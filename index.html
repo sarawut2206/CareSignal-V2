@@ -216,6 +216,12 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
         <div class="mode-desc">ครบทุกตัวคูณ<br>ผิดได้ไม่เกิน 15 ข้อ</div>
         <div class="mode-badge" style="background:var(--red);color:#fff;">Master</div>
       </div>
+      <div class="mode-card" onclick="showSetup('mission144')" style="border:2px solid var(--gold);background:linear-gradient(135deg,#fffbe6,#fff8d6);">
+        <div class="mode-icon">🏅</div>
+        <div class="mode-title" style="color:#b8760a;">ภารกิจ 144 ข้อ</div>
+        <div class="mode-desc" style="color:#a06010;">ครบ 144 ข้อ ใน 300 วิ<br>ผิดได้ไม่เกิน 5 ข้อ</div>
+        <div class="mode-badge" style="background:var(--gold);color:var(--navy);">🎁 มีรางวัล!</div>
+      </div>
       <div class="mode-card" onclick="showSetup('timer')">
         <div class="mode-icon">⏱️</div>
         <div class="mode-title">จับเวลาเขียน</div>
@@ -232,7 +238,11 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
       <div class="criteria-row" style="color:var(--muted);font-size:11px;"><span>* ต้องทำทันเวลาด้วย</span></div>
     </div>
     <div class="criteria-card">
-      <div class="criteria-title">⏱️ เกณฑ์เวลา (144 ข้อ / จับเวลาเขียน)</div>
+      <div class="criteria-title">🏅 ภารกิจ 144 ข้อ (รับรางวัล)</div>
+      <div class="criteria-row"><span class="grade">⏱ เวลา</span><span class="time">5:00 (300 วิ)</span></div>
+      <div class="criteria-row"><span class="grade">❌ ผิดได้ไม่เกิน</span><span class="time">5 ข้อ</span></div>
+      <div class="criteria-row" style="color:var(--muted);font-size:11px;"><span>* ผ่านทั้ง 2 เงื่อนไข = รับรางวัลพิเศษ 🎁</span></div>
+    </div>
       <div class="criteria-row"><span class="grade">ป.6</span><span class="time">5:30</span></div>
       <div class="criteria-row"><span class="grade">ป.5</span><span class="time">6:00</span></div>
       <div class="criteria-row"><span class="grade">ป.4</span><span class="time">7:30</span></div>
@@ -353,6 +363,7 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
       <div class="result-grade" id="result-grade-badge"></div>
     </div>
     <div class="stat-grid" id="stat-grid"></div>
+    <div id="reward-banner"></div>
     <div class="section-title" id="result-detail-title">สรุปผล</div>
     <div class="history-list" id="result-history"></div>
     <div class="divider"></div>
@@ -373,6 +384,7 @@ const QUIZ_CONFIG = {
   q40:  { total:40,  timeSec:160, maxWrong:9,  label:'Quiz 40 ข้อ',  type:'choice4' },
   q55:  { total:55,  timeSec:240, maxWrong:11, label:'Quiz 55 ข้อ',  type:'choice4' },
   q144: { total:144, timeSec:null,maxWrong:15, label:'Quiz 144 ข้อ', type:'fill4' },
+  mission144: { total:144, timeSec:300, maxWrong:5, label:'ภารกิจ 144 ข้อ', type:'fill4' },
 };
 
 // ── STATE ──────────────────────────────────────────────────────────
@@ -408,7 +420,7 @@ function showSetup(mode) {
   document.getElementById('setup-title').textContent =
     isTimer ? '⏱️ จับเวลาเขียน — ข้อมูลนักเรียน' : `🧠 ${cfg.label} — ข้อมูลนักเรียน`;
 
-  // grade needed for timer & q144
+  // grade needed for timer & q144 (not mission144)
   const gradeGroup = document.getElementById('grade-group');
   const gradeNote = document.getElementById('grade-note');
   if (isTimer || mode === 'q144') {
@@ -423,9 +435,9 @@ function showSetup(mode) {
   if (!isTimer && cfg) {
     box.style.display = 'block';
     document.getElementById('info-total').textContent = cfg.total + ' ข้อ';
-    document.getElementById('info-time').textContent = cfg.timeSec ? cfg.timeSec + ' วินาที' : 'ตามระดับชั้น';
+    document.getElementById('info-time').textContent = mode === 'mission144' ? '300 วินาที (5:00)' : (cfg.timeSec ? cfg.timeSec + ' วินาที' : 'ตามระดับชั้น');
     document.getElementById('info-wrong').textContent = cfg.maxWrong + ' ข้อ';
-    document.getElementById('info-type').textContent = mode === 'q144' ? '2×3 = ? (พิมพ์/กดตัวเลข)' : 'ผล = a × ? (4 ตัวเลือก)';
+    document.getElementById('info-type').textContent = (mode === 'q144' || mode === 'mission144') ? '2×3 = ? (กดตัวเลข)' : 'ผล = a × ? (4 ตัวเลือก)';
   } else {
     box.style.display = 'none';
   }
@@ -440,7 +452,6 @@ function confirmSetup() {
   const isTimer = currentMode === 'timer';
   const needGrade = isTimer || currentMode === 'q144';
   const gv = document.getElementById('input-grade').value;
-
   if (needGrade && !gv) { toast('⚠️ กรุณาเลือกระดับชั้น'); return; }
 
   studentName = name;
@@ -559,7 +570,7 @@ function renderQuestion() {
   document.getElementById('qs-wrong').textContent = quiz.wrong;
   document.getElementById('qs-remaining').textContent = quiz.cfg.total - quiz.current;
 
-  const is144 = quiz.mode === 'q144';
+  const is144 = quiz.mode === 'q144' || quiz.mode === 'mission144';
 
   if (is144) {
     // Format: 2 × 3 = ?  (ตัวเลือกคือคำตอบ a*b)
@@ -609,7 +620,7 @@ function answerQuiz(chosen, correct, key) {
   fb.style.display = 'block';
   fb.className = 'feedback-bar ' + (isCorrect ? 'correct' : 'wrong');
 
-  if (quiz.mode === 'q144') {
+  if (quiz.mode === 'q144' || quiz.mode === 'mission144') {
     fb.textContent = isCorrect
       ? `✅ ถูก! ${q.a} × ${q.b} = ${q.ans}`
       : `❌ ผิด! ${q.a} × ${q.b} = ${q.ans}`;
@@ -654,11 +665,16 @@ function finishQuiz() {
   const accuracy = Math.round((quiz.correct / quiz.cfg.total) * 100);
 
   const isScored = ['q20','q30','q40','q55'].includes(quiz.mode);
+  const isMission = quiz.mode === 'mission144';
   const scoreInfo = isScored ? getScoreLabel(accuracy, timePass) : null;
 
   // ─── กำหนดหัวผลลัพธ์ ───
   let resultTitle, resultIcon, heroCls;
-  if (isScored && overall && scoreInfo) {
+  if (isMission && overall) {
+    resultTitle = '🎉 ผ่านภารกิจ!';
+    resultIcon  = '🏅';
+    heroCls     = 'result-pass';
+  } else if (isScored && overall && scoreInfo) {
     resultTitle = scoreInfo.label;
     resultIcon  = scoreInfo.icon;
     heroCls     = scoreInfo.cls;
@@ -679,6 +695,22 @@ function finishQuiz() {
   document.getElementById('result-student-name').textContent = studentName;
   document.getElementById('result-grade-badge').textContent =
     `${quiz.cfg.label} | เวลา ${fmtTime(quiz.timeSec)} | ผิดได้ ${quiz.cfg.maxWrong} ข้อ`;
+
+  // ─── แสดงแบนเนอร์รางวัล (mission144 เท่านั้น) ───
+  let rewardBanner = '';
+  if (isMission && overall) {
+    rewardBanner = `
+    <div style="background:linear-gradient(135deg,var(--gold),#e8950f);border-radius:18px;padding:22px;text-align:center;margin-bottom:14px;box-shadow:0 8px 30px rgba(245,166,35,0.4);">
+      <div style="font-size:52px;margin-bottom:6px;">🎁</div>
+      <div style="font-family:'Kanit',sans-serif;font-size:22px;font-weight:900;color:var(--navy);margin-bottom:4px;">ยินดีด้วย! ได้รับรางวัลพิเศษ</div>
+      <div style="font-size:13px;color:var(--navy);opacity:0.85;margin-bottom:10px;">ทำ 144 ข้อสำเร็จภายใน 300 วินาที 🌟</div>
+      <div style="background:rgba(255,255,255,0.4);border-radius:10px;padding:10px 16px;display:inline-block;">
+        <div style="font-family:'Kanit',sans-serif;font-size:15px;font-weight:800;color:var(--navy);">🏅 เหรียญ ครูแซม CHAMPION</div>
+        <div style="font-size:11px;color:var(--navy);opacity:0.8;margin-top:2px;">สูตรคูณครบ 144 ข้อ ≤ 5 นาที</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('reward-banner').innerHTML = rewardBanner;
 
   document.getElementById('stat-grid').innerHTML = `
     <div class="stat-box"><div class="s-num">${quiz.correct}/${quiz.cfg.total}</div><div class="s-lbl">ถูกต้อง</div></div>
@@ -727,7 +759,9 @@ function finishQuiz() {
 
   // ─── ข้อความระดับสำหรับแชร์ ───
   let scoreShareLine = '';
-  if (isScored && overall) {
+  if (isMission && overall) {
+    scoreShareLine = `\n🏅 รางวัล: ผ่านภารกิจ 144 ข้อ ใน ${fmtTime(elapsed)} ✅`;
+  } else if (isScored && overall) {
     scoreShareLine = scoreInfo
       ? `\n🌟 ระดับ: ${scoreInfo.label} (ถูก ${accuracy}%)`
       : `\n📌 ระดับ: ต้องพัฒนา (ถูก ${accuracy}%)`;
