@@ -189,25 +189,25 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
       <div class="mode-card" onclick="showSetup('q20')">
         <div class="mode-icon">⚡</div>
         <div class="mode-title">Quiz 20 ข้อ</div>
-        <div class="mode-desc">เวลา 80 วิ<br>ผิดได้ไม่เกิน 5 ข้อ</div>
+        <div class="mode-desc">เวลา 80 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q30')">
         <div class="mode-icon">🧠</div>
         <div class="mode-title">Quiz 30 ข้อ</div>
-        <div class="mode-desc">เวลา 120 วิ<br>ผิดได้ไม่เกิน 7 ข้อ</div>
+        <div class="mode-desc">เวลา 120 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q40')">
         <div class="mode-icon">🎯</div>
         <div class="mode-title">Quiz 40 ข้อ</div>
-        <div class="mode-desc">เวลา 160 วิ<br>ผิดได้ไม่เกิน 9 ข้อ</div>
+        <div class="mode-desc">เวลา 160 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q55')">
         <div class="mode-icon">🔥</div>
         <div class="mode-title">Quiz 55 ข้อ</div>
-        <div class="mode-desc">เวลา 240 วิ<br>ผิดได้ไม่เกิน 11 ข้อ</div>
+        <div class="mode-desc">เวลา 240 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q144')">
@@ -225,16 +225,23 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
     </div>
 
     <div class="criteria-card">
-      <div class="criteria-title">🎯 เกณฑ์เวลา (จับเวลาเขียน)</div>
-      <div class="criteria-row"><span class="grade">ป.6</span><span class="time">4:30</span></div>
-      <div class="criteria-row"><span class="grade">ป.5</span><span class="time">5:00</span></div>
-      <div class="criteria-row"><span class="grade">ป.4</span><span class="time">5:30</span></div>
-      <div class="criteria-row"><span class="grade">ป.3</span><span class="time">6:00</span></div>
-      <div class="criteria-row"><span class="grade">ป.2</span><span class="time">6:30</span></div>
-      <div class="criteria-row"><span class="grade">ป.1</span><span class="time">7:00</span></div>
-      <div class="criteria-row"><span class="grade">อ.3</span><span class="time">7:30</span></div>
-      <div class="criteria-row"><span class="grade">อ.2</span><span class="time">8:00</span></div>
-      <div class="criteria-row"><span class="grade">อ.1</span><span class="time">8:10</span></div>
+      <div class="criteria-title">🎯 เกณฑ์ผล (Quiz 20/30/40/55 ข้อ)</div>
+      <div class="criteria-row"><span class="grade">🌟 ดีเยี่ยม</span><span class="time">100%</span></div>
+      <div class="criteria-row"><span class="grade">🏆 ดีมาก</span><span class="time">90–99%</span></div>
+      <div class="criteria-row"><span class="grade">👍 ดี</span><span class="time">80–89%</span></div>
+      <div class="criteria-row" style="color:var(--muted);font-size:11px;"><span>* ต้องทำทันเวลาด้วย</span></div>
+    </div>
+    <div class="criteria-card">
+      <div class="criteria-title">⏱️ เกณฑ์เวลา (144 ข้อ / จับเวลาเขียน)</div>
+      <div class="criteria-row"><span class="grade">ป.6</span><span class="time">5:30</span></div>
+      <div class="criteria-row"><span class="grade">ป.5</span><span class="time">6:00</span></div>
+      <div class="criteria-row"><span class="grade">ป.4</span><span class="time">7:30</span></div>
+      <div class="criteria-row"><span class="grade">ป.3</span><span class="time">8:00</span></div>
+      <div class="criteria-row"><span class="grade">ป.2</span><span class="time">9:30</span></div>
+      <div class="criteria-row"><span class="grade">ป.1</span><span class="time">10:00</span></div>
+      <div class="criteria-row"><span class="grade">อ.3</span><span class="time">11:30</span></div>
+      <div class="criteria-row"><span class="grade">อ.2</span><span class="time">12:00</span></div>
+      <div class="criteria-row"><span class="grade">อ.1</span><span class="time">13:10</span></div>
     </div>
   </div>
 </div>
@@ -252,15 +259,15 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
         <label>ระดับชั้น <span id="grade-note" style="color:var(--muted);font-weight:400;">(สำหรับเกณฑ์เวลา)</span></label>
         <select id="input-grade">
           <option value="">-- เลือกระดับชั้น --</option>
-          <option value="อ.1|490">อนุบาล 1 (เป้า 8:10)</option>
-          <option value="อ.2|480">อนุบาล 2 (เป้า 8:00)</option>
-          <option value="อ.3|450">อนุบาล 3 (เป้า 7:30)</option>
-          <option value="ป.1|420">ประถม 1 (เป้า 7:00)</option>
-          <option value="ป.2|390">ประถม 2 (เป้า 6:30)</option>
-          <option value="ป.3|360">ประถม 3 (เป้า 6:00)</option>
-          <option value="ป.4|330">ประถม 4 (เป้า 5:30)</option>
-          <option value="ป.5|300">ประถม 5 (เป้า 5:00)</option>
-          <option value="ป.6|270">ประถม 6 (เป้า 4:30)</option>
+          <option value="อ.1|790">อนุบาล 1 (เป้า 13:10)</option>
+          <option value="อ.2|720">อนุบาล 2 (เป้า 12:00)</option>
+          <option value="อ.3|690">อนุบาล 3 (เป้า 11:30)</option>
+          <option value="ป.1|600">ประถม 1 (เป้า 10:00)</option>
+          <option value="ป.2|570">ประถม 2 (เป้า 9:30)</option>
+          <option value="ป.3|480">ประถม 3 (เป้า 8:00)</option>
+          <option value="ป.4|450">ประถม 4 (เป้า 7:30)</option>
+          <option value="ป.5|360">ประถม 5 (เป้า 6:00)</option>
+          <option value="ป.6|330">ประถม 6 (เป้า 5:30)</option>
         </select>
       </div>
       <div class="quiz-info-box" id="quiz-info-box" style="display:none;">
@@ -629,6 +636,15 @@ function answerQuiz(chosen, correct, key) {
   }, 800);
 }
 
+function getScoreLabel(accuracy, timePass) {
+  // สำหรับโหมด q20/q30/q40/q55 เท่านั้น
+  if (!timePass) return null; // ไม่ผ่านเวลา ไม่มีระดับ
+  if (accuracy === 100) return { label: 'ดีเยี่ยม', icon: '🌟', cls: 'result-pass' };
+  if (accuracy >= 90)  return { label: 'ดีมาก',   icon: '🏆', cls: 'result-pass' };
+  if (accuracy >= 80)  return { label: 'ดี',       icon: '👍', cls: 'result-pass' };
+  return null;
+}
+
 function finishQuiz() {
   clearInterval(quiz.timerInterval);
   const elapsed = Math.floor((Date.now() - quiz.startTime) / 1000);
@@ -637,10 +653,29 @@ function finishQuiz() {
   const overall = timePass && wrongPass;
   const accuracy = Math.round((quiz.correct / quiz.cfg.total) * 100);
 
+  const isScored = ['q20','q30','q40','q55'].includes(quiz.mode);
+  const scoreInfo = isScored ? getScoreLabel(accuracy, timePass) : null;
+
+  // ─── กำหนดหัวผลลัพธ์ ───
+  let resultTitle, resultIcon, heroCls;
+  if (isScored && overall && scoreInfo) {
+    resultTitle = scoreInfo.label;
+    resultIcon  = scoreInfo.icon;
+    heroCls     = scoreInfo.cls;
+  } else if (overall) {
+    resultTitle = 'ผ่านเกณฑ์!';
+    resultIcon  = '🏆';
+    heroCls     = 'result-pass';
+  } else {
+    resultTitle = 'ยังไม่ผ่าน';
+    resultIcon  = '💪';
+    heroCls     = 'result-fail';
+  }
+
   const hero = document.getElementById('result-hero');
-  hero.className = 'result-hero ' + (overall ? 'result-pass' : 'result-fail');
-  document.getElementById('result-icon').textContent = overall ? '🏆' : '💪';
-  document.getElementById('result-title').textContent = overall ? 'ผ่านเกณฑ์!' : 'ยังไม่ผ่าน';
+  hero.className = 'result-hero ' + heroCls;
+  document.getElementById('result-icon').textContent = resultIcon;
+  document.getElementById('result-title').textContent = resultTitle;
   document.getElementById('result-student-name').textContent = studentName;
   document.getElementById('result-grade-badge').textContent =
     `${quiz.cfg.label} | เวลา ${fmtTime(quiz.timeSec)} | ผิดได้ ${quiz.cfg.maxWrong} ข้อ`;
@@ -650,6 +685,25 @@ function finishQuiz() {
     <div class="stat-box"><div class="s-num">${quiz.wrong}</div><div class="s-lbl">ผิด (max ${quiz.cfg.maxWrong})</div></div>
     <div class="stat-box"><div class="s-num">${fmtTime(elapsed)}</div><div class="s-lbl">เวลาที่ใช้</div></div>
   `;
+
+  // ─── แถวเกณฑ์ระดับ (เฉพาะโหมด q20/q30/q40/q55) ───
+  let scoreLevelRow = '';
+  if (isScored) {
+    let levelText, levelCls;
+    if (!timePass) {
+      levelText = '✗ ไม่ผ่าน (เกินเวลา)'; levelCls = 'fail';
+    } else if (scoreInfo) {
+      levelText = `✓ ${scoreInfo.label} (${accuracy}%)`; levelCls = 'pass';
+    } else {
+      levelText = `ต้องพัฒนา (${accuracy}%)`; levelCls = 'fail';
+    }
+    scoreLevelRow = `
+    <div class="history-item">
+      <span class="round-num">ระดับผลคะแนน</span>
+      <span class="round-time">${accuracy}%</span>
+      <span class="round-result ${levelCls}">${levelText}</span>
+    </div>`;
+  }
 
   document.getElementById('result-detail-title').textContent = 'สรุปผล Quiz';
   document.getElementById('result-history').innerHTML = `
@@ -668,17 +722,26 @@ function finishQuiz() {
       <span class="round-time">${accuracy}%</span>
       <span class="round-result ${accuracy>=75?'pass':'fail'}">${accuracy>=75?'✓ ดี':'ต้องพัฒนา'}</span>
     </div>
+    ${scoreLevelRow}
   `;
+
+  // ─── ข้อความระดับสำหรับแชร์ ───
+  let scoreShareLine = '';
+  if (isScored && overall) {
+    scoreShareLine = scoreInfo
+      ? `\n🌟 ระดับ: ${scoreInfo.label} (ถูก ${accuracy}%)`
+      : `\n📌 ระดับ: ต้องพัฒนา (ถูก ${accuracy}%)`;
+  }
 
   const today = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
   const gradeStr = studentGrade ? `\n📚 ระดับชั้น: ${studentGrade}` : '';
   document.getElementById('share-text').textContent =
-    `${overall?'🏆':'📊'} ผลทดสอบ ${quiz.cfg.label}\n` +
+    `${overall?resultIcon:'📊'} ผลทดสอบ ${quiz.cfg.label}\n` +
     `─────────────────\n` +
     `👤 นักเรียน: ${studentName}${gradeStr}\n` +
     `✅ ถูก: ${quiz.correct}/${quiz.cfg.total} ข้อ  |  ❌ ผิด: ${quiz.wrong} ข้อ\n` +
     `⏱ เวลา: ${fmtTime(elapsed)} (กำหนด ${fmtTime(quiz.timeSec)})\n` +
-    `🎯 ผล: ${overall?'ผ่านเกณฑ์!':'ยังไม่ผ่าน — ฝึกต่อ!'}\n` +
+    `🎯 ผล: ${overall?'ผ่านเกณฑ์!':'ยังไม่ผ่าน — ฝึกต่อ!'}${scoreShareLine}\n` +
     `📅 ${today}\n─────────────────\n🎓 ครูแซม`;
 
   showScreen('screen-result');
