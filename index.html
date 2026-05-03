@@ -189,49 +189,57 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
       <div class="mode-card" onclick="showSetup('q20')">
         <div class="mode-icon">⚡</div>
         <div class="mode-title">Quiz 20 ข้อ</div>
-        <div class="mode-desc">เวลา 80 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
+        <div class="mode-desc">เวลา 80 วิ · ผ่าน ≥80%</div>
+        <div style="font-size:10px;color:var(--muted);margin:5px 0 4px;line-height:1.6;">ทดสอบเร็ว เหมาะวอร์มอัพ<br>หรือเช็กความพร้อมก่อนเรียน</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q30')">
         <div class="mode-icon">🧠</div>
         <div class="mode-title">Quiz 30 ข้อ</div>
-        <div class="mode-desc">เวลา 120 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
+        <div class="mode-desc">เวลา 120 วิ · ผ่าน ≥80%</div>
+        <div style="font-size:10px;color:var(--muted);margin:5px 0 4px;line-height:1.6;">ระดับกลาง ฝึกความเร็ว<br>และความแม่นยำพร้อมกัน</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q40')">
         <div class="mode-icon">🎯</div>
         <div class="mode-title">Quiz 40 ข้อ</div>
-        <div class="mode-desc">เวลา 160 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
+        <div class="mode-desc">เวลา 160 วิ · ผ่าน ≥80%</div>
+        <div style="font-size:10px;color:var(--muted);margin:5px 0 4px;line-height:1.6;">ท้าทายขึ้น ต้องมีสมาธิ<br>ตลอด 40 ข้อ</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q55')">
         <div class="mode-icon">🔥</div>
         <div class="mode-title">Quiz 55 ข้อ</div>
-        <div class="mode-desc">เวลา 240 วิ<br>ผ่าน: ≥80% + ทันเวลา</div>
+        <div class="mode-desc">เวลา 240 วิ · ผ่าน ≥80%</div>
+        <div style="font-size:10px;color:var(--muted);margin:5px 0 4px;line-height:1.6;">ครึ่งหนึ่งของ 132 ข้อ<br>วัดความอดทนและแม่นยำ</div>
         <div class="mode-badge">4 ตัวเลือก</div>
       </div>
       <div class="mode-card" onclick="showSetup('q144')">
         <div class="mode-icon">👑</div>
         <div class="mode-title">Quiz 132 ข้อ</div>
         <div class="mode-desc">ครบทุกตัวคูณ<br>ผิดได้ไม่เกิน 15 ข้อ</div>
+        <div style="font-size:10px;color:var(--muted);margin:5px 0 4px;line-height:1.6;">แม่ 2–12 × 1–12 ครบทุกตัว<br>วัดผลจริงตามระดับชั้น</div>
         <div class="mode-badge" style="background:var(--red);color:#fff;">Master</div>
       </div>
       <div class="mode-card" onclick="showSetup('mission144')" style="border:2px solid var(--gold);background:linear-gradient(135deg,#fffbe6,#fff8d6);">
         <div class="mode-icon">🏅</div>
         <div class="mode-title" style="color:#b8760a;">ภารกิจ 132 ข้อ</div>
         <div class="mode-desc" style="color:#a06010;">ครบ 132 ข้อ ใน 300 วิ<br>ผิดได้ไม่เกิน 5 ข้อ</div>
+        <div style="font-size:10px;color:#a06010;margin:5px 0 4px;line-height:1.6;">ทำครบและแม่นภายใน 5 นาที<br>ผ่าน = รับรางวัลพิเศษ 🎁</div>
         <div class="mode-badge" style="background:var(--gold);color:var(--navy);">🎁 มีรางวัล!</div>
       </div>
       <div class="mode-card" onclick="startStopwatch()">
         <div class="mode-icon">⏱️</div>
         <div class="mode-title">จับเวลาเขียน</div>
-        <div class="mode-desc">นาฬิกาจับเวลา<br>กดเริ่ม / หยุด / รีเซ็ต</div>
+        <div class="mode-desc">นาฬิกาจับเวลา</div>
+        <div style="font-size:10px;color:var(--muted);margin:5px 0 4px;line-height:1.6;">จับเวลาขณะเขียนสูตรคูณ<br>ลงกระดาษด้วยตัวเอง</div>
         <div class="mode-badge" style="background:var(--blue);">Stopwatch</div>
       </div>
       <div class="mode-card" onclick="showSetup('reverse144')" style="border:2px solid #9b59b6;background:linear-gradient(135deg,#f5eeff,#ede5ff);">
         <div class="mode-icon">🔄</div>
         <div class="mode-title" style="color:#6c3483;">ถอยหลัง 132 ข้อ</div>
-        <div class="mode-desc" style="color:#7d3c98;">2×12 → 12×2<br>นับถอยหลัง ตามระดับชั้น</div>
+        <div class="mode-desc" style="color:#7d3c98;">2×12 → 12×1 · นับถอยหลัง</div>
+        <div style="font-size:10px;color:#7d3c98;margin:5px 0 4px;line-height:1.6;">ท่องจากปลายกลับต้น<br>ทดสอบความจำแบบย้อนกลับ</div>
         <div class="mode-badge" style="background:#9b59b6;color:#fff;">Reverse</div>
       </div>
     </div>
