@@ -222,11 +222,11 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
         <div class="mode-desc" style="color:#a06010;">ครบ 132 ข้อ ใน 300 วิ<br>ผิดได้ไม่เกิน 5 ข้อ</div>
         <div class="mode-badge" style="background:var(--gold);color:var(--navy);">🎁 มีรางวัล!</div>
       </div>
-      <div class="mode-card" onclick="showSetup('timer')">
+      <div class="mode-card" onclick="startStopwatch()">
         <div class="mode-icon">⏱️</div>
         <div class="mode-title">จับเวลาเขียน</div>
-        <div class="mode-desc">เขียนถอยหลัง<br>5 รอบ ผ่าน 3 รอบ</div>
-        <div class="mode-badge" style="background:var(--blue);">Classic</div>
+        <div class="mode-desc">นาฬิกาจับเวลา<br>กดเริ่ม / หยุด / รีเซ็ต</div>
+        <div class="mode-badge" style="background:var(--blue);">Stopwatch</div>
       </div>
       <div class="mode-card" onclick="showSetup('reverse144')" style="border:2px solid #9b59b6;background:linear-gradient(135deg,#f5eeff,#ede5ff);">
         <div class="mode-icon">🔄</div>
@@ -247,7 +247,7 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
       <div class="criteria-title">🏅 ภารกิจ 132 ข้อ (รับรางวัล)</div>
       <div class="criteria-row"><span class="grade">⏱ เวลา</span><span class="time">5:00 (300 วิ)</span></div>
       <div class="criteria-row"><span class="grade">❌ ผิดได้ไม่เกิน</span><span class="time">5 ข้อ</span></div>
-      <div class="criteria-row" style="color:var(--muted);font-size:11px;"><span>* ผ่านทั้ง 2 เงื่อนไข = รับรางวัลพิเศษ 🎁</span></div>
+      <div class="criteria-row" style="color:var(--muted);font-size:11px;"><span>* ผ่านทั้ง 2 เงื่อนไข = รับรางวัลพิเศษ 🎁 (ครบ 132 ข้อ)</span></div>
     </div>
     <div class="criteria-card" style="border-color:#9b59b6;">
       <div class="criteria-title" style="color:#6c3483;">📏 ถอยหลัง 132 ข้อ — เกณฑ์เวลา (นับถอยหลัง)</div>
@@ -329,34 +329,24 @@ input[type="text"]:focus, select:focus { border-color:var(--blue); background:#f
   </div>
 </div>
 
-<!-- ═══ TIMER ═══ -->
+<!-- ═══ STOPWATCH ═══ -->
 <div class="screen" id="screen-timer">
   <div class="container">
-    <div class="timer-header">
-      <div class="round-badge" id="round-badge">รอบที่ 1 / 5</div>
-      <div id="student-name-display" style="font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:4px;"></div>
-      <div class="timer-display" id="timer-display">00:00</div>
-      <div class="timer-sub">กำลังจับเวลา</div>
-      <div class="target-info">เป้าหมาย: <strong id="target-display">--</strong> &nbsp;|&nbsp; ระดับ <strong id="grade-display">--</strong></div>
+    <div class="timer-header" style="padding:30px 22px;">
+      <div style="font-family:'Kanit',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);margin-bottom:6px;">⏱️ จับเวลาเขียนสูตรคูณ</div>
+      <div class="timer-display" id="timer-display" style="font-size:80px;letter-spacing:-3px;">00:00</div>
+      <div style="font-family:'Kanit',sans-serif;font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px;" id="timer-ms-display">00</div>
     </div>
-    <div class="round-progress">
-      <div class="rp-title">ความคืบหน้า 5 รอบ</div>
-      <div class="rp-dots">
-        <div class="rp-dot active" id="dot-1">1</div>
-        <div class="rp-dot" id="dot-2">2</div>
-        <div class="rp-dot" id="dot-3">3</div>
-        <div class="rp-dot" id="dot-4">4</div>
-        <div class="rp-dot" id="dot-5">5</div>
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-primary" id="btn-start-stop" onclick="toggleStopwatch()" style="font-size:18px;padding:16px;">▶ เริ่ม</button>
+      <button class="btn btn-outline" id="btn-reset" onclick="resetStopwatch()" style="font-size:18px;padding:16px;">↺ รีเซ็ต</button>
     </div>
-    <div class="timer-controls">
-      <button class="btn btn-primary" id="btn-start-stop" onclick="toggleTimer()">▶ เริ่ม</button>
-      <button class="btn btn-gold" id="btn-record" onclick="recordRound()" disabled>✓ บันทึกรอบ</button>
-    </div>
-    <div class="section-title">ประวัติรอบที่บันทึกแล้ว</div>
+    <button class="btn btn-gold" id="btn-lap" onclick="recordLap()" disabled style="font-size:15px;">📌 จดเวลา (Lap)</button>
+    <div class="section-title" style="margin-top:16px;">เวลาที่จด</div>
     <div class="history-list" id="history-list">
-      <div style="text-align:center;color:var(--muted);font-size:12px;padding:14px;">ยังไม่มีรอบที่บันทึก</div>
+      <div style="text-align:center;color:var(--muted);font-size:12px;padding:14px;">กดจดเวลาเพื่อบันทึก</div>
     </div>
+    <button class="btn btn-outline" onclick="showScreen('screen-home')" style="margin-top:8px;">← กลับหน้าหลัก</button>
   </div>
 </div>
 
@@ -390,8 +380,8 @@ const QUIZ_CONFIG = {
   q30:  { total:30,  timeSec:120, maxWrong:7,  label:'Quiz 30 ข้อ',  type:'choice4' },
   q40:  { total:40,  timeSec:160, maxWrong:9,  label:'Quiz 40 ข้อ',  type:'choice4' },
   q55:  { total:55,  timeSec:240, maxWrong:11, label:'Quiz 55 ข้อ',  type:'choice4' },
-  q144: { total:144, timeSec:null,maxWrong:15, label:'Quiz 132 ข้อ', type:'fill4' },
-  mission144: { total:144, timeSec:300, maxWrong:5, label:'ภารกิจ 132 ข้อ', type:'fill4' },
+  q144: { total:132, timeSec:null,maxWrong:15, label:'Quiz 132 ข้อ', type:'fill4' },
+  mission144: { total:132, timeSec:300, maxWrong:5, label:'ภารกิจ 132 ข้อ', type:'fill4' },
   reverse144: { total:132, timeSec:null, maxWrong:13, label:'ถอยหลัง 132 ข้อ', type:'reverse4' },
 };
 
@@ -428,24 +418,24 @@ function showSetup(mode) {
   document.getElementById('setup-title').textContent =
     isTimer ? '⏱️ จับเวลาเขียน — ข้อมูลนักเรียน' : `🧠 ${cfg.label} — ข้อมูลนักเรียน`;
 
-  // grade needed for timer & q144 & reverse144 (not mission144)
+  // grade needed for q144 & reverse144 only
   const gradeGroup = document.getElementById('grade-group');
   const gradeNote = document.getElementById('grade-note');
-  if (isTimer || mode === 'q144' || mode === 'reverse144') {
+  if (mode === 'q144' || mode === 'reverse144') {
     gradeGroup.style.display = 'block';
-    gradeNote.textContent = isTimer ? '(สำหรับเกณฑ์เวลา)' : '(สำหรับเกณฑ์เวลา)';
+    gradeNote.textContent = '(สำหรับเกณฑ์เวลา)';
   } else {
     gradeGroup.style.display = 'none';
   }
 
   // info box
   const box = document.getElementById('quiz-info-box');
-  if (!isTimer && cfg) {
+  if (cfg) {
     box.style.display = 'block';
     document.getElementById('info-total').textContent = cfg.total + ' ข้อ';
     document.getElementById('info-time').textContent = (mode === 'mission144') ? '300 วินาที (5:00)' : (mode === 'reverse144') ? 'นับถอยหลังตามระดับชั้น' : (cfg.timeSec ? cfg.timeSec + ' วินาที' : 'ตามระดับชั้น');
     document.getElementById('info-wrong').textContent = cfg.maxWrong + ' ข้อ';
-    document.getElementById('info-type').textContent = (mode === 'reverse144') ? '2×12=? → 12×2=? (นับถอยหลัง)' : (mode === 'q144' || mode === 'mission144') ? '2×3 = ? (กดตัวเลข)' : 'ผล = a × ? (4 ตัวเลือก)';
+    document.getElementById('info-type').textContent = (mode === 'reverse144') ? '2×12=? → 12×1=? (นับถอยหลัง)' : (mode === 'q144' || mode === 'mission144') ? '2×3 = ? (กดตัวเลข)' : 'ผล = a × ? (4 ตัวเลือก)';
   } else {
     box.style.display = 'none';
   }
@@ -457,8 +447,7 @@ function confirmSetup() {
   const name = document.getElementById('input-name').value.trim();
   if (!name) { toast('⚠️ กรุณากรอกชื่อนักเรียน'); return; }
 
-  const isTimer = currentMode === 'timer';
-  const needGrade = isTimer || currentMode === 'q144' || currentMode === 'reverse144';
+  const needGrade = currentMode === 'q144' || currentMode === 'reverse144';
   const gv = document.getElementById('input-grade').value;
   if (needGrade && !gv) { toast('⚠️ กรุณาเลือกระดับชั้น'); return; }
 
@@ -470,15 +459,14 @@ function confirmSetup() {
     studentGrade = ''; targetSec = 0;
   }
 
-  if (isTimer) startTimer();
-  else startQuiz(currentMode);
+  startQuiz(currentMode);
 }
 
 // ══════════════════════════════════════════════════════════════════
 // QUIZ MODE
 // ══════════════════════════════════════════════════════════════════
 
-// Build all 144 facts (แม่ 2–12, ×1–12)
+// Build all 132 facts (แม่ 2–12, ×1–12)
 function allFacts() {
   const f = [];
   for (let a = 2; a <= 12; a++)
@@ -487,11 +475,11 @@ function allFacts() {
   return f;
 }
 
-// Build reverse-order 132 questions: 2×12, 2×11...2×2, 3×12...12×2
+// Build reverse-order 132 questions: แม่ 2–12 × 12–1 (ตัดแม่ 1 ออก = 11×12 = 132 ข้อ)
 function generateReverseQuestions() {
   const f = [];
   for (let a = 2; a <= 12; a++)
-    for (let b = 12; b >= 2; b--)
+    for (let b = 12; b >= 1; b--)
       f.push({ a, b, ans: a*b });
   return f;
 }
@@ -508,7 +496,7 @@ function shuffle(arr) {
 function generateQuestions(total) {
   const all = shuffle(allFacts());
   if (total <= all.length) return all.slice(0, total);
-  // For 144: use all 132 + repeat 12 random ones
+  // For 132: use all 132 facts
   const extra = shuffle(allFacts()).slice(0, total - all.length);
   return shuffle([...all, ...extra]);
 }
@@ -717,10 +705,11 @@ function getScoreLabel(accuracy, timePass) {
 function finishQuiz() {
   clearInterval(quiz.timerInterval);
   const elapsed = (quiz.elapsedAtFinish != null) ? quiz.elapsedAtFinish : Math.floor((Date.now() - quiz.startTime) / 1000);
-  // reverse144 countdown: ผ่านถ้าตอบครบก่อนหมดเวลา (elapsed < timeSec)
-  // โหมดอื่น: ผ่านถ้าใช้เวลา <= timeSec
+  // reverse144 countdown: ผ่านถ้าตอบครบก่อนหมดเวลา
+  // elapsedAtFinish ถูกบันทึกตอนกดข้อสุดท้าย ก่อนหมดเวลา = elapsed < timeSec
+  // ถ้าหมดเวลาก่อน (tickQuizCountdown เรียก finishQuiz) = elapsed >= timeSec
   const timePass = (quiz.mode === 'reverse144')
-    ? (elapsed < quiz.timeSec && quiz.current >= quiz.cfg.total)
+    ? (elapsed < quiz.timeSec)
     : elapsed <= quiz.timeSec;
   const wrongPass = quiz.wrong <= quiz.cfg.maxWrong;
   const overall = timePass && wrongPass;
@@ -878,126 +867,78 @@ function finishQuiz() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// TIMER MODE
+// STOPWATCH MODE
 // ══════════════════════════════════════════════════════════════════
-function startTimer() {
-  timer = { round:1, running:false, elapsed:0, interval:null, startTime:null, history:[] };
-  document.getElementById('student-name-display').textContent = studentName;
-  document.getElementById('target-display').textContent = fmtTime(targetSec);
-  document.getElementById('grade-display').textContent = studentGrade;
-  document.getElementById('round-badge').textContent = 'รอบที่ 1 / 5';
+let sw = { running:false, startTime:null, elapsed:0, interval:null, laps:[], lapCount:0 };
+
+function startStopwatch() {
+  sw = { running:false, startTime:null, elapsed:0, interval:null, laps:[], lapCount:0 };
   document.getElementById('timer-display').textContent = '00:00';
   document.getElementById('timer-display').className = 'timer-display';
+  document.getElementById('timer-ms-display').textContent = '00';
   document.getElementById('btn-start-stop').textContent = '▶ เริ่ม';
-  document.getElementById('btn-record').disabled = true;
+  document.getElementById('btn-lap').disabled = true;
   document.getElementById('history-list').innerHTML =
-    '<div style="text-align:center;color:var(--muted);font-size:12px;padding:14px;">ยังไม่มีรอบที่บันทึก</div>';
-  for (let i=1;i<=5;i++) {
-    const d = document.getElementById(`dot-${i}`);
-    d.className = 'rp-dot'+(i===1?' active':''); d.textContent = i;
-  }
+    '<div style="text-align:center;color:var(--muted);font-size:12px;padding:14px;">กดจดเวลาเพื่อบันทึก</div>';
   showScreen('screen-timer');
 }
 
-function toggleTimer() {
-  if (!timer.running) {
-    timer.running = true;
-    timer.startTime = Date.now() - timer.elapsed;
-    timer.interval = setInterval(tickTimer, 100);
-    document.getElementById('btn-start-stop').textContent = '⏸ หยุดชั่วคราว';
-    document.getElementById('btn-record').disabled = false;
+function toggleStopwatch() {
+  if (!sw.running) {
+    sw.running = true;
+    sw.startTime = Date.now() - sw.elapsed;
+    sw.interval = setInterval(tickStopwatch, 50);
+    document.getElementById('btn-start-stop').textContent = '⏸ หยุด';
+    document.getElementById('btn-lap').disabled = false;
   } else {
-    timer.running = false;
-    clearInterval(timer.interval);
-    timer.elapsed = Date.now() - timer.startTime;
+    sw.running = false;
+    clearInterval(sw.interval);
+    sw.elapsed = Date.now() - sw.startTime;
     document.getElementById('btn-start-stop').textContent = '▶ ดำเนินต่อ';
-    document.getElementById('btn-record').disabled = false;
   }
 }
 
-function tickTimer() {
-  const ms = Date.now() - timer.startTime;
-  const sec = Math.floor(ms/1000);
-  document.getElementById('timer-display').textContent = fmtTimeMs(ms);
-  const el = document.getElementById('timer-display');
-  el.className = 'timer-display'+(sec>=targetSec+60?' danger':sec>=targetSec?' warning':'');
+function resetStopwatch() {
+  sw.running = false;
+  clearInterval(sw.interval);
+  sw.elapsed = 0; sw.startTime = null; sw.laps = []; sw.lapCount = 0;
+  document.getElementById('timer-display').textContent = '00:00';
+  document.getElementById('timer-display').className = 'timer-display';
+  document.getElementById('timer-ms-display').textContent = '00';
+  document.getElementById('btn-start-stop').textContent = '▶ เริ่ม';
+  document.getElementById('btn-lap').disabled = true;
+  document.getElementById('history-list').innerHTML =
+    '<div style="text-align:center;color:var(--muted);font-size:12px;padding:14px;">กดจดเวลาเพื่อบันทึก</div>';
 }
 
-function recordRound() {
-  if (!timer.startTime) { toast('⚠️ กดเริ่มก่อนนะครับ'); return; }
-  timer.running = false; clearInterval(timer.interval);
-  const ms = Date.now() - timer.startTime;
-  const totalSec = Math.floor(ms/1000);
-  const pass = totalSec <= targetSec;
-  timer.history.push({ round:timer.round, sec:totalSec, pass });
-
-  const dot = document.getElementById(`dot-${timer.round}`);
-  dot.className = 'rp-dot '+(pass?'pass':'fail');
-  dot.textContent = pass?'✓':'✗';
-
-  renderTimerHistory();
-  toast(pass?`✅ รอบ ${timer.round} ผ่าน! (${fmtTime(totalSec)})`:`❌ รอบ ${timer.round} ไม่ผ่าน (${fmtTime(totalSec)})`);
-
-  if (timer.round < 5) {
-    timer.round++;
-    timer.elapsed = 0; timer.startTime = null;
-    document.getElementById('round-badge').textContent = `รอบที่ ${timer.round} / 5`;
-    document.getElementById('timer-display').textContent = '00:00';
-    document.getElementById('timer-display').className = 'timer-display';
-    document.getElementById('btn-start-stop').textContent = '▶ เริ่ม';
-    document.getElementById('btn-record').disabled = true;
-    const nd = document.getElementById(`dot-${timer.round}`);
-    if (nd) nd.classList.add('active');
-  } else {
-    setTimeout(finishTimer, 500);
-  }
+function tickStopwatch() {
+  const ms = Date.now() - sw.startTime;
+  const totalSec = Math.floor(ms / 1000);
+  const centisec = Math.floor((ms % 1000) / 10);
+  const m = Math.floor(totalSec / 60), s = totalSec % 60;
+  document.getElementById('timer-display').textContent =
+    `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('timer-ms-display').textContent =
+    String(centisec).padStart(2,'0');
 }
 
-function renderTimerHistory() {
-  document.getElementById('history-list').innerHTML = timer.history.map(h => `
+function recordLap() {
+  if (!sw.startTime) return;
+  const ms = Date.now() - sw.startTime;
+  sw.lapCount++;
+  sw.laps.push({ n: sw.lapCount, ms });
+  renderLaps();
+  toast(`📌 จดเวลา #${sw.lapCount}: ${fmtTimeMs(ms)}`);
+}
+
+function renderLaps() {
+  if (!sw.laps.length) return;
+  document.getElementById('history-list').innerHTML = sw.laps.slice().reverse().map(l => `
     <div class="history-item">
-      <span class="round-num">รอบที่ ${h.round}</span>
-      <span class="round-time">${fmtTime(h.sec)}</span>
-      <span class="round-result ${h.pass?'pass':'fail'}">${h.pass?'✓ ผ่าน':'✗ ไม่ผ่าน'}</span>
+      <span class="round-num">#${l.n}</span>
+      <span class="round-time" style="font-size:20px;">${fmtTimeMs(l.ms)}</span>
+      <span class="round-result" style="background:var(--bg);color:var(--blue);">Lap ${l.n}</span>
     </div>`).join('');
-}
-
-function finishTimer() {
-  const passed = timer.history.filter(h=>h.pass).length;
-  const overall = passed >= 3;
-  const times = timer.history.map(h=>h.sec);
-  const best = Math.min(...times);
-  const avg = Math.round(times.reduce((a,b)=>a+b,0)/times.length);
-
-  const hero = document.getElementById('result-hero');
-  hero.className = 'result-hero '+(overall?'result-pass':'result-fail');
-  document.getElementById('result-icon').textContent = overall?'🏆':'💪';
-  document.getElementById('result-title').textContent = overall?'ผ่านเกณฑ์!':'ยังไม่ผ่าน';
-  document.getElementById('result-student-name').textContent = studentName;
-  document.getElementById('result-grade-badge').textContent = `ระดับ ${studentGrade} | เป้า ${fmtTime(targetSec)}`;
-
-  document.getElementById('stat-grid').innerHTML = `
-    <div class="stat-box"><div class="s-num">${passed}/5</div><div class="s-lbl">รอบที่ผ่าน</div></div>
-    <div class="stat-box"><div class="s-num">${fmtTime(best)}</div><div class="s-lbl">ดีสุด</div></div>
-    <div class="stat-box"><div class="s-num">${fmtTime(avg)}</div><div class="s-lbl">เฉลี่ย</div></div>
-  `;
-  document.getElementById('result-detail-title').textContent = 'ผลแต่ละรอบ';
-  document.getElementById('result-history').innerHTML = timer.history.map(h=>`
-    <div class="history-item">
-      <span class="round-num">รอบที่ ${h.round}</span>
-      <span class="round-time">${fmtTime(h.sec)}</span>
-      <span class="round-result ${h.pass?'pass':'fail'}">${h.pass?'✓ ผ่าน':'✗ ไม่ผ่าน'}</span>
-    </div>`).join('');
-
-  const today = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('share-text').textContent =
-    `${overall?'🏆':'📊'} ผลการวัดผลสูตรคูณถอยหลัง\n` +
-    `─────────────────\n👤 นักเรียน: ${studentName}\n📚 ระดับชั้น: ${studentGrade}\n` +
-    `⏱ เป้าหมาย: ${fmtTime(targetSec)}\n` +
-    `${overall?'✅':'❌'} ผล: ${overall?'ผ่านเกณฑ์! ('+passed+'/5 รอบ)':'ยังไม่ผ่าน ('+passed+'/5 รอบ)'}\n` +
-    `🥇 เวลาดีสุด: ${fmtTime(best)}\n📅 ${today}\n─────────────────\n🎓 ครูแซม คณิตตรงจุด ติด TURBO `;
-
-  showScreen('screen-result');
 }
 
 function copyShare() {
