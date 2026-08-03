@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>CareSignal Vision — ตรวจจับสมรรถภาพด้วยกล้อง</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2563EB">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CareSignal">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./favicon-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=IBM+Plex+Sans+Thai+Looped:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE; --navy:#0F1B33;
+  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7;
+  --line:#DFE7F2; --line2:#EDF2FA;
+  --brand:#2563EB; --brand2:#1D4ED8;
+  --accent:#F59E0B; --accent2:#B45309; --accentb:#FEF3C7;
+  --c4:#0E9F6E; --c3:#C79200; --c2:#D97706; --c1:#DC2626;
+  --c4b:#E3F6EF; --c3b:#FEF6DE; --c2b:#FDECD8; --c1b:#FEE9E9;
+  --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --loop:"IBM Plex Sans Thai Looped","Prompt",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sh:0 1px 2px rgba(22,35,59,.04),0 8px 24px rgba(22,35,59,.06);
+  --shx:0 2px 8px rgba(22,35,59,.08),0 24px 60px rgba(22,35,59,.13);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:#0B1220;font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;
+  display:flex;align-items:center;justify-content:center}
+.phone{width:100%;max-width:430px;height:100dvh;max-height:920px;background:var(--bg);position:relative;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shx)}
+@media(min-width:520px){.phone{border-radius:28px;height:880px}}
+
+/* หัวแถบ */
+.bar{flex:none;background:linear-gradient(135deg,var(--brand2),var(--brand) 62%,#3B82F6);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 14px) 18px 14px;position:relative}
+.brandrow{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.bar .kick{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#FCD34D}
+.bar h1{margin:2px 0 0;font-size:19px;letter-spacing:-.02em;font-weight:600;line-height:1.35}
+.bar p{margin:6px 0 0;font-size:12.5px;color:rgba(255,255,255,.78);line-height:1.6}
+.chip{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:16px;font-family:var(--mono);font-size:9px;
+  letter-spacing:.1em;text-transform:uppercase;background:rgba(245,158,11,.22);color:#FDE68A;padding:4px 9px;border-radius:99px}
+.backb{background:rgba(255,255,255,.16);border:0;color:#fff;font-family:var(--sans);font-size:12.5px;
+  padding:6px 12px;border-radius:99px;margin-bottom:9px;cursor:pointer}
+
+/* เนื้อหา */
+.view{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 16px calc(env(safe-area-inset-bottom) + 20px);-webkit-overflow-scrolling:touch}
+.anim{animation:up .32s cubic-bezier(.2,.7,.3,1)}
+@keyframes up{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.anim{animation:none}}
+
+.card{background:var(--surf);border-radius:20px;padding:17px;box-shadow:var(--sh);margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:15.5px;letter-spacing:-.01em;font-weight:600}
+.sub{color:var(--ink2);font-size:13px;line-height:1.65}
+.rowline{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-top:1px solid var(--line2);font-size:13.5px}
+.rowline:first-of-type{border-top:0}
+.rowline .k{color:var(--ink2)}
+.rowline .v{font-family:var(--mono);font-weight:600;text-align:right}
+.cta{display:block;width:100%;border:0;border-radius:16px;background:var(--brand);color:#fff;font-family:var(--loop);
+  font-size:16px;font-weight:600;padding:15px;cursor:pointer;margin-bottom:10px;transition:transform .1s}
+.cta:active{transform:scale(.985)}
+.cta[disabled]{opacity:.45;cursor:not-allowed}
+.ghostb{display:block;width:100%;border:1px solid var(--line);border-radius:14px;background:var(--surf);color:var(--ink);
+  font-family:var(--sans);font-size:14.5px;padding:13px;cursor:pointer;margin-bottom:10px}
+.ghostb.danger{color:var(--c1);border-color:#F6CFCF}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:99px}
+.t4{background:var(--c4b);color:var(--c4)}.t3{background:var(--c3b);color:var(--c3)}
+.t2{background:var(--c2b);color:var(--c2)}.t1{background:var(--c1b);color:var(--c1)}
+
+/* กล้อง — องค์ประกอบหลักของหน้าจอนี้ */
+.stage{position:relative;border-radius:22px;overflow:hidden;background:#0B1220;aspect-ratio:3/4;margin-bottom:12px;box-shadow:var(--shx)}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.stage video{transform:scaleX(-1)}
+.stage canvas{transform:scaleX(-1);pointer-events:none}
+.hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:14px}
+.hudtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.hudtag{background:rgba(11,18,32,.62);backdrop-filter:blur(8px);color:#fff;font-size:11.5px;padding:6px 11px;border-radius:99px;line-height:1.4}
+.hudtag b{color:#FCD34D}
+.hudbot{background:rgba(11,18,32,.68);backdrop-filter:blur(10px);border-radius:16px;padding:12px 14px;color:#fff}
+.counter{display:flex;align-items:baseline;gap:10px}
+.counter .n{font-family:var(--mono);font-size:38px;font-weight:600;line-height:1;letter-spacing:-.03em}
+.counter .of{font-size:14px;color:rgba(255,255,255,.6)}
+.counter .clock{margin-left:auto;font-family:var(--mono);font-size:22px;font-weight:600;color:#FCD34D}
+.track{height:6px;background:rgba(255,255,255,.18);border-radius:99px;margin-top:10px;overflow:hidden}
+.track i{display:block;height:100%;background:#FCD34D;border-radius:99px;transition:width .12s linear}
+.coach{margin-top:9px;font-size:12.5px;color:rgba(255,255,255,.85);line-height:1.5;min-height:19px}
+.statebadge{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(255,255,255,.16);padding:3px 8px;border-radius:99px;margin-left:8px}
+
+/* กราฟแนวโน้ม */
+.bars{display:flex;align-items:flex-end;gap:8px;height:118px;padding-top:6px}
+.bars .b{flex:1;border-radius:7px 7px 3px 3px;position:relative;min-height:10px;display:flex;align-items:flex-start;justify-content:center}
+.bars .b span{font-family:var(--mono);font-size:10px;color:#fff;padding-top:4px;font-weight:600}
+.barx{display:flex;gap:8px;margin-top:7px}
+.barx div{flex:1;text-align:center;font-size:9.5px;color:var(--ink3)}
+
+/* คำอธิบายเหตุผล */
+.evi{border-left:3px solid var(--accent);background:var(--accentb);border-radius:0 12px 12px 0;padding:10px 13px;margin:8px 0;font-size:13px;line-height:1.6}
+.evi .rid{display:block;font-family:var(--mono);font-size:10px;color:var(--accent2);letter-spacing:.08em;margin-bottom:3px}
+.evi .why{display:block;color:var(--ink2);font-size:11.5px;margin-top:4px}
+.disc{background:var(--line2);border-radius:12px;padding:10px 13px;font-size:11.5px;color:var(--ink2);line-height:1.6;margin-top:10px}
+
+/* คำถามเสริม */
+.pick{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--surf);border-radius:14px;
+  padding:14px;font-family:var(--sans);font-size:14.5px;margin-bottom:9px;cursor:pointer;color:var(--ink)}
+.pick:active{border-color:var(--brand);background:var(--surf2)}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12.5px;color:var(--ink2);margin-bottom:6px}
+.field input{width:100%;border:1.5px solid var(--line);border-radius:13px;padding:13px;font-family:var(--sans);font-size:15.5px;background:var(--surf);color:var(--ink)}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;border:1.5px solid var(--line);background:var(--surf);border-radius:13px;padding:12px;font-family:var(--sans);font-size:14px;cursor:pointer;color:var(--ink)}
+.seg button[aria-pressed="true"]{border-color:var(--brand);background:var(--surf2);color:var(--brand2);font-weight:600}
+.chk{display:flex;gap:11px;align-items:flex-start;background:var(--surf2);border-radius:14px;padding:13px;cursor:pointer;font-size:12.5px;line-height:1.6}
+.chk input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:var(--brand)}
+
+/* เคส/ตาราง */
+.case{border-top:1px solid var(--line2);padding:12px 0}
+.case:first-of-type{border-top:0}
+.case .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:5px}
+.case .who{font-weight:600;font-size:14px}
+.case .meta{font-size:12px;color:var(--ink2);line-height:1.6}
+.mini{display:flex;gap:8px;margin-top:9px}
+.mini button{flex:1;border:0;border-radius:11px;padding:10px;font-family:var(--sans);font-size:12.5px;cursor:pointer;font-weight:600}
+.ok{background:var(--c4);color:#fff}
+.no{background:var(--line2);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.kpi{background:var(--surf);border-radius:16px;padding:13px;box-shadow:var(--sh)}
+.kpi .l{font-size:11px;color:var(--ink3);line-height:1.4}
+.kpi .n{font-family:var(--mono);font-size:20px;font-weight:600;margin-top:3px;letter-spacing:-.02em}
+.mixrow{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:12.5px}
+.mixrow .lab{width:76px;color:var(--ink2)}
+.mixrow .bar{flex:1;height:9px;background:var(--line2);border-radius:99px;overflow:hidden}
+.mixrow .bar i{display:block;height:100%;border-radius:99px}
+.mixrow .val{font-family:var(--mono);font-size:12px;width:40px;text-align:right}
+
+/* แท็บล่าง */
+.tabs{flex:none;display:flex;background:var(--surf);border-top:1px solid var(--line);padding:7px 6px calc(env(safe-area-inset-bottom) + 7px)}
+.tabs button{flex:1;background:none;border:0;padding:7px 2px;font-family:var(--sans);font-size:10.5px;color:var(--ink3);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button[aria-selected="true"]{color:var(--brand);font-weight:600}
+.tabs svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.toast{position:absolute;left:16px;right:16px;bottom:88px;background:var(--navy);color:#fff;border-radius:14px;padding:13px 15px;
+  font-size:13.5px;line-height:1.5;opacity:0;transform:translateY(9px);transition:.25s;pointer-events:none;z-index:60}
+.toast.on{opacity:1;transform:none}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="bar"><div id="barIn"></div><span class="chip" id="chip">DB</span></div>
+  <div class="view" id="view"></div>
+  <div class="tabs" id="tabs" hidden>
+    <button data-go="assess" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg><b>ประเมิน</b></button>
+    <button data-go="trend"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 15v-4M12 15V8M16 15v-6"/></svg><b>แนวโน้ม</b></button>
+    <button data-go="cases"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>เคส</b></button>
+    <button data-go="insurer"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>บริษัทประกัน</b></button>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+"use strict";
+var LOGO='<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none">'+
+'<defs><linearGradient id="lgV" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#DBEAFE"/><stop offset="1" stop-color="#93C5FD"/></linearGradient>'+
+'<linearGradient id="lgA" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FCD34D"/><stop offset="1" stop-color="#F59E0B"/></linearGradient></defs>'+
+'<path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgV)" stroke-width="4" stroke-linejoin="round"/>'+
+'<path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgV)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'+
+'<path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgA)" stroke-width="3.6" stroke-linecap="round"/>'+
+'<circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgA)"/></svg>';
+
+/* ============================================================
+   ที่เก็บข้อมูล — คลาวด์แพลตฟอร์ม → เครื่องผู้ใช้ → หน่วยความจำ
+   ============================================================ */
+var MEM={};
+var DB={
+  mode:"temp",
+  async get(k){
+    if(window.storage){try{var r=await window.storage.get(k);this.mode="cloud";if(r)return JSON.parse(r.value)}catch(e){}}
+    try{var s=localStorage.getItem("csv:"+k);if(this.mode!=="cloud")this.mode="local";if(s)return JSON.parse(s)}catch(e){}
+    return MEM[k]||null;
+  },
+  async set(k,v){
+    var s=JSON.stringify(v);MEM[k]=v;
+    if(window.storage){try{await window.storage.set(k,s);this.mode="cloud";return}catch(e){}}
+    try{localStorage.setItem("csv:"+k,s);this.mode="local"}catch(e){this.mode="temp"}
+  },
+  async del(k){
+    if(window.storage){try{await window.storage.delete(k)}catch(e){}}
+    try{localStorage.removeItem("csv:"+k)}catch(e){}
+    delete MEM[k];
+  },
+  async putPool(rec){
+    if(window.storage){try{await window.storage.set("pool:"+rec.uid,JSON.stringify(rec),true);return}catch(e){}}
+    try{localStorage.setItem("csShared:pool:"+rec.uid,JSON.stringify(rec))}catch(e){}
+  },
+  async listPool(){
+    var out=[];
+    if(window.storage){
+      try{
+        var r=await window.storage.list("pool:",true);
+        for(var i=0;i<(r.keys||[]).length;i++){try{var g=await window.storage.get(r.keys[i],true);if(g)out.push(JSON.parse(g.value))}catch(e){}}
+        return out;
+      }catch(e){}
+    }
+    try{for(var j=0;j<localStorage.length;j++){var k=localStorage.key(j);
+      if(k&&k.indexOf("csShared:pool:")===0){try{out.push(JSON.parse(localStorage.getItem(k)))}catch(e){}}}}catch(e){}
+    return out;
+  }
+};
+function dbLabel(){return "DB · "+(DB.mode==="cloud"?"CLOUD":(DB.mode==="local"?"LOCAL":"TEMP"))}
+
+/* ============================================================
+   ค่ากลาง — ชุดเดียวกับแอป เว็บ และโมเดลผู้ประกอบการ
+   ============================================================ */
+var CFG={
+  ftsstCut:function(age){return age<60?10.0:(age<70?11.5:12.1);},
+  ageBand:function(a){return a<55?"50–54":(a<60?"55–59":(a<66?"60–65":"66–70"));},
+  ageMult:function(a){return a<55?1.00:(a<60?1.35:(a<66?1.80:2.30));},
+  sexMult:{f:1.10,m:1.00},
+  plans:[{id:"s",nm:"เริ่มต้น",benefit:10000,base:590},{id:"m",nm:"มาตรฐาน",benefit:15000,base:890},
+         {id:"l",nm:"พรีเมียม",benefit:25000,base:1490},{id:"xl",nm:"สูงสุด",benefit:40000,base:2290}],
+  discount:{4:.15,3:.08,2:0,1:0},
+  tiers:{
+    4:{nm:"เขียว — แข็งแรงดี",c:"var(--c4)",b:"t4",act:"ออกกำลังต่อเนื่อง ประเมินซ้ำทุก 3 เดือน"},
+    3:{nm:"เหลือง — เฝ้าระวัง",c:"var(--c3)",b:"t3",act:"ฝึกทรงตัวสัปดาห์ละ 3 วัน ประเมินซ้ำทุก 2 เดือน"},
+    2:{nm:"ส้ม — เสี่ยงปานกลาง",c:"var(--c2)",b:"t2",act:"Care Manager ติดต่อภายใน 7 วัน"},
+    1:{nm:"แดง — เสี่ยงสูง",c:"var(--c1)",b:"t1",act:"พยาบาลประเมินที่บ้านภายใน 72 ชม."}
+  }
+};
+function fmt(n){return Math.round(n).toLocaleString("th-TH")}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function nowISO(){return new Date().toISOString()}
+function thDate(iso){return new Date(iso).toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"})}
+function thTime(iso){return new Date(iso).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"})}
+function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
+
+/* ============================================================
+   ชั้นวิเคราะห์ท่าทาง — ประมวลผลบนเครื่อง ไม่ส่งภาพออกจากอุปกรณ์
+   ------------------------------------------------------------
+   ตัวชี้วัดหลัก: ตำแหน่งสะโพกเทียบสัดส่วนลำตัว
+     M = (ระยะข้อเท้า−สะโพก) ÷ (ระยะข้อเท้า−ไหล่)
+   เลือกอัตราส่วนแทนพิกัดดิบ เพราะไม่ขึ้นกับระยะห่างจากกล้อง
+   ส่วนสูงของผู้ใช้ หรือการวางมือถือสูงต่ำ
+   ============================================================ */
+var LM={LSH:11,RSH:12,LHIP:23,RHIP:24,LKNEE:25,RKNEE:26,LANK:27,RANK:28};
+
+function midY(lm,a,b){return (lm[a].y+lm[b].y)/2}
+function visOK(lm){
+  var need=[LM.LSH,LM.RSH,LM.LHIP,LM.RHIP,LM.LKNEE,LM.RKNEE,LM.LANK,LM.RANK];
+  var seen=0;
+  for(var i=0;i<need.length;i++){var v=lm[need[i]];if(v&&(v.visibility===undefined||v.visibility>0.5))seen++}
+  return seen/need.length;
+}
+function hipRatio(lm){
+  var sh=midY(lm,LM.LSH,LM.RSH), hip=midY(lm,LM.LHIP,LM.RHIP), ank=midY(lm,LM.LANK,LM.RANK);
+  var span=ank-sh;
+  if(!isFinite(span)||Math.abs(span)<0.02)return null;
+  return (ank-hip)/span;
+}
+function kneeAngle(lm){
+  function ang(h,k,a){
+    var v1={x:lm[h].x-lm[k].x,y:lm[h].y-lm[k].y}, v2={x:lm[a].x-lm[k].x,y:lm[a].y-lm[k].y};
+    var d=v1.x*v2.x+v1.y*v2.y, m=Math.hypot(v1.x,v1.y)*Math.hypot(v2.x,v2.y);
+    if(!m)return null;
+    return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
+  }
+  var l=ang(LM.LHIP,LM.LKNEE,LM.LANK), r=ang(LM.RHIP,LM.RKNEE,LM.RANK);
+  if(l==null&&r==null)return null;
+  if(l==null)return r; if(r==null)return l;
+  return (l+r)/2;
+}
+
+/* ---- ตัวนับจำนวนครั้ง: เครื่องสถานะพร้อม hysteresis กันการนับซ้ำจากการสั่น ---- */
+function RepDetector(opts){
+  opts=opts||{};
+  this.sitRef=null; this.standRef=null;
+  this.state="idle"; this.reps=0; this.stamps=[]; this.t0=null; this.done=false;
+  this.target=opts.target||5;
+  this.upFrac=opts.upFrac!==undefined?opts.upFrac:0.68;
+  this.downFrac=opts.downFrac!==undefined?opts.downFrac:0.36;
+  this.buf=[]; this.smoothN=opts.smoothN||5;
+}
+RepDetector.prototype.smooth=function(v){
+  this.buf.push(v); if(this.buf.length>this.smoothN)this.buf.shift();
+  var s=0; for(var i=0;i<this.buf.length;i++)s+=this.buf[i];
+  return s/this.buf.length;
+};
+RepDetector.prototype.setRefs=function(sit,stand){this.sitRef=sit;this.standRef=stand};
+RepDetector.prototype.start=function(t){this.state="sit";this.reps=0;this.stamps=[];this.t0=t;this.done=false;this.buf=[]};
+RepDetector.prototype.thresholds=function(){
+  var range=this.standRef-this.sitRef;
+  return {up:this.sitRef+range*this.upFrac, down:this.sitRef+range*this.downFrac, range:range};
+};
+RepDetector.prototype.push=function(raw,t){
+  if(this.done||this.state==="idle"||this.sitRef==null||this.standRef==null)return null;
+  var v=this.smooth(raw), th=this.thresholds();
+  if(this.state==="sit"&&v>=th.up){
+    this.state="stand"; this.reps++; this.stamps.push(t);
+    if(this.reps>=this.target){this.done=true;return{event:"finish",reps:this.reps,elapsed:(t-this.t0)/1000}}
+    return {event:"rep",reps:this.reps};
+  }
+  if(this.state==="stand"&&v<=th.down){this.state="sit";return{event:"down",reps:this.reps}}
+  return null;
+};
+
+/* ============================================================
+   คะแนนและการวิเคราะห์แนวโน้ม
+   ============================================================ */
+function ftsstPoints(sec,age){
+  var cut=CFG.ftsstCut(age);
+  if(sec==null)return 0;
+  return sec<=cut?4 : sec<=cut+2?3 : sec<=cut+4.5?2 : sec<=60?1 : 0;
+}
+function scoreOf(d,age){
+  var parts={ftsst:ftsstPoints(d.ftsst,age), balance:d.balance||0, falls:d.falls==null?0:d.falls,
+              meds:d.meds==null?0:d.meds, adl:d.adl==null?0:d.adl};
+  var s=parts.ftsst+parts.balance+parts.falls+parts.meds+parts.adl;
+  return {score:s, max:12, tier:s>=10?4:s>=8?3:s>=5?2:1, parts:parts};
+}
+
+var ENGINE={
+  version:"1.2.0-vision",
+  kind:"rule-based-explainable",
+  rules:{
+    R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ",src:"MCID ของ Five-Times Sit-to-Stand ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
+    R2:{nm:"ข้ามเกณฑ์เสี่ยงตามอายุ",src:"ค่าตัดประชากรไทย 10.0/11.5/12.1 วินาที (Poncumhak 2014; Intaruk 2021)"},
+    R3:{nm:"มีเหตุหกล้มใหม่",src:"WHO Step Safely 2021 — ล้ม 1 ครั้งเพิ่มโอกาสล้มซ้ำใน 12 เดือน"},
+    R4:{nm:"คะแนนรวมถดถอยจากค่าดีที่สุดของตนเอง",src:"เทียบกับตนเองแทนค่าเฉลี่ยประชากร เพื่อลดอคติระหว่างกลุ่ม"},
+    R5:{nm:"ใช้ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง",src:"STOPPFall 2021; Beers Criteria — ปฏิสัมพันธ์แบบทวีคูณ"},
+    R6:{nm:"สูญเสียความสามารถทำกิจวัตร",src:"Lawton IADL; Barthel Index — สัญญาณเริ่มต้นภาวะพึ่งพิง"},
+    R7:{nm:"ความสม่ำเสมอของจังหวะลดลง",src:"ความแปรปรวนของเวลาต่อครั้งสะท้อนความล้าของกล้ามเนื้อขา"}
+  },
+  cadence:{stable:90,watch:45,decline:21,urgent:7},
+  levelNm:{stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"ต้องดูแลเร่งด่วน"},
+  levelColor:{stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"}
+};
+
+function trajectory(){
+  var A=S.data.assessments, p=S.data.profile;
+  if(!A.length||!p)return null;
+  var last=A[A.length-1], first=A[0];
+  var out={n:A.length,last:last,flags:[],level:"stable",span:daysBetween(first.at,last.at),
+           sinceLast:daysBetween(last.at,nowISO())};
+  var fts=A.filter(function(x){return x.ftsst!=null});
+  var bestFt=fts.length?Math.min.apply(null,fts.map(function(x){return x.ftsst})):null;
+  var bestScore=Math.max.apply(null,A.map(function(x){return x.score}));
+
+  if(last.ftsst!=null&&bestFt!=null&&fts.length>1&&last.ftsst>bestFt){
+    var d=last.ftsst-bestFt, pct=d/bestFt*100;
+    if(d>=2.3||pct>=15){
+      out.flags.push({id:"R1",sev:(pct>=30||d>=4)?2:1,
+        text:"เวลาลุกนั่ง 5 ครั้งช้าลง "+pct.toFixed(0)+"% ("+bestFt.toFixed(1)+" → "+last.ftsst.toFixed(1)+" วินาที) เทียบกับผลที่ดีที่สุดของคุณเอง",
+        why:"ส่วนต่าง "+d.toFixed(1)+" วินาที ถึงเกณฑ์การเปลี่ยนแปลงที่มีความหมายทางคลินิก (≥2.3 วินาที)"});
+    }
+  }
+  if(last.ftsst!=null){
+    var cut=CFG.ftsstCut(p.age), prevFt=null;
+    for(var i=A.length-2;i>=0;i--){if(A[i].ftsst!=null){prevFt=A[i].ftsst;break}}
+    if(last.ftsst>cut&&(prevFt==null||prevFt<=cut)){
+      out.flags.push({id:"R2",sev:2,
+        text:"เวลาลุกนั่งขึ้นเป็น "+last.ftsst.toFixed(1)+" วินาที สูงกว่าเกณฑ์ของช่วงอายุ "+CFG.ageBand(p.age)+" ปี ("+cut.toFixed(1)+" วินาที)",
+        why:"เป็นการข้ามค่าตัดเกณฑ์ครั้งแรก จึงถือเป็นการเปลี่ยนสถานะ ไม่ใช่ความผันผวนปกติ"});
+    }
+  }
+  if(A.length>1){
+    var prev=A[A.length-2];
+    if(last.parts.falls<prev.parts.falls)
+      out.flags.push({id:"R3",sev:2,text:"มีการหกล้มเกิดขึ้นใหม่ในช่วง "+daysBetween(prev.at,last.at)+" วันที่ผ่านมา",
+        why:"ผู้ที่ล้มแล้ว 1 ครั้งมีโอกาสล้มซ้ำสูงขึ้นชัดเจนใน 12 เดือนถัดไป"});
+    if(last.parts.adl<prev.parts.adl)
+      out.flags.push({id:"R6",sev:3,text:"ความสามารถทำกิจวัตรประจำวันลดลงจากการประเมินครั้งก่อน",
+        why:"การลดลงของ ADL เป็นสัญญาณเริ่มต้นของภาวะพึ่งพิง ซึ่งเป็นเหตุการณ์ที่กรมธรรม์คุ้มครอง"});
+  }
+  if(last.score<=bestScore-2)
+    out.flags.push({id:"R4",sev:last.score<=bestScore-3?2:1,
+      text:"คะแนนรวมลดลง "+(bestScore-last.score)+" คะแนน จากค่าดีที่สุดของคุณ ("+bestScore+" → "+last.score+")",
+      why:"เปรียบเทียบกับตัวคุณเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น"});
+  if(last.parts.meds===0&&last.parts.balance<=1)
+    out.flags.push({id:"R5",sev:2,text:"ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป ร่วมกับผลทรงตัวที่ยังไม่ผ่านเกณฑ์",
+      why:"สองปัจจัยนี้เมื่อเกิดร่วมกันเพิ่มความเสี่ยงหกล้มมากกว่าผลรวมของแต่ละปัจจัย"});
+  /* กฎเฉพาะของการวัดด้วยกล้อง: ความสม่ำเสมอของจังหวะแต่ละครั้ง */
+  if(last.cv!=null&&last.cv>=0.25)
+    out.flags.push({id:"R7",sev:1,
+      text:"จังหวะการลุกแต่ละครั้งไม่สม่ำเสมอ (ครั้งท้าย ๆ ช้ากว่าครั้งแรกอย่างชัดเจน)",
+      why:"กล้องวัดเวลาแยกรายครั้งได้ ความแปรปรวน "+(last.cv*100).toFixed(0)+"% บ่งชี้ความล้าของกล้ามเนื้อขาเร็วกว่าปกติ"});
+
+  var sev=out.flags.reduce(function(a,b){return a+b.sev},0);
+  var hasADL=out.flags.some(function(f){return f.id==="R6"});
+  out.level = (last.tier===1||hasADL||sev>=5)?"urgent" : (last.tier===2||sev>=3)?"decline" : sev>=1?"watch":"stable";
+  out.nextDays=ENGINE.cadence[out.level];
+  out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
+  out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
+               : out.level==="decline"?{nm:"Care Manager โทรติดตาม",sla:"ภายใน 7 วัน",need:true}
+               : out.level==="watch"?{nm:"แผนป้องกันด้วยตนเอง + เตือนประเมินซ้ำ",sla:"ไม่ต้องส่งต่อ",need:false}
+                                     :{nm:"ดูแลตนเองตามแผนปกติ",sla:"ไม่ต้องส่งต่อ",need:false};
+  return out;
+}
+function audit(ev,detail,human){
+  if(!S.data.audit)S.data.audit=[];
+  S.data.audit.push({at:nowISO(),ev:ev,engine:ENGINE.version,detail:detail,human:human||"ไม่ต้องมีผู้เชี่ยวชาญตรวจสอบ"});
+  if(S.data.audit.length>200)S.data.audit=S.data.audit.slice(-200);
+}
+
+/* ============================================================
+   สถานะแอป
+   ============================================================ */
+var S={data:null,screen:"loading",draft:{},cam:null};
+function blank(){return {profile:null,assessments:[],cases:[],audit:[],sharePool:true,createdAt:nowISO()}}
+async function loadAll(){S.data=await DB.get("visionData")||blank();document.getElementById("chip").textContent=dbLabel()}
+async function saveAll(){
+  await DB.set("visionData",S.data);
+  document.getElementById("chip").textContent=dbLabel();
+  if(S.data.sharePool&&S.data.profile){
+    var p=S.data.profile,last=S.data.assessments[S.data.assessments.length-1]||null,tr=null;
+    try{tr=trajectory()}catch(e){}
+    await DB.putPool({uid:p.uid,ageBand:CFG.ageBand(p.age),sex:p.sex,
+      tier:last?last.tier:null,score:last?last.score:null,ftsst:last?last.ftsst:null,
+      lastAssess:last?last.at:null,nAssess:S.data.assessments.length,
+      level:tr?tr.level:null,referred:tr?!!tr.referral.need:false,
+      method:"camera-pose",engine:ENGINE.version,updated:nowISO()});
+  }
+}
+
+/* ============================================================
+   เรนเดอร์
+   ============================================================ */
+var V=document.getElementById("view"),B=document.getElementById("barIn"),T=document.getElementById("tabs");
+function head(kick,h,p,back){
+  B.innerHTML=(back?'<button class="backb" data-go="'+back+'">‹ ย้อนกลับ</button>':
+    '<div class="brandrow">'+LOGO+'<span style="font-weight:700;font-size:14.5px;letter-spacing:-.01em">Care<span style="color:#FCD34D">Signal</span> Vision</span></div>')+
+    '<div class="kick">'+kick+'</div><h1>'+h+'</h1>'+(p?'<p>'+p+'</p>':'');
+}
+function go(sc,arg){
+  if(S.screen==="test"&&sc!=="test")stopCam();
+  S.screen=sc;render(arg);V.scrollTop=0;
+}
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");
+  clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2800)}
+function render(arg){
+  T.hidden=!S.data.profile||["test","calib","q","result"].indexOf(S.screen)>=0;
+  var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer"};
+  T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
+  var fn={loading:loadingV,welcome:welcomeV,reg:regV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
+          trend:trendV,cases:casesV,insurer:insurerV}[S.screen]||assessV;
+  fn(arg);
+}
+function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
+
+/* ---------- เริ่มต้น ---------- */
+function welcomeV(){
+  head("CARESIGNAL · VISION","วัดสมรรถภาพด้วยกล้อง ไม่ต้องมีอุปกรณ์","กล้องมือถือนับท่าลุกนั่ง 5 ครั้งและจับเวลาให้อัตโนมัติ ประมวลผลในเครื่อง ไม่ส่งภาพออกไปที่ใด");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>ระบบนี้ทำอะไร</h3>'+
+  '<div class="rowline"><span class="k">ตรวจจับท่าทางด้วย AI</span><span class="v">33 จุดบนร่างกาย</span></div>'+
+  '<div class="rowline"><span class="k">นับครั้งและจับเวลา</span><span class="v">อัตโนมัติ</span></div>'+
+  '<div class="rowline"><span class="k">ภาพที่ส่งออกจากเครื่อง</span><span class="v" style="color:var(--c4)">ไม่มี</span></div>'+
+  '<div class="rowline"><span class="k">อธิบายเหตุผลทุกคำเตือน</span><span class="v">ทุกครั้ง</span></div></div>'+
+  '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ก่อนเริ่ม โปรดเตรียม</h3>'+
+  '<p class="sub" style="margin:0">เก้าอี้มีพนักพิงวางชิดผนัง · พื้นที่ว่างด้านหน้าประมาณ 2 เมตร · วางมือถือให้เห็นตัวคุณตั้งแต่ศีรษะถึงเท้า · มีคนอยู่ใกล้ ๆ เผื่อต้องช่วยพยุง</p></div>'+
+  '<div class="card"><h3>หลักคุ้มครองผู้ใช้</h3><p class="sub" style="margin:0">ผลประเมิน<b>ลดเบี้ยได้เท่านั้น</b> ไม่มีการเพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนน · AI คัดกรองเท่านั้น การส่งต่อและการพิจารณาสินไหมทุกกรณีตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์</p></div>'+
+  '<button class="cta" data-go="reg">เริ่มใช้งาน · สร้างบัญชี</button></div>';
+}
+function regV(){
+  head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้เลือกเกณฑ์เวลาตามช่วงอายุและคำนวณเบี้ยของคุณ","welcome");
+  var d=S.draft;
+  V.innerHTML='<div class="anim">'+
+  '<div class="card">'+
+  '<div class="field"><label>ชื่อที่ให้เราเรียก</label><input id="fName" value="'+esc(d.name||"")+'" placeholder="เช่น คุณสมศรี"></div>'+
+  '<div class="field"><label>ปีเกิด (พ.ศ.)</label><input id="fYear" inputmode="numeric" value="'+esc(d.year||"")+'" placeholder="เช่น 2505"></div>'+
+  '<div class="field"><label>เพศ</label><div class="seg" id="fSex">'+
+  '<button data-v="f" aria-pressed="'+(d.sex==="f")+'">หญิง</button><button data-v="m" aria-pressed="'+(d.sex==="m")+'">ชาย</button></div></div></div>'+
+  '<div class="card"><h3>ความยินยอมตาม PDPA</h3>'+
+  '<p class="sub" style="margin:0 0 12px">กล้องประมวลผลท่าทาง<b>ภายในเครื่องของคุณ</b> ระบบเก็บเฉพาะตัวเลข (เวลาที่ใช้ จำนวนครั้ง คะแนน) ไม่เก็บและไม่ส่งภาพหรือวิดีโอ · ใช้เพื่อประเมินความเสี่ยง คำนวณส่วนลดเบี้ย และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · ถอนความยินยอมและลบข้อมูลได้ทุกเมื่อ</p>'+
+  '<label class="chk"><input type="checkbox" id="fConsent"><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
+  '<button class="cta" id="fGo">บันทึกและเริ่มใช้งาน</button></div>';
+  document.getElementById("fSex").addEventListener("click",function(e){
+    var b=e.target.closest("button");if(!b)return;S.draft.sex=b.dataset.v;
+    this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});
+  });
+  document.getElementById("fGo").addEventListener("click",async function(){
+    var nm=document.getElementById("fName").value.trim(), yr=parseInt(document.getElementById("fYear").value,10);
+    if(!nm){toast("กรุณากรอกชื่อ");return}
+    if(!yr||yr<2460||yr>2530){toast("กรุณากรอกปีเกิด พ.ศ. เช่น 2505");return}
+    if(!S.draft.sex){toast("กรุณาเลือกเพศ");return}
+    if(!document.getElementById("fConsent").checked){toast("กรุณาให้ความยินยอมตาม PDPA ก่อนเริ่มใช้งาน");return}
+    var age=(new Date().getFullYear()+543)-yr;
+    S.data.profile={uid:"v"+Date.now().toString(36),name:nm,birthYear:yr,age:age,sex:S.draft.sex,joined:nowISO()};
+    S.data.consent={version:"PDPA-1.0",at:nowISO()};
+    audit("บันทึกความยินยอม","ผู้ใช้ยินยอมตามข้อตกลง PDPA-1.0 รวมถึงการประมวลผลภาพในเครื่อง");
+    await saveAll(); S.draft={};
+    toast("สร้างบัญชีสำเร็จ ยินดีต้อนรับคุณ"+nm);
+    go("assess");
+  });
+}
+
+/* ---------- หน้าประเมิน ---------- */
+function assessV(){
+  var p=S.data.profile, last=S.data.assessments[S.data.assessments.length-1];
+  head("ประเมิน","สวัสดี คุณ"+esc(p.name),"อายุ "+p.age+" ปี · เกณฑ์เวลาของช่วงอายุนี้คือ "+CFG.ftsstCut(p.age).toFixed(1)+" วินาที");
+  var lastCard="";
+  if(last){
+    var t=CFG.tiers[last.tier];
+    lastCard='<div class="card"><h3>ผลล่าสุด · '+thDate(last.at)+'</h3>'+
+    '<div class="rowline"><span class="k">เวลาลุกนั่ง 5 ครั้ง</span><span class="v">'+(last.ftsst?last.ftsst.toFixed(1)+" วินาที":"—")+'</span></div>'+
+    '<div class="rowline"><span class="k">คะแนนรวม</span><span class="v">'+last.score+' / '+last.max+'</span></div>'+
+    '<div class="rowline"><span class="k">ระดับสัญญาณ</span><span class="v"><span class="pill '+t.b+'">'+t.nm.split(" — ")[0]+'</span></span></div></div>';
+  }
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--navy);color:#fff">'+
+  '<h3 style="color:#fff">การทดสอบลุกนั่ง 5 ครั้ง</h3>'+
+  '<p class="sub" style="color:rgba(255,255,255,.75);margin:0 0 4px">นั่งบนเก้าอี้ กอดอกไว้ แล้วลุกยืนสุดและนั่งลงให้ครบ 5 ครั้ง เร็วที่สุดเท่าที่ทำได้อย่างปลอดภัย</p>'+
+  '<p class="sub" style="color:#FCD34D;margin:8px 0 0">กล้องจะนับครั้งและจับเวลาให้เอง ไม่ต้องกดปุ่มระหว่างทำ</p></div>'+
+  lastCard+
+  '<button class="cta" data-go="calib">เปิดกล้องและเริ่มทดสอบ</button>'+
+  '<button class="ghostb" id="manual">ทำแบบจับเวลาเอง (กรณีกล้องใช้ไม่ได้)</button>'+
+  '<div class="disc">ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์ · หากรู้สึกเวียนศีรษะหรือเจ็บระหว่างทำ ให้หยุดทันที</div></div>';
+  document.getElementById("manual").addEventListener("click",function(){
+    var v=prompt("กรอกเวลาที่ใช้ลุกนั่ง 5 ครั้ง (วินาที) เช่น 11.4");
+    if(v==null)return;
+    var n=parseFloat(v);
+    if(!isFinite(n)||n<=2||n>120){toast("กรุณากรอกตัวเลขระหว่าง 2–120 วินาที");return}
+    S.draft={ftsst:n,method:"manual",reps:5,cv:null};
+    audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (ไม่ได้ใช้กล้อง)");
+    go("q",0);
+  });
+}
+
+/* ---------- ตั้งค่ากล้อง + สอบเทียบ ---------- */
+var POSE=null, RAF=null, DET=null, MODEL_STATE="idle";
+async function loadModel(statusEl){
+  if(POSE)return POSE;
+  MODEL_STATE="loading";
+  if(statusEl)statusEl.textContent="กำลังโหลดโมเดลตรวจจับท่าทาง…";
+  var mod=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+  var fileset=await mod.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  POSE=await mod.PoseLandmarker.createFromOptions(fileset,{
+    baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:"GPU"},
+    runningMode:"VIDEO",numPoses:1,minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5
+  });
+  MODEL_STATE="ready";
+  return POSE;
+}
+function showFallback(reason){
+  var box=document.createElement("div");
+  box.className="card";
+  box.style.background="var(--accentb)";
+  box.innerHTML='<h3 style="color:var(--accent2)">'+esc(reason)+'</h3>'+
+  '<p class="sub" style="margin:0 0 12px">ใช้วิธีสำรองได้ทันที: ให้คนข้าง ๆ จับเวลาลุกนั่ง 5 ครั้งด้วยนาฬิกา แล้วกรอกตัวเลข ระบบจะให้คะแนนและวิเคราะห์แนวโน้มเหมือนกันทุกอย่าง</p>'+
+  '<button class="cta" style="margin:0" id="fb">กรอกเวลาที่จับได้</button>';
+  V.insertBefore(box,V.firstChild.nextSibling);
+  document.getElementById("fb").addEventListener("click",function(){
+    stopCam();
+    var v=prompt("กรอกเวลาที่ใช้ลุกนั่ง 5 ครั้ง (วินาที) เช่น 11.4");
+    if(v==null)return;
+    var n=parseFloat(v);
+    if(!isFinite(n)||n<=2||n>120){toast("กรุณากรอกตัวเลขระหว่าง 2–120 วินาที");return}
+    S.draft={ftsst:n,method:"manual",reps:5,cv:null};
+    audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (กล้องใช้ไม่ได้: "+reason+")");
+    go("q",0);
+  });
+}
+function stopCam(){
+  if(RAF)cancelAnimationFrame(RAF);RAF=null;
+  if(S.cam){S.cam.getTracks().forEach(function(t){t.stop()});S.cam=null}
+}
+function calibV(){
+  head("สอบเทียบ","ให้กล้องรู้จักท่านั่งและท่ายืนของคุณ","ขั้นตอนนี้ทำให้ระบบวัดได้แม่นยำกับสรีระและระยะกล้องของคุณโดยเฉพาะ","assess");
+  V.innerHTML='<div class="anim">'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
+  '<div class="hudbot"><div id="cstep" style="font-size:14px;font-weight:600">ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว</div>'+
+  '<div class="coach" id="coach">วางมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า</div></div></div></div>'+
+  '<button class="cta" id="cap" disabled>บันทึกท่านั่ง</button>'+
+  '<button class="ghostb" data-go="assess">ยกเลิก</button>'+
+  '<div class="disc">ภาพจากกล้องประมวลผลในเครื่องนี้เท่านั้น ไม่มีการอัปโหลดภาพหรือวิดีโอไปที่ใด</div></div>';
+  startPipeline("calib");
+}
+function testV(){
+  head("กำลังทดสอบ","ลุกนั่งให้ครบ 5 ครั้ง","เร็วที่สุดเท่าที่ทำได้อย่างปลอดภัย ระบบนับให้เอง","assess");
+  V.innerHTML='<div class="anim">'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">พร้อม</span><span class="hudtag" id="qual">คุณภาพภาพ —</span></div>'+
+  '<div class="hudbot"><div class="counter"><span class="n" id="rep">0</span><span class="of">/ 5 ครั้ง</span>'+
+  '<span class="clock" id="clk">0.0<span style="font-size:13px"> วิ</span></span></div>'+
+  '<div class="track"><i id="trk" style="width:0%"></i></div>'+
+  '<div class="coach" id="coach">กดปุ่มด้านล่างเมื่อนั่งพร้อมแล้ว<span class="statebadge" id="st">รอเริ่ม</span></div></div></div></div>'+
+  '<button class="cta" id="startBtn">เริ่มจับเวลา</button>'+
+  '<button class="ghostb" data-go="assess">ยกเลิก</button></div>';
+  startPipeline("test");
+}
+async function startPipeline(mode){
+  var video=document.getElementById("vid"), canvas=document.getElementById("cv"), ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"), coach=document.getElementById("coach");
+  var stream;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false});
+  }catch(e){
+    tag.textContent="เปิดกล้องไม่ได้";
+    coach.innerHTML="เบราว์เซอร์ปฏิเสธการเข้าถึงกล้อง ให้อนุญาตในการตั้งค่าแล้วลองใหม่";
+    showFallback("กล้องใช้ไม่ได้ในเครื่องนี้");
+    return;
+  }
+  S.cam=stream; video.srcObject=stream;
+  await video.play().catch(function(){});
+  try{ await loadModel(tag); }
+  catch(e){
+    tag.textContent="โหลดโมเดลไม่สำเร็จ";
+    coach.innerHTML="ต้องต่ออินเทอร์เน็ตครั้งแรกเพื่อโหลดโมเดลตรวจจับท่าทาง";
+    showFallback("โหลดโมเดลไม่สำเร็จ");
+    return;
+  }
+  tag.textContent="ตรวจจับท่าทางแล้ว";
+
+  if(mode==="calib")setupCalib(video,canvas,ctx);
+  else setupTest(video,canvas,ctx);
+}
+function drawPose(ctx,canvas,video,lm){
+  if(canvas.width!==video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight}
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!lm)return;
+  var pairs=[[11,12],[11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28],[11,13],[13,15],[12,14],[14,16]];
+  ctx.lineWidth=Math.max(3,canvas.width/150); ctx.strokeStyle="rgba(96,165,250,.9)"; ctx.lineCap="round";
+  pairs.forEach(function(p){
+    var a=lm[p[0]],b=lm[p[1]]; if(!a||!b)return;
+    ctx.beginPath();ctx.moveTo(a.x*canvas.width,a.y*canvas.height);ctx.lineTo(b.x*canvas.width,b.y*canvas.height);ctx.stroke();
+  });
+  [11,12,23,24,25,26,27,28].forEach(function(i){
+    var p=lm[i]; if(!p)return;
+    ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(4,canvas.width/110),0,6.3);
+    ctx.fillStyle=(i===23||i===24)?"#FCD34D":"#DBEAFE";ctx.fill();
+  });
+}
+function setupCalib(video,canvas,ctx){
+  var step=0, sitVal=null, standVal=null, cur=null;
+  var cap=document.getElementById("cap"), cstep=document.getElementById("cstep"), coach=document.getElementById("coach");
+  function loop(){
+    if(S.screen!=="calib"){return}
+    var r=null;
+    try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(lm){
+      var q=visOK(lm), m=hipRatio(lm);
+      if(q<0.85){coach.textContent="ขยับมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า";cap.disabled=true}
+      else if(m==null){coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";cap.disabled=true}
+      else{cur=m;cap.disabled=false;
+        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งให้สบายแล้วกดบันทึกท่านั่ง":"เห็นชัดแล้ว — ยืนตรงแล้วกดบันทึกท่ายืน";}
+    }else{coach.textContent="ยังไม่พบคนในภาพ";cap.disabled=true}
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  cap.addEventListener("click",function(){
+    if(cur==null)return;
+    if(step===0){
+      sitVal=cur;step=1;
+      cstep.textContent="ขั้นที่ 2 · ยืนขึ้นตรง ๆ หนึ่งครั้ง";
+      cap.textContent="บันทึกท่ายืน";
+      toast("บันทึกท่านั่งแล้ว");
+    }else{
+      standVal=cur;
+      if(standVal-sitVal<0.045){
+        toast("ความต่างระหว่างท่านั่งกับท่ายืนน้อยเกินไป ลองใหม่โดยยืนให้ตรงสุด");
+        step=0;cstep.textContent="ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว";cap.textContent="บันทึกท่านั่ง";return;
+      }
+      S.draft.sitRef=sitVal;S.draft.standRef=standVal;
+      audit("สอบเทียบกล้อง","ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
+      toast("สอบเทียบเรียบร้อย");
+      go("test");
+    }
+  });
+}
+function setupTest(video,canvas,ctx){
+  DET=new RepDetector({target:5});
+  DET.setRefs(S.draft.sitRef,S.draft.standRef);
+  var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
+      st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
+      startBtn=document.getElementById("startBtn");
+  var running=false, t0=0;
+  function loop(){
+    if(S.screen!=="test")return;
+    var r=null;
+    try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(lm){
+      var q=visOK(lm),m=hipRatio(lm),ka=kneeAngle(lm);
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"");
+      if(m!=null&&running){
+        var ev=DET.push(m,performance.now());
+        st.textContent=DET.state==="stand"?"ยืน":"นั่ง";
+        repEl.textContent=DET.reps;
+        trk.style.width=(DET.reps/5*100)+"%";
+        if(ev&&ev.event==="rep")coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>";
+        if(ev&&ev.event==="finish"){finishTest(ev.elapsed);return}
+      }else if(m!=null&&!running){
+        st.textContent=(m>=(S.draft.sitRef+S.draft.standRef)/2)?"ยืน":"นั่ง";
+      }
+      if(q<0.8)coach.textContent="เห็นตัวไม่ครบ — ขยับมือถือให้เห็นทั้งตัว";
+    }else{qual.innerHTML="คุณภาพภาพ <b>—</b>"}
+    if(running){var el=(performance.now()-t0)/1000;clk.innerHTML=el.toFixed(1)+'<span style="font-size:13px"> วิ</span>'}
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  startBtn.addEventListener("click",function(){
+    if(running)return;
+    running=true;t0=performance.now();DET.start(t0);
+    startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
+    coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
+  });
+}
+function finishTest(elapsed){
+  stopCam();
+  var gaps=[];
+  for(var i=1;i<DET.stamps.length;i++)gaps.push((DET.stamps[i]-DET.stamps[i-1])/1000);
+  var cv=null;
+  if(gaps.length>1){
+    var mean=gaps.reduce(function(a,b){return a+b},0)/gaps.length;
+    var sd=Math.sqrt(gaps.reduce(function(a,b){return a+(b-mean)*(b-mean)},0)/gaps.length);
+    cv=mean>0?sd/mean:null;
+  }
+  S.draft.ftsst=Math.round(elapsed*10)/10;
+  S.draft.method="camera-pose";
+  S.draft.reps=DET.reps;
+  S.draft.cv=cv;
+  S.draft.gaps=gaps.map(function(g){return Math.round(g*10)/10});
+  audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
+  toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
+  go("q",0);
+}
+
+/* ---------- คำถามเสริม 4 ข้อ ---------- */
+var QS=[
+  {k:"balance",q:"ยืนเท้าชิดกันหลับตา 10 วินาทีได้ไหม",o:[["ได้สบาย ไม่โคลง",3],["ได้แต่โคลงเล็กน้อย",2],["ต้องมีที่จับ",1],["ทำไม่ได้",0]]},
+  {k:"falls",q:"ในรอบ 12 เดือน หกล้มกี่ครั้ง",o:[["ไม่เคยล้ม",2],["ล้ม 1 ครั้ง",1],["ล้มตั้งแต่ 2 ครั้ง",0]]},
+  {k:"meds",q:"ตอนนี้กินยาประจำกี่ชนิด",o:[["น้อยกว่า 4 ชนิด",1],["ตั้งแต่ 4 ชนิดขึ้นไป",0]]},
+  {k:"adl",q:"อาบน้ำ แต่งตัว เข้าห้องน้ำ ทำเองได้ไหม",o:[["ทำเองได้ทั้งหมด",2],["ต้องมีคนช่วยบางอย่าง",1],["ต้องมีคนช่วยเกือบทั้งหมด",0]]}
+];
+function qV(i){
+  i=i||0; var q=QS[i];
+  head("ข้อ "+(i+1)+" จาก "+QS.length,q.q,"ตอบตามความเป็นจริง ผลที่ตรงช่วยให้ระบบดูแลคุณได้ถูกต้อง");
+  V.innerHTML='<div class="anim">'+q.o.map(function(o,k){
+    return '<button class="pick" data-v="'+o[1]+'">'+esc(o[0])+'</button>'}).join("")+
+    '<div class="disc">ข้อมูลชุดนี้รวมกับผลจากกล้อง เป็นคะแนนเต็ม 12</div></div>';
+  V.querySelectorAll(".pick").forEach(function(b){
+    b.addEventListener("click",function(){
+      S.draft[q.k]=+b.dataset.v;
+      if(i+1<QS.length)go("q",i+1); else finishAssess();
+    });
+  });
+}
+async function finishAssess(){
+  var p=S.data.profile, r=scoreOf(S.draft,p.age);
+  var rec={at:nowISO(),score:r.score,max:r.max,tier:r.tier,ftsst:S.draft.ftsst,parts:r.parts,
+           method:S.draft.method,reps:S.draft.reps,cv:S.draft.cv,gaps:S.draft.gaps||null};
+  S.data.assessments.push(rec);
+  audit("ให้คะแนนการประเมิน","คะแนน "+r.score+"/"+r.max+" ระดับ "+CFG.tiers[r.tier].nm+" · วิธีวัด: "+(rec.method==="camera-pose"?"กล้องตรวจจับท่าทาง":"จับเวลาเอง"));
+  var tr=trajectory();
+  if(tr){
+    audit("วิเคราะห์แนวโน้มความเสี่ยง","ระดับ "+ENGINE.levelNm[tr.level]+" · กฎที่ทำงาน: "+(tr.flags.map(function(f){return f.id}).join(", ")||"ไม่มี")+" · นัดประเมินซ้ำใน "+tr.nextDays+" วัน");
+    if(tr.referral.need){
+      S.data.cases.push({id:"C"+Date.now().toString(36),at:nowISO(),uid:p.uid,name:p.name,age:p.age,sex:p.sex,
+        level:tr.level,sla:tr.referral.sla,action:tr.referral.nm,
+        reasons:tr.flags.map(function(f){return{id:f.id,text:f.text}}),
+        status:"pending"});
+      audit("สร้างเคสส่งต่อ",tr.referral.nm+" "+tr.referral.sla+" — สถานะ: รอผู้เชี่ยวชาญยืนยัน","ต้องมีพยาบาล/Care Manager ยืนยันก่อนดำเนินการ");
+    }
+  }
+  await saveAll();
+  S.draft={};
+  go("result",rec);
+}
+
+/* ---------- ผลลัพธ์ ---------- */
+function warnBlock(){
+  var tr=trajectory(); if(!tr)return "";
+  var body=tr.flags.length? tr.flags.slice(0,3).map(function(f){
+      return '<div class="evi"><span class="rid">กฎ '+f.id+' · '+esc(ENGINE.rules[f.id].nm)+'</span>'+esc(f.text)+
+      '<span class="why">เหตุผล: '+esc(f.why)+'</span></div>'}).join("")
+    : '<div class="evi">ไม่พบสัญญาณถดถอยจากการเปรียบเทียบผลย้อนหลัง '+tr.n+' ครั้งของคุณ<span class="why">เหตุผล: ไม่มีกฎใดในเอนจินทำงานกับข้อมูลชุดนี้</span></div>';
+  return '<div class="card"><h3>ระบบอ่านแนวโน้มของคุณอย่างไร <span class="pill" style="background:'+ENGINE.levelColor[tr.level]+';color:#fff">'+ENGINE.levelNm[tr.level]+'</span></h3>'+
+  body+
+  '<div class="rowline"><span class="k">ควรประเมินซ้ำภายใน</span><span class="v">'+tr.nextDays+' วัน</span></div>'+
+  '<div class="rowline"><span class="k">ระดับการส่งต่อ</span><span class="v">'+esc(tr.referral.sla)+'</span></div>'+
+  (tr.referral.need?'<p class="sub" style="margin:10px 0 0">'+esc(tr.referral.nm)+' — เคสถูกส่งเข้าคิว รอ<b>ผู้เชี่ยวชาญยืนยัน</b>ก่อนดำเนินการ</p>':'')+
+  '<div class="disc">เอนจินกฎที่อธิบายได้ v'+ENGINE.version+' · ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์</div></div>';
+}
+function resultV(rec){
+  rec=rec||S.data.assessments[S.data.assessments.length-1];
+  var t=CFG.tiers[rec.tier], d=CFG.discount[rec.tier], p=S.data.profile;
+  head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at)+" · "+(rec.method==="camera-pose"?"วัดด้วยกล้อง":"จับเวลาเอง"));
+  var gapsRow = rec.gaps&&rec.gaps.length? '<div class="rowline"><span class="k">เวลาต่อครั้ง</span><span class="v">'+rec.gaps.join(" · ")+' วิ</span></div>':"";
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:'+t.c+';color:#fff">'+
+  '<div style="font-size:12px;opacity:.85;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase">คะแนนรวม</div>'+
+  '<div style="font-family:var(--mono);font-size:44px;font-weight:600;line-height:1.1">'+rec.score+'<span style="font-size:18px;opacity:.75"> / '+rec.max+'</span></div>'+
+  '<div style="font-size:15px;font-weight:600;margin-top:4px">'+t.nm+'</div>'+
+  '<p class="sub" style="color:rgba(255,255,255,.85);margin:8px 0 0">'+t.act+'</p></div>'+
+  '<div class="card"><h3>สิ่งที่กล้องวัดได้</h3>'+
+  '<div class="rowline"><span class="k">เวลาลุกนั่ง 5 ครั้ง</span><span class="v">'+(rec.ftsst?rec.ftsst.toFixed(1)+" วินาที":"—")+'</span></div>'+
+  '<div class="rowline"><span class="k">เกณฑ์ช่วงอายุ '+CFG.ageBand(p.age)+' ปี</span><span class="v">'+CFG.ftsstCut(p.age).toFixed(1)+' วินาที</span></div>'+
+  gapsRow+
+  (rec.cv!=null?'<div class="rowline"><span class="k">ความสม่ำเสมอของจังหวะ</span><span class="v">'+(100-rec.cv*100).toFixed(0)+'%</span></div>':"")+
+  '<div class="rowline"><span class="k">คะแนนส่วนลุกนั่ง</span><span class="v">'+rec.parts.ftsst+' / 4</span></div></div>'+
+  '<div class="card"><h3>คะแนนรายด้าน</h3>'+
+  '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
+  '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
+  '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
+  '<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+rec.parts.adl+' / 2</span></div></div>'+
+  warnBlock()+
+  (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">สิทธิ์ที่เปิดใช้ได้ทันที</h3><p class="sub" style="margin:0">ผลระดับนี้ลดเบี้ยประกัน CareSignal LTC ได้ <b>'+(d*100)+'%</b> — ผลประเมินใช้ลดเบี้ยได้เท่านั้น ไม่มีการเพิ่มเบี้ยจากคะแนนที่ลดลง</p></div>':'')+
+  '<button class="cta" data-go="trend">ดูแนวโน้มย้อนหลัง</button>'+
+  '<button class="ghostb" data-go="assess">กลับหน้าประเมิน</button></div>';
+}
+
+/* ---------- แนวโน้ม ---------- */
+function trendV(){
+  var A=S.data.assessments;
+  head("แนวโน้ม","ผลย้อนหลังของคุณ","ระบบเปรียบเทียบคุณกับตัวคุณเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น");
+  if(!A.length){V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ยังไม่มีผลประเมิน</p></div><button class="cta" data-go="assess">เริ่มประเมินครั้งแรก</button></div>';return}
+  var a=A.slice(-7);
+  var maxFt=Math.max.apply(null,a.map(function(x){return x.ftsst||0}))||1;
+  var scoreBars=a.map(function(x){var t=CFG.tiers[x.tier];
+    return '<div class="b" style="height:'+Math.max(9,x.score/x.max*100)+'%;background:'+t.c+'"><span>'+x.score+'</span></div>'}).join("");
+  var ftBars=a.map(function(x){
+    var h=x.ftsst?Math.max(9,x.ftsst/maxFt*100):9;
+    return '<div class="b" style="height:'+h+'%;background:'+(x.ftsst&&x.ftsst>CFG.ftsstCut(S.data.profile.age)?"var(--c2)":"var(--brand)")+'"><span>'+(x.ftsst?x.ftsst.toFixed(0):"—")+'</span></div>'}).join("");
+  var xl=a.map(function(x){return '<div>'+thDate(x.at).replace(/ \d{2}$/,"")+'</div>'}).join("");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>คะแนนรวม (เต็ม 12)</h3><div class="bars">'+scoreBars+'</div><div class="barx">'+xl+'</div></div>'+
+  '<div class="card"><h3>เวลาลุกนั่ง 5 ครั้ง (วินาที)</h3><p class="sub" style="margin:-4px 0 6px">แท่งสีส้มคือครั้งที่เกินเกณฑ์ '+CFG.ftsstCut(S.data.profile.age).toFixed(1)+' วินาทีของช่วงอายุคุณ</p>'+
+  '<div class="bars">'+ftBars+'</div><div class="barx">'+xl+'</div></div>'+
+  warnBlock()+
+  '<div class="card"><h3>บันทึกการทำงานของระบบ</h3>'+
+  (S.data.audit||[]).slice(-8).reverse().map(function(x){
+    return '<div style="border-top:1px solid var(--line2);padding:9px 0;font-size:12px;line-height:1.6;color:var(--ink2)">'+
+    '<b style="color:var(--ink);font-family:var(--mono);font-size:11px">'+thDate(x.at)+' '+thTime(x.at)+' · '+esc(x.ev)+'</b><br>'+esc(x.detail)+'</div>'}).join("")+
+  '<p class="sub" style="margin:10px 0 0">ทุกการตัดสินใจของระบบถูกบันทึกไว้ ตรวจสอบย้อนหลังได้ว่าทำอะไรด้วยเหตุผลใด</p></div>'+
+  '<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';
+  document.getElementById("wipe").addEventListener("click",async function(){
+    if(!confirm("ลบบัญชี ผลประเมิน และเคสทั้งหมด? กู้คืนไม่ได้"))return;
+    await DB.del("visionData");S.data=blank();S.draft={};
+    toast("ลบข้อมูลเรียบร้อยตามสิทธิ PDPA");go("welcome");
+  });
+}
+
+/* ---------- คิวเคสสำหรับผู้เชี่ยวชาญ ---------- */
+function casesV(){
+  head("เคสรอตรวจสอบ","ผู้เชี่ยวชาญเป็นผู้ตัดสิน","ระบบรวบรวมหลักฐานและจัดลำดับความเร่งด่วน แต่ไม่ส่งต่อเองโดยอัตโนมัติ");
+  var cs=(S.data.cases||[]).slice().reverse();
+  if(!cs.length){
+    V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ยังไม่มีเคสในคิว — เคสจะถูกสร้างอัตโนมัติเมื่อผลประเมินเข้าเกณฑ์ถดถอยหรือเสี่ยงสูง</p></div>'+
+    '<button class="cta" data-go="assess">ไปหน้าประเมิน</button></div>';return;
+  }
+  V.innerHTML='<div class="anim"><div class="card">'+cs.map(function(c){
+    var col=ENGINE.levelColor[c.level];
+    return '<div class="case"><div class="top"><span class="who">'+esc(c.name)+' · '+c.age+' ปี</span>'+
+    '<span class="pill" style="background:'+col+';color:#fff">'+ENGINE.levelNm[c.level]+'</span></div>'+
+    '<div class="meta">'+esc(c.action)+' · <b>'+esc(c.sla)+'</b> · สร้างเมื่อ '+thDate(c.at)+' '+thTime(c.at)+'</div>'+
+    c.reasons.map(function(r){return '<div class="evi" style="margin:7px 0 0"><span class="rid">กฎ '+r.id+'</span>'+esc(r.text)+'</div>'}).join("")+
+    (c.status==="pending"
+      ? '<div class="mini"><button class="ok" data-ok="'+c.id+'">ยืนยันส่งต่อ</button><button class="no" data-no="'+c.id+'">ยังไม่ส่งต่อ</button></div>'
+      : '<div class="meta" style="margin-top:8px;color:'+(c.status==="approved"?"var(--c4)":"var(--ink3)")+'">'+
+        (c.status==="approved"?"ผู้เชี่ยวชาญยืนยันส่งต่อแล้ว":"ผู้เชี่ยวชาญพิจารณาแล้วว่ายังไม่ต้องส่งต่อ")+' เมื่อ '+thDate(c.decidedAt)+'</div>')+
+    '</div>'}).join("")+'</div>'+
+  '<div class="disc">การกดปุ่มนี้แทนการตัดสินใจของพยาบาลหรือ Care Manager ในระบบจริง ผู้ใช้ทั่วไปไม่มีสิทธิ์เข้าถึงหน้านี้ · AI ไม่มีสิทธิ์ยืนยันเคสด้วยตนเองในทุกกรณี</div></div>';
+  V.querySelectorAll("[data-ok],[data-no]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      var ok=b.hasAttribute("data-ok"), id=b.dataset.ok||b.dataset.no;
+      var c=S.data.cases.find(function(x){return x.id===id});
+      if(!c)return;
+      c.status=ok?"approved":"declined"; c.decidedAt=nowISO();
+      audit(ok?"ผู้เชี่ยวชาญยืนยันส่งต่อ":"ผู้เชี่ยวชาญไม่ส่งต่อ","เคส "+id+" ของ "+c.name,"ตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์");
+      await saveAll();
+      toast(ok?"ยืนยันส่งต่อแล้ว":"บันทึกว่ายังไม่ส่งต่อ");
+      render();
+    });
+  });
+}
+
+/* ---------- แดชบอร์ดบริษัทประกัน ---------- */
+async function insurerV(){
+  head("บริษัทประกัน","ภาพรวมพอร์ต","ข้อมูลสรุปแบบไม่ระบุตัวตนจากฐานข้อมูลกลาง ตามหลัก data minimization ของ PDPA");
+  V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">กำลังอ่านฐานข้อมูล…</p></div></div>';
+  var pool=await DB.listPool();
+  if(!pool.length){
+    V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0 0 12px">ยังไม่มีข้อมูลในฐานข้อมูลกลาง</p>'+
+    '<button class="ghostb" id="seed" style="margin:0">เติมข้อมูลสาธิต 10 ราย</button></div></div>';
+    document.getElementById("seed").addEventListener("click",async function(){await seed();toast("เติมข้อมูลสาธิตแล้ว");render()});
+    return;
+  }
+  var n=pool.length;
+  var mix={4:0,3:0,2:0,1:0};pool.forEach(function(r){if(mix[r.tier]!==undefined)mix[r.tier]++});
+  var cam=pool.filter(function(r){return r.method==="camera-pose"}).length;
+  var ref=pool.filter(function(r){return r.referred}).length;
+  var fts=pool.filter(function(r){return r.ftsst});
+  var avgFt=fts.length?fts.reduce(function(a,b){return a+b.ftsst},0)/fts.length:null;
+  var disc=pool.filter(function(r){return CFG.discount[r.tier]>0}).length;
+  var mixRows=[4,3,2,1].map(function(k){var t=CFG.tiers[k];
+    return '<div class="mixrow"><span class="lab">'+t.nm.split(" — ")[0]+'</span>'+
+    '<span class="bar"><i style="width:'+(mix[k]/n*100)+'%;background:'+t.c+'"></i></span>'+
+    '<span class="val">'+mix[k]+' ราย</span></div>'}).join("");
+  V.innerHTML='<div class="anim">'+
+  '<div class="kpis">'+
+  '<div class="kpi"><div class="l">สมาชิกในพอร์ต</div><div class="n">'+n+' ราย</div></div>'+
+  '<div class="kpi"><div class="l">วัดด้วยกล้อง</div><div class="n">'+Math.round(cam/n*100)+'%</div></div>'+
+  '<div class="kpi"><div class="l">เวลาลุกนั่งเฉลี่ย</div><div class="n">'+(avgFt?avgFt.toFixed(1)+" วิ":"—")+'</div></div>'+
+  '<div class="kpi"><div class="l">เข้าเกณฑ์ส่งต่อ</div><div class="n">'+ref+' ราย</div></div></div>'+
+  '<div class="card"><h3>การกระจายระดับสัญญาณ</h3>'+mixRows+
+  '<p class="sub" style="margin:10px 0 0">พอร์ตที่มีสัดส่วนเขียว-เหลืองสูง หมายถึงต้นทุนสินไหมคาดการณ์ต่ำกว่า และเป็นผลจากการคัดกรองก่อนรับประกัน</p></div>'+
+  '<div class="card"><h3>ผลต่อการตั้งราคา</h3>'+
+  '<div class="rowline"><span class="k">ได้รับส่วนลดจากผลประเมิน</span><span class="v">'+disc+' ราย ('+Math.round(disc/n*100)+'%)</span></div>'+
+  '<div class="rowline"><span class="k">ยังไม่ได้ส่วนลด</span><span class="v">'+(n-disc)+' ราย</span></div>'+
+  '<p class="sub" style="margin:10px 0 0">ผลประเมิน<b>ลดเบี้ยได้ทางเดียว</b> ไม่มีเส้นทางในระบบที่เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนนที่แย่ลง — ออกแบบเพื่อไม่ลงโทษผู้ที่ประเมินตนเองอย่างซื่อสัตย์</p></div>'+
+  '<div class="card"><h3>รายการในพอร์ต</h3>'+
+  pool.slice(0,12).map(function(r){var t=CFG.tiers[r.tier]||{nm:"—",b:""};
+    return '<div class="rowline"><span class="k">'+esc(r.uid.slice(0,10))+' · '+esc(r.ageBand||"—")+' · '+(r.sex==="f"?"ญ":"ช")+'</span>'+
+    '<span class="v"><span class="pill '+t.b+'">'+t.nm.split(" — ")[0]+'</span></span></div>'}).join("")+'</div>'+
+  '<button class="ghostb" id="seed2">เติมข้อมูลสาธิต 10 ราย (สำหรับการนำเสนอ)</button>'+
+  '<div class="disc">ต้องการโมเดลผลประกอบการเต็มรูปแบบ (เบี้ยรับ 5 ปี Loss Ratio ผลตอบแทน ทะเบียนความเสี่ยง)? เปิดไฟล์ CareSignal-Insurer-Model.html ที่มาพร้อมชุดนี้</div></div>';
+  document.getElementById("seed2").addEventListener("click",async function(){await seed();toast("เติมข้อมูลสาธิตแล้ว");render()});
+}
+async function seed(){
+  var band=["55–59","60–65","60–65","66–70","50–54","60–65","66–70","55–59","60–65","66–70"];
+  var tiers=[4,4,3,2,4,3,1,4,3,2];
+  var fts=[9.2,9.8,11.1,13.4,8.9,11.8,16.2,9.5,11.4,14.1];
+  for(var i=0;i<10;i++){
+    await DB.putPool({uid:"demo-"+String.fromCharCode(97+i),ageBand:band[i],sex:i%3===0?"m":"f",
+      tier:tiers[i],score:tiers[i]===4?11:(tiers[i]===3?9:(tiers[i]===2?6:3)),ftsst:fts[i],
+      lastAssess:new Date(Date.now()-i*3*864e5).toISOString(),nAssess:2+(i%3),
+      level:tiers[i]===1?"urgent":(tiers[i]===2?"decline":(tiers[i]===3?"watch":"stable")),
+      referred:tiers[i]<=2,method:"camera-pose",engine:ENGINE.version,demo:true,updated:nowISO()});
+  }
+}
+
+/* ---------- นำทาง ---------- */
+document.addEventListener("click",function(e){
+  var g=e.target.closest("[data-go]");
+  if(g){go(g.dataset.go)}
+});
+(async function(){
+  await loadAll();
+  go(S.data.profile?"assess":"welcome");
+})();
+</script>
+</body>
+</html>

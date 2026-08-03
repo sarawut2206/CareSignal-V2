@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CareSignal — โมเดลผลประกอบการสำหรับบริษัทประกันภัย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D1626; --panel:#14203A; --panel2:#1A2947; --edge:#25355C;
+  --ink:#E8EEF9; --ink2:#96A6C8; --ink3:#5F7098;
+  --brand:#4D8DFF; --up:#2DD4A7; --warn:#F5B93E; --down:#FF6B6B;
+  --upb:rgba(45,212,167,.12); --warnb:rgba(245,185,62,.12); --downb:rgba(255,107,107,.12);
+  --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+header{padding:46px 0 30px;border-bottom:1px solid var(--edge)}
+.kick{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--warn)}
+h1{font-size:clamp(26px,3.6vw,38px);letter-spacing:-.02em;margin:12px 0 10px;font-weight:700;line-height:1.25}
+.lead{color:var(--ink2);max-width:720px;margin:0}
+section{padding:34px 0}
+h2{font-size:20px;letter-spacing:-.01em;margin:0 0 6px;font-weight:600}
+.secsub{color:var(--ink2);font-size:13.5px;margin:0 0 20px;max-width:720px}
+.panel{background:var(--panel);border:1px solid var(--edge);border-radius:18px;padding:22px}
+.grid2{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.sl{margin-bottom:16px}
+.sl label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink2);margin-bottom:5px}
+.sl label b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.sl input{width:100%;accent-color:var(--brand)}
+.sl .note{font-size:11px;color:var(--ink3);margin-top:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--panel2);border:1px solid var(--edge);border-radius:14px;padding:14px 16px}
+.kpi .l{font-size:11.5px;color:var(--ink2)}
+.kpi .n{font-family:var(--mono);font-size:23px;font-weight:600;letter-spacing:-.02em;margin-top:2px;color:var(--warn)}
+.kpi .d{font-size:11px;margin-top:2px;color:var(--ink3)}
+.kpi.up .n{color:var(--up)}.kpi.warn .n{color:var(--warn)}.kpi.down .n{color:var(--down)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:right;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--edge)}
+th:first-child,td:first-child{text-align:left}
+td{padding:9px 12px;border-bottom:1px solid rgba(37,53,92,.5);text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--sans);color:var(--ink2)}
+tr:last-child td{border-bottom:0}
+.pos{color:var(--up)}.neg{color:var(--down)}.mid{color:var(--warn)}
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.legend{display:flex;gap:18px;font-size:11.5px;color:var(--ink2);margin-top:10px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.risk{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.rk{background:var(--panel);border:1px solid var(--edge);border-radius:16px;padding:18px 20px}
+.rk .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.rk h3{margin:0;font-size:14.5px;font-weight:600}
+.sev{font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:3px 10px;border-radius:99px}
+.sevH{background:var(--downb);color:var(--down)}.sevM{background:var(--warnb);color:var(--warn)}.sevL{background:var(--upb);color:var(--up)}
+.rk p{margin:0;font-size:12.5px;color:var(--ink2)}
+.rk .mit{margin-top:10px;padding-top:10px;border-top:1px dashed var(--edge);font-size:12.5px}
+.rk .mit b{color:var(--up);font-weight:600}
+.warnbox{background:var(--warnb);border:1px solid rgba(245,185,62,.35);border-radius:14px;padding:14px 18px;font-size:12.5px;color:var(--ink2);line-height:1.7}
+.warnbox b{color:var(--warn)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.split{grid-template-columns:1fr}}
+footer{border-top:1px solid var(--edge);padding:30px 0 44px;color:var(--ink3);font-size:12px;margin-top:22px}
+:focus-visible{outline:3px solid rgba(77,141,255,.5);outline-offset:2px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><svg width="46" height="46" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgMg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgMa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgMg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgMg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgMg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgMa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgMa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgMa)"/></svg><span style="font-weight:700;font-size:22px;letter-spacing:-.02em">Care<span style="color:var(--warn)">Signal</span></span></div>
+  <div class="kick">CareSignal · Insurer Economics Model</div>
+  <h1>ผลประกอบการที่คาดหวัง เมื่อออกผลิตภัณฑ์ LTC บนแพลตฟอร์ม CareSignal</h1>
+  <p class="lead">โมเดลคณิตศาสตร์ประกันภัยแบบโปร่งใส: เบี้ยรับ ต้นทุนสินไหม Loss Ratio ผลกำไร 5 ปี และมูลค่าของการป้องกันหกล้ม — ทุกสมมติฐานปรับได้และประกาศชัดเจน เพื่อให้ฝ่ายคณิตศาสตร์ประกันภัยนำไปสอบทานด้วยข้อมูลจริงของบริษัท</p>
+</div></header>
+
+<!-- ============ 1. ตารางเบี้ย ============ -->
+<section><div class="wrap">
+  <h2>1 · ตารางเบี้ยมาตรฐาน (Rate Table)</h2>
+  <p class="secsub">เบี้ยรายเดือนต่อกรมธรรม์ = เบี้ยฐานของแผน × เกณฑ์อายุ × เกณฑ์เพศ · ผลประเมินความเสี่ยง<b style="color:var(--up)">ลดเบี้ยได้เท่านั้น</b> (เขียว −15%, เหลือง −8%) ไม่มีการเพิ่มเบี้ยหรือปฏิเสธ — เป็นกลไกป้องกัน adverse selection ที่ไม่ลงโทษผู้เสี่ยง</p>
+  <div class="panel" style="overflow-x:auto"><table id="rateTbl"></table></div>
+</section></div>
+
+<!-- ============ 2. สมมติฐาน + ผลประกอบการ ============ -->
+<section style="padding-top:8px"><div class="wrap">
+  <h2>2 · ประมาณการผลประกอบการ 5 ปี</h2>
+  <p class="secsub">เลื่อนสมมติฐานด้านซ้าย ตัวเลขทั้งหน้าอัปเดตทันที — โมเดลบันทึกต้นทุนสินไหมเต็มมูลค่าคาดหวังในปีที่เกิดภาวะพึ่งพิง (incurred basis) ตามแนวทางตั้งสำรอง</p>
+  <div class="grid2">
+    <div class="panel">
+      <div class="kick" style="margin-bottom:14px">สมมติฐานหลัก · ปรับได้</div>
+      <div class="sl"><label>กรมธรรม์ใหม่ปีแรก <b id="vN">5,000</b></label><input type="range" id="sN" min="1000" max="30000" step="500" value="5000"></div>
+      <div class="sl"><label>อัตราเติบโตกรมธรรม์ใหม่/ปี <b id="vG">30%</b></label><input type="range" id="sG" min="0" max="80" step="5" value="30"></div>
+      <div class="sl"><label>เบี้ยเฉลี่ย/กรมธรรม์/เดือน <b id="vP">1,400 บ.</b></label><input type="range" id="sP" min="700" max="3000" step="50" value="1400"><div class="note">ค่าถ่วงน้ำหนักจากตารางเบี้ยและสัดส่วนแผนที่คาดว่าจะขายได้</div></div>
+      <div class="sl"><label>อุบัติการณ์เข้าสู่ภาวะพึ่งพิง/ปี <b id="vI">1.2%</b></label><input type="range" id="sI" min="0.4" max="3" step="0.1" value="1.2"><div class="note">⚠️ ต้องสอบทานกับข้อมูลจริง: กรมกิจการผู้สูงอายุ / สวรส. / ประสบการณ์พอร์ตบริษัท</div></div>
+      <div class="sl"><label>ผลประโยชน์เฉลี่ยเมื่อพึ่งพิง <b id="vB">16,000 บ./ด.</b></label><input type="range" id="sB" min="10000" max="30000" step="1000" value="16000"></div>
+      <div class="sl"><label>ระยะเวลาพึ่งพิงเฉลี่ย <b id="vD">36 เดือน</b></label><input type="range" id="sD" min="18" max="60" step="6" value="36"><div class="note">⚠️ อ้างอิงงานศึกษาระยะเวลาติดบ้านติดเตียงของไทย</div></div>
+      <div class="sl"><label>สัดส่วนสมาชิกที่ประเมิน/เข้าโปรแกรมป้องกัน <b id="vE">60%</b></label><input type="range" id="sE" min="0" max="100" step="5" value="60"></div>
+      <div class="sl"><label>ประสิทธิผลการป้องกัน (ลดอุบัติการณ์) <b id="vR">20%</b></label><input type="range" id="sR" min="0" max="35" step="5" value="20"><div class="note">งานทบทวนวรรณกรรมโปรแกรมออกกำลังป้องกันล้มรายงานการลดราว 20–25% — ตั้งค่าอนุรักษนิยมและวัดจริงจากพอร์ต</div></div>
+      <div class="sl"><label>งบป้องกันที่จ่ายจริง/สมาชิกที่เข้าโปรแกรม/ปี <b id="vV">1,500 บ.</b></label><input type="range" id="sV" min="0" max="8000" step="500" value="1500"><div class="note">เฉพาะที่เบิกใช้จริง (กายภาพ อุปกรณ์กันล้ม) ไม่ใช่เพดานสิทธิ์</div></div>
+      <div class="sl"><label>สัดส่วนเคสที่ถูกตัดด้วยระยะรอคอย <b id="vW">42%</b></label><input type="range" id="sW" min="0" max="60" step="1" value="42"><div class="note">ระยะรอคอย 3 ชั้น: อุบัติเหตุคุ้มครองทันที · เจ็บป่วยเฉียบพลัน 180 วัน · เสื่อมถอยเรื้อรัง 730 วัน (สั้นลงได้เมื่อมีข้อมูลต่อเนื่อง) — อ้างอิงแนวปฏิบัติตลาดไทยที่ใช้ระยะรอคอยแบบชั้นอยู่แล้ว</div></div>
+      <div class="sl"><label>ผลของระยะปลอดผลประโยชน์ 90 วัน <b id="vM">5%</b></label><input type="range" id="sM" min="0" max="20" step="1" value="5"><div class="note">ตัดกรณีพึ่งพิงชั่วคราวที่ฟื้นได้ภายใน 90 วัน เช่น หลังผ่าตัดสะโพก</div></div>
+      <div class="sl"><label>อุบัติการณ์ส่วนเพิ่มจาก adverse selection หากไม่มีการประเมิน <b id="vA">+25%</b></label><input type="range" id="sA" min="0" max="60" step="5" value="25"><div class="note">ใช้เฉพาะสถานการณ์เปรียบเทียบ "ไม่มี CareSignal" — พอร์ตที่ไม่คัดกรองจะกระจุกผู้เสี่ยงสูง ⚠️ สอบทานด้วย experience study</div></div>
+      <div class="sl"><label>ค่าใช้จ่ายดำเนินงาน (% เบี้ย) <b id="vX">20%</b></label><input type="range" id="sX" min="10" max="35" step="1" value="20"></div>
+      <div class="sl"><label>ค่านายหน้า/ช่องทางขาย (% เบี้ย) <b id="vC">15%</b></label><input type="range" id="sC" min="5" max="30" step="1" value="15"></div>
+      <div class="sl"><label>อัตราขาดอายุกรมธรรม์/ปี (Lapse) <b id="vL">8%</b></label><input type="range" id="sL" min="2" max="20" step="1" value="8"></div>
+      <div class="sl"><label>ค่าแพลตฟอร์ม CareSignal (% เบี้ย) <b id="vF">3%</b></label><input type="range" id="sF" min="0" max="10" step="1" value="3"></div>
+    </div>
+    <div>
+      <div class="kpis" id="kpis"></div>
+      <div class="panel" style="overflow-x:auto"><table id="projTbl"></table></div>
+      <div class="panel" style="margin-top:16px">
+        <div class="kick" style="margin-bottom:8px">เบี้ยรับ · สินไหม · กำไรรับประกันภัย (ล้านบาท)</div>
+        <svg class="chart" id="chart" viewBox="0 0 720 260" role="img" aria-label="กราฟแท่งเบี้ยรับ สินไหม และกำไร 5 ปี"></svg>
+        <div class="legend"><span><i style="background:var(--brand)"></i>เบี้ยรับ (GWP)</span><span><i style="background:var(--down)"></i>สินไหม + งบป้องกัน</span><span><i style="background:var(--up)"></i>กำไรรับประกันภัย</span></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ 3. มูลค่าของ CareSignal ============ -->
+<section style="padding-top:8px"><div class="wrap">
+  <h2>3 · CareSignal สร้างมูลค่าให้บริษัทเท่าไร</h2>
+  <p class="secsub">เปรียบเทียบพอร์ตเดียวกัน 2 สถานการณ์ — <b style="color:var(--ink)">ไม่มี CareSignal</b>: ไม่มีการประเมินก่อนคุ้มครอง จึงเผชิญ adverse selection (อุบัติการณ์สูงขึ้นตามสมมติฐาน) และไม่มีกลไกป้องกัน · <b style="color:var(--ink)">มี CareSignal</b>: คัดกรอง-ป้องกันลดอุบัติการณ์ แลกกับงบป้องกันและค่าแพลตฟอร์ม</p>
+  <div class="split">
+    <div class="panel" id="cmpA"></div>
+    <div class="panel" id="cmpB"></div>
+  </div>
+  <div class="kpis" id="valueKpis" style="margin-top:16px"></div>
+</div></section>
+
+<!-- ============ 4. ความเสี่ยง ============ -->
+<section style="padding-top:8px"><div class="wrap">
+  <h2>4 · ทะเบียนความเสี่ยงของบริษัทประกัน และกลไกจัดการ</h2>
+  <p class="secsub">ความเสี่ยงหลักที่ทำให้บริษัทไทยยังไม่กล้าออกผลิตภัณฑ์ LTC — และวิธีที่สถาปัตยกรรม CareSignal ตอบโจทย์แต่ละข้อ</p>
+  <div class="risk">
+    <div class="rk"><div class="hd"><h3>Adverse Selection — คนเสี่ยงสูงแห่ซื้อ</h3><span class="sev sevH">สูง</span></div>
+      <p>ผลิตภัณฑ์ LTC ดึงดูดผู้ที่รู้ตัวว่าใกล้พึ่งพิง ทำให้อุบัติการณ์จริงสูงกว่าที่ตั้งราคา</p>
+      <div class="mit"><b>กลไก:</b> ประเมินก่อนคุ้มครอง + ระยะรอคอย + โครงสร้าง "ส่วนลดเท่านั้น" จูงใจคนสุขภาพดีเข้าพอร์ตมาถ่วงดุล โดยไม่ผลักไสผู้เสี่ยง (ไม่ผิดหลักการเข้าถึง)</div></div>
+    <div class="rk"><div class="hd"><h3>Longevity / Duration Risk — พึ่งพิงนานกว่าคาด</h3><span class="sev sevH">สูง</span></div>
+      <p>ระยะเวลาจ่ายผลประโยชน์ยาวกว่าสมมติฐาน ทำให้สำรองไม่พอ</p>
+      <div class="mit"><b>กลไก:</b> จำกัดเพดานจ่ายต่อกรมธรรม์ (เช่น 60 งวด) + ข้อมูลติดตามต่อเนื่องจากแอปทำให้ปรับสมมติฐานได้เร็วกว่ารอบสถิติราชการ + ทำ reinsurance ส่วนเกิน</div></div>
+    <div class="rk"><div class="hd"><h3>ความเสี่ยงข้อมูลตั้งราคา (Pricing/Model Risk)</h3><span class="sev sevM">กลาง</span></div>
+      <p>ไทยไม่มีตารางอุบัติการณ์ LTC มาตรฐาน ตัวเลขในโมเดลนี้จึงเป็นสมมติฐานตั้งต้น</p>
+      <div class="mit"><b>กลไก:</b> เปิดตัวแบบ pilot จำกัดวงเงิน + เก็บ experience data จากแพลตฟอร์มทุกไตรมาส + ทบทวนเบี้ยรายปีตามจริง (ปรับได้เฉพาะรอบต่ออายุ ตามเงื่อนไข คปภ.)</div></div>
+    <div class="rk"><div class="hd"><h3>Fraud / สินไหมเกินจริง</h3><span class="sev sevM">กลาง</span></div>
+      <p>การพิสูจน์ภาวะพึ่งพิง (ADL) ตรวจสอบยาก เปิดช่องเคลมเกินจริง</p>
+      <div class="mit"><b>กลไก:</b> AI รวบรวมหลักฐานหลายแหล่ง (ผลประเมินย้อนหลัง วิดีโอทดสอบ บันทึกพยาบาล) แต่<b style="color:var(--ink)">การอนุมัติทุกกรณีตัดสินโดยผู้เชี่ยวชาญมนุษย์</b> — ลดทั้ง fraud และข้อพิพาท</div></div>
+    <div class="rk"><div class="hd"><h3>Lapse Risk — ขาดอายุสูงช่วงแรก</h3><span class="sev sevM">กลาง</span></div>
+      <p>ลูกค้าสูงวัยอ่อนไหวต่อค่าใช้จ่าย หากขาดอายุมาก เบี้ยที่รับมาไม่คุ้มค่าโอนลูกค้า</p>
+      <div class="mit"><b>กลไก:</b> คุณค่าที่จับต้องได้ระหว่างทาง (งบป้องกัน ผลประเมิน ส่วนลด) ทำให้กรมธรรม์ "มีประโยชน์ก่อนเคลม" — กลไกพิสูจน์แล้วในประกันสุขภาพเชิงพฤติกรรมว่าลด lapse</div></div>
+    <div class="rk"><div class="hd"><h3>PDPA / ธรรมาภิบาลข้อมูล</h3><span class="sev sevL">จัดการได้</span></div>
+      <p>ข้อมูลสุขภาพเป็นข้อมูลอ่อนไหวตามมาตรา 26</p>
+      <div class="mit"><b>กลไก:</b> ความยินยอมแบบละเอียด + ส่งเข้าระบบกลางเฉพาะข้อมูลสรุปไม่ระบุตัวตน + สิทธิลบข้อมูลในแอป + ข้อมูลดิบอยู่กับเจ้าของ</div></div>
+  </div>
+</div></section>
+
+<!-- ============ 5. การกำกับดูแล AI ============ -->
+<section><div class="wrap">
+  <h2>5 · การกำกับดูแล AI ที่ผู้รับประกันต้องตอบผู้กำกับได้</h2>
+  <p class="secsub">เมื่อนำผลจากระบบไปใช้ประกอบการตั้งราคาหรือการพิจารณาสินไหม บริษัทประกันคือผู้รับผิดชอบตามกฎหมาย ตารางนี้จึงระบุว่าใครตัดสินใจอะไร และหลักฐานอยู่ที่ไหน</p>
+  <div class="panel">
+    <table>
+      <thead><tr><th>ประเด็นที่ผู้กำกับจะถาม</th><th>คำตอบของ CareSignal</th><th>หลักฐานที่ตรวจได้</th></tr></thead>
+      <tbody>
+        <tr><td><b>ระบบเป็น AI ชนิดใด</b></td><td>สองส่วนแยกกัน: <b>AI Computer Vision</b> ตรวจจับการเคลื่อนไหว (เป็น AI จริง) และ <b>Explainable Risk Engine</b> วิเคราะห์แนวโน้มด้วยกฎ 7 ข้อที่ตรวจสอบได้ (ไม่ใช่ ML ไม่เรียนรู้จากข้อมูลผู้ใช้) โดยมนุษย์เป็นผู้ยืนยันการตัดสินใจ</td><td>Model Card ในหน้า Responsible AI ของแพลตฟอร์ม</td></tr>
+        <tr><td><b>คะแนนใช้เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองได้หรือไม่</b></td><td>ไม่ได้ — ออกแบบให้ลดเบี้ยได้ทางเดียว ไม่มีเส้นทางในโค้ดที่เพิ่มเบี้ยจากผลประเมินที่แย่ลง</td><td>ตารางส่วนลดในโมเดล + ตรรกะเดียวกันทั้งแอปและเว็บ</td></tr>
+        <tr><td><b>AI อนุมัติสินไหมเองหรือไม่</b></td><td>ไม่ — ระบบรวบรวมหลักฐาน การตัดสินทุกกรณีเป็นของผู้เชี่ยวชาญมนุษย์ และคำแนะนำส่งต่อขึ้นคิวในสถานะ “รอยืนยัน” เสมอ</td><td>ตาราง Human-in-the-loop + audit log รายบุคคล</td></tr>
+        <tr><td><b>ตรวจสอบอคติระหว่างเพศและช่วงอายุอย่างไร</b></td><td>เอนจินเทียบผู้ใช้กับตนเองในอดีต และค่าตัดเกณฑ์แยกตามช่วงอายุ พร้อมแดชบอร์ดตรวจช่องว่างระหว่างกลุ่ม เกณฑ์ ≤20 จุดร้อยละ</td><td>หน้า Responsible AI — คำนวณสดจากฐานข้อมูล</td></tr>
+        <tr><td><b>ผู้เอาประกันถอนความยินยอมได้หรือไม่</b></td><td>ได้ทุกเมื่อ พร้อมลบข้อมูลทั้งหมดตามสิทธิ PDPA และการแชร์ข้อมูลสรุปนิรนามปิดได้แยกต่างหาก</td><td>ปุ่มในแอป + บันทึกความยินยอมพร้อมรุ่นข้อตกลงและเวลา</td></tr>
+        <tr><td><b>ระบบพิสูจน์แล้วหรือยังว่าได้ผลจริง</b></td><td><b style="color:var(--warn)">ยังไม่ได้พิสูจน์</b> — อยู่ระหว่างจัดทำนำร่อง 30–100 ราย ตัวเลขลดอุบัติการณ์ในโมเดลนี้อ้างจากวรรณกรรมต่างประเทศ ไม่ใช่ผลของระบบนี้เอง</td><td>หน้าแผนวัดผลนำร่อง — ตัวชี้วัด 7 ข้อพร้อมเกณฑ์ผ่านที่ประกาศล่วงหน้า</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div></section>
+
+<!-- ============ 6. บทเรียนจากตลาดจริง ============ -->
+<section><div class="wrap">
+  <h2>6 · แนวปฏิบัติจากตลาดไทยที่ CareSignal นำมาปรับใช้</h2>
+  <p class="secsub">การออกแบบผลิตภัณฑ์นี้ไม่ได้คิดขึ้นลอย ๆ แต่ยืมกลไกที่บริษัทประกันไทยใช้จริงและตลาดยอมรับแล้ว มาปรับให้เข้ากับความเสี่ยงของ LTC ซึ่งรุนแรงกว่าประกันสุขภาพมาก</p>
+  <div class="panel">
+    <table>
+      <thead><tr><th>กลไกที่ตลาดใช้อยู่จริง</th><th>CareSignal ปรับใช้อย่างไร</th><th>เหตุผล</th></tr></thead>
+      <tbody>
+        <tr><td><b>ระยะรอคอยแบบชั้น</b><br><span style="color:var(--ink2);font-size:12.5px">ประกันสุขภาพในตลาดใช้: อุบัติเหตุคุ้มครองทันที · เจ็บป่วยทั่วไปรอ 30 วัน · โรคที่รู้ตัวล่วงหน้าได้รอ 120 วัน</span></td>
+            <td>อุบัติเหตุคุ้มครองทันที · เจ็บป่วยเฉียบพลัน 180 วัน · ภาวะเสื่อมถอยเรื้อรัง 730 วัน</td>
+            <td>LTC มีมูลค่าสินไหมสูงกว่าประกันสุขภาพหลายสิบเท่า และภาวะเสื่อมถอยรู้ตัวล่วงหน้าได้เป็นปี ระยะรอคอยจึงต้องยาวกว่าตามสัดส่วนความเสี่ยง</td></tr>
+        <tr><td><b>ส่วนลดประกาศเป็นจำนวนบาท ไม่ใช่เปอร์เซ็นต์</b><br><span style="color:var(--ink2);font-size:12.5px">ตลาดประกาศเป็นบาทต่อสัปดาห์ตามแผน แล้วรวมเป็นเพดานราว 17–37% ของเบี้ย</span></td>
+            <td>ส่วนลดต่อเนื่องรายเดือนเป็นบาทคงที่ตามแผน (60–230 บาท) รวมกับส่วนลดผลประเมิน โดยมีเพดานรวมไม่เกิน 25%</td>
+            <td>บริษัทคำนวณเพดานต้นทุนส่วนลดได้แน่นอนตั้งแต่ออกแบบ และผู้สูงอายุเข้าใจง่ายกว่าเปอร์เซ็นต์</td></tr>
+        <tr><td><b>ผูกความต่อเนื่องด้วยแรงจูงใจ</b><br><span style="color:var(--ink2);font-size:12.5px">ตลาดแจกอุปกรณ์สวมใส่แลกกับเงื่อนไขชำระเบี้ยต่อเนื่อง 24 เดือน</span></td>
+            <td>ไม่ต้องแจกอุปกรณ์ (ใช้กล้องมือถือที่มีอยู่แล้ว) แต่ให้สิ่งที่มีค่ากว่า: ประเมินต่อเนื่องทุก 3 เดือน ลดระยะรอคอยกลุ่มเรื้อรังครั้งละ 90 วัน สูงสุด 365 วัน</td>
+            <td>ลดต้นทุนอุปกรณ์ต่อรายจนเหลือศูนย์ และเปลี่ยนข้อจำกัดของผลิตภัณฑ์ให้กลายเป็นแรงจูงใจให้ผู้ใช้ส่งข้อมูลต่อเนื่อง ซึ่งเป็นสินทรัพย์หลักของแพลตฟอร์ม</td></tr>
+        <tr><td><b>สิทธิประโยชน์ระหว่างทางจากพันธมิตร</b><br><span style="color:var(--ink2);font-size:12.5px">ตลาดให้ส่วนลดโรงพยาบาล ร้านยา อุปกรณ์กีฬา เพื่อให้ลูกค้าได้ประโยชน์แม้ไม่เคลม</span></td>
+            <td>ส่วนลดอุปกรณ์กันล้มในบ้าน ราวจับ กายภาพบำบัด ตรวจสายตา และการทบทวนยากับเภสัชกร</td>
+            <td>LTC เป็นผลิตภัณฑ์ที่อาจไม่เคลมเลยตลอด 20 ปี คุณค่าระหว่างทางจึงเป็นกลไกสำคัญที่สุดในการลดอัตราการเลิกกรมธรรม์</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="warnbox" style="margin-top:16px"><b>ความต่างที่ต้องพูดให้ชัด</b><br>
+  อุปกรณ์สวมใส่ในตลาดวัด <b>ปริมาณการเคลื่อนไหว</b> (จำนวนก้าว อัตราการเต้นหัวใจ) ซึ่งใช้เกณฑ์อย่างเดินวันละ 7,500–10,000 ก้าว — เกณฑ์แบบนี้<b>ใช้กับกลุ่มเป้าหมายของ LTC ไม่ได้</b> เพราะผู้ที่กำลังเข้าสู่ภาวะพึ่งพิงคือคนที่เดินได้น้อยลงอยู่แล้ว การวัดแบบนั้นจึงคัดกรองคนที่ควรได้รับการดูแลมากที่สุดออกไป<br><br>
+  CareSignal วัด <b>คุณภาพการเคลื่อนไหว</b> แทน — ลุกจากเก้าอี้ได้ในกี่วินาที จังหวะสม่ำเสมอหรือล้าลงเรื่อย ๆ ทรงตัวได้แค่ไหน ซึ่งเป็นตัวทำนายภาวะพึ่งพิงที่มีงานวิจัยรองรับ และเป็นสิ่งที่อุปกรณ์สวมใส่วัดไม่ได้</div>
+</div></section>
+
+<!-- ============ 7. สถานะของส่วนลด ============ -->
+<section><div class="wrap">
+  <h2>7 · สถานะของส่วนลด — คำถามที่นักคณิตศาสตร์ประกันภัยจะถาม</h2>
+  <p class="secsub">ตัวเลขส่วนลดในเอกสารนี้<b style="color:var(--warn)">ยังไม่ใช่อัตราที่รับรองแล้ว</b> เราจึงเรียกว่า <b style="color:var(--ink)">Wellness Reward ที่บริษัทประกันเป็นผู้กำหนดหลังผ่านการสอบทานทางคณิตศาสตร์ประกันภัย</b> ไม่ใช่ส่วนลดที่ใช้ได้ทันที</p>
+  <div class="panel">
+    <table>
+      <thead><tr><th style="width:26%">คำถาม</th><th>สถานะปัจจุบัน</th><th style="width:30%">สิ่งที่ต้องทำก่อนใช้จริง</th></tr></thead>
+      <tbody>
+        <tr><td><b>ส่วนลดมาจาก loss reduction เท่าไร</b></td>
+            <td><span class="tag" style="background:var(--warnb);color:var(--warn);margin:0 0 6px;display:inline-block">ยังคำนวณจากหลักฐานของเราเองไม่ได้</span><br>ตัวเลข 15% กำหนดจากขนาดที่จูงใจพอให้เกิดพฤติกรรม ไม่ได้ derive จาก loss experience</td>
+            <td>ต้องมี experience study อย่างน้อย 2–3 ปี เทียบอุบัติการณ์ระหว่างกลุ่มที่ประเมินสม่ำเสมอกับกลุ่มที่ไม่ประเมิน</td></tr>
+        <tr><td><b>ผู้ที่ผลตรวจดี เสี่ยง LTC ต่ำลงจริงหรือไม่</b></td>
+            <td>วรรณกรรมรองรับความสัมพันธ์ระหว่างเวลาลุกนั่งกับการเกิดความพิการด้าน ADL อย่างชัดเจน (ดูหน้าหลักฐานวิชาการ) แต่<b>ยังไม่มีข้อมูลจากพอร์ตจริงในไทย</b></td>
+            <td>เชื่อมข้อมูลผลตรวจกับข้อมูลสินไหมของบริษัทที่ร่วมนำร่อง แล้วสร้าง incidence table แยกตามระดับสัญญาณ</td></tr>
+        <tr><td><b>มี selection bias หรือไม่</b></td>
+            <td>มีแน่นอน — คนที่ยอมประเมินสม่ำเสมอมักใส่ใจสุขภาพมากกว่าอยู่แล้ว ส่วนลดจึงอาจสะท้อนนิสัย ไม่ใช่ผลของโปรแกรม</td>
+            <td>แยกผลของ “การเข้าร่วม” ออกจากผลของ “โปรแกรม” ด้วยการเปรียบเทียบภายในกลุ่มที่เข้าร่วมด้วยกัน หรือออกแบบให้มีกลุ่มควบคุม</td></tr>
+        <tr><td><b>ปลอมผลได้หรือไม่ (gaming)</b></td>
+            <td>กลไกที่มีอยู่: ผลตรวจใช้<b>ลดเบี้ยได้ทางเดียว</b> จึงไม่มีแรงจูงใจให้แกล้งทำแย่ · เอนจินเทียบกับ<b>ตัวผู้ใช้เองในอดีต</b> การกระโดดผิดธรรมชาติจึงเห็นได้ · ต้องมีข้อมูลต่อเนื่องหลายครั้งจึงได้สิทธิ์ · การอนุมัติสินไหมใช้การประเมินที่บ้านโดยทีมสหวิชาชีพ ไม่ใช้ผลจากแอป</td>
+            <td>เพิ่มการตรวจจับความผิดปกติของรูปแบบ (เช่น เวลาที่ดีขึ้นเร็วเกินจริง) และการสุ่มตรวจซ้ำโดยเจ้าหน้าที่</td></tr>
+        <tr><td><b>ส่วนลดเกิดตอนไหน</b></td>
+            <td>ออกแบบให้เป็น <b>Wellness Reward รายงวด</b> ที่ปรับได้ตามพฤติกรรมล่าสุด ไม่ใช่การลดอัตราเบี้ยฐานตอนออกกรมธรรม์ — บริษัทจึงเปลี่ยนหรือหยุดให้ได้โดยไม่กระทบอัตราเบี้ยที่ยื่นไว้</td>
+            <td>ระบุในกรมธรรม์ว่าเป็นสิทธิประโยชน์ส่งเสริมสุขภาพ พร้อมเงื่อนไขการเปลี่ยนแปลง</td></tr>
+        <tr><td><b>ใครรับรอง rate table</b></td>
+            <td><span class="tag" style="background:var(--downb);color:var(--down);margin:0;display:inline-block">ยังไม่มีผู้รับรอง</span> ตารางในเอกสารนี้เป็นโครงสร้างสาธิตเพื่อให้สอบทานได้ ไม่ใช่อัตราที่ยื่นขออนุมัติ</td>
+            <td>นักคณิตศาสตร์ประกันภัยรับอนุญาตของบริษัทที่รับประกันเป็นผู้รับรอง และยื่นขออนุมัติต่อสำนักงาน คปภ. ตามกระบวนการปกติ</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div></section>
+
+<!-- ============ 8. ข้อจำกัด ============ -->
+<section style="padding-top:8px"><div class="wrap">
+  <div class="warnbox"><b>ขอบเขตของโมเดลนี้ — อ่านก่อนใช้ตัดสินใจ</b><br>
+  ตัวเลขทั้งหมดเป็น<b>สมมติฐานสาธิตเพื่อแสดงโครงสร้างโมเดล</b> ไม่ใช่คำแนะนำการลงทุนหรืออัตราเบี้ยที่ผ่านการรับรอง ก่อนใช้จริงต้อง: (1) แทนอุบัติการณ์และระยะเวลาพึ่งพิงด้วยข้อมูลไทยจริง (กรมกิจการผู้สูงอายุ, สวรส., HDC กระทรวงสาธารณสุข, ประสบการณ์พอร์ต) (2) ให้นักคณิตศาสตร์ประกันภัยรับอนุญาตรับรองอัตราเบี้ยและเงินสำรองตามประกาศ คปภ. (3) เพิ่มการคิดลดกระแสเงินสด เงินสำรอง และเงินกองทุนตาม RBC ซึ่งโมเดลสาธิตนี้ตัดออกเพื่อความเข้าใจง่าย</div>
+</div></section>
+
+<footer><div class="wrap">CareSignal · เอกสารประกอบการแข่งขัน OIC InsurTech Award 2026 (Topic 2: สังคมผู้สูงอายุ) · โมเดลนี้ออกแบบให้ฝ่ายคณิตศาสตร์ประกันภัยตรวจสอบและแทนค่าด้วยข้อมูลจริงได้ทุกตัวแปร</div></footer>
+
+<script>
+/* ===== ตารางเบี้ย — ตรรกะชุดเดียวกับแอปและเว็บ ===== */
+var PLANS=[
+  {id:"s", nm:"เริ่มต้น",  benefit:10000, prev:3000,  base:590},
+  {id:"m", nm:"มาตรฐาน", benefit:15000, prev:5000,  base:890},
+  {id:"l", nm:"พรีเมียม", benefit:25000, prev:8000,  base:1490},
+  {id:"xl",nm:"สูงสุด",   benefit:40000, prev:12000, base:2290}
+];
+var BANDS=[["50–54",1.00],["55–59",1.35],["60–65",1.80],["66–70",2.30]];
+function fmt(n){return Math.round(n).toLocaleString("th-TH")}
+function mb(n){return (n/1e6).toLocaleString("th-TH",{maximumFractionDigits:1})}
+(function rateTable(){
+  var h="<thead><tr><th>แผน / ผลประโยชน์</th>";
+  BANDS.forEach(function(b){h+="<th>"+b[0]+" ชาย</th><th>"+b[0]+" หญิง</th>"});
+  h+="</tr></thead><tbody>";
+  PLANS.forEach(function(p){
+    h+="<tr><td>"+p.nm+" · "+fmt(p.benefit)+" บ./ด.</td>";
+    BANDS.forEach(function(b){
+      h+="<td>"+fmt(p.base*b[1])+"</td><td>"+fmt(p.base*b[1]*1.10)+"</td>";
+    });
+    h+="</tr>";
+  });
+  h+='<tr><td style="color:var(--up)">ตัวอย่างหลังส่วนลดเขียว −15% (มาตรฐาน)</td>';
+  BANDS.forEach(function(b){h+='<td class="pos">'+fmt(890*b[1]*.85)+'</td><td class="pos">'+fmt(890*b[1]*1.10*.85)+'</td>'});
+  h+="</tr></tbody>";
+  document.getElementById("rateTbl").innerHTML=h;
+})();
+
+/* ===== โมเดลพอร์ต 5 ปี ===== */
+var A={};
+var SL=[["sN","vN",function(v){return fmt(v)}],["sG","vG",function(v){return v+"%"}],["sP","vP",function(v){return fmt(v)+" บ."}],
+["sI","vI",function(v){return (+v).toFixed(1)+"%"}],["sB","vB",function(v){return fmt(v)+" บ./ด."}],["sD","vD",function(v){return v+" เดือน"}],
+["sE","vE",function(v){return v+"%"}],["sR","vR",function(v){return v+"%"}],["sV","vV",function(v){return fmt(v)+" บ."}],
+["sW","vW",function(v){return v+"%"}],["sM","vM",function(v){return v+"%"}],["sA","vA",function(v){return "+"+v+"%"}],["sX","vX",function(v){return v+"%"}],["sC","vC",function(v){return v+"%"}],["sL","vL",function(v){return v+"%"}],["sF","vF",function(v){return v+"%"}]];
+SL.forEach(function(s){
+  var el=document.getElementById(s[0]);
+  el.addEventListener("input",function(){document.getElementById(s[1]).textContent=s[2](this.value);run()});
+});
+function readA(){
+  A={N:+sN.value,g:+sG.value/100,prem:+sP.value,inc:+sI.value/100,ben:+sB.value,dur:+sD.value,
+     eng:+sE.value/100,red:+sR.value/100,prevPay:+sV.value,exp:+sX.value/100,com:+sC.value/100,
+     lapse:+sL.value/100,fee:+sF.value/100,adv:+sA.value/100,wait:+sW.value/100,elim:+sM.value/100};
+}
+function project(withCS){
+  readA();
+  var yrs=[],inforce=0;
+  for(var t=1;t<=5;t++){
+    var newN=Math.round(A.N*Math.pow(1+A.g,t-1));
+    inforce=Math.round(inforce*(1-A.lapse))+newN;
+    var gwp=inforce*A.prem*12;
+    var effInc=withCS? A.inc*(1-A.eng*A.red) : A.inc*(1+A.adv);
+    var cases=inforce*effInc;
+    var claims=cases*A.ben*A.dur*(withCS?(1-A.wait)*(1-A.elim):1);                 /* ตั้งต้นทุนเต็มมูลค่าคาดหวังปีที่เกิดเหตุ */
+    var prevention=withCS? inforce*A.eng*A.prevPay : 0;
+    var fee=withCS? gwp*A.fee : 0;
+    var expenses=gwp*(A.exp+A.com)+fee;
+    var uw=gwp-claims-prevention-expenses;
+    yrs.push({t:t,newN:newN,inforce:inforce,gwp:gwp,cases:cases,claims:claims,prevention:prevention,fee:fee,expenses:expenses,uw:uw,
+      lr:(claims+prevention)/gwp, cr:(claims+prevention+expenses)/gwp});
+  }
+  return yrs;
+}
+function cls(v,goodLow){ if(goodLow) return v<.65?"pos":(v<1?"mid":"neg"); return v>0?"pos":"neg"}
+function run(){
+  var Y=project(true), Y0=project(false);
+  var y5=Y[4], sum=function(arr,k){return arr.reduce(function(s,x){return s+x[k]},0)};
+  var totUW=sum(Y,"uw"), totGWP=sum(Y,"gwp");
+  /* KPI */
+  var beYear=null;Y.forEach(function(y){if(beYear===null&&y.uw>0)beYear=y.t});
+  document.getElementById("kpis").innerHTML=
+    kpi("กรมธรรม์มีผลบังคับ ปีที่ 5",fmt(y5.inforce)+" กธ.","สะสมหลังหัก lapse","")+
+    kpi("เบี้ยรับปีที่ 5 (GWP)",mb(y5.gwp)+" ลบ.","รวม 5 ปี "+mb(totGWP)+" ลบ.","")+
+    kpi("Loss Ratio ปีที่ 5",(y5.lr*100).toFixed(0)+"%","สินไหม+งบป้องกัน ÷ เบี้ย",y5.lr<.65?"up":(y5.lr<1?"warn":"down"))+
+    kpi("Combined Ratio ปีที่ 5",(y5.cr*100).toFixed(0)+"%","ต่ำกว่า 100% = กำไรรับประกัน",y5.cr<1?"up":"down")+
+    kpi("กำไรรับประกันสะสม 5 ปี",mb(totUW)+" ลบ.","อัตรากำไร "+(totUW/totGWP*100).toFixed(0)+"% ของเบี้ย",totUW>0?"up":"down")+
+    kpi("คุ้มทุนรับประกันภัย",beYear?("ปีที่ "+beYear):"เกิน 5 ปี","ปีแรกที่กำไรรับประกันเป็นบวก",beYear?"up":"down");
+  /* ตาราง */
+  var h="<thead><tr><th>รายการ (ล้านบาท)</th>";
+  Y.forEach(function(y){h+="<th>ปีที่ "+y.t+"</th>"});
+  h+="</tr></thead><tbody>";
+  h+=row("กรมธรรม์ใหม่",Y,function(y){return fmt(y.newN)});
+  h+=row("กรมธรรม์มีผลบังคับ",Y,function(y){return fmt(y.inforce)});
+  h+=row("เบี้ยรับ (GWP)",Y,function(y){return mb(y.gwp)});
+  h+=row("ผู้เข้าสู่ภาวะพึ่งพิง (คาดหวัง)",Y,function(y){return fmt(y.cases)+" ราย"});
+  h+=row("สินไหม LTC (มูลค่าคาดหวัง)",Y,function(y){return '<span class="neg">−'+mb(y.claims)+'</span>'});
+  h+=row("งบป้องกันหกล้มที่จ่ายจริง",Y,function(y){return '<span class="neg">−'+mb(y.prevention)+'</span>'});
+  h+=row("ค่าใช้จ่าย+นายหน้า+แพลตฟอร์ม",Y,function(y){return '<span class="neg">−'+mb(y.expenses)+'</span>'});
+  h+=row("<b style='color:var(--ink)'>กำไร (ขาดทุน) รับประกันภัย</b>",Y,function(y){return '<span class="'+(y.uw>0?"pos":"neg")+'">'+(y.uw>0?"":"−")+mb(Math.abs(y.uw))+'</span>'});
+  h+=row("Loss Ratio",Y,function(y){return '<span class="'+cls(y.lr,true)+'">'+(y.lr*100).toFixed(0)+'%</span>'});
+  h+=row("Combined Ratio",Y,function(y){return '<span class="'+cls(y.cr,true)+'">'+(y.cr*100).toFixed(0)+'%</span>'});
+  h+="</tbody>";
+  document.getElementById("projTbl").innerHTML=h;
+  drawChart(Y);
+  /* เปรียบเทียบ */
+  var claimsSaved=sum(Y0,"claims")-sum(Y,"claims");
+  var prevCost=sum(Y,"prevention"), feeCost=sum(Y,"fee");
+  var netValue=claimsSaved-prevCost-feeCost;
+  cmpPanel("cmpA","ไม่มี CareSignal (ประกัน LTC แบบดั้งเดิม)",Y0,false);
+  cmpPanel("cmpB","มี CareSignal (ประเมิน + ป้องกัน + ส่วนลด)",Y,true);
+  document.getElementById("valueKpis").innerHTML=
+    kpi("สินไหมที่ลดได้ (5 ปี)",mb(claimsSaved)+" ลบ.","จากการคัดกรอง (เลี่ยง adverse selection) + โปรแกรมป้องกัน","up")+
+    kpi("ลงทุนในการป้องกัน",mb(prevCost+feeCost)+" ลบ.","งบป้องกัน "+mb(prevCost)+" + ค่าแพลตฟอร์ม "+mb(feeCost),"warn")+
+    kpi("มูลค่าสุทธิของการป้องกัน",(netValue>0?"+":"−")+mb(Math.abs(netValue))+" ลบ.","ทุก 1 บาทที่ลงทุน ลดสินไหม "+(prevCost+feeCost>0?(claimsSaved/(prevCost+feeCost)).toFixed(1):"—")+" บาท",netValue>0?"up":"down")+
+    kpi("กำไรเพิ่มเทียบแบบดั้งเดิม",mb(sum(Y,"uw")-sum(Y0,"uw"))+" ลบ.","ผลรวมกำไรรับประกัน 5 ปี",(sum(Y,"uw")-sum(Y0,"uw"))>0?"up":"down");
+}
+function row(nm,Y,f){var s="<tr><td>"+nm+"</td>";Y.forEach(function(y){s+="<td>"+f(y)+"</td>"});return s+"</tr>"}
+function kpi(l,n,d,c){return '<div class="kpi '+(c||"")+'"><div class="l">'+l+'</div><div class="n">'+n+'</div><div class="d">'+d+'</div></div>'}
+function cmpPanel(id,title,Y,withCS){
+  var sum=function(k){return Y.reduce(function(s,x){return s+x[k]},0)};
+  var lr5=Y[4].lr, uw=sum("uw");
+  document.getElementById(id).innerHTML=
+  '<div class="kick" style="margin-bottom:10px">'+title+'</div>'+
+  '<table><tbody>'+
+  '<tr><td>เบี้ยรับสะสม 5 ปี</td><td>'+mb(sum("gwp"))+' ลบ.</td></tr>'+
+  '<tr><td>สินไหมสะสม</td><td class="neg">−'+mb(sum("claims"))+' ลบ.</td></tr>'+
+  (withCS?'<tr><td>งบป้องกัน + ค่าแพลตฟอร์ม</td><td class="neg">−'+mb(sum("prevention")+sum("fee"))+' ลบ.</td></tr>':'')+
+  '<tr><td>Loss Ratio ปีที่ 5</td><td class="'+cls(lr5,true)+'">'+(lr5*100).toFixed(0)+'%</td></tr>'+
+  '<tr><td><b style="color:var(--ink)">กำไรรับประกันสะสม</b></td><td class="'+(uw>0?"pos":"neg")+'"><b>'+(uw>0?"+":"−")+mb(Math.abs(uw))+' ลบ.</b></td></tr>'+
+  '</tbody></table>';
+}
+function drawChart(Y){
+  var svg=document.getElementById("chart");
+  var W=720,H=260,padL=8,padB=28,padT=14;
+  var maxV=0;Y.forEach(function(y){maxV=Math.max(maxV,y.gwp,y.claims+y.prevention,Math.abs(y.uw))});
+  if(maxV<=0)maxV=1;
+  var gw=(W-padL*2)/5, bw=Math.min(34,gw/4.2);
+  var s="";
+  function bar(x,v,color){
+    var h=Math.max(2,Math.abs(v)/maxV*(H-padB-padT-20));
+    var y=H-padB-h;
+    return '<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+h+'" rx="4" fill="'+color+'"'+(v<0?' opacity=".55"':'')+'/>';
+  }
+  Y.forEach(function(y,i){
+    var cx=padL+gw*i+gw/2;
+    s+=bar(cx-bw*1.6,y.gwp,"var(--brand)");
+    s+=bar(cx-bw*0.5,y.claims+y.prevention,"var(--down)");
+    s+=bar(cx+bw*0.6,y.uw,"var(--up)");
+    s+='<text x="'+cx+'" y="'+(H-9)+'" text-anchor="middle" fill="var(--ink3)" font-size="11" font-family="var(--mono)">ปีที่ '+y.t+'</text>';
+    s+='<text x="'+cx+'" y="'+(padT)+'" text-anchor="middle" fill="var(--ink2)" font-size="10" font-family="var(--mono)">'+mb(y.gwp)+' ลบ.</text>';
+  });
+  s+='<line x1="0" y1="'+(H-padB)+'" x2="'+W+'" y2="'+(H-padB)+'" stroke="var(--edge)"/>';
+  svg.innerHTML=s;
+}
+run();
+</script>
+</body>
+</html>

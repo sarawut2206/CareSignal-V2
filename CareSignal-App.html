@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2563EB">
+<title>CareSignal — แอปประเมินและประกันดูแลระยะยาว</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE;
+  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7;
+  --line:#DFE7F2; --line2:#EDF2FA; --brand:#2563EB; --brand2:#1D4ED8;
+  --accent:#F59E0B; --accent2:#B45309; --accentb:#FEF3C7;
+  --c4:#0E9F6E; --c3:#C79200; --c2:#D97706; --c1:#DC2626;
+  --c4b:#E3F6EF; --c3b:#FEF6DE; --c2b:#FDECD8; --c1b:#FEE9E9;
+  --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --loop:"IBM Plex Sans Thai Looped","Prompt",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sh:0 1px 2px rgba(22,35,59,.04),0 6px 18px rgba(22,35,59,.05);
+  --shx:0 2px 6px rgba(22,35,59,.07),0 18px 44px rgba(22,35,59,.11);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:#D9DEE2;font-family:var(--sans);color:var(--ink);font-size:17px;line-height:1.7;-webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center}
+.phone{position:relative;width:404px;height:860px;max-height:100vh;background:var(--bg);border-radius:42px;overflow:hidden;box-shadow:0 30px 80px rgba(22,35,59,.3);display:flex;flex-direction:column}
+@media(max-width:470px),(max-height:720px){body{display:block;background:var(--bg)}.phone{width:100%;height:100dvh;max-height:none;border-radius:0;box-shadow:none}}
+.bar .brandrow{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.bar .brandrow svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.18))}
+.bar{flex:none;background:linear-gradient(135deg,var(--brand2),var(--brand) 62%,#3B82F6);color:#fff;padding:calc(env(safe-area-inset-top) + 16px) 20px 16px;position:relative}
+.bar .kick{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#FCD34D;opacity:.95}
+.bar h1{margin:3px 0 0;font-size:23px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
+.bar p{margin:6px 0 0;font-size:14px;opacity:.78;line-height:1.6}
+.backb{background:none;border:0;color:#fff;font:inherit;font-size:14px;padding:0;margin-bottom:8px;opacity:.75;cursor:pointer}
+.dbchip{position:absolute;top:calc(env(safe-area-inset-top) + 16px);right:16px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:rgba(245,158,11,.22);color:#FDE68A;padding:4px 9px;border-radius:99px}
+.scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 26px;-webkit-overflow-scrolling:touch}
+.anim{animation:rise .32s cubic-bezier(.25,.9,.35,1)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.anim{animation:none}}
+.tabs{flex:none;display:flex;background:rgba(255,255,255,.96);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;border:0;background:none;cursor:pointer;font-family:var(--sans);padding:11px 2px 13px;color:var(--ink3);font-size:12.5px;line-height:1.3;transition:color .18s;min-height:64px}
+.tab svg{display:block;margin:0 auto 5px;width:27px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab b{display:block;font-weight:600;font-size:12.5px}
+.tab[aria-selected="true"]{color:var(--brand)}
+.acc{background:var(--surf);border-radius:20px;margin-bottom:12px;box-shadow:var(--sh);overflow:hidden}
+.acc>summary{list-style:none;cursor:pointer;padding:20px;font-size:17px;font-weight:600;display:flex;align-items:center;gap:12px;min-height:64px}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary::after{content:"⌄";margin-left:auto;font-size:26px;line-height:1;color:var(--ink3);transition:transform .2s}
+.acc[open]>summary::after{transform:rotate(180deg)}
+.acc>summary .sm{display:block;font-size:14px;font-weight:400;color:var(--ink2);margin-top:3px}
+.acc .accin{padding:0 20px 20px}
+.bigrow{display:flex;align-items:center;gap:14px;padding:16px 0;border-top:1px solid var(--line2)}
+.bigrow:first-of-type{border-top:0}
+.bigrow .ic{width:44px;height:44px;flex:none;border-radius:14px;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:22px}
+.bigrow .tx{flex:1;min-width:0}
+.bigrow .tx b{display:block;font-size:16.5px;font-weight:600;line-height:1.4}
+.bigrow .tx span{display:block;font-size:14px;color:var(--ink2);line-height:1.5;margin-top:2px}
+.card{background:var(--surf);border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:var(--sh)}
+.card h2{margin:0 0 6px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.card h3{margin:0 0 12px;font-size:17px;font-weight:600}
+.sub{margin:0 0 14px;font-size:15px;color:var(--ink2);line-height:1.75}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin:0 0 8px}
+.hero{background:var(--brand);color:#fff;border-radius:24px;padding:22px;margin-bottom:12px;box-shadow:var(--shx)}
+.hero .eyebrow{color:rgba(255,255,255,.45)}
+.hero .score{font-family:var(--mono);font-size:48px;font-weight:600;line-height:1;letter-spacing:-.03em}
+.hero .of{font-size:15px;opacity:.45;font-family:var(--mono)}
+.hero .state{margin-top:10px;display:inline-block;font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:99px;color:#fff}
+.hero .note{margin:14px 0 0;font-size:12.5px;opacity:.72;line-height:1.6}
+.senior{font-family:var(--loop)}
+.senior .qtext{font-size:21px;font-weight:600;line-height:1.5;margin:0 0 6px;letter-spacing:-.01em}
+.senior .qhelp{font-size:15px;color:var(--ink2);line-height:1.65;margin:0 0 18px}
+.pick{display:block;width:100%;text-align:left;font-family:var(--loop);font-size:17px;padding:16px 19px;margin-bottom:10px;border:2px solid var(--line);border-radius:16px;background:var(--surf);color:var(--ink);cursor:pointer;transition:border-color .15s,background .15s,transform .1s}
+.pick:active{transform:scale(.985)}
+.pick[aria-pressed="true"]{border-color:var(--brand);background:var(--surf2);color:var(--brand2);font-weight:600}
+.cta{display:block;width:100%;border:0;border-radius:18px;background:var(--brand);color:#fff;font-family:var(--loop);font-size:20px;font-weight:600;padding:20px;min-height:64px;cursor:pointer;transition:transform .1s}
+.cta:active{transform:scale(.99)}
+.cta.loop{font-family:var(--loop);font-size:18px;padding:18px}
+.cta.go{background:var(--c4)}
+.cta.stop{background:var(--c2)}
+.cta[disabled]{opacity:.45;cursor:default}
+.ghostb{display:block;width:100%;border:2px solid var(--line);border-radius:16px;background:var(--surf);color:var(--ink);font-family:var(--sans);font-size:17px;font-weight:500;padding:17px;margin-top:10px;cursor:pointer;min-height:58px}
+.clock{font-family:var(--mono);font-size:56px;font-weight:600;text-align:center;letter-spacing:-.04em;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.clock small{font-size:18px;opacity:.4;font-weight:500}
+.hint{text-align:center;font-size:13.5px;color:var(--ink2);margin:0 0 16px;line-height:1.6}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink)}
+.field input,.field select{width:100%;font-family:var(--loop);font-size:17px;padding:14px 16px;border:2px solid var(--line);border-radius:14px;background:var(--surf);color:var(--ink);outline:none}
+.field input:focus,.field select:focus{border-color:var(--brand)}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;font-family:var(--loop);font-size:16px;padding:13px;border:2px solid var(--line);border-radius:14px;background:var(--surf);color:var(--ink2);cursor:pointer}
+.seg button[aria-pressed="true"]{border-color:var(--brand);background:var(--surf2);color:var(--brand2);font-weight:600}
+.rowline{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:14px 0;border-top:1px solid var(--line2);font-size:16px}
+.rowline:first-of-type{border-top:0}
+.rowline .k{color:var(--ink2)}
+.rowline .v{font-family:var(--mono);font-weight:600;color:var(--accent2)}
+.tierpill{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:99px}
+.t4{background:var(--c4b);color:var(--c4)}.t3{background:var(--c3b);color:var(--c3)}.t2{background:var(--c2b);color:var(--c2)}.t1{background:var(--c1b);color:var(--c1)}
+.hrow{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line2)}
+.hrow:first-child{border-top:0}
+.hrow .dt{font-family:var(--mono);font-size:11px;color:var(--ink3);width:74px;flex:none;line-height:1.4}
+.hrow .sc{font-family:var(--mono);font-size:19px;font-weight:600;width:44px;flex:none}
+.trend{display:flex;align-items:flex-end;gap:5px;height:64px;margin:14px 0 4px}
+.trend .b{flex:1;border-radius:5px 5px 0 0;min-height:6px;position:relative}
+.trend .b span{position:absolute;top:-17px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:9.5px;color:var(--ink3)}
+.planbox{border:2px solid var(--line);border-radius:16px;padding:15px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,background .15s}
+.planbox[aria-pressed="true"]{border-color:var(--brand);background:var(--surf2)}
+.planbox .nm{font-weight:600;font-size:15px}
+.planbox .bn{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.planbox .pr{float:right;font-family:var(--mono);font-weight:600;font-size:16px}
+.bignum{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.02em}
+.toast{position:absolute;left:20px;right:20px;bottom:88px;background:var(--ink);color:#fff;font-size:13.5px;padding:13px 17px;border-radius:14px;box-shadow:var(--shx);opacity:0;transform:translateY(8px);transition:.28s;pointer-events:none;z-index:50;line-height:1.5}
+.toast.on{opacity:1;transform:none}
+.warncard{border-radius:20px;padding:18px;margin-bottom:12px;border:1px solid var(--line);background:var(--surf);box-shadow:var(--sh)}
+.warncard .lvl{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;color:#fff}
+.warncard h3{margin:12px 0 8px;font-size:16.5px;letter-spacing:-.01em}
+.evi{border-left:3px solid var(--accent);background:var(--accentb);border-radius:0 12px 12px 0;padding:10px 13px;margin:8px 0;font-size:13.5px;line-height:1.6}
+.evi .why{display:block;color:var(--ink2);font-size:12px;margin-top:4px}
+.evi .rid{font-family:var(--mono);font-size:10px;color:var(--accent2);letter-spacing:.08em}
+.disc{background:var(--line2);border-radius:12px;padding:10px 13px;font-size:11.5px;color:var(--ink2);line-height:1.6;margin-top:12px}
+.pitem{border-top:1px solid var(--line2);padding:13px 0}
+.pitem:first-of-type{border-top:0}
+.pitem b{display:block;font-size:14.5px;margin-bottom:3px}
+.pitem .hw{font-size:13px;color:var(--ink2);line-height:1.6}
+.pitem .rs{display:inline-block;font-size:11.5px;color:var(--accent2);background:var(--accentb);border-radius:8px;padding:3px 9px;margin-top:6px}
+.pitem .sc{display:block;font-size:11px;color:var(--ink3);margin-top:5px}
+.logline{font-family:var(--mono);font-size:11px;border-top:1px solid var(--line2);padding:8px 0;color:var(--ink2);line-height:1.55}
+.logline b{color:var(--ink);font-weight:600}
+.chk{display:flex;gap:11px;align-items:flex-start;background:var(--surf2);border-radius:14px;padding:13px;cursor:pointer;font-size:13px;line-height:1.6}
+.chk input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:var(--brand)}
+.notice{background:var(--accentb);border:1px solid rgba(245,158,11,.35);border-radius:14px;padding:12px 15px;font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:12px}
+.danger{color:var(--c1)}
+:focus-visible{outline:3px solid rgba(37,99,235,.45);outline-offset:2px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <header class="bar" id="bar">
+    <span class="dbchip" id="dbchip">DB · –</span>
+    <div id="barIn"></div>
+  </header>
+  <main class="scroll" id="view" aria-live="polite"></main>
+  <nav class="tabs" id="tabs" hidden>
+    <button class="tab" data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg><b>หน้าแรก</b></button>
+    <button class="tab" data-go="assessIntro"><svg viewBox="0 0 24 24"><path d="M12 21c-1 0-8-4.5-8-10a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 11c0 5.5-7 10-8 10z"/></svg><b>ตรวจร่างกาย</b></button>
+    <button class="tab" data-go="policy"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>ประกันของฉัน</b></button>
+    <button class="tab" data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg><b>ตั้งค่า</b></button>
+  </nav>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
+
+/* ============================================================
+   ฐานข้อมูล — Storage adapter 3 ชั้น
+   1) window.storage (Claude artifact persistent storage)
+   2) localStorage (เมื่อ deploy บนเว็บเซิร์ฟเวอร์จริง)
+   3) หน่วยความจำชั่วคราว (fallback สุดท้าย)
+   โครงนี้ออกแบบให้สลับเป็น REST API ของ backend จริงได้ทันที
+   ============================================================ */
+var MEM={};
+var DB={
+  mode:"memory",
+  async get(k){
+    if(window.storage){try{var r=await window.storage.get(k);this.mode="cloud";return r?JSON.parse(r.value):null}catch(e){this.mode="cloud";return null}}
+    try{var v=localStorage.getItem("cs:"+k);this.mode="local";return v?JSON.parse(v):null}catch(e){this.mode="memory";return MEM[k]||null}
+  },
+  async set(k,val){
+    var s=JSON.stringify(val);
+    if(window.storage){try{await window.storage.set(k,s);this.mode="cloud";return true}catch(e){}}
+    try{localStorage.setItem("cs:"+k,s);this.mode="local";return true}catch(e){MEM[k]=val;this.mode="memory";return true}
+  },
+  async setShared(k,val){ /* ข้อมูลสรุปนิรนาม แชร์ให้แดชบอร์ด Care Manager / บริษัทประกัน */
+    if(window.storage){try{await window.storage.set(k,JSON.stringify(val),true);return true}catch(e){}}
+    try{localStorage.setItem("csShared:"+k,JSON.stringify(val));return true}catch(e){return false}
+  },
+  async del(k){
+    if(window.storage){try{await window.storage.delete(k)}catch(e){}}
+    try{localStorage.removeItem("cs:"+k)}catch(e){}
+    delete MEM[k];
+  }
+};
+function dbLabel(){var m=DB.mode;return "DB · "+(m==="cloud"?"CLOUD":(m==="local"?"LOCAL":"TEMP"))}
+
+/* ============================================================
+   ค่ากลางของระบบ — ใช้ชุดเดียวกับเว็บไซต์และโมเดลผู้ประกอบการ
+   ============================================================ */
+var CFG={
+  ftsstCut:function(age){return age<60?10.0:(age<70?11.5:12.1);}, /* วินาที — เกณฑ์งานวิจัยไทย */
+  plans:[
+    {id:"s", nm:"เริ่มต้น",  benefit:10000, prev:3000,  base:590},
+    {id:"m", nm:"มาตรฐาน", benefit:15000, prev:5000,  base:890, pop:true},
+    {id:"l", nm:"พรีเมียม", benefit:25000, prev:8000,  base:1490},
+    {id:"xl",nm:"สูงสุด",   benefit:40000, prev:12000, base:2290}
+  ],
+  ageMult:function(a){return a<55?1.00:(a<60?1.35:(a<66?1.80:2.30));},
+  ageBand:function(a){return a<55?"50–54":(a<60?"55–59":(a<66?"60–65":"66–70"));},
+  sexMult:{f:1.10,m:1.00},
+  discount:{4:.15,3:.08,2:0,1:0}, /* หลักการ: ผลประเมิน "ลด" เบี้ยได้เท่านั้น ไม่มีบวก ไม่มีปฏิเสธ */
+  yearlyOff:.08,
+  /* --- เงื่อนไขความคุ้มครอง (อ้างอิงแนวปฏิบัติตลาดไทย เช่น ระยะรอคอยแบบชั้นของประกันสุขภาพ) --- */
+  terms:{
+    waitAccident:0,      /* อุบัติเหตุ — คุ้มครองทันที เพราะเลือกเวลาเกิดไม่ได้ */
+    waitAcute:180,       /* เจ็บป่วยเฉียบพลัน เช่น หลอดเลือดสมอง */
+    waitChronic:730,     /* ภาวะเสื่อมถอยเรื้อรัง เช่น สมองเสื่อม พาร์กินสัน */
+    chronicCutPerAssess:90,  /* ประเมินต่อเนื่องทุก 3 เดือน ลดระยะรอคอยเรื้อรัง 90 วัน */
+    chronicCutMax:365,   /* ลดได้สูงสุด 1 ปี */
+    elimination:90,      /* ต้องพึ่งพิงต่อเนื่อง 90 วันก่อนเริ่มจ่าย */
+    capMonths:60         /* เพดานผลประโยชน์ 60 งวด */
+  },
+  /* --- ส่วนลดต่อเนื่องรายเดือน: ประกาศเป็นบาทคงที่ ไม่ใช่ % เพื่อให้เพดานต้นทุนแน่นอน --- */
+  loyalty:{s:60, m:90, l:150, xl:230},
+  loyaltyNeed:4,
+  tiers:{
+    4:{nm:"เขียว — แข็งแรงดี",   c:"var(--c4)", b:"t4", act:"ออกกำลังต่อเนื่อง วัดซ้ำทุก 3 เดือน"},
+    3:{nm:"เหลือง — เฝ้าระวัง",  c:"var(--c3)", b:"t3", act:"ฝึกทรงตัวสัปดาห์ละ 3 วัน วัดซ้ำทุก 2 เดือน"},
+    2:{nm:"ส้ม — เสี่ยงปานกลาง", c:"var(--c2)", b:"t2", act:"Care Manager จะติดต่อภายใน 7 วัน"},
+    1:{nm:"แดง — เสี่ยงสูง",     c:"var(--c1)", b:"t1", act:"ส่งต่อพยาบาลประเมินที่บ้านภายใน 72 ชม."}
+  }
+};
+function fmt(n){return Math.round(n).toLocaleString("th-TH")}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function todayISO(){return new Date().toISOString()}
+function thDate(iso){var d=new Date(iso);return d.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"})}
+
+/* ============================================================
+   สถานะแอป
+   ============================================================ */
+var S={data:null, screen:"loading", draft:{}, planSel:"m", pay:"m", timer:null, t0:0};
+function blankData(){return {profile:null, assessments:[], policy:null, payments:[], sharePool:true, createdAt:todayISO()}}
+
+async function loadAll(){
+  var d=await DB.get("careSignalData");
+  S.data=d||blankData();
+  document.getElementById("dbchip").textContent=dbLabel();
+}
+async function saveAll(){
+  await DB.set("careSignalData",S.data);
+  document.getElementById("dbchip").textContent=dbLabel();
+  /* ส่งสำเนาสรุปนิรนามเข้าคลังรวม (ผู้ใช้ปิดได้ในหน้า "ฉัน") */
+  if(S.data.sharePool && S.data.profile){
+    var p=S.data.profile, last=S.data.assessments[S.data.assessments.length-1]||null;
+    await DB.setShared("pool:"+p.uid,{
+      uid:p.uid, ageBand:CFG.ageBand(p.age), sex:p.sex,
+      tier:last?last.tier:null, score:last?last.score:null,
+      lastAssess:last?last.at:null,
+      firstAssess:S.data.assessments.length?S.data.assessments[0].at:null,
+      nAssess:S.data.assessments.length,
+      durSec:last&&last.durSec?last.durSec:null,
+      level:(function(){try{var x=trajectory();return x?x.level:null}catch(e){return null}})(),
+      referred:(function(){try{var x=trajectory();return x?!!x.referral.need:false}catch(e){return false}})(),
+      consentAt:S.data.consent?S.data.consent.at:null,
+      engine:ENGINE.version,
+      plan:S.data.policy?S.data.policy.plan:null,
+      premium:S.data.policy?S.data.policy.premium:null,
+      updated:todayISO()
+    });
+  }
+}
+
+/* ============================================================
+   คำนวณเบี้ย — ตรรกะเดียวกับเว็บและโมเดลผู้ประกอบการ
+   ============================================================ */
+function premiumFor(planId,age,sex,tier,pay){
+  var p=CFG.plans.find(function(x){return x.id===planId});
+  var gross=p.base*CFG.ageMult(age)*CFG.sexMult[sex];
+  var d=tier?CFG.discount[tier]:0;
+  var net=gross*(1-d);
+  var loy=loyaltyBaht(planId);
+  net=Math.max(net-loy, gross*0.75);   /* เพดานรวมส่วนลดไม่เกิน 25% เพื่อคุมต้นทุน */
+  if(pay==="y"){net=net*12*(1-CFG.yearlyOff)}
+  return {plan:p, gross:Math.round(gross), net:Math.round(net), disc:d, loyalty:loy};
+}
+
+/* ============================================================
+   ส่วนลดต่อเนื่อง + ระยะรอคอยที่ลดได้จากการมีข้อมูลต่อเนื่อง
+   ------------------------------------------------------------
+   หลักการที่ยืมมาจากตลาด: ประกาศส่วนลดเป็น "บาทต่อรอบ" ไม่ใช่ % ของเบี้ย
+   บริษัทจึงคำนวณเพดานต้นทุนล่วงหน้าได้แน่นอน และผู้ใช้เข้าใจทันทีว่าประหยัดกี่บาท
+   ============================================================ */
+function loyaltyPoints(){
+  var A=S.data.assessments||[], now=Date.now(), pts=0, detail=[];
+  var in90=A.filter(function(x){return (now-new Date(x.at))/864e5<=90});
+  if(in90.length>=1){pts+=2;detail.push(["ตรวจร่างกายใน 3 เดือนที่ผ่านมา","+2"])}
+  else detail.push(["ตรวจร่างกายใน 3 เดือนที่ผ่านมา","0"]);
+  if(in90.length>=2){pts+=1;detail.push(["ตรวจซ้ำอีกครั้งเพื่อยืนยัน","+1"])}
+  else detail.push(["ตรวจซ้ำอีกครั้งเพื่อยืนยัน","0"]);
+  var last=A[A.length-1];
+  if(last&&last.tier>=3){pts+=1;detail.push(["ผลตรวจอยู่ในเกณฑ์ดี","+1"])}
+  else detail.push(["ผลตรวจอยู่ในเกณฑ์ดี","0"]);
+  if(A.length>=4){pts+=1;detail.push(["ตรวจมาแล้วอย่างน้อย 4 ครั้ง","+1"])}
+  else detail.push(["ตรวจมาแล้วอย่างน้อย 4 ครั้ง","0"]);
+  return {pts:pts, need:CFG.loyaltyNeed, ok:pts>=CFG.loyaltyNeed, detail:detail};
+}
+function loyaltyBaht(planId){
+  var L=loyaltyPoints();
+  return L.ok ? (CFG.loyalty[planId]||0) : 0;
+}
+/* ระยะรอคอยกลุ่มเรื้อรังที่เหลือ — ยิ่งมีข้อมูลต่อเนื่อง ยิ่งสั้นลง */
+function chronicWait(){
+  var n=(S.data.assessments||[]).length;
+  var cut=Math.min(n*CFG.terms.chronicCutPerAssess, CFG.terms.chronicCutMax);
+  return {days:CFG.terms.waitChronic-cut, cut:cut, n:n};
+}
+
+/* ============================================================
+   คะแนนประเมิน (ย่อจาก SPPB + FRAT ให้ทำเองที่บ้านได้)
+   ============================================================ */
+function scoreDraft(dr,age){
+  var s=0, parts={};
+  /* 1) ลุกนั่ง 5 ครั้ง (FTSST) — 0-4 คะแนน */
+  var cut=CFG.ftsstCut(age);
+  var f=dr.ftsst;
+  var pf = f==null?0 : f<=cut?4 : f<=cut+2?3 : f<=cut+4.5?2 : f<=60?1:0;
+  parts.ftsst=pf; s+=pf;
+  /* 2) ยืนทรงตัว — 0-3 */
+  parts.balance=dr.balance||0; s+=parts.balance;
+  /* 3) ประวัติหกล้ม 12 เดือน — 0-2 (ไม่ล้ม=2) */
+  parts.falls=dr.falls==null?0:dr.falls; s+=parts.falls;
+  /* 4) การใช้ยา ≥4 ชนิด — 0-1 */
+  parts.meds=dr.meds==null?0:dr.meds; s+=parts.meds;
+  /* 5) ทำกิจวัตรเองได้ (ADL อย่างย่อ) — 0-2 */
+  parts.adl=dr.adl==null?0:dr.adl; s+=parts.adl;
+  var max=12;
+  var tier = s>=10?4 : s>=8?3 : s>=5?2 : 1;
+  return {score:s, max:max, tier:tier, parts:parts};
+}
+
+
+/* ============================================================
+   CareSignal Decision Engine v1.2 — Explainable Rule-Based
+   ------------------------------------------------------------
+   ประกาศตามหลัก Responsible AI:
+   ระบบนี้เป็น "ระบบสนับสนุนการตัดสินใจแบบกฎที่อธิบายได้"
+   (Explainable Rule-Based Clinical Decision Support)
+   ไม่ใช่แบบจำลอง machine learning และไม่ใช่การวินิจฉัยทางการแพทย์
+   กฎทุกข้อ derive จากวรรณกรรมที่อ้างอิงได้ และแสดงเหตุผลทุกครั้งที่ทำงาน
+   ชั้น ML จะเปิดใช้เมื่อมีข้อมูลนำร่องครบเกณฑ์และผ่านการ validate เท่านั้น
+   ============================================================ */
+var ENGINE={
+  version:"1.2.0",
+  kind:"rule-based-explainable",
+  rules:{
+    R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ", src:"MCID ของ Five-Times Sit-to-Stand ในผู้สูงอายุ ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
+    R2:{nm:"ข้ามเกณฑ์เสี่ยงตามอายุ", src:"ค่าตัดเกณฑ์ประชากรไทย 10.0/11.5/12.1 วินาที (Poncumhak 2014; Intaruk 2021)"},
+    R3:{nm:"มีเหตุหกล้มใหม่", src:"การหกล้ม 1 ครั้งเพิ่มโอกาสล้มซ้ำใน 12 เดือน (WHO Falls Prevention 2021)"},
+    R4:{nm:"คะแนนรวมถดถอยจากค่าดีที่สุดของตนเอง", src:"เปรียบเทียบกับ personal best แทนค่าเฉลี่ยประชากร เพื่อลดอคติระหว่างกลุ่ม"},
+    R5:{nm:"ใช้ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง", src:"Polypharmacy (≥4 ชนิด) ร่วมกับ balance impairment เพิ่มความเสี่ยงล้มแบบทวีคูณ (Beers Criteria; STOPPFall 2021)"},
+    R6:{nm:"สูญเสียความสามารถทำกิจวัตร", src:"การลดลงของ ADL/IADL เป็นสัญญาณเริ่มต้นภาวะพึ่งพิง (Lawton IADL; Barthel Index)"},
+    R7:{nm:"เกินกำหนดประเมินซ้ำ", src:"กติกาภายในระบบ ตามระดับความเสี่ยงที่คำนวณได้"}
+  },
+  cadence:{stable:90, watch:45, decline:21, urgent:7},
+  levelNm:{stable:"คงที่", watch:"เฝ้าสังเกต", decline:"ถดถอย", urgent:"ต้องดูแลเร่งด่วน"},
+  levelColor:{stable:"var(--c4)", watch:"var(--c3)", decline:"var(--c2)", urgent:"var(--c1)"}
+};
+
+function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
+
+/* ---- วิเคราะห์เส้นทางความเสี่ยงเฉพาะบุคคล ---- */
+function trajectory(){
+  var A=S.data.assessments, p=S.data.profile;
+  if(!A.length) return null;
+  var last=A[A.length-1], first=A[0];
+  var out={n:A.length, last:last, flags:[], level:"stable", ftsstPct:null, ftsstDelta:null,
+           span:daysBetween(first.at,last.at), sinceLast:daysBetween(last.at,todayISO())};
+
+  /* baseline = ค่าที่ดีที่สุดของผู้ใช้เอง (ไม่ใช่ค่าเฉลี่ยประชากร → ลดอคติระหว่างกลุ่ม) */
+  var ftsstVals=A.filter(function(x){return x.ftsst!=null});
+  var bestFt = ftsstVals.length? Math.min.apply(null,ftsstVals.map(function(x){return x.ftsst})) : null;
+  var bestScore = Math.max.apply(null,A.map(function(x){return x.score}));
+
+  /* R1 — ความเร็วการเสื่อมถอยของ FTSST */
+  if(last.ftsst!=null && bestFt!=null && ftsstVals.length>1 && last.ftsst>bestFt){
+    var d=last.ftsst-bestFt, pct=d/bestFt*100;
+    out.ftsstDelta=d; out.ftsstPct=pct;
+    if(d>=2.3 || pct>=15){
+      out.flags.push({id:"R1", sev:pct>=30||d>=4?2:1,
+        text:"เวลาลุกนั่ง 5 ครั้งช้าลง "+pct.toFixed(0)+"% ("+bestFt.toFixed(1)+" → "+last.ftsst.toFixed(1)+" วินาที) เทียบกับผลที่ดีที่สุดของคุณเอง",
+        why:"ส่วนต่าง "+d.toFixed(1)+" วินาที ถึงเกณฑ์การเปลี่ยนแปลงที่มีความหมายทางคลินิก (≥2.3 วินาที)"});
+    }
+  }
+  /* R2 — ข้ามเกณฑ์ตามอายุ */
+  if(last.ftsst!=null){
+    var cut=CFG.ftsstCut(p.age);
+    var prevFt=null;
+    for(var i=A.length-2;i>=0;i--){if(A[i].ftsst!=null){prevFt=A[i].ftsst;break}}
+    if(last.ftsst>cut && (prevFt==null || prevFt<=cut)){
+      out.flags.push({id:"R2", sev:2,
+        text:"เวลาลุกนั่งขึ้นเป็น "+last.ftsst.toFixed(1)+" วินาที สูงกว่าเกณฑ์ของช่วงอายุ "+CFG.ageBand(p.age)+" ปี ("+cut.toFixed(1)+" วินาที)",
+        why:"เป็นการข้ามค่าตัดเกณฑ์ครั้งแรก จึงถือเป็นสัญญาณเปลี่ยนสถานะ ไม่ใช่ความผันผวนปกติ"});
+    }
+  }
+  /* R3 — เหตุหกล้มใหม่ */
+  if(A.length>1){
+    var prev=A[A.length-2];
+    if(last.parts.falls<prev.parts.falls){
+      out.flags.push({id:"R3", sev:2,
+        text:"มีการหกล้มเกิดขึ้นใหม่ในช่วง "+daysBetween(prev.at,last.at)+" วันที่ผ่านมา",
+        why:"ผู้ที่ล้มแล้ว 1 ครั้งมีโอกาสล้มซ้ำสูงขึ้นชัดเจนใน 12 เดือนถัดไป"});
+    }
+    if(last.parts.adl<prev.parts.adl){
+      out.flags.push({id:"R6", sev:3,
+        text:"ความสามารถทำกิจวัตรประจำวันลดลงจากการประเมินครั้งก่อน",
+        why:"การลดลงของ ADL เป็นสัญญาณเริ่มต้นของภาวะพึ่งพิง ซึ่งเป็นเหตุการณ์ที่กรมธรรม์คุ้มครอง"});
+    }
+  }
+  /* R4 — คะแนนรวมถดถอย */
+  if(last.score<=bestScore-2){
+    out.flags.push({id:"R4", sev:last.score<=bestScore-3?2:1,
+      text:"คะแนนรวมลดลง "+(bestScore-last.score)+" คะแนน จากค่าดีที่สุดของคุณ ("+bestScore+" → "+last.score+")",
+      why:"เปรียบเทียบกับตัวคุณเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น"});
+  }
+  /* R5 — ยาหลายชนิด + ทรงตัวบกพร่อง */
+  if(last.parts.meds===0 && last.parts.balance<=1){
+    out.flags.push({id:"R5", sev:2,
+      text:"ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป ร่วมกับผลทรงตัวที่ยังไม่ผ่านเกณฑ์",
+      why:"สองปัจจัยนี้เมื่อเกิดร่วมกันเพิ่มความเสี่ยงหกล้มมากกว่าผลรวมของแต่ละปัจจัย"});
+  }
+  /* R7 — เกินกำหนด */
+  var due=nextDueDays(out.flags,last.tier);
+  if(out.sinceLast>due){
+    out.flags.push({id:"R7", sev:1,
+      text:"เลยกำหนดประเมินซ้ำมาแล้ว "+(out.sinceLast-due)+" วัน",
+      why:"ข้อมูลที่เก่ากว่ากำหนดทำให้ระบบประเมินความเสี่ยงปัจจุบันได้แม่นยำน้อยลง"});
+  }
+
+  /* ระดับรวม */
+  var sev=out.flags.reduce(function(a,b){return a+b.sev},0);
+  var hasADL=out.flags.some(function(f){return f.id==="R6"});
+  if(last.tier===1 || hasADL || sev>=5) out.level="urgent";
+  else if(last.tier===2 || sev>=3) out.level="decline";
+  else if(sev>=1) out.level="watch";
+  else out.level="stable";
+
+  out.nextDays=ENGINE.cadence[out.level];
+  out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
+  out.referral = out.level==="urgent" ? {nm:"ส่งต่อพยาบาลประเมินที่บ้าน", sla:"ภายใน 72 ชั่วโมง", need:true}
+               : out.level==="decline" ? {nm:"Care Manager โทรติดตาม", sla:"ภายใน 7 วัน", need:true}
+               : out.level==="watch"   ? {nm:"แผนป้องกันด้วยตนเอง + เตือนประเมินซ้ำ", sla:"ไม่ต้องส่งต่อ", need:false}
+                                       : {nm:"ดูแลตนเองตามแผนปกติ", sla:"ไม่ต้องส่งต่อ", need:false};
+  return out;
+}
+function nextDueDays(flags,tier){
+  var sev=flags.filter(function(f){return f.id!=="R7"}).reduce(function(a,b){return a+b.sev},0);
+  if(tier===1||sev>=5)return ENGINE.cadence.urgent;
+  if(tier===2||sev>=3)return ENGINE.cadence.decline;
+  if(sev>=1)return ENGINE.cadence.watch;
+  return ENGINE.cadence.stable;
+}
+
+/* ---- แผนป้องกันเฉพาะบุคคล ---- */
+var PREV_LIB=[
+  {id:"P1", dom:"ftsst", nm:"ฝึกลุกนั่งจากเก้าอี้แบบเพิ่มระดับ", how:"เริ่ม 5 ครั้ง × 2 รอบ/วัน เพิ่มเป็น 10 ครั้ง × 3 รอบเมื่อทำได้สบาย ใช้เก้าอี้มีพนักพิงชิดผนัง", src:"Otago Exercise Programme (สร้างความแข็งแรงขาส่วนล่าง)"},
+  {id:"P2", dom:"balance", nm:"ฝึกทรงตัวยืนต่อเท้า", how:"ยืนเท้าต่อเท้าจับขอบโต๊ะ 30 วินาที × 3 ครั้ง สัปดาห์ละ 3 วัน", src:"Cochrane 2019 — โปรแกรมออกกำลังกายลดอัตราการหกล้ม 20–25%"},
+  {id:"P3", dom:"falls", nm:"สำรวจจุดเสี่ยงในบ้าน", how:"ตรวจไฟทางเดินกลางคืน พรมลื่น ธรณีประตู และติดราวจับในห้องน้ำ", src:"WHO Step Safely 2021 — home hazard modification"},
+  {id:"P4", dom:"meds", nm:"ทบทวนรายการยากับเภสัชกร", how:"นำยาทั้งหมดรวมทั้งยาสมุนไพรไปให้เภสัชกรตรวจสอบปฏิกิริยาระหว่างยาและยาที่ทำให้เวียนศีรษะ", src:"STOPPFall 2021 — deprescribing ยากลุ่มเสี่ยงหกล้ม"},
+  {id:"P5", dom:"adl", nm:"ประเมินอุปกรณ์ช่วยและปรับกิจวัตร", how:"ปรึกษานักกิจกรรมบำบัดเรื่องอุปกรณ์ช่วยเดิน เก้าอี้อาบน้ำ และการจัดลำดับกิจวัตร", src:"Lawton IADL — ป้องกันการสูญเสียความสามารถเพิ่มเติม"},
+  {id:"P6", dom:"general", nm:"โภชนาการและการเคลื่อนไหวประจำวัน", how:"กินโปรตีนให้พอทุกมื้อ ออกไปเดินกลางแจ้งช่วงเช้า และปรึกษาแพทย์เรื่องวิตามินดีในการตรวจครั้งถัดไป", src:"คำแนะนำทั่วไปเรื่องมวลกล้ามเนื้อผู้สูงอายุ — ไม่ใช่การสั่งจ่ายยาหรือกำหนดขนาดรับประทาน"}
+];
+function preventionPlan(){
+  var tr=trajectory(); if(!tr) return null;
+  var last=tr.last, p=S.data.profile, picks=[];
+  function add(dom,reason){var it=PREV_LIB.find(function(x){return x.dom===dom});if(it&&!picks.some(function(x){return x.id===it.id}))picks.push(Object.assign({},it,{reason:reason}))}
+  if(last.parts.ftsst<=2) add("ftsst","คะแนนลุกนั่งของคุณอยู่ที่ "+last.parts.ftsst+"/4"+(last.ftsst?" ("+last.ftsst.toFixed(1)+" วินาที)":""));
+  else if(tr.flags.some(function(f){return f.id==="R1"})) add("ftsst","เวลาลุกนั่งของคุณช้าลงจากเดิม แม้คะแนนยังอยู่ในเกณฑ์");
+  if(last.parts.balance<=1) add("balance","คะแนนทรงตัว "+last.parts.balance+"/3");
+  if(last.parts.falls<2) add("falls","มีประวัติหกล้มในรอบ 12 เดือน");
+  if(last.parts.meds===0) add("meds","ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป");
+  if(last.parts.adl<2) add("adl","คะแนนกิจวัตรประจำวัน "+last.parts.adl+"/2");
+  add("general","แนะนำกับทุกคนในช่วงอายุ "+CFG.ageBand(p.age)+" ปี");
+  return {level:tr.level, items:picks, tr:tr};
+}
+
+/* ---- Audit log — บันทึกทุกการทำงานของระบบเพื่อการตรวจสอบย้อนหลัง ---- */
+function audit(ev,detail,human){
+  if(!S.data.audit)S.data.audit=[];
+  S.data.audit.push({at:todayISO(), ev:ev, engine:ENGINE.version, detail:detail, human:human||"ไม่ต้องมีผู้เชี่ยวชาญตรวจสอบ"});
+  if(S.data.audit.length>200)S.data.audit=S.data.audit.slice(-200);
+}
+
+/* ============================================================
+   เรนเดอร์
+   ============================================================ */
+var V=document.getElementById("view"), B=document.getElementById("barIn"), T=document.getElementById("tabs");
+function head(kick,h,p,back){
+  B.innerHTML=(back?'<button class="backb" data-go="'+back+'">‹ ย้อนกลับ</button>':'<div class="brandrow">'+LOGO+'<span style="font-weight:700;font-size:15px;letter-spacing:-.01em">Care<span style="color:#FCD34D">Signal</span></span></div>')+
+  '<div class="kick">'+kick+'</div><h1>'+h+'</h1>'+(p?'<p>'+p+'</p>':'');
+}
+function go(sc,arg){S.screen=sc;render(arg);V.scrollTop=0}
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2600)}
+
+function render(arg){
+  T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult"].indexOf(S.screen)>=0;
+  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
+  T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
+  var fn={loading:loadingV,welcome:welcomeV,register:registerV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV}[S.screen]||homeV;
+  fn(arg);
+}
+function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
+
+/* ---------- ลงทะเบียน ---------- */
+function welcomeV(){
+  head("CARESIGNAL · LTC PLATFORM","สัญญาณสุขภาพ ที่แปลงเป็นความคุ้มครอง","ประเมินความเสี่ยงหกล้มและภาวะพึ่งพิงด้วยตัวเองที่บ้าน ผลดีช่วยลดเบี้ยประกันดูแลระยะยาว");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card senior"><h2 style="font-size:19px">แอปนี้ทำอะไรได้บ้าง</h2>'+
+  '<div class="rowline"><span class="k">วัดความแข็งแรง 5 ด้าน</span><span class="v">6 นาที</span></div>'+
+  '<div class="rowline"><span class="k">บันทึกผลทุกครั้งลงฐานข้อมูล</span><span class="v">ถาวร</span></div>'+
+  '<div class="rowline"><span class="k">ผลดี ลดเบี้ยได้สูงสุด</span><span class="v">15%</span></div>'+
+  '<div class="rowline"><span class="k">ผลเสี่ยง ส่งต่อพยาบาล</span><span class="v">72 ชม.</span></div></div>'+
+  '<div class="notice">ข้อสัญญาที่เราให้ไว้กับคุณ: ผลตรวจใช้<b>ลดค่าเบี้ยได้อย่างเดียว</b> ไม่มีการขึ้นค่าเบี้ยหรือไม่รับประกันเพราะผลตรวจแย่ลง และการอนุมัติเงินทุกครั้งตัดสินโดยคนจริง ไม่ใช่คอมพิวเตอร์</div>'+
+  '<button class="cta loop" data-go="register">เริ่มใช้งาน · สร้างบัญชี</button></div>';
+}
+function registerV(){
+  head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้คำนวณเกณฑ์อายุและเบี้ยประกันของคุณ เก็บในฐานข้อมูลของคุณเอง","welcome");
+  var d=S.draft;
+  V.innerHTML='<div class="anim senior">'+
+  '<div class="card">'+
+  '<div class="field"><label>ชื่อที่ให้เราเรียก</label><input id="fName" value="'+esc(d.name||"")+'" placeholder="เช่น คุณสมศรี"></div>'+
+  '<div class="field"><label>ปีเกิด (พ.ศ.)</label><input id="fYear" inputmode="numeric" value="'+esc(d.year||"")+'" placeholder="เช่น 2505"></div>'+
+  '<div class="field"><label>เพศ</label><div class="seg" id="fSex">'+
+    '<button data-v="f" aria-pressed="'+(d.sex==="f")+'">หญิง</button>'+
+    '<button data-v="m" aria-pressed="'+(d.sex==="m")+'">ชาย</button></div></div>'+
+  '<div class="field"><label>เบอร์โทรผู้ดูแล/ครอบครัว (ไม่บังคับ)</label><input id="fPhone" inputmode="tel" value="'+esc(d.phone||"")+'" placeholder="สำหรับแจ้งเตือนเมื่อสัญญาณเปลี่ยน"></div>'+
+  '</div>'+
+  '<div class="card"><h3 style="font-size:15px;margin:0 0 10px">ความยินยอมตาม PDPA</h3>'+
+  '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนป้องกัน (2) คำนวณส่วนลดเบี้ย (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
+  '<label class="chk"><input type="checkbox" id="fConsent"'+(d.consent?" checked":"")+'><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
+  '<button class="cta loop" id="fGo">บันทึกและเริ่มใช้งาน</button>'+
+  '<p class="hint" style="margin-top:12px">ข้อมูลสรุปแบบไม่ระบุตัวตน (ช่วงอายุ เพศ ระดับสัญญาณ) จะถูกส่งเข้าระบบกลางเพื่อให้ Care Manager ดูแลคุณได้ — ปิดได้ในหน้า "ฉัน"</p></div>';
+  document.getElementById("fSex").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.draft.sex=b.dataset.v;this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});});
+  document.getElementById("fGo").addEventListener("click",async function(){
+    var nm=document.getElementById("fName").value.trim();
+    var yr=parseInt(document.getElementById("fYear").value,10);
+    if(!nm){toast("กรุณากรอกชื่อ");return}
+    if(!yr||yr<2460||yr>2530){toast("กรุณากรอกปีเกิด พ.ศ. เช่น 2505");return}
+    if(!S.draft.sex){toast("กรุณาเลือกเพศ");return}
+    if(!document.getElementById("fConsent").checked){toast("กรุณาให้ความยินยอมตาม PDPA ก่อนเริ่มใช้งาน");return}
+    var age=(new Date().getFullYear()+543)-yr;
+    S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, age:age, sex:S.draft.sex, phone:document.getElementById("fPhone").value.trim(), joined:todayISO()};
+    S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนป้องกัน","คำนวณส่วนลดเบี้ย","ส่งต่อทีมดูแล"]};
+    audit("บันทึกความยินยอม","ผู้ใช้ให้ความยินยอมตามข้อตกลง PDPA-1.0 ครบทุกวัตถุประสงค์");
+    await saveAll();
+    S.draft={};
+    toast("สร้างบัญชีสำเร็จ ยินดีต้อนรับคุณ"+nm);
+    go("home");
+  });
+}
+
+/* ---------- หน้าหลัก ---------- */
+function homeV(){
+  var p=S.data.profile;
+  var A=S.data.assessments, last=A[A.length-1], pol=S.data.policy;
+  head("หน้าแรก","สวัสดี คุณ"+esc(p.name),"");
+  var hero, mainBtn;
+  if(last){
+    var ti=CFG.tiers[last.tier];
+    var simple={4:"ร่างกายแข็งแรงดี",3:"ควรเฝ้าระวัง",2:"ควรได้รับการดูแล",1:"ต้องดูแลด่วน"}[last.tier];
+    var days=Math.round((Date.now()-new Date(last.at))/864e5);
+    hero='<div class="hero" style="background:'+ti.c+'">'+
+      '<p class="eyebrow">ผลตรวจล่าสุด '+(days===0?"วันนี้":days+" วันที่แล้ว")+'</p>'+
+      '<div style="font-size:30px;font-weight:700;line-height:1.3;margin:6px 0 8px">'+simple+'</div>'+
+      '<p class="note" style="font-size:16px">'+ti.act+'</p></div>';
+    mainBtn='<button class="cta loop" data-go="assessIntro">ตรวจร่างกายอีกครั้ง</button>';
+  }else{
+    hero='<div class="hero"><p class="eyebrow">ยังไม่เคยตรวจ</p>'+
+      '<div style="font-size:26px;font-weight:700;line-height:1.35;margin:6px 0 8px">มาตรวจร่างกายกันก่อน</div>'+
+      '<p class="note" style="font-size:16px">ใช้เวลาประมาณ 6 นาที ทำเองที่บ้านได้เลย</p></div>';
+    mainBtn='<button class="cta loop" data-go="assessIntro">เริ่มตรวจร่างกาย</button>';
+  }
+  /* สรุปเตือนเป็นประโยคเดียว รายละเอียดพับเก็บไว้ */
+  var warnPart="";
+  if(last && A.length>1){
+    var tr=trajectory();
+    if(tr){
+      var lvNm={stable:"ผลของคุณคงที่ ไม่มีสัญญาณถดถอย",watch:"มีบางอย่างเปลี่ยนไปเล็กน้อย",decline:"ร่างกายถดถอยลงจากเดิม",urgent:"ควรพบผู้ดูแลโดยเร็ว"}[tr.level];
+      warnPart='<details class="acc"><summary><span style="width:12px;height:12px;border-radius:50%;background:'+ENGINE.levelColor[tr.level]+';flex:none"></span>'+
+        '<span>'+lvNm+'<span class="sm">แตะเพื่อดูว่าทำไมระบบถึงบอกแบบนี้</span></span></summary>'+
+        '<div class="accin">'+warnBody(tr)+'</div></details>';
+    }
+  }
+  var polPart;
+  if(pol){
+    polPart='<div class="card"><h3>ประกันของฉัน</h3>'+
+      '<div class="bigrow"><div class="ic">🛡️</div><div class="tx"><b>แผน'+esc(pol.planName)+'</b>'+
+      '<span>ถ้าช่วยเหลือตัวเองไม่ได้ รับเดือนละ '+fmt(pol.benefit)+' บาท</span></div></div>'+
+      '<div class="bigrow"><div class="ic">💰</div><div class="tx"><b>จ่าย '+fmt(pol.premium)+' บาท ต่อ'+(pol.pay==="y"?"ปี":"เดือน")+'</b>'+
+      '<span>ชำระแล้ว '+S.data.payments.length+' งวด</span></div></div>'+
+      '<button class="ghostb" data-go="policy">ดูประกันและชำระเงิน</button></div>';
+  }else{
+    polPart='<div class="card"><h3>ประกันของฉัน</h3>'+
+      '<div class="bigrow"><div class="ic">🛡️</div><div class="tx"><b>ยังไม่มีประกัน</b>'+
+      '<span>ตรวจร่างกายก่อน ผลดีช่วยให้จ่ายเบี้ยถูกลง</span></div></div>'+
+      '<button class="ghostb" data-go="policy">ดูแผนประกันและราคา</button></div>';
+  }
+  V.innerHTML='<div class="anim">'+hero+mainBtn+warnPart+polPart+
+  (A.length>1?'<details class="acc"><summary><span>ผลตรวจย้อนหลัง<span class="sm">ดูว่าดีขึ้นหรือแย่ลง ('+A.length+' ครั้ง)</span></span></summary><div class="accin">'+trendCard()+'</div></details>':'')+
+  '</div>';
+}
+
+/* ---------- เนื้อหาคำอธิบายเหตุผล (ใช้ร่วมกันหลายหน้า) ---------- */
+function warnBody(tr){
+  tr=tr||trajectory(); if(!tr)return "";
+  var body;
+  if(tr.flags.length){
+    body=tr.flags.slice(0,3).map(function(f){
+      return '<div class="evi"><span class="rid">ข้อสังเกตที่ '+f.id.replace("R","")+'</span>'+esc(f.text)+
+             '<span class="why">เพราะ: '+esc(f.why)+'</span></div>';
+    }).join("");
+  }else{
+    body='<div class="evi">ไม่พบสัญญาณถดถอย เมื่อเทียบผลตรวจย้อนหลัง '+tr.n+' ครั้งของคุณ<span class="why">เพราะ: ไม่มีข้อสังเกตใดเข้าเงื่อนไขเตือน</span></div>';
+  }
+  return body+
+  '<div class="rowline"><span class="k">ควรตรวจอีกครั้งภายใน</span><span class="v">'+tr.nextDays+' วัน</span></div>'+
+  '<div class="rowline"><span class="k">การดูแลที่แนะนำ</span><span class="v">'+esc(tr.referral.sla)+'</span></div>'+
+  (tr.referral.need?'<p class="sub" style="margin:12px 0 0">'+esc(tr.referral.nm)+' — เจ้าหน้าที่จะติดต่อคุณ โดยมี<b>พยาบาลตรวจสอบก่อนเสมอ</b></p>':'')+
+  '<button class="ghostb" data-go="plan">ดูสิ่งที่ควรทำต่อ</button>'+
+  '<div class="disc">ระบบนี้ช่วยสังเกตการเปลี่ยนแปลง ไม่ใช่การวินิจฉัยของแพทย์ · หากมีอาการผิดปกติกะทันหัน ให้พบแพทย์ทันที</div>';
+}
+function warnCard(){
+  var tr=trajectory(); if(!tr)return "";
+  var lvNm={stable:"ผลของคุณคงที่",watch:"มีบางอย่างเปลี่ยนไป",decline:"ร่างกายถดถอยลง",urgent:"ควรพบผู้ดูแลโดยเร็ว"}[tr.level];
+  return '<div class="card"><h3><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+ENGINE.levelColor[tr.level]+';margin-right:8px"></span>'+lvNm+'</h3>'+warnBody(tr)+'</div>';
+}
+
+/* ---------- สิ่งที่ควรทำต่อ (แผนป้องกัน) ---------- */
+function planV(){
+  var pl=preventionPlan();
+  if(!pl){
+    head("สิ่งที่ควรทำ","ยังไม่มีข้อมูล","ตรวจร่างกายครั้งแรกก่อน ระบบจะแนะนำสิ่งที่เหมาะกับคุณ","home");
+    V.innerHTML='<div class="anim"><button class="cta loop" data-go="assessIntro">เริ่มตรวจร่างกาย</button></div>';return;
+  }
+  head("สิ่งที่ควรทำ","แนะนำเฉพาะคุณ","เลือกมาจากผลตรวจ "+pl.tr.n+" ครั้งของคุณเอง","home");
+  V.innerHTML='<div class="anim">'+
+  pl.items.map(function(x,i){
+    return '<div class="card"><h3>'+(i+1)+'. '+esc(x.nm)+'</h3>'+
+    '<p class="sub" style="margin:0 0 10px">'+esc(x.how)+'</p>'+
+    '<div class="notice" style="margin:0">แนะนำให้คุณเพราะ: '+esc(x.reason)+'</div>'+
+    '<details class="acc" style="box-shadow:none;margin:10px 0 0;background:var(--line2)"><summary style="padding:12px 14px;font-size:14.5px;min-height:0">ที่มาของคำแนะนำนี้</summary>'+
+    '<div class="accin" style="padding:0 14px 14px;font-size:14px;color:var(--ink2)">'+esc(x.src)+'</div></details></div>';
+  }).join("")+
+  '<div class="card"><h3>ตรวจครั้งต่อไป</h3>'+
+  '<div class="bigrow"><div class="ic">📅</div><div class="tx"><b>ภายใน '+pl.tr.nextDays+' วัน</b><span>ระบบจะเตือนคุณเมื่อถึงกำหนด</span></div></div></div>'+
+  '<div class="disc">คำแนะนำเหล่านี้ช่วยป้องกันการหกล้ม <b>ไม่ใช่การรักษาโรค</b> และไม่ใช้แทนคำแนะนำของแพทย์ พยาบาล หรือเภสัชกร · หากเจ็บหน้าอก เวียนศีรษะรุนแรง หรือล้มแล้วลุกไม่ได้ ให้โทร 1669 ทันที</div>'+
+  '<button class="cta" data-go="home">กลับหน้าแรก</button></div>';
+}
+
+function trendCard(){
+  var a=S.data.assessments.slice(-7);
+  var bars=a.map(function(x){var t=CFG.tiers[x.tier];var h=Math.max(8,x.score/x.max*100);
+    return '<div class="b" style="height:'+h+'%;background:'+t.c+'"><span>'+x.score+'</span></div>'}).join("");
+  return '<div class="card"><h3>แนวโน้ม '+a.length+' ครั้งล่าสุด</h3><div class="trend">'+bars+'</div><p class="sub" style="margin:6px 0 0;font-size:12px">'+thDate(a[0].at)+' → '+thDate(a[a.length-1].at)+'</p></div>';
+}
+
+/* ---------- ประเมิน ---------- */
+function assessIntroV(){
+  S.draft.t0=Date.now();
+  head("การประเมิน","วัดสัญญาณวันนี้","5 ขั้นตอน ราว 6 นาที ผลบันทึกอัตโนมัติ","home");
+  V.innerHTML='<div class="anim senior">'+
+  '<div class="card"><h2 style="font-size:19px">เตรียมตัวก่อนเริ่ม</h2>'+
+  '<div class="rowline"><span class="k">① เก้าอี้มีพนักพิง ไม่มีล้อ</span><span class="v">1 ตัว</span></div>'+
+  '<div class="rowline"><span class="k">② พื้นที่ยืนข้างผนัง/โต๊ะ</span><span class="v">กันล้ม</span></div>'+
+  '<div class="rowline"><span class="k">③ รองเท้าหุ้มส้น หรือเท้าเปล่า</span><span class="v">ห้ามถุงเท้า</span></div>'+
+  '<p class="qhelp" style="margin:14px 0 0">หากวันนี้เวียนหัว หน้ามืด หรือเพิ่งกินยาใหม่ ให้เลื่อนไปวันอื่น ความปลอดภัยสำคัญกว่า</p></div>'+
+  '<button class="cta loop" id="aStart">พร้อมแล้ว เริ่มเลย</button></div>';
+  document.getElementById("aStart").addEventListener("click",function(){S.draft={};go("assessTimer")});
+}
+function assessTimerV(){
+  head("ขั้นที่ 1 / 5","ลุกนั่ง 5 ครั้ง","กอดอกไว้ ลุกยืนแล้วนั่งลงให้ครบ 5 ครั้ง เร็วที่สุดเท่าที่ปลอดภัย","assessIntro");
+  V.innerHTML='<div class="anim senior"><div class="card" style="text-align:center">'+
+  '<div class="clock" id="clk">0.0<small> วิ</small></div>'+
+  '<p class="hint">กด "เริ่มจับเวลา" แล้ววางมือถือ · ลุก-นั่งครบ 5 ครั้งจึงกด "หยุด"</p>'+
+  '<button class="cta loop go" id="tGo">เริ่มจับเวลา</button>'+
+  '<button class="ghostb" id="tSkip">ทำไม่ได้ / ข้ามขั้นนี้</button></div></div>';
+  var run=false;
+  var btn=document.getElementById("tGo"), clk=document.getElementById("clk");
+  btn.addEventListener("click",function(){
+    if(!run){run=true;S.t0=Date.now();btn.textContent="หยุด — ครบ 5 ครั้งแล้ว";btn.classList.remove("go");btn.classList.add("stop");
+      S.timer=setInterval(function(){clk.innerHTML=((Date.now()-S.t0)/1000).toFixed(1)+"<small> วิ</small>"},100);
+    }else{clearInterval(S.timer);S.draft.ftsst=(Date.now()-S.t0)/1000;go("assessQ",0)}
+  });
+  document.getElementById("tSkip").addEventListener("click",function(){clearInterval(S.timer);S.draft.ftsst=null;go("assessQ",0)});
+}
+var QS=[
+ {k:"balance",q:"ยืนต่อส้นเท้าชิดปลายเท้า ได้นานแค่ไหน?",h:"ยืนข้างผนัง เอามือแตะได้เมื่อจะเสียหลัก",
+  o:[["ยืนได้เกิน 10 วินาที",3],["ยืนได้ 3–9 วินาที",2],["ยืนได้ไม่ถึง 3 วินาที",1],["ไม่กล้าลอง / ทำไม่ได้",0]]},
+ {k:"falls",q:"ใน 12 เดือนที่ผ่านมา หกล้มกี่ครั้ง?",h:"นับทุกครั้งที่ตัวถึงพื้นโดยไม่ตั้งใจ",
+  o:[["ไม่ล้มเลย",2],["ล้ม 1 ครั้ง",1],["ล้ม 2 ครั้งขึ้นไป",0]]},
+ {k:"meds",q:"ยาประจำที่กินทุกวัน มีกี่ชนิด?",h:"รวมยาความดัน เบาหวาน นอนหลับ ทุกชนิด",
+  o:[["น้อยกว่า 4 ชนิด",1],["4 ชนิดขึ้นไป",0]]},
+ {k:"adl",q:"กิจวัตรประจำวัน ทำเองได้แค่ไหน?",h:"อาบน้ำ แต่งตัว เดินในบ้าน ขึ้นบันได",
+  o:[["ทำเองได้ทั้งหมด",2],["ต้องมีคนช่วยบางอย่าง",1],["ต้องมีคนช่วยเกือบทุกอย่าง",0]]}
+];
+function assessQV(i){
+  i=i||0;var q=QS[i];
+  head("ขั้นที่ "+(i+2)+" / 5",q.q,"","");
+  V.innerHTML='<div class="anim senior"><p class="qhelp">'+q.h+'</p>'+
+  q.o.map(function(o,j){return '<button class="pick" data-i="'+j+'">'+o[0]+'</button>'}).join("")+'</div>';
+  V.querySelectorAll(".pick").forEach(function(b){
+    b.addEventListener("click",function(){
+      S.draft[q.k]=q.o[+b.dataset.i][1];
+      if(i+1<QS.length){go("assessQ",i+1)}else{finishAssess()}
+    });
+  });
+}
+async function finishAssess(){
+  var p=S.data.profile;
+  var r=scoreDraft(S.draft,p.age);
+  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null};
+  S.data.assessments.push(rec);
+  audit("ประเมินและให้คะแนน","คะแนน "+r.score+"/"+r.max+" ระดับ "+CFG.tiers[r.tier].nm+(S.draft.ftsst?" · ลุกนั่ง "+S.draft.ftsst.toFixed(1)+" วินาที":" · ข้ามการจับเวลา"));
+  var tr=trajectory();
+  if(tr){
+    audit("วิเคราะห์แนวโน้มความเสี่ยง","ระดับ "+ENGINE.levelNm[tr.level]+" · กฎที่ทำงาน: "+(tr.flags.map(function(f){return f.id}).join(", ")||"ไม่มี")+" · นัดประเมินซ้ำใน "+tr.nextDays+" วัน");
+    if(tr.referral.need) audit("สร้างคำแนะนำส่งต่อ", tr.referral.nm+" "+tr.referral.sla+" — สถานะ: รอผู้เชี่ยวชาญยืนยัน","ต้องมีพยาบาล/Care Manager ยืนยันก่อนดำเนินการ");
+  }
+  await saveAll();
+  go("assessResult",rec);
+}
+function assessResultV(rec){
+  rec=rec||S.data.assessments[S.data.assessments.length-1];
+  var t=CFG.tiers[rec.tier], p=S.data.profile;
+  head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at));
+  var d=CFG.discount[rec.tier];
+  V.innerHTML='<div class="anim">'+
+  '<div class="hero"><p class="eyebrow">คะแนนรวม</p>'+
+  '<span class="score">'+rec.score+'</span><span class="of"> / '+rec.max+'</span>'+
+  '<div><span class="state" style="background:'+t.c+'">'+t.nm+'</span></div>'+
+  '<p class="note">'+t.act+'</p></div>'+
+  '<div class="card"><h3>คะแนนรายด้าน</h3>'+
+  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+
+  '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
+  '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
+  '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
+  '<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+rec.parts.adl+' / 2</span></div></div>'+
+  (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">คุณได้ส่วนลดแล้ว</h3><p class="sub" style="margin:0">ผลตรวจระดับนี้ช่วยลดค่าเบี้ยได้ <b>'+(d*100)+'%</b> — ระบบคิดให้อัตโนมัติในหน้าประกันของฉัน</p></div>':'')+
+  (rec.tier<=2?'<div class="card" style="background:var(--c2b)"><h3 style="color:var(--c2)">เราส่งเรื่องให้ทีมดูแลแล้ว</h3><p class="sub" style="margin:0">ทีมดูแลได้รับเรื่องของคุณแล้ว '+t.act+'</p></div>':'')+
+  (S.data.assessments.length>1?warnCard():'')+
+  '<button class="cta" data-go="plan">ดูแผนป้องกันเฉพาะของฉัน</button>'+
+  '<button class="ghostb" data-go="home">กลับหน้าหลัก</button>'+
+  '<button class="ghostb" data-go="policy">ดูเบี้ยประกันของฉัน</button></div>';
+}
+
+/* ---------- ประวัติ ---------- */
+function historyV(){
+  head("ผลย้อนหลัง","ผลตรวจทั้งหมดของคุณ","เก็บไว้ให้ครบทุกครั้ง ใช้ยืนยันส่วนลดและติดตามสุขภาพ","home");
+  var a=S.data.assessments;
+  if(!a.length){V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ยังไม่มีผลตรวจ — เมื่อตรวจแล้วผลจะมาแสดงที่นี่</p></div><button class="cta loop" data-go="assessIntro">ประเมินครั้งแรก</button></div>';return}
+  V.innerHTML='<div class="anim">'+(a.length>1?trendCard():'')+
+  '<div class="card">'+a.slice().reverse().map(function(x){var t=CFG.tiers[x.tier];
+    return '<div class="hrow"><span class="dt">'+thDate(x.at)+'</span><span class="sc" style="color:'+t.c+'">'+x.score+'</span><span class="tierpill '+t.b+'">'+t.nm.split(" — ")[0]+'</span></div>'}).join("")+'</div></div>';
+}
+
+/* ---------- กรมธรรม์ ---------- */
+
+/* ---------- กล่องเงื่อนไขความคุ้มครอง (ต้องแสดงก่อนสมัครทุกครั้ง) ---------- */
+function termsCard(){return '<div class="card">'+termsBody()+'</div>'}
+function termsBody(){
+  var cw=chronicWait(), T=CFG.terms;
+  return '<p class="sub" style="margin:0 0 12px">หลักง่าย ๆ: <b>สิ่งที่เกิดขึ้นโดยไม่ทันตั้งตัว คุ้มครองทันที</b> ส่วนโรคที่ค่อย ๆ เป็น ต้องรอระยะหนึ่งก่อน</p>'+
+  '<div class="rowline"><span class="k">อุบัติเหตุ (หกล้ม สะโพกหัก)</span><span class="v" style="color:var(--c4)">คุ้มครองทันที</span></div>'+
+  '<div class="rowline"><span class="k">เจ็บป่วยเฉียบพลัน (หลอดเลือดสมอง)</span><span class="v">'+T.waitAcute+' วัน</span></div>'+
+  '<div class="rowline"><span class="k">ภาวะเสื่อมถอยเรื้อรัง</span><span class="v">'+cw.days+' วัน</span></div>'+
+  (cw.cut>0?'<p class="sub" style="margin:8px 0 0;color:var(--c4)">ระยะรอคอยกลุ่มเรื้อรังของคุณสั้นลง '+cw.cut+' วันแล้ว จากการมีผลประเมินต่อเนื่อง '+cw.n+' ครั้ง (จากเดิม '+T.waitChronic+' วัน)</p>'
+        :'<p class="sub" style="margin:8px 0 0">ประเมินต่อเนื่องทุก 3 เดือน ลดระยะรอคอยกลุ่มเรื้อรังได้ครั้งละ '+T.chronicCutPerAssess+' วัน สูงสุด '+T.chronicCutMax+' วัน</p>')+
+  '<div class="rowline" style="margin-top:6px"><span class="k">ต้องช่วยตัวเองไม่ได้ติดต่อกัน</span><span class="v">'+T.elimination+' วัน</span></div>'+
+  '<div class="rowline"><span class="k">บริษัทจ่ายให้นานสุด</span><span class="v">'+T.capMonths+' งวด</span></div>'+
+  '<div class="notice" style="margin:12px 0 0">ไม่คุ้มครองโรคหรือการบาดเจ็บที่เป็นมาก่อนวันเริ่มคุ้มครอง · การตัดสินว่าเข้าเกณฑ์รับเงินหรือไม่ ทำโดยพยาบาลและทีมดูแลที่มาประเมินถึงบ้าน ไม่ใช่แอปตัดสินเอง</div>';
+}
+/* ---------- การ์ดส่วนลดต่อเนื่อง ---------- */
+function loyaltyCard(planId){return '<div class="card">'+loyaltyBody(planId)+'</div>'}
+function loyaltyBody(planId){
+  var L=loyaltyPoints(), baht=CFG.loyalty[planId]||0;
+  return (L.ok?'<div class="notice" style="margin:0 0 12px;background:var(--c4b);border-color:rgba(14,159,110,.3)"><b style="color:var(--c4)">คุณกำลังได้ส่วนลดนี้อยู่</b></div>':'')+
+  '<p class="sub" style="margin:0 0 10px">ยิ่งตรวจสม่ำเสมอ ยิ่งจ่ายถูกลง โดยบอกเป็น<b>จำนวนบาท</b>ให้เห็นชัด ไม่ใช่เปอร์เซ็นต์</p>'+
+  L.detail.map(function(d){return '<div class="rowline"><span class="k">'+esc(d[0])+'</span><span class="v" style="color:'+(d[1]==="0"?"var(--ink3)":"var(--c4)")+'">'+d[1]+'</span></div>'}).join("")+
+  '<div class="rowline"><span class="k"><b>รวมได้</b></span><span class="v">'+L.pts+' / '+L.need+' คะแนน</span></div>'+
+  '<div class="rowline"><span class="k">ส่วนลดที่ได้</span><span class="v" style="color:'+(L.ok?"var(--c4)":"var(--ink3)")+'">'+(L.ok?"−"+fmt(baht)+" บ./เดือน":"ยังไม่ครบเกณฑ์")+'</span></div>'+
+  (L.ok?'':'<p class="sub" style="margin:10px 0 0">ทำให้ครบ '+L.need+' ข้อ จะได้ลดเดือนละ '+fmt(baht)+' บาททุกเดือน</p>')+
+  '</div>';
+}
+
+function policyV(){
+  var p=S.data.profile, pol=S.data.policy;
+  var last=S.data.assessments[S.data.assessments.length-1];
+  var tier=last?last.tier:null;
+  head("ประกันของฉัน","ประกันดูแลยามช่วยตัวเองไม่ได้","ค่าเบี้ยคิดจากอายุ เพศ และผลตรวจล่าสุดของคุณ");
+  if(pol){
+    var paid=S.data.payments.length;
+    V.innerHTML='<div class="anim">'+
+    '<div class="hero"><p class="eyebrow">เลขที่ประกัน '+esc(pol.no)+'</p>'+
+    '<span class="score" style="font-size:34px">'+esc(pol.planName)+'</span>'+
+    '<p class="note">ถ้าช่วยตัวเองไม่ได้ รับเดือนละ '+fmt(pol.benefit)+' บ./เดือน · งบป้องกัน '+fmt(pol.prev)+' บ./ปี<br>เริ่มคุ้มครอง '+thDate(pol.start)+'</p></div>'+
+    '<div class="card"><h3>เบี้ยประกัน</h3>'+
+    '<div class="rowline"><span class="k">ต้องจ่ายงวดนี้</span><span class="v">'+fmt(pol.premium)+' บ./'+(pol.pay==="y"?"ปี":"เดือน")+'</span></div>'+
+    '<div class="rowline"><span class="k">ส่วนลดจากผลตรวจ</span><span class="v">'+(pol.disc>0?("−"+(pol.disc*100)+"%"):"—")+'</span></div>'+
+    '<div class="rowline"><span class="k">ส่วนลดจากการตรวจสม่ำเสมอ</span><span class="v" style="color:'+(loyaltyBaht(pol.plan)>0?"var(--c4)":"var(--ink3)")+'">'+(loyaltyBaht(pol.plan)>0?("−"+fmt(loyaltyBaht(pol.plan))+" บ."):"ยังไม่ครบเกณฑ์")+'</span></div>'+
+    '<div class="rowline"><span class="k">จ่ายมาแล้ว</span><span class="v">'+paid+' งวด · '+fmt(S.data.payments.reduce(function(s,x){return s+x.amt},0))+' บ.</span></div>'+
+    '<button class="cta" id="payBtn" style="margin-top:12px">จ่ายเงินงวดนี้ '+fmt(pol.premium)+' บ.</button>'+
+    (tier&&CFG.discount[tier]!==pol.disc?'<button class="ghostb" id="reprice">ใช้ผลตรวจล่าสุดคิดค่าเบี้ยใหม่</button>':'')+
+    '</div>'+
+    '<details class="acc"><summary><span>ส่วนลดของฉัน<span class="sm">ดูว่าทำอะไรแล้วจ่ายถูกลง</span></span></summary><div class="accin">'+loyaltyBody(pol.plan)+'</div></details>'+
+    '<details class="acc"><summary><span>เงื่อนไขความคุ้มครอง<span class="sm">3 ข้อควรรู้ก่อนใช้สิทธิ์</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
+    (S.data.payments.length?'<div class="card"><h3>ประวัติการจ่ายเงิน</h3>'+S.data.payments.slice().reverse().slice(0,6).map(function(x){return '<div class="rowline"><span class="k">'+thDate(x.at)+' · '+esc(x.ref)+'</span><span class="v">'+fmt(x.amt)+' บ.</span></div>'}).join("")+'</div>':'')+
+    '</div>';
+    document.getElementById("payBtn").addEventListener("click",function(){go("pay")});
+    var rp=document.getElementById("reprice");
+    if(rp)rp.addEventListener("click",async function(){
+      var q=premiumFor(pol.plan,p.age,p.sex,tier,pol.pay);
+      if(q.net<=pol.premium){pol.premium=q.net;pol.disc=q.disc;await saveAll();toast("อัปเดตเบี้ยใหม่ "+fmt(q.net)+" บ. (ลด "+(q.disc*100)+"%)");render()}
+      else{toast("ผลล่าสุดไม่ทำให้เบี้ยเพิ่ม — คงเบี้ยเดิมไว้ตามหลักคุ้มครองผู้ใช้")}
+    });
+    return;
+  }
+  /* ยังไม่มีกรมธรรม์ — เลือกแผน */
+  var q=premiumFor(S.planSel,p.age,p.sex,tier,S.pay);
+  V.innerHTML='<div class="anim">'+
+  (tier?'<div class="notice">ใช้ผลประเมินล่าสุด: <b class="tierpill '+CFG.tiers[tier].b+'">'+CFG.tiers[tier].nm.split(" — ")[0]+'</b> '+(CFG.discount[tier]>0?"→ ลดเบี้ย "+(CFG.discount[tier]*100)+"%":"→ ยังไม่เข้าเกณฑ์ส่วนลด (ไม่มีการเพิ่มเบี้ย)")+'</div>'
+       :'<div class="notice">ยังไม่มีผลประเมิน — สมัครได้เลย หรือ<b>ประเมินก่อนเพื่อรับส่วนลดสูงสุด 15%</b></div>')+
+  '<div class="card"><h3>เลือกแผน</h3>'+
+  CFG.plans.map(function(x){var pr=premiumFor(x.id,p.age,p.sex,tier,"m");
+    return '<div class="planbox" role="button" tabindex="0" data-plan="'+x.id+'" aria-pressed="'+(x.id===S.planSel)+'">'+
+    '<span class="pr">'+fmt(pr.net)+' บ./ด.</span><div class="nm">'+x.nm+(x.pop?' ★':'')+'</div>'+
+    '<div class="bn">พึ่งพิงรับ '+fmt(x.benefit)+' บ./ด. · งบป้องกัน '+fmt(x.prev)+' บ./ปี</div></div>'}).join("")+
+  '<div class="seg" style="margin-top:6px" id="paySeg">'+
+    '<button data-v="m" aria-pressed="'+(S.pay==="m")+'">รายเดือน</button>'+
+    '<button data-v="y" aria-pressed="'+(S.pay==="y")+'">รายปี −8%</button></div></div>'+
+  '<div class="card" style="background:var(--surf2)"><h3>สรุปเบี้ยของคุณ</h3>'+
+  '<div class="bignum">'+fmt(q.net)+' <span style="font-size:15px;font-weight:500">บ./'+(S.pay==="y"?"ปี":"เดือน")+'</span></div>'+
+  '<div class="rowline"><span class="k">แผน '+q.plan.nm+' ฐาน</span><span class="v">'+fmt(q.plan.base)+' บ.</span></div>'+
+  '<div class="rowline"><span class="k">ช่วงอายุ '+CFG.ageBand(p.age)+'</span><span class="v">× '+CFG.ageMult(p.age).toFixed(2)+'</span></div>'+
+  '<div class="rowline"><span class="k">เพศ'+(p.sex==="f"?"หญิง":"ชาย")+'</span><span class="v">× '+CFG.sexMult[p.sex].toFixed(2)+'</span></div>'+
+  '<div class="rowline"><span class="k">ส่วนลดจากผลตรวจ</span><span class="v">'+(q.disc>0?"−"+(q.disc*100)+"%":"—")+'</span></div>'+
+  '<div class="rowline"><span class="k">ส่วนลดจากการตรวจสม่ำเสมอ</span><span class="v" style="color:'+(q.loyalty>0?"var(--c4)":"var(--ink3)")+'">'+(q.loyalty>0?"−"+fmt(q.loyalty)+" บ.":"ยังไม่ครบเกณฑ์")+'</span></div></div>'+
+  '<details class="acc"><summary><span>ส่วนลดของฉัน<span class="sm">ดูว่าทำอะไรแล้วจ่ายถูกลง</span></span></summary><div class="accin">'+loyaltyBody(S.planSel)+'</div></details>'+
+  '<details class="acc" open><summary><span>เงื่อนไขความคุ้มครอง<span class="sm">อ่านก่อนสมัคร</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
+  '<div class="notice" style="margin:0 0 10px">ส่วนลดในหน้านี้เป็น<b>สิทธิประโยชน์ส่งเสริมสุขภาพ</b> ที่บริษัทประกันเป็นผู้กำหนดและปรับได้ ไม่ใช่การลดอัตราเบี้ยฐานถาวร · อัตราจริงต้องผ่านการรับรองโดยนักคณิตศาสตร์ประกันภัยและอนุมัติจาก คปภ.</div>'+'<button class="cta loop" id="buy">สมัครแผน'+q.plan.nm+' · '+fmt(q.net)+' บ.</button>'+
+  '<p class="hint" style="margin-top:12px">ต้นแบบสาธิต — การสมัครจริงต้องผ่านบริษัทประกันที่ได้รับใบอนุญาตจาก คปภ.</p></div>';
+  V.querySelectorAll(".planbox").forEach(function(b){b.addEventListener("click",function(){S.planSel=b.dataset.plan;render()})});
+  document.getElementById("paySeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.pay=b.dataset.v;render()});
+  document.getElementById("buy").addEventListener("click",async function(){
+    var qq=premiumFor(S.planSel,p.age,p.sex,tier,S.pay);
+    S.data.policy={no:"CS-"+String(Date.now()).slice(-8), plan:S.planSel, planName:qq.plan.nm, benefit:qq.plan.benefit, prev:qq.plan.prev, premium:qq.net, disc:qq.disc, loyalty:qq.loyalty, pay:S.pay, start:todayISO(), terms:{waitAcute:CFG.terms.waitAcute, waitChronic:chronicWait().days, elimination:CFG.terms.elimination, capMonths:CFG.terms.capMonths}};
+    await saveAll();
+    toast("ออกเลขที่ประกัน "+S.data.policy.no+" แล้ว");
+    render();
+  });
+}
+function payV(){
+  var pol=S.data.policy;
+  head("ชำระเบี้ย","งวดนี้ "+fmt(pol.premium)+" บาท","เลือกช่องทาง (สาธิต — บันทึกลงฐานข้อมูลจริง)","policy");
+  V.innerHTML='<div class="anim senior">'+
+  ['พร้อมเพย์ / QR','บัตรเครดิต·เดบิต','หักบัญชีอัตโนมัติ'].map(function(m,i){return '<button class="pick" data-m="'+m+'">'+m+'</button>'}).join("")+'</div>';
+  V.querySelectorAll(".pick").forEach(function(b){b.addEventListener("click",async function(){
+    S.data.payments.push({at:todayISO(), amt:pol.premium, ref:b.dataset.m});
+    await saveAll();
+    toast("บันทึกการชำระ "+fmt(pol.premium)+" บ. ("+b.dataset.m+") สำเร็จ");
+    go("policy");
+  })});
+}
+
+/* ---------- ฉัน ---------- */
+
+/* ---------- Responsible AI / Model Card ในแอป ---------- */
+function aiV(){
+  head("ความโปร่งใสของระบบ","ระบบทำงานกับข้อมูลคุณอย่างไร","อ่านได้ทุกบรรทัด ตรวจสอบได้ทุกครั้งที่ระบบตัดสินใจ","me");
+  var log=(S.data.audit||[]).slice(-12).reverse();
+  var c=S.data.consent;
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>ระบบนี้คืออะไร (Model Card ฉบับผู้ใช้)</h3>'+
+  '<div class="rowline"><span class="k">กล้องตรวจจับท่าทาง</span><span class="v">AI จริง</span></div>'+'<div class="rowline"><span class="k">การอ่านแนวโน้ม</span><span class="v">กฎที่ตรวจสอบได้</span></div>'+
+  '<div class="rowline"><span class="k">รุ่น</span><span class="v">v'+ENGINE.version+'</span></div>'+
+  '<div class="rowline"><span class="k">ใช้กับ</span><span class="v">อายุ 50–70 ปี</span></div>'+
+  '<div class="rowline"><span class="k">ไม่ใช้กับ</span><span class="v">ผู้ป่วยติดเตียง</span></div>'+
+  '<p class="sub" style="margin:12px 0 0">ระบบเปรียบเทียบผลของคุณกับ<b>ตัวคุณเองในอดีต</b> ไม่ใช่กับค่าเฉลี่ยของกลุ่มใด จึงไม่เกิดการเสียเปรียบจากเพศหรือช่วงอายุ · เกณฑ์เวลาลุกนั่งอ้างอิงค่าตัดของประชากรไทยแยกตามช่วงอายุ</p></div>'+
+  '<div class="card"><h3>กฎทั้งหมดที่ระบบใช้</h3>'+
+  Object.keys(ENGINE.rules).map(function(k){var r=ENGINE.rules[k];
+    return '<div class="pitem"><b>'+k+' · '+esc(r.nm)+'</b><span class="sc">ที่มา: '+esc(r.src)+'</span></div>'}).join("")+'</div>'+
+  '<div class="card"><h3>สิ่งที่ระบบทำไม่ได้</h3>'+
+  '<p class="sub" style="margin:0">ระบบ<b>ไม่วินิจฉัยโรค ไม่สั่งยา ไม่อนุมัติสินไหม และไม่ปฏิเสธความคุ้มครอง</b> · ผลประเมินใช้<b>ลดเบี้ยได้เท่านั้น</b> ไม่มีการเพิ่มเบี้ยจากคะแนนที่แย่ลง · การส่งต่อทุกครั้งต้องมีพยาบาลหรือ Care Manager ที่เป็นมนุษย์ยืนยันก่อนเสมอ · การอนุมัติสินไหมทุกกรณีตัดสินโดยผู้เชี่ยวชาญมนุษย์ ระบบทำหน้าที่รวบรวมหลักฐานเท่านั้น</p></div>'+
+  '<div class="card"><h3>ความยินยอม (PDPA)</h3>'+
+  (c?'<div class="rowline"><span class="k">ให้ความยินยอมเมื่อ</span><span class="v">'+thDate(c.at)+'</span></div>'+
+     '<div class="rowline"><span class="k">รุ่นข้อตกลง</span><span class="v">'+esc(c.version)+'</span></div>'
+    :'<p class="sub">ยังไม่มีบันทึกความยินยอมในเครื่องนี้</p>')+
+  '<p class="sub" style="margin:10px 0 0">วัตถุประสงค์: ประเมินความเสี่ยง สร้างแผนป้องกัน คำนวณส่วนลดเบี้ย และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · คุณถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อในหน้า “ฉัน”</p></div>'+
+  '<div class="card"><h3>บันทึกการทำงานของระบบ (Audit log)</h3>'+
+  (log.length?log.map(function(x){
+    return '<div class="logline"><b>'+thDate(x.at)+' · '+esc(x.ev)+'</b><br>'+esc(x.detail)+'<br>ผู้ตรวจสอบ: '+esc(x.human)+'</div>'}).join("")
+   :'<p class="sub" style="margin:0">ยังไม่มีบันทึก</p>')+
+  '<p class="sub" style="margin:10px 0 0">เก็บ 200 รายการล่าสุดในฐานข้อมูลของคุณ เพื่อให้ตรวจสอบย้อนหลังได้ว่าระบบตัดสินใจอะไรด้วยเหตุผลใด</p></div>'+
+  '<button class="cta" data-go="me">กลับ</button></div>';
+}
+
+function meV(){
+  var p=S.data.profile;
+  head("ตั้งค่า",esc(p.name),"สมาชิกตั้งแต่ "+thDate(p.joined));
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>ข้อมูลส่วนตัว</h3>'+
+  '<div class="rowline"><span class="k">รหัสสมาชิก</span><span class="v">'+esc(p.uid)+'</span></div>'+
+  '<div class="rowline"><span class="k">ปีเกิด / อายุ</span><span class="v">'+p.birthYear+' · '+p.age+' ปี</span></div>'+
+  '<div class="rowline"><span class="k">เพศ</span><span class="v">'+(p.sex==="f"?"หญิง":"ชาย")+'</span></div>'+
+  '<div class="rowline"><span class="k">เบอร์ผู้ดูแล</span><span class="v">'+esc(p.phone||"—")+'</span></div></div>'+
+  '<div class="card"><h3>ความเป็นส่วนตัว</h3>'+
+  '<p class="sub">ส่งข้อมูลสรุปแบบไม่ระบุตัวตน (ช่วงอายุ เพศ ระดับสัญญาณ) เข้าระบบกลาง เพื่อให้ Care Manager และบริษัทประกันดูแลพอร์ตได้</p>'+
+  '<div class="seg"><button id="shareOn" aria-pressed="'+S.data.sharePool+'">เปิด</button><button id="shareOff" aria-pressed="'+(!S.data.sharePool)+'">ปิด</button></div></div>'+
+  '<div class="card"><h3>ที่เก็บข้อมูล</h3><p class="sub" style="margin:0">โหมดปัจจุบัน: <b>'+dbLabel().replace("DB · ","")+'</b> — CLOUD = ฐานข้อมูลถาวรของแพลตฟอร์ม · LOCAL = ในเครื่องนี้ · TEMP = ชั่วคราว</p></div>'+
+  '<div class="card"><h3>ความโปร่งใสและสิทธิของคุณ</h3><p class="sub">ดูได้ว่าระบบใช้กฎอะไร ตัดสินใจอะไรกับข้อมูลของคุณบ้าง และระบบทำอะไรไม่ได้</p><button class="ghostb" data-go="ai">ดูว่าระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>'+'<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';
+  document.getElementById("shareOn").addEventListener("click",async function(){S.data.sharePool=true;await saveAll();toast("เปิดการแชร์ข้อมูลสรุปแล้ว");render()});
+  document.getElementById("shareOff").addEventListener("click",async function(){S.data.sharePool=false;await saveAll();toast("ปิดการแชร์แล้ว — ข้อมูลอยู่กับคุณเท่านั้น");render()});
+  document.getElementById("wipe").addEventListener("click",async function(){
+    if(!confirm("ลบบัญชี ผลประเมิน กรมธรรม์ และประวัติชำระทั้งหมด? กู้คืนไม่ได้"))return;
+    await DB.del("careSignalData");
+    S.data=blankData();S.draft={};
+    toast("ลบข้อมูลเรียบร้อยตามสิทธิ PDPA");
+    go("welcome");
+  });
+}
+
+/* ---------- นำทาง ---------- */
+document.addEventListener("click",function(e){
+  var g=e.target.closest("[data-go]");
+  if(g){go(g.dataset.go)}
+});
+(async function(){
+  await loadAll();
+  go(S.data.profile?"home":"welcome");
+})();
+</script>
+</body>
+</html>

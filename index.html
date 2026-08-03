@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CareSignal — แพลตฟอร์มข้อมูลต่อเนื่องสำหรับประกันดูแลระยะยาว</title>
+<meta name="description" content="CareSignal เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุให้เป็นข้อมูลที่ป้องกันความเสี่ยงและออกแบบประกัน LTC ได้">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#2563EB">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./favicon-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE; --navy:#0F1B33;
+  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7; --line:#DFE7F2; --line2:#EDF2FA;
+  --brand:#2563EB; --brand2:#1D4ED8; --teal:#2DD4BF;
+  --accent:#F59E0B; --accent2:#B45309; --accentb:#FEF3C7;
+  --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sh:0 1px 2px rgba(22,35,59,.04),0 8px 24px rgba(22,35,59,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:960px;margin:0 auto;padding:0 22px}
+header{background:var(--navy);color:#fff;padding:52px 0 46px;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;border-radius:50%;
+  background:radial-gradient(circle,rgba(37,99,235,.38),transparent 65%)}
+header::before{content:"";position:absolute;left:-170px;bottom:-220px;width:480px;height:480px;border-radius:50%;
+  background:radial-gradient(circle,rgba(245,158,11,.15),transparent 62%)}
+header .wrap{position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.brand img{width:56px;height:56px;background:#fff;border-radius:14px;padding:5px}
+.brand b{font-size:22px;letter-spacing:-.02em;font-weight:700}
+.kick{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#FCD34D}
+h1{font-size:clamp(26px,4.2vw,40px);line-height:1.25;letter-spacing:-.025em;margin:12px 0 14px;font-weight:700;max-width:720px}
+h1 em{font-style:normal;color:#FBBF24}
+.lead{color:rgba(255,255,255,.74);max-width:620px;margin:0 0 26px;font-size:16px}
+.tagline{display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
+  border-radius:99px;padding:8px 18px;font-size:13.5px}
+section{padding:44px 0}
+h2{font-size:21px;letter-spacing:-.015em;margin:0 0 6px;font-weight:600}
+.secsub{color:var(--ink2);font-size:14px;margin:0 0 22px;max-width:660px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.tile{background:var(--surf);border-radius:20px;padding:22px;box-shadow:var(--sh);border:1px solid var(--line);
+  display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 2px 8px rgba(22,35,59,.08),0 20px 44px rgba(22,35,59,.12)}
+.tile .no{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--accent2);text-transform:uppercase}
+.tile h3{margin:8px 0 7px;font-size:17.5px;letter-spacing:-.01em;font-weight:600}
+.tile p{margin:0 0 14px;color:var(--ink2);font-size:13.5px;line-height:1.65;flex:1}
+.tile .go{font-size:13.5px;font-weight:600;color:var(--brand)}
+.tile.hero{border:1.5px solid var(--brand);background:linear-gradient(180deg,#fff,#F7FAFF)}
+.tile.hero .no{color:var(--brand2)}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;
+  background:var(--accentb);color:var(--accent2);margin-left:7px;vertical-align:middle}
+.note{background:var(--surf);border-left:3px solid var(--accent);border-radius:0 14px 14px 0;padding:16px 18px;
+  font-size:13.5px;color:var(--ink2);line-height:1.75;box-shadow:var(--sh)}
+.note b{color:var(--ink)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:8px}
+.fact{background:var(--surf);border-radius:16px;padding:16px;box-shadow:var(--sh)}
+.fact .n{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--brand2)}
+.fact .l{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.5}
+footer{background:var(--navy);color:rgba(255,255,255,.6);padding:32px 0;font-size:12.5px;line-height:1.8;margin-top:20px}
+footer b{color:#fff}
+@media(max-width:600px){header{padding:38px 0 34px}section{padding:32px 0}}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="brand"><img src="./logo-mark.png" alt="โลโก้ CareSignal"><b>CareSignal</b></div>
+  <div class="kick">OIC InsurTech Award 2026 · ความเสี่ยงด้านสังคมสูงวัย</div>
+  <h1>เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุ ให้เป็นข้อมูลที่<em>ป้องกันความเสี่ยง</em>และออกแบบประกัน LTC ได้</h1>
+  <p class="lead">บริษัทประกันไทยออกผลิตภัณฑ์ดูแลระยะยาวได้ยาก เพราะไม่มีข้อมูลสมรรถภาพของคนไทยแบบต่อเนื่อง CareSignal สร้างข้อมูลชุดนั้นจากการประเมินที่บ้าน โดยประมวลผลในเครื่องและส่งขึ้นระบบเฉพาะคะแนน</p>
+  <span class="tagline">รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม</span>
+</div></header>
+
+<section><div class="wrap">
+  <div class="note" style="border-left-color:var(--brand);margin-bottom:26px">
+    <b style="font-size:16px;color:var(--ink)">CareSignal คืออะไร — อธิบายในประโยคเดียว</b><br>
+    <span style="font-size:16px;color:var(--ink);line-height:1.8">ใช้กล้องมือถือวัดความถดถอยของสมรรถภาพผู้สูงอายุที่บ้าน เพื่อให้บริษัทประกันป้องกันภาวะพึ่งพิงก่อนเกิดเคลม LTC โดยไม่ส่งภาพออกจากเครื่อง</span>
+  </div>
+  <h2>แกนกลาง — จุดเดียวที่ต้องจำ</h2>
+  <p class="secsub">ระบบอื่นทั้งหมดในหน้านี้เกิดขึ้น <b>เพราะ</b> มีข้อมูลชุดนี้ ไม่ใช่ไอเดียคู่ขนาน</p>
+  <div class="grid">
+
+    <a class="tile hero" href="./CareSignal-Vision.html">
+      <span class="no">ระบบหลัก · ใช้กล้อง</span>
+      <h3>CareSignal Vision<span class="badge">แนะนำให้เริ่มที่นี่</span></h3>
+      <p>กล้องมือถือตรวจจับ 33 จุดบนร่างกาย นับท่าลุกนั่ง 5 ครั้งและจับเวลาให้อัตโนมัติ วิเคราะห์แนวโน้มพร้อมอธิบายเหตุผลเป็นตัวเลข ส่งเคสเข้าคิวให้ผู้เชี่ยวชาญยืนยัน และมีแดชบอร์ดพอร์ตของบริษัทประกันในตัว</p>
+      <span class="go">เปิดระบบ · ต้องอนุญาตใช้กล้อง →</span>
+    </a>
+
+  </div>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <h2>สิ่งที่ตามมาเมื่อมีข้อมูลชุดนี้</h2>
+  <p class="secsub">สามระบบนี้ไม่ใช่ผลิตภัณฑ์แยก แต่คือปลายทางของข้อมูลเดียวกัน — ผู้ใช้เห็นแนวโน้มตัวเอง ทีมดูแลเห็นคิวที่ต้องช่วย และบริษัทประกันเห็นความเสี่ยงของพอร์ต</p>
+  <div class="grid">
+    <a class="tile" href="./CareSignal-App.html">
+      <span class="no">แอปผู้เอาประกัน</span>
+      <h3>แอปสมาชิก</h3>
+      <p>สมัครสมาชิก ประเมินสมรรถภาพ 5 ด้าน ดูประวัติย้อนหลัง เลือกแผนและสมัครกรมธรรม์ที่คำนวณเบี้ยจากผลประเมิน พร้อมแผนป้องกันเฉพาะบุคคลและหน้าความโปร่งใสของระบบ</p>
+      <span class="go">เปิดแอป →</span>
+    </a>
+
+    <a class="tile" href="./CareSignal-Web.html">
+      <span class="no">เว็บแพลตฟอร์ม</span>
+      <h3>เว็บไซต์ · Care Manager · Responsible AI</h3>
+      <p>หน้าเว็บสาธารณะพร้อมเครื่องคำนวณเบี้ย คิวดูแลของ Care Manager แดชบอร์ดบริษัทประกัน Model Card พร้อมการตรวจสอบอคติ และแผนวัดผลนำร่อง 7 ตัวชี้วัด</p>
+      <span class="go">เปิดเว็บไซต์ →</span>
+    </a>
+
+    <a class="tile" href="./CareSignal-Web.html#evi">
+      <span class="no">หลักฐาน</span>
+      <h3>ฐานหลักฐานทางวิชาการ</h3>
+      <p>งานวิจัยที่ตีพิมพ์แล้วซึ่งรองรับสองคำถามหลัก: กล้องวัดได้แม่นเท่าคนจับเวลาหรือไม่ และเวลาลุกนั่งทำนายภาวะพึ่งพิงได้จริงหรือไม่ พร้อมรายการสิ่งที่ยัง<b>ไม่ได้</b>พิสูจน์อย่างเปิดเผย</p>
+      <span class="go">เปิดในเว็บแพลตฟอร์ม · เมนู “หลักฐานวิชาการ” →</span>
+    </a>
+
+    <a class="tile" href="./CareSignal-Insurer-Model.html">
+      <span class="no">สำหรับผู้ประกอบการ</span>
+      <h3>โมเดลผลประกอบการ</h3>
+      <p>ตารางอัตราเบี้ยเต็ม ประมาณการ 5 ปีที่ปรับสมมติฐานได้ 14 ตัวแปร เปรียบเทียบพอร์ตที่มีและไม่มีการคัดกรอง ทะเบียนความเสี่ยง 6 ข้อ และตารางคำถามที่ผู้กำกับดูแลจะถาม</p>
+      <span class="go">เปิดโมเดล →</span>
+    </a>
+
+  </div>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <h2>หลักการที่ยึดไว้ตั้งแต่การออกแบบ</h2>
+  <p class="secsub">ข้อจำกัดเหล่านี้เขียนอยู่ในโค้ด ไม่ใช่คำสัญญาในเอกสาร</p>
+  <div class="facts">
+    <div class="fact"><div class="n">ลดเบี้ยทางเดียว</div><div class="l">ไม่มีเส้นทางใดในระบบที่เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนนที่แย่ลง</div></div>
+    <div class="fact"><div class="n">ไม่ส่งภาพออก</div><div class="l">กล้องประมวลผลในเครื่อง ส่งขึ้นระบบเฉพาะตัวเลขคะแนนและเวลา</div></div>
+    <div class="fact"><div class="n">มนุษย์ตัดสิน</div><div class="l">AI คัดกรองและรวบรวมหลักฐาน การส่งต่อและสินไหมตัดสินโดยผู้เชี่ยวชาญเท่านั้น</div></div>
+    <div class="fact"><div class="n">แยก AI ออกจากกฎ</div><div class="l">กล้องตรวจจับท่าทางใช้ AI จริง ส่วนการอ่านแนวโน้มใช้กฎที่ตรวจสอบได้ทุกข้อ ไม่เรียกรวมว่า “AI ทำนายโรค”</div></div>
+  </div>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <div class="note">
+    <b>สถานะของงานชิ้นนี้</b><br>
+    ระบบทั้งหมดทำงานได้จริงและทดสอบแล้ว แต่ <b>ยังไม่ผ่านการทดสอบกับผู้สูงอายุจริงในภาคสนาม</b> ตัวเลขทางการเงินในโมเดลเป็นสมมติฐานที่ประกาศไว้ชัดเจนและปรับได้ทุกตัวแปร ส่วนอัตราการลดอุบัติการณ์อ้างอิงจากวรรณกรรมต่างประเทศ ไม่ใช่ผลของระบบนี้เอง<br><br>
+    แผนวัดผลนำร่อง 30–100 ราย พร้อมนิยามการวัดและเกณฑ์ผ่านที่ประกาศล่วงหน้า อยู่ในหน้า “แผนวัดผลนำร่อง” ของเว็บแพลตฟอร์ม<br><br>
+    <b>ระบบนี้เป็นเครื่องมือสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์</b> และการเสนอขายประกันภัยจริงต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ.
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <b>CareSignal</b> — ผลงานเพื่อการแข่งขัน OIC InsurTech Award 2026 (โจทย์: ความเสี่ยงด้านสังคมสูงวัย)<br>
+  ระบบเคารพสิทธิตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 · ผู้ใช้ถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อ
+</div></footer>
+
+</body>
+</html>
