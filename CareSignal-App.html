@@ -45,6 +45,27 @@ body{background:#D9DEE2;font-family:var(--sans);color:var(--ink);font-size:17px;
 .tab svg{display:block;margin:0 auto 5px;width:27px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .tab b{display:block;font-weight:600;font-size:12.5px}
 .tab[aria-selected="true"]{color:var(--brand)}
+/* กล้อง — องค์ประกอบหลักของหน้าจอนี้ */
+.stage{position:relative;border-radius:22px;overflow:hidden;background:#0B1220;aspect-ratio:3/4;margin-bottom:12px;box-shadow:var(--shx)}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.stage video{transform:scaleX(-1)}
+.stage canvas{transform:scaleX(-1);pointer-events:none}
+.hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:14px}
+.hudtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.hudtag{background:rgba(11,18,32,.62);backdrop-filter:blur(8px);color:#fff;font-size:11.5px;padding:6px 11px;border-radius:99px;line-height:1.4}
+.hudtag b{color:#FCD34D}
+.hudbot{background:rgba(11,18,32,.68);backdrop-filter:blur(10px);border-radius:16px;padding:12px 14px;color:#fff}
+.counter{display:flex;align-items:baseline;gap:10px}
+.counter .n{font-family:var(--mono);font-size:38px;font-weight:600;line-height:1;letter-spacing:-.03em}
+.counter .of{font-size:14px;color:rgba(255,255,255,.6)}
+.counter .clock{margin-left:auto;font-family:var(--mono);font-size:22px;font-weight:600;color:#FCD34D}
+.track{height:6px;background:rgba(255,255,255,.18);border-radius:99px;margin-top:10px;overflow:hidden}
+.track i{display:block;height:100%;background:#FCD34D;border-radius:99px;transition:width .12s linear}
+.coach{margin-top:9px;font-size:12.5px;color:rgba(255,255,255,.85);line-height:1.5;min-height:19px}
+.statebadge{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(255,255,255,.16);padding:3px 8px;border-radius:99px;margin-left:8px}
+
+
 .acc{background:var(--surf);border-radius:20px;margin-bottom:12px;box-shadow:var(--sh);overflow:hidden}
 .acc>summary{list-style:none;cursor:pointer;padding:20px;font-size:17px;font-weight:600;display:flex;align-items:center;gap:12px;min-height:64px}
 .acc>summary::-webkit-details-marker{display:none}
@@ -307,6 +328,76 @@ function chronicWait(){
 }
 
 /* ============================================================
+   ชั้นวิเคราะห์ท่าทาง — ประมวลผลบนเครื่อง ไม่ส่งภาพออกจากอุปกรณ์
+   ------------------------------------------------------------
+   ตัวชี้วัดหลัก: ตำแหน่งสะโพกเทียบสัดส่วนลำตัว
+     M = (ระยะข้อเท้า−สะโพก) ÷ (ระยะข้อเท้า−ไหล่)
+   เลือกอัตราส่วนแทนพิกัดดิบ เพราะไม่ขึ้นกับระยะห่างจากกล้อง
+   ส่วนสูงของผู้ใช้ หรือการวางมือถือสูงต่ำ
+   ============================================================ */
+var LM={LSH:11,RSH:12,LHIP:23,RHIP:24,LKNEE:25,RKNEE:26,LANK:27,RANK:28};
+
+function midY(lm,a,b){return (lm[a].y+lm[b].y)/2}
+function visOK(lm){
+  var need=[LM.LSH,LM.RSH,LM.LHIP,LM.RHIP,LM.LKNEE,LM.RKNEE,LM.LANK,LM.RANK];
+  var seen=0;
+  for(var i=0;i<need.length;i++){var v=lm[need[i]];if(v&&(v.visibility===undefined||v.visibility>0.5))seen++}
+  return seen/need.length;
+}
+function hipRatio(lm){
+  var sh=midY(lm,LM.LSH,LM.RSH), hip=midY(lm,LM.LHIP,LM.RHIP), ank=midY(lm,LM.LANK,LM.RANK);
+  var span=ank-sh;
+  if(!isFinite(span)||Math.abs(span)<0.02)return null;
+  return (ank-hip)/span;
+}
+function kneeAngle(lm){
+  function ang(h,k,a){
+    var v1={x:lm[h].x-lm[k].x,y:lm[h].y-lm[k].y}, v2={x:lm[a].x-lm[k].x,y:lm[a].y-lm[k].y};
+    var d=v1.x*v2.x+v1.y*v2.y, m=Math.hypot(v1.x,v1.y)*Math.hypot(v2.x,v2.y);
+    if(!m)return null;
+    return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
+  }
+  var l=ang(LM.LHIP,LM.LKNEE,LM.LANK), r=ang(LM.RHIP,LM.RKNEE,LM.RANK);
+  if(l==null&&r==null)return null;
+  if(l==null)return r; if(r==null)return l;
+  return (l+r)/2;
+}
+
+/* ---- ตัวนับจำนวนครั้ง: เครื่องสถานะพร้อม hysteresis กันการนับซ้ำจากการสั่น ---- */
+function RepDetector(opts){
+  opts=opts||{};
+  this.sitRef=null; this.standRef=null;
+  this.state="idle"; this.reps=0; this.stamps=[]; this.t0=null; this.done=false;
+  this.target=opts.target||5;
+  this.upFrac=opts.upFrac!==undefined?opts.upFrac:0.68;
+  this.downFrac=opts.downFrac!==undefined?opts.downFrac:0.36;
+  this.buf=[]; this.smoothN=opts.smoothN||5;
+}
+RepDetector.prototype.smooth=function(v){
+  this.buf.push(v); if(this.buf.length>this.smoothN)this.buf.shift();
+  var s=0; for(var i=0;i<this.buf.length;i++)s+=this.buf[i];
+  return s/this.buf.length;
+};
+RepDetector.prototype.setRefs=function(sit,stand){this.sitRef=sit;this.standRef=stand};
+RepDetector.prototype.start=function(t){this.state="sit";this.reps=0;this.stamps=[];this.t0=t;this.done=false;this.buf=[]};
+RepDetector.prototype.thresholds=function(){
+  var range=this.standRef-this.sitRef;
+  return {up:this.sitRef+range*this.upFrac, down:this.sitRef+range*this.downFrac, range:range};
+};
+RepDetector.prototype.push=function(raw,t){
+  if(this.done||this.state==="idle"||this.sitRef==null||this.standRef==null)return null;
+  var v=this.smooth(raw), th=this.thresholds();
+  if(this.state==="sit"&&v>=th.up){
+    this.state="stand"; this.reps++; this.stamps.push(t);
+    if(this.reps>=this.target){this.done=true;return{event:"finish",reps:this.reps,elapsed:(t-this.t0)/1000}}
+    return {event:"rep",reps:this.reps};
+  }
+  if(this.state==="stand"&&v<=th.down){this.state="sit";return{event:"down",reps:this.reps}}
+  return null;
+};
+
+
+/* ============================================================
    คะแนนประเมิน (ย่อจาก SPPB + FRAT ให้ทำเองที่บ้านได้)
    ============================================================ */
 function scoreDraft(dr,age){
@@ -350,6 +441,8 @@ var ENGINE={
     R4:{nm:"คะแนนรวมถดถอยจากค่าดีที่สุดของตนเอง", src:"เปรียบเทียบกับ personal best แทนค่าเฉลี่ยประชากร เพื่อลดอคติระหว่างกลุ่ม"},
     R5:{nm:"ใช้ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง", src:"Polypharmacy (≥4 ชนิด) ร่วมกับ balance impairment เพิ่มความเสี่ยงล้มแบบทวีคูณ (Beers Criteria; STOPPFall 2021)"},
     R6:{nm:"สูญเสียความสามารถทำกิจวัตร", src:"การลดลงของ ADL/IADL เป็นสัญญาณเริ่มต้นภาวะพึ่งพิง (Lawton IADL; Barthel Index)"},
+    R9:{nm:"ลุกเดิน 3 เมตรช้ากว่าเกณฑ์", src:"เวลาที่ใช้ตั้งแต่ 12 วินาทีขึ้นไปในการทดสอบ Timed Up and Go สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น (Makizako 2017; Physiopedia)"},
+    R8:{nm:"จังหวะการลุกไม่สม่ำเสมอ", src:"กล้องวัดเวลาแยกรายครั้งได้ ความแปรปรวนสะท้อนความล้าของกล้ามเนื้อขา (npj Digital Medicine 2023 — ค่าทางจลนศาสตร์ไวกว่าการดูเวลารวมอย่างเดียว)"},
     R7:{nm:"เกินกำหนดประเมินซ้ำ", src:"กติกาภายในระบบ ตามระดับความเสี่ยงที่คำนวณได้"}
   },
   cadence:{stable:90, watch:45, decline:21, urgent:7},
@@ -418,6 +511,18 @@ function trajectory(){
     out.flags.push({id:"R5", sev:2,
       text:"ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป ร่วมกับผลทรงตัวที่ยังไม่ผ่านเกณฑ์",
       why:"สองปัจจัยนี้เมื่อเกิดร่วมกันเพิ่มความเสี่ยงหกล้มมากกว่าผลรวมของแต่ละปัจจัย"});
+  }
+  /* R9 — ลุกเดิน 3 เมตรช้ากว่าเกณฑ์ */
+  if(last.tug!=null&&last.tug>=12){
+    out.flags.push({id:"R9", sev:last.tug>=15?2:1,
+      text:"ลุกเดิน 3 เมตรแล้วกลับมานั่ง ใช้เวลา "+last.tug.toFixed(1)+" วินาที",
+      why:"เวลาตั้งแต่ 12 วินาทีขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้นในผู้สูงอายุ"});
+  }
+  /* R8 — จังหวะไม่สม่ำเสมอ (เฉพาะเมื่อวัดด้วยกล้อง) */
+  if(last.cv!=null&&last.cv>=0.25){
+    out.flags.push({id:"R8", sev:1,
+      text:"จังหวะการลุกแต่ละครั้งไม่สม่ำเสมอ ครั้งท้าย ๆ ช้ากว่าครั้งแรกอย่างชัดเจน",
+      why:"กล้องจับเวลาแยกรายครั้งได้ ความแปรปรวน "+(last.cv*100).toFixed(0)+"% บ่งชี้ว่ากล้ามเนื้อขาล้าเร็วกว่าปกติ"});
   }
   /* R7 — เกินกำหนด */
   var due=nextDueDays(out.flags,last.tier);
@@ -493,10 +598,10 @@ function go(sc,arg){S.screen=sc;render(arg);V.scrollTop=0}
 function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2600)}
 
 function render(arg){
-  T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult"].indexOf(S.screen)>=0;
-  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
+  T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug"].indexOf(S.screen)>=0;
+  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,register:registerV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV}[S.screen]||homeV;
+  var fn={loading:loadingV,welcome:welcomeV,register:registerV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -657,15 +762,23 @@ function trendCard(){
 /* ---------- ประเมิน ---------- */
 function assessIntroV(){
   S.draft.t0=Date.now();
-  head("การประเมิน","วัดสัญญาณวันนี้","5 ขั้นตอน ราว 6 นาที ผลบันทึกอัตโนมัติ","home");
+  head("ตรวจร่างกาย","วัดสัญญาณวันนี้","ใช้เวลาราว 6 นาที ผลบันทึกอัตโนมัติ","home");
   V.innerHTML='<div class="anim senior">'+
   '<div class="card"><h2 style="font-size:19px">เตรียมตัวก่อนเริ่ม</h2>'+
   '<div class="rowline"><span class="k">① เก้าอี้มีพนักพิง ไม่มีล้อ</span><span class="v">1 ตัว</span></div>'+
   '<div class="rowline"><span class="k">② พื้นที่ยืนข้างผนัง/โต๊ะ</span><span class="v">กันล้ม</span></div>'+
   '<div class="rowline"><span class="k">③ รองเท้าหุ้มส้น หรือเท้าเปล่า</span><span class="v">ห้ามถุงเท้า</span></div>'+
   '<p class="qhelp" style="margin:14px 0 0">หากวันนี้เวียนหัว หน้ามืด หรือเพิ่งกินยาใหม่ ให้เลื่อนไปวันอื่น ความปลอดภัยสำคัญกว่า</p></div>'+
-  '<button class="cta loop" id="aStart">พร้อมแล้ว เริ่มเลย</button></div>';
-  document.getElementById("aStart").addEventListener("click",function(){S.draft={};go("assessTimer")});
+  '<div class="card"><h2 style="font-size:19px">เลือกวิธีวัด</h2>'+
+  '<p class="sub" style="margin:0 0 14px">ทั้งสองวิธีให้คะแนนแบบเดียวกัน เลือกวิธีไหนก็ได้</p>'+
+  '<div class="bigrow"><div class="ic">📷</div><div class="tx"><b>ให้กล้องนับให้</b><span>วางมือถือแล้วลุกนั่ง กล้องนับครั้งและจับเวลาเอง แม่นกว่าและบอกได้ว่าเหนื่อยเร็วแค่ไหน · ภาพไม่ออกจากเครื่อง</span></div></div>'+
+  '<button class="cta loop" id="aCam" style="margin-top:12px">ใช้กล้องวัดให้</button>'+
+  '<div class="bigrow" style="margin-top:6px"><div class="ic">⏱️</div><div class="tx"><b>จับเวลาเอง</b><span>ถ้ากล้องใช้ไม่ได้ หรือมีคนช่วยจับเวลาให้</span></div></div>'+
+  '<button class="ghostb" id="aStart">จับเวลาเอง</button></div>'+
+  '<div class="disc">ผลตรวจทั้งสองวิธีเก็บในที่เดียวกัน และระบบบันทึกไว้ด้วยว่าครั้งนั้นวัดด้วยวิธีใด</div>'+
+  '</div>';
+  document.getElementById("aCam").addEventListener("click",function(){S.draft={t0:Date.now()};go("calib")});
+  document.getElementById("aStart").addEventListener("click",function(){S.draft={t0:Date.now()};go("assessTimer")});
 }
 function assessTimerV(){
   head("ขั้นที่ 1 / 5","ลุกนั่ง 5 ครั้ง","กอดอกไว้ ลุกยืนแล้วนั่งลงให้ครบ 5 ครั้ง เร็วที่สุดเท่าที่ปลอดภัย","assessIntro");
@@ -708,7 +821,7 @@ function assessQV(i){
 async function finishAssess(){
   var p=S.data.profile;
   var r=scoreDraft(S.draft,p.age);
-  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null};
+  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null, method:S.draft.method||"manual", reps:S.draft.reps||null, cv:(S.draft.cv==null?null:S.draft.cv), gaps:S.draft.gaps||null, tug:(S.draft.tug==null?null:S.draft.tug)};
   S.data.assessments.push(rec);
   audit("ประเมินและให้คะแนน","คะแนน "+r.score+"/"+r.max+" ระดับ "+CFG.tiers[r.tier].nm+(S.draft.ftsst?" · ลุกนั่ง "+S.draft.ftsst.toFixed(1)+" วินาที":" · ข้ามการจับเวลา"));
   var tr=trajectory();
@@ -730,7 +843,7 @@ function assessResultV(rec){
   '<div><span class="state" style="background:'+t.c+'">'+t.nm+'</span></div>'+
   '<p class="note">'+t.act+'</p></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
-  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+
+  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+
   '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
   '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
   '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
@@ -741,6 +854,296 @@ function assessResultV(rec){
   '<button class="cta" data-go="plan">ดูแผนป้องกันเฉพาะของฉัน</button>'+
   '<button class="ghostb" data-go="home">กลับหน้าหลัก</button>'+
   '<button class="ghostb" data-go="policy">ดูเบี้ยประกันของฉัน</button></div>';
+}
+
+var POSE=null, RAF=null, DET=null, MODEL_STATE="idle";
+async function loadModel(statusEl){
+  if(POSE)return POSE;
+  MODEL_STATE="loading";
+  if(statusEl)statusEl.textContent="กำลังโหลดโมเดลตรวจจับท่าทาง…";
+  var mod=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+  var fileset=await mod.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  POSE=await mod.PoseLandmarker.createFromOptions(fileset,{
+    baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",delegate:"GPU"},
+    runningMode:"VIDEO",numPoses:1,minPoseDetectionConfidence:.5,minPosePresenceConfidence:.5,minTrackingConfidence:.5
+  });
+  MODEL_STATE="ready";
+  return POSE;
+}
+function showFallback(reason){
+  var box=document.createElement("div");
+  box.className="card";
+  box.style.background="var(--accentb)";
+  box.innerHTML='<h3 style="color:var(--accent2)">'+esc(reason)+'</h3>'+
+  '<p class="sub" style="margin:0 0 12px">ใช้วิธีสำรองได้ทันที: ให้คนข้าง ๆ จับเวลาลุกนั่ง 5 ครั้งด้วยนาฬิกา แล้วกรอกตัวเลข ระบบจะให้คะแนนและวิเคราะห์แนวโน้มเหมือนกันทุกอย่าง</p>'+
+  '<button class="cta" style="margin:0" id="fb">กรอกเวลาที่จับได้</button>';
+  V.insertBefore(box,V.firstChild.nextSibling);
+  document.getElementById("fb").addEventListener("click",function(){
+    stopCam();
+    var v=prompt("กรอกเวลาที่ใช้ลุกนั่ง 5 ครั้ง (วินาที) เช่น 11.4");
+    if(v==null)return;
+    var n=parseFloat(v);
+    if(!isFinite(n)||n<=2||n>120){toast("กรุณากรอกตัวเลขระหว่าง 2–120 วินาที");return}
+    S.draft.ftsst=n;S.draft.method="manual";S.draft.reps=5;S.draft.cv=null;
+    audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (กล้องใช้ไม่ได้: "+reason+")");
+    go("assessQ",0);
+  });
+}
+function stopCam(){
+  if(RAF)cancelAnimationFrame(RAF);RAF=null;
+  if(S.cam){S.cam.getTracks().forEach(function(t){t.stop()});S.cam=null}
+}
+function calibV(){
+  head("ขั้นที่ 1","ให้กล้องรู้จักตัวคุณก่อน","ทำครั้งเดียว เพื่อให้กล้องวัดได้ตรงกับตัวคุณ","assessIntro");
+  V.innerHTML='<div class="anim">'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
+  '<div class="hudbot"><div id="cstep" style="font-size:14px;font-weight:600">ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว</div>'+
+  '<div class="coach" id="coach">วางมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า</div></div></div></div>'+
+  '<button class="cta" id="cap" disabled>บันทึกท่านั่ง</button>'+
+  '<button class="ghostb" data-go="assessIntro">ยกเลิก</button>'+
+  '<div class="disc">ภาพจากกล้องประมวลผลในเครื่องนี้เท่านั้น ไม่มีการอัปโหลดภาพหรือวิดีโอไปที่ใด</div></div>';
+  startPipeline("calib");
+}
+function camtestV(){
+  head("ขั้นที่ 2","ลุกนั่งให้ครบ 5 ครั้ง","เร็วที่สุดเท่าที่ทำได้อย่างปลอดภัย กล้องนับให้เอง","assessIntro");
+  V.innerHTML='<div class="anim">'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">พร้อม</span><span class="hudtag" id="qual">คุณภาพภาพ —</span></div>'+
+  '<div class="hudbot"><div class="counter"><span class="n" id="rep">0</span><span class="of">/ 5 ครั้ง</span>'+
+  '<span class="clock" id="clk">0.0<span style="font-size:13px"> วิ</span></span></div>'+
+  '<div class="track"><i id="trk" style="width:0%"></i></div>'+
+  '<div class="coach" id="coach">กดปุ่มด้านล่างเมื่อนั่งพร้อมแล้ว<span class="statebadge" id="st">รอเริ่ม</span></div></div></div></div>'+
+  '<button class="cta" id="startBtn">เริ่มจับเวลา</button>'+
+  '<button class="ghostb" data-go="assess">ยกเลิก</button></div>';
+  startPipeline("test");
+}
+async function startPipeline(mode){
+  var video=document.getElementById("vid"), canvas=document.getElementById("cv"), ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"), coach=document.getElementById("coach");
+  var stream;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false});
+  }catch(e){
+    tag.textContent="เปิดกล้องไม่ได้";
+    coach.innerHTML="เบราว์เซอร์ปฏิเสธการเข้าถึงกล้อง ให้อนุญาตในการตั้งค่าแล้วลองใหม่";
+    showFallback("กล้องใช้ไม่ได้ในเครื่องนี้");
+    return;
+  }
+  S.cam=stream; video.srcObject=stream;
+  await video.play().catch(function(){});
+  try{ await loadModel(tag); }
+  catch(e){
+    tag.textContent="โหลดโมเดลไม่สำเร็จ";
+    coach.innerHTML="ต้องต่ออินเทอร์เน็ตครั้งแรกเพื่อโหลดโมเดลตรวจจับท่าทาง";
+    showFallback("โหลดโมเดลไม่สำเร็จ");
+    return;
+  }
+  tag.textContent="ตรวจจับท่าทางแล้ว";
+
+  if(mode==="calib")setupCalib(video,canvas,ctx);
+  else setupTest(video,canvas,ctx);
+}
+function drawPose(ctx,canvas,video,lm){
+  if(canvas.width!==video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight}
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!lm)return;
+  var pairs=[[11,12],[11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28],[11,13],[13,15],[12,14],[14,16]];
+  ctx.lineWidth=Math.max(3,canvas.width/150); ctx.strokeStyle="rgba(96,165,250,.9)"; ctx.lineCap="round";
+  pairs.forEach(function(p){
+    var a=lm[p[0]],b=lm[p[1]]; if(!a||!b)return;
+    ctx.beginPath();ctx.moveTo(a.x*canvas.width,a.y*canvas.height);ctx.lineTo(b.x*canvas.width,b.y*canvas.height);ctx.stroke();
+  });
+  [11,12,23,24,25,26,27,28].forEach(function(i){
+    var p=lm[i]; if(!p)return;
+    ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(4,canvas.width/110),0,6.3);
+    ctx.fillStyle=(i===23||i===24)?"#FCD34D":"#DBEAFE";ctx.fill();
+  });
+}
+function setupCalib(video,canvas,ctx){
+  var step=0, sitVal=null, standVal=null, cur=null;
+  var cap=document.getElementById("cap"), cstep=document.getElementById("cstep"), coach=document.getElementById("coach");
+  function loop(){
+    if(S.screen!=="calib"){return}
+    var r=null;
+    try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(lm){
+      var q=visOK(lm), m=hipRatio(lm);
+      if(q<0.85){coach.textContent="ขยับมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า";cap.disabled=true}
+      else if(m==null){coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";cap.disabled=true}
+      else{cur=m;cap.disabled=false;
+        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งให้สบายแล้วกดบันทึกท่านั่ง":"เห็นชัดแล้ว — ยืนตรงแล้วกดบันทึกท่ายืน";}
+    }else{coach.textContent="ยังไม่พบคนในภาพ";cap.disabled=true}
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  cap.addEventListener("click",function(){
+    if(cur==null)return;
+    if(step===0){
+      sitVal=cur;step=1;
+      cstep.textContent="ขั้นที่ 2 · ยืนขึ้นตรง ๆ หนึ่งครั้ง";
+      cap.textContent="บันทึกท่ายืน";
+      toast("บันทึกท่านั่งแล้ว");
+    }else{
+      standVal=cur;
+      if(standVal-sitVal<0.045){
+        toast("ความต่างระหว่างท่านั่งกับท่ายืนน้อยเกินไป ลองใหม่โดยยืนให้ตรงสุด");
+        step=0;cstep.textContent="ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว";cap.textContent="บันทึกท่านั่ง";return;
+      }
+      S.draft.sitRef=sitVal;S.draft.standRef=standVal;
+      audit("สอบเทียบกล้อง","ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
+      toast("สอบเทียบเรียบร้อย");
+      go("camtest");
+    }
+  });
+}
+function setupTest(video,canvas,ctx){
+  DET=new RepDetector({target:5});
+  DET.setRefs(S.draft.sitRef,S.draft.standRef);
+  var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
+      st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
+      startBtn=document.getElementById("startBtn");
+  var running=false, t0=0;
+  function loop(){
+    if(S.screen!=="camtest")return;
+    var r=null;
+    try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(lm){
+      var q=visOK(lm),m=hipRatio(lm),ka=kneeAngle(lm);
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"");
+      if(m!=null&&running){
+        var ev=DET.push(m,performance.now());
+        st.textContent=DET.state==="stand"?"ยืน":"นั่ง";
+        repEl.textContent=DET.reps;
+        trk.style.width=(DET.reps/5*100)+"%";
+        if(ev&&ev.event==="rep")coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>";
+        if(ev&&ev.event==="finish"){finishTest(ev.elapsed);return}
+      }else if(m!=null&&!running){
+        st.textContent=(m>=(S.draft.sitRef+S.draft.standRef)/2)?"ยืน":"นั่ง";
+      }
+      if(q<0.8)coach.textContent="เห็นตัวไม่ครบ — ขยับมือถือให้เห็นทั้งตัว";
+    }else{qual.innerHTML="คุณภาพภาพ <b>—</b>"}
+    if(running){var el=(performance.now()-t0)/1000;clk.innerHTML=el.toFixed(1)+'<span style="font-size:13px"> วิ</span>'}
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  startBtn.addEventListener("click",function(){
+    if(running)return;
+    running=true;t0=performance.now();DET.start(t0);
+    startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
+    coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
+  });
+}
+function finishTest(elapsed){
+  stopCam();
+  var gaps=[];
+  for(var i=1;i<DET.stamps.length;i++)gaps.push((DET.stamps[i]-DET.stamps[i-1])/1000);
+  var cv=null;
+  if(gaps.length>1){
+    var mean=gaps.reduce(function(a,b){return a+b},0)/gaps.length;
+    var sd=Math.sqrt(gaps.reduce(function(a,b){return a+(b-mean)*(b-mean)},0)/gaps.length);
+    cv=mean>0?sd/mean:null;
+  }
+  S.draft.ftsst=Math.round(elapsed*10)/10;
+  S.draft.method="camera-pose";
+  S.draft.reps=DET.reps;
+  S.draft.cv=cv;
+  S.draft.gaps=gaps.map(function(g){return Math.round(g*10)/10});
+  audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
+  toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
+  go("tug");
+}
+
+
+
+/* ============================================================
+   การทดสอบลุกเดิน 3 เมตร (Timed Up and Go)
+   ------------------------------------------------------------
+   จับเวลาตั้งแต่ลุกจากเก้าอี้ เดินไป 3 เมตร หมุนกลับ จนนั่งลง
+   กล้องตรวจ 2 จุด: จังหวะที่ลุกขึ้น (เริ่มจับ) และจังหวะที่นั่งลง (หยุด)
+   ระหว่างเดินออกนอกเฟรม ระบบรอโดยไม่นับผิด
+   เกณฑ์อ้างอิง: ใช้เวลา ≥12 วินาที สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น
+   ============================================================ */
+function TugDetector(refs){
+  this.sitRef=refs.sitRef; this.standRef=refs.standRef;
+  this.state="waiting"; this.t0=null; this.t1=null; this.buf=[];
+}
+TugDetector.prototype.push=function(raw,t){
+  this.buf.push(raw); if(this.buf.length>5)this.buf.shift();
+  var v=this.buf.reduce(function(a,b){return a+b},0)/this.buf.length;
+  var range=this.standRef-this.sitRef;
+  var up=this.sitRef+range*0.68, down=this.sitRef+range*0.36;
+  if(this.state==="waiting"&&v>=up){this.state="walking";this.t0=t;return{event:"start"}}
+  if(this.state==="walking"&&v<=down&&this.t0&&(t-this.t0)>3000){
+    this.state="done";this.t1=t;return{event:"finish",elapsed:(t-this.t0)/1000};
+  }
+  return null;
+};
+function tugV(){
+  head("ขั้นที่ 3","ลุกเดิน 3 เมตร แล้วกลับมานั่ง","ทำได้ก็ดี ข้ามได้ถ้าไม่สะดวก กล้องจับเวลาให้เอง","assessIntro");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>วิธีทำ</h3>'+
+  '<div class="bigrow"><div class="ic">1</div><div class="tx"><b>วัดระยะ 3 เมตรจากเก้าอี้</b><span>ใช้ก้าวเดินของผู้ใหญ่ราว 4 ก้าว หรือวางของไว้เป็นจุดหมาย</span></div></div>'+
+  '<div class="bigrow"><div class="ic">2</div><div class="tx"><b>นั่งบนเก้าอี้ให้กล้องเห็นเต็มตัว</b><span>วางมือถือให้เห็นทั้งเก้าอี้และทางเดิน</span></div></div>'+
+  '<div class="bigrow"><div class="ic">3</div><div class="tx"><b>ลุก เดินไปถึงจุดหมาย หมุนกลับ แล้วนั่งลง</b><span>เดินด้วยความเร็วปกติของคุณ ใช้ไม้เท้าได้ตามปกติ</span></div></div></div>'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
+  '<div class="hudbot"><div class="counter"><span class="n" id="tugclk">0.0</span><span class="of">วินาที</span></div>'+
+  '<div class="coach" id="coach">กดเริ่มเมื่อนั่งพร้อมแล้ว</div></div></div></div>'+
+  '<button class="cta" id="tugStart">เริ่มจับเวลา</button>'+
+  '<button class="ghostb" id="tugSkip">ข้ามขั้นนี้</button>'+
+  '<div class="disc">หากรู้สึกเวียนศีรษะหรือทรงตัวไม่มั่นคง ให้หยุดทันทีและข้ามขั้นนี้ · ควรมีคนอยู่ใกล้ ๆ</div></div>';
+  document.getElementById("tugSkip").addEventListener("click",function(){stopCam();go("assessQ",0)});
+  startTugPipeline();
+}
+async function startTugPipeline(){
+  var video=document.getElementById("vid"), canvas=document.getElementById("cv"), ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"), coach=document.getElementById("coach"), clk=document.getElementById("tugclk");
+  var stream;
+  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false}); }
+  catch(e){ tag.textContent="เปิดกล้องไม่ได้"; coach.textContent="ข้ามขั้นนี้ได้เลย ไม่กระทบคะแนนรวม"; return; }
+  S.cam=stream; video.srcObject=stream; await video.play().catch(function(){});
+  try{ await loadModel(tag); }catch(e){ tag.textContent="โหลดโมเดลไม่สำเร็จ"; coach.textContent="ข้ามขั้นนี้ได้เลย"; return; }
+  tag.textContent="พร้อมแล้ว";
+  var TUG=new TugDetector({sitRef:S.draft.sitRef,standRef:S.draft.standRef});
+  var running=false, t0=0;
+  function loop(){
+    if(S.screen!=="tug")return;
+    var r=null;
+    try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(running){
+      if(lm){
+        var m=hipRatio(lm);
+        if(m!=null){
+          var ev=TUG.push(m,performance.now());
+          if(ev&&ev.event==="start"){coach.textContent="เริ่มแล้ว — เดินไปให้ถึงจุดหมายแล้วกลับมานั่ง"}
+          if(ev&&ev.event==="finish"){finishTug(ev.elapsed);return}
+        }
+      }else{ coach.textContent="กำลังรอคุณเดินกลับมา…" }
+      clk.textContent=((performance.now()-t0)/1000).toFixed(1);
+    }
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  document.getElementById("tugStart").addEventListener("click",function(){
+    if(running)return;
+    running=true; t0=performance.now();
+    this.textContent="กำลังจับเวลา…"; this.disabled=true;
+    coach.textContent="ลุกขึ้นได้เลย";
+  });
+}
+function finishTug(sec){
+  stopCam();
+  S.draft.tug=Math.round(sec*10)/10;
+  audit("วัดลุกเดิน 3 เมตรด้วยกล้อง","ใช้เวลา "+S.draft.tug.toFixed(1)+" วินาที");
+  toast("วัดเสร็จแล้ว "+S.draft.tug.toFixed(1)+" วินาที");
+  go("assessQ",0);
 }
 
 /* ---------- ประวัติ ---------- */
