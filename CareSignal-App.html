@@ -303,10 +303,11 @@ function premiumFor(planId,age,sex,tier,pay){
    บริษัทจึงคำนวณเพดานต้นทุนล่วงหน้าได้แน่นอน และผู้ใช้เข้าใจทันทีว่าประหยัดกี่บาท
    ============================================================ */
 function loyaltyPoints(){
-  var A=S.data.assessments||[], now=Date.now(), pts=0, detail=[];
+  var A=(S.data.assessments||[]).filter(function(x){return x.verified===true});  /* นับเฉพาะครั้งที่ยืนยันตัวตนผ่าน */
+  var now=Date.now(), pts=0, detail=[];
   var in90=A.filter(function(x){return (now-new Date(x.at))/864e5<=90});
-  if(in90.length>=1){pts+=2;detail.push(["ตรวจร่างกายใน 3 เดือนที่ผ่านมา","+2"])}
-  else detail.push(["ตรวจร่างกายใน 3 เดือนที่ผ่านมา","0"]);
+  if(in90.length>=1){pts+=2;detail.push(["ตรวจด้วยกล้องพร้อมยืนยันตัวตน ใน 3 เดือน","+2"])}
+  else detail.push(["ตรวจด้วยกล้องพร้อมยืนยันตัวตน ใน 3 เดือน","0"]);
   if(in90.length>=2){pts+=1;detail.push(["ตรวจซ้ำอีกครั้งเพื่อยืนยัน","+1"])}
   else detail.push(["ตรวจซ้ำอีกครั้งเพื่อยืนยัน","0"]);
   var last=A[A.length-1];
@@ -326,6 +327,59 @@ function chronicWait(){
   var cut=Math.min(n*CFG.terms.chronicCutPerAssess, CFG.terms.chronicCutMax);
   return {days:CFG.terms.waitChronic-cut, cut:cut, n:n};
 }
+
+
+/* ============================================================
+   การยืนยันว่าเป็นคนเดิม (Presence & Continuity Check)
+   ------------------------------------------------------------
+   ประกาศขอบเขตอย่างตรงไปตรงมา:
+   - ระบบสร้าง "ลายเซ็นเชิงเรขาคณิตของใบหน้า" เป็นตัวเลขไม่กี่ค่า
+     จากสัดส่วนระยะห่างระหว่างจุดบนใบหน้า แล้วเก็บไว้ในเครื่องนี้เท่านั้น
+   - ไม่เก็บภาพ ไม่ส่งภาพหรือค่าลายเซ็นออกจากเครื่องไม่ว่ากรณีใด
+   - ใช้เพื่อ "ยืนยันว่าเป็นคนเดิมตลอดการทดสอบ" ไม่ใช่การพิสูจน์ตัวตนระดับ e-KYC
+   - ข้อมูลชีวมิติเป็นข้อมูลอ่อนไหวตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล มาตรา 26
+     จึงต้องขอความยินยอมแยกต่างหาก และผู้ใช้ปฏิเสธได้โดยยังใช้ระบบได้ตามปกติ
+   ============================================================ */
+var FACE=null, FACE_STATE="idle";
+var FL={LEYE_OUT:33, REYE_OUT:263, LEYE_IN:133, REYE_IN:362, NOSE:1, NOSE_L:97, NOSE_R:326,
+        MOUTH_L:61, MOUTH_R:291, CHIN:152, FOREHEAD:10};
+async function loadFaceModel(){
+  if(FACE)return FACE;
+  FACE_STATE="loading";
+  var mod=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+  var fileset=await mod.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  FACE=await mod.FaceLandmarker.createFromOptions(fileset,{
+    baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:"GPU"},
+    runningMode:"VIDEO", numFaces:1
+  });
+  FACE_STATE="ready";
+  return FACE;
+}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y,(a.z||0)-(b.z||0))}
+/* ลายเซ็นเชิงสัดส่วน — ไม่ขึ้นกับระยะห่างจากกล้องหรือขนาดภาพ */
+function faceSignature(lm){
+  var base=dist(lm[FL.LEYE_OUT],lm[FL.REYE_OUT]);
+  if(!base||base<1e-6)return null;
+  return [
+    dist(lm[FL.LEYE_IN],lm[FL.REYE_IN])/base,
+    dist(lm[FL.NOSE],lm[FL.CHIN])/base,
+    dist(lm[FL.MOUTH_L],lm[FL.MOUTH_R])/base,
+    dist(lm[FL.NOSE_L],lm[FL.NOSE_R])/base,
+    dist(lm[FL.FOREHEAD],lm[FL.CHIN])/base,
+    dist(lm[FL.LEYE_OUT],lm[FL.MOUTH_L])/base
+  ];
+}
+function sigDist(a,b){
+  if(!a||!b||a.length!==b.length)return 99;
+  var s=0; for(var i=0;i<a.length;i++)s+=(a[i]-b[i])*(a[i]-b[i]);
+  return Math.sqrt(s);
+}
+var FACE_TOL=0.16;   /* ระยะห่างที่ยอมรับว่าเป็นคนเดิม — ตั้งแบบผ่อนปรนเพื่อลดการปฏิเสธผิดพลาด */
+/* ลายเซ็นเก็บในเครื่องนี้เท่านั้น ไม่ผ่านชั้นฐานข้อมูลที่อาจซิงก์ขึ้นคลาวด์ */
+function saveFaceSig(sig){try{localStorage.setItem("cs:faceSig:"+S.data.profile.uid,JSON.stringify(sig))}catch(e){}}
+function loadFaceSig(){try{var s=localStorage.getItem("cs:faceSig:"+S.data.profile.uid);return s?JSON.parse(s):null}catch(e){return null}}
+function clearFaceSig(){try{localStorage.removeItem("cs:faceSig:"+S.data.profile.uid)}catch(e){}}
+function faceEnabled(){return !!(S.data.consentFace && loadFaceSig())}
 
 /* ============================================================
    ชั้นวิเคราะห์ท่าทาง — ประมวลผลบนเครื่อง ไม่ส่งภาพออกจากอุปกรณ์
@@ -598,10 +652,10 @@ function go(sc,arg){S.screen=sc;render(arg);V.scrollTop=0}
 function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2600)}
 
 function render(arg){
-  T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug"].indexOf(S.screen)>=0;
-  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
+  T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
+  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,register:registerV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV}[S.screen]||homeV;
+  var fn={loading:loadingV,welcome:welcomeV,register:registerV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -777,7 +831,7 @@ function assessIntroV(){
   '<button class="ghostb" id="aStart">จับเวลาเอง</button></div>'+
   '<div class="disc">ผลตรวจทั้งสองวิธีเก็บในที่เดียวกัน และระบบบันทึกไว้ด้วยว่าครั้งนั้นวัดด้วยวิธีใด</div>'+
   '</div>';
-  document.getElementById("aCam").addEventListener("click",function(){S.draft={t0:Date.now()};go("calib")});
+  document.getElementById("aCam").addEventListener("click",function(){S.draft={t0:Date.now()};go("faceEnroll")});
   document.getElementById("aStart").addEventListener("click",function(){S.draft={t0:Date.now()};go("assessTimer")});
 }
 function assessTimerV(){
@@ -799,18 +853,35 @@ function assessTimerV(){
 var QS=[
  {k:"balance",q:"ยืนต่อส้นเท้าชิดปลายเท้า ได้นานแค่ไหน?",h:"ยืนข้างผนัง เอามือแตะได้เมื่อจะเสียหลัก",
   o:[["ยืนได้เกิน 10 วินาที",3],["ยืนได้ 3–9 วินาที",2],["ยืนได้ไม่ถึง 3 วินาที",1],["ไม่กล้าลอง / ทำไม่ได้",0]]},
- {k:"falls",q:"ใน 12 เดือนที่ผ่านมา หกล้มกี่ครั้ง?",h:"นับทุกครั้งที่ตัวถึงพื้นโดยไม่ตั้งใจ",
+ {k:"falls",q:"ใน 12 เดือนที่ผ่านมา หกล้มกี่ครั้ง?",h:"นับทุกครั้งที่ตัวถึงพื้นโดยไม่ตั้งใจ",verify:true,
   o:[["ไม่ล้มเลย",2],["ล้ม 1 ครั้ง",1],["ล้ม 2 ครั้งขึ้นไป",0]]},
- {k:"meds",q:"ยาประจำที่กินทุกวัน มีกี่ชนิด?",h:"รวมยาความดัน เบาหวาน นอนหลับ ทุกชนิด",
+ {k:"meds",q:"ยาประจำที่กินทุกวัน มีกี่ชนิด?",h:"รวมยาความดัน เบาหวาน นอนหลับ ทุกชนิด",verify:true,
   o:[["น้อยกว่า 4 ชนิด",1],["4 ชนิดขึ้นไป",0]]},
- {k:"adl",q:"กิจวัตรประจำวัน ทำเองได้แค่ไหน?",h:"อาบน้ำ แต่งตัว เดินในบ้าน ขึ้นบันได",
+ {k:"adl",q:"กิจวัตรประจำวัน ทำเองได้แค่ไหน?",h:"อาบน้ำ แต่งตัว เข้าห้องน้ำ ลุกจากเตียง เดินในบ้าน ขึ้นบันได",adl:true,
   o:[["ทำเองได้ทั้งหมด",2],["ต้องมีคนช่วยบางอย่าง",1],["ต้องมีคนช่วยเกือบทุกอย่าง",0]]}
 ];
 function assessQV(i){
   i=i||0;var q=QS[i];
   head("ขั้นที่ "+(i+2)+" / 5",q.q,"","");
+  var extra="";
+  if(q.verify){
+    extra='<div class="card" style="border:1.5px solid var(--accent);margin-top:14px">'+
+      '<h3 style="color:var(--accent2)">ข้อควรทราบก่อนตอบ</h3>'+
+      '<p class="sub" style="margin:0">การตอบตามความจริงมีผลต่อสิทธิ์ของคุณเอง เมื่อสมัครประกัน คุณจะให้ความยินยอมให้บริษัทตรวจสอบประวัติการรักษาและการใช้ยากับสถานพยาบาลและหน่วยงานสาธารณสุขที่เกี่ยวข้องได้ '+
+      'หากพบว่าข้อมูลที่กรอกไม่ตรงกับความจริงในสาระสำคัญ บริษัทอาจใช้สิทธิ์ตามกฎหมายในการปฏิเสธการจ่ายสินไหมหรือบอกล้างสัญญาได้ '+
+      'ตามประมวลกฎหมายแพ่งและพาณิชย์ว่าด้วยการปกปิดข้อความจริงในสัญญาประกันภัย</p>'+
+      '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ตอบตามจริงไม่ทำให้เบี้ยแพงขึ้น</b> — ระบบนี้ใช้ผลตรวจลดเบี้ยได้ทางเดียว การตอบว่ามีความเสี่ยงจะทำให้คุณได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
+  }
+  if(q.adl){
+    extra='<div class="card" style="margin-top:14px"><h3>คำถามนี้วัดอะไร</h3>'+
+      '<p class="sub" style="margin:0 0 10px">วัดความสามารถในการทำกิจวัตรประจำวัน (ADL) ซึ่งเป็นเกณฑ์เดียวกับที่ระบบสาธารณสุขไทยใช้ชี้ว่าใครอยู่ในภาวะพึ่งพิง โดยใช้ดัชนีบาร์เธล (Barthel ADL Index) ที่ประเมิน 10 ด้าน เช่น กินอาหาร อาบน้ำ แต่งตัว เข้าห้องน้ำ ลุกจากเตียงไปเก้าอี้ เดิน ขึ้นบันได และการกลั้นขับถ่าย</p>'+
+      '<div class="rowline"><span class="k">คะแนน 12 ขึ้นไป</span><span class="v" style="color:var(--c4)">พึ่งตนเองได้</span></div>'+
+      '<div class="rowline"><span class="k">คะแนน 5–11</span><span class="v" style="color:var(--c2)">พึ่งพิงปานกลางถึงรุนแรง</span></div>'+
+      '<div class="rowline"><span class="k">คะแนน 0–4</span><span class="v" style="color:var(--c1)">พึ่งพิงระดับสูง</span></div>'+
+      '<p class="sub" style="margin:10px 0 0">คำถามในแอปเป็นเพียง<b>การคัดกรองอย่างย่อ</b> ไม่ใช่การประเมินบาร์เธลฉบับเต็ม การตัดสินว่าเข้าเกณฑ์ภาวะพึ่งพิงเพื่อรับสินไหม ต้องประเมินโดยทีมสหวิชาชีพที่ไปถึงบ้าน · กล้องวัดข้อนี้แทนไม่ได้ เพราะเป็นเรื่องการอาบน้ำและเข้าห้องน้ำซึ่งไม่ควรถ่ายภาพ กล้องจึงวัดเฉพาะความสามารถทางกายที่เป็นสัญญาณนำมาก่อน เช่น การลุกจากเก้าอี้และการเดิน</p></div>';
+  }
   V.innerHTML='<div class="anim senior"><p class="qhelp">'+q.h+'</p>'+
-  q.o.map(function(o,j){return '<button class="pick" data-i="'+j+'">'+o[0]+'</button>'}).join("")+'</div>';
+  q.o.map(function(o,j){return '<button class="pick" data-i="'+j+'">'+o[0]+'</button>'}).join("")+extra+'</div>';
   V.querySelectorAll(".pick").forEach(function(b){
     b.addEventListener("click",function(){
       S.draft[q.k]=q.o[+b.dataset.i][1];
@@ -821,7 +892,7 @@ function assessQV(i){
 async function finishAssess(){
   var p=S.data.profile;
   var r=scoreDraft(S.draft,p.age);
-  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null, method:S.draft.method||"manual", reps:S.draft.reps||null, cv:(S.draft.cv==null?null:S.draft.cv), gaps:S.draft.gaps||null, tug:(S.draft.tug==null?null:S.draft.tug)};
+  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null, method:S.draft.method||"manual", reps:S.draft.reps||null, cv:(S.draft.cv==null?null:S.draft.cv), gaps:S.draft.gaps||null, tug:(S.draft.tug==null?null:S.draft.tug), verified:!!S.draft.identityVerified};
   S.data.assessments.push(rec);
   audit("ประเมินและให้คะแนน","คะแนน "+r.score+"/"+r.max+" ระดับ "+CFG.tiers[r.tier].nm+(S.draft.ftsst?" · ลุกนั่ง "+S.draft.ftsst.toFixed(1)+" วินาที":" · ข้ามการจับเวลา"));
   var tr=trajectory();
@@ -843,7 +914,7 @@ function assessResultV(rec){
   '<div><span class="state" style="background:'+t.c+'">'+t.nm+'</span></div>'+
   '<p class="note">'+t.act+'</p></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
-  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+
+  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+'<div class="rowline"><span class="k">ยืนยันตัวตน</span><span class="v" style="color:'+(rec.verified?'var(--c4)':'var(--ink3)')+'">'+(rec.verified?'ผ่าน · นำไปคิดส่วนลดได้':'ไม่ได้ยืนยัน · ไม่คิดส่วนลด')+'</span></div>'+
   '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
   '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
   '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
@@ -893,6 +964,75 @@ function stopCam(){
   if(RAF)cancelAnimationFrame(RAF);RAF=null;
   if(S.cam){S.cam.getTracks().forEach(function(t){t.stop()});S.cam=null}
 }
+
+function faceEnrollV(){
+  head("ยืนยันตัวตน","ให้กล้องจำใบหน้าคุณไว้","ทำครั้งเดียว เพื่อยืนยันว่าเป็นคุณเองที่ทำการทดสอบ","assessIntro");
+  var already=faceEnabled();
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="border:1.5px solid var(--accent)"><h3 style="color:var(--accent2)">ก่อนตกลง โปรดอ่าน</h3>'+
+  '<div class="bigrow"><div class="ic">🔢</div><div class="tx"><b>เก็บเป็นตัวเลข ไม่ใช่รูป</b><span>ระบบวัดสัดส่วนใบหน้าเป็นตัวเลข 6 ค่า แล้วลบภาพทิ้งทันที ไม่มีการเก็บรูปใด ๆ</span></div></div>'+
+  '<div class="bigrow"><div class="ic">📵</div><div class="tx"><b>ไม่ออกจากเครื่องนี้</b><span>ตัวเลขชุดนี้เก็บในมือถือของคุณเท่านั้น ไม่ส่งขึ้นระบบ ไม่ส่งให้บริษัทประกัน</span></div></div>'+
+  '<div class="bigrow"><div class="ic">⚖️</div><div class="tx"><b>เป็นข้อมูลอ่อนไหวตามกฎหมาย</b><span>ข้อมูลชีวมิติได้รับความคุ้มครองตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล มาตรา 26 จึงต้องขอความยินยอมแยกจากข้อตกลงทั่วไป</span></div></div>'+
+  '<div class="bigrow"><div class="ic">🙅</div><div class="tx"><b>ไม่ยินยอมก็ใช้งานได้</b><span>แต่ผลตรวจครั้งนั้นจะไม่นำไปคิดส่วนลด เพราะยืนยันไม่ได้ว่าใครเป็นผู้ทำ</span></div></div>'+
+  '<p class="sub" style="margin:14px 0 0">ขอบเขตที่ระบบทำได้จริง: ตรวจว่า<b>เป็นคนเดิมตลอดการทดสอบ</b>เท่านั้น ไม่ใช่การพิสูจน์ตัวตนแบบธนาคาร การพิสูจน์ตัวตนจริงตอนเรียกสินไหมทำโดยเจ้าหน้าที่ที่ไปเยี่ยมบ้าน</p></div>'+
+  (already?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ลงทะเบียนใบหน้าไว้แล้ว</h3><p class="sub" style="margin:0">ระบบจะตรวจอัตโนมัติระหว่างการทดสอบ</p></div>':'')+
+  '<div class="stage" style="aspect-ratio:1/1"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
+  '<div class="hudbot"><div class="coach" id="coach">มองตรงมาที่กล้อง ให้เห็นใบหน้าเต็ม</div></div></div></div>'+
+  '<label class="chk" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(S.data.consentFace?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
+  '<button class="cta" id="fcSave" disabled>บันทึกใบหน้าและไปต่อ</button>'+
+  '<button class="ghostb" id="fcSkip">ไม่ยินยอม · ทำต่อโดยไม่คิดส่วนลด</button></div>';
+  document.getElementById("fcSkip").addEventListener("click",async function(){
+    stopCam(); S.draft.identityVerified=false;
+    audit("ไม่ยินยอมยืนยันใบหน้า","ผู้ใช้เลือกทำการทดสอบโดยไม่ยืนยันตัวตน ผลครั้งนี้ไม่นำไปคิดส่วนลด");
+    go("calib");
+  });
+  startFacePipeline();
+}
+async function startFacePipeline(){
+  var video=document.getElementById("vid"), canvas=document.getElementById("cv"), ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"), coach=document.getElementById("coach"),
+      save=document.getElementById("fcSave"), chk=document.getElementById("fcConsent");
+  var stream, cur=null;
+  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480},height:{ideal:480}},audio:false}); }
+  catch(e){ tag.textContent="เปิดกล้องไม่ได้"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นำไปคิดส่วนลด"; return; }
+  S.cam=stream; video.srcObject=stream; await video.play().catch(function(){});
+  try{ tag.textContent="กำลังโหลดตัวตรวจใบหน้า…"; await loadFaceModel(); }
+  catch(e){ tag.textContent="โหลดไม่สำเร็จ"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นำไปคิดส่วนลด"; return; }
+  tag.textContent="พบใบหน้าแล้ว";
+  function loop(){
+    if(S.screen!=="faceEnroll")return;
+    var r=null;
+    try{r=FACE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.faceLandmarks&&r.faceLandmarks[0]?r.faceLandmarks[0]:null;
+    if(canvas.width!==video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight}
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(lm){
+      ctx.fillStyle="rgba(96,165,250,.85)";
+      [FL.LEYE_OUT,FL.REYE_OUT,FL.NOSE,FL.MOUTH_L,FL.MOUTH_R,FL.CHIN].forEach(function(i){
+        var p=lm[i]; if(!p)return;
+        ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(3,canvas.width/120),0,6.3);ctx.fill();
+      });
+      cur=faceSignature(lm);
+      coach.textContent=cur?"เห็นใบหน้าชัดแล้ว — ติ๊กยินยอมแล้วกดบันทึก":"ขยับให้เห็นใบหน้าเต็ม";
+      save.disabled=!(cur&&chk.checked);
+    }else{ cur=null; coach.textContent="ยังไม่พบใบหน้า"; save.disabled=true }
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  chk.addEventListener("change",function(){save.disabled=!(cur&&chk.checked)});
+  save.addEventListener("click",async function(){
+    if(!cur||!chk.checked)return;
+    S.data.consentFace={at:todayISO(), version:"PDPA-BIO-1.0"};
+    saveFaceSig(cur);
+    S.draft.identityVerified=true;
+    audit("ลงทะเบียนใบหน้า","เก็บลายเซ็นเชิงสัดส่วน 6 ค่าไว้ในเครื่องผู้ใช้ ไม่ส่งออกและไม่เก็บภาพ","ผู้ใช้ให้ความยินยอมตามมาตรา 26");
+    await saveAll(); stopCam();
+    toast("บันทึกใบหน้าแล้ว");
+    go("calib");
+  });
+}
+
 function calibV(){
   head("ขั้นที่ 1","ให้กล้องรู้จักตัวคุณก่อน","ทำครั้งเดียว เพื่อให้กล้องวัดได้ตรงกับตัวคุณ","assessIntro");
   V.innerHTML='<div class="anim">'+
@@ -1001,6 +1141,10 @@ function setupCalib(video,canvas,ctx){
 }
 function setupTest(video,canvas,ctx){
   DET=new RepDetector({target:5});
+  /* ตัวนับสำหรับตรวจใบหน้าเป็นระยะ ป้องกันการสลับคนกลางคัน */
+  var faceRef=faceEnabled()?loadFaceSig():null;
+  var frameN=0, faceChecks=0, faceFails=0;
+  S.draft.identityChecks=0; S.draft.identityFails=0;
   DET.setRefs(S.draft.sitRef,S.draft.standRef);
   var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
       st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
@@ -1012,9 +1156,22 @@ function setupTest(video,canvas,ctx){
     try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
     var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
     drawPose(ctx,canvas,video,lm);
+    frameN++;
+    /* ตรวจใบหน้าทุก ~2 วินาที ระหว่างทดสอบ (ไม่ทุกเฟรม เพื่อไม่ให้เครื่องหน่วง) */
+    if(faceRef&&running&&FACE&&frameN%60===0){
+      try{
+        var fr=FACE.detectForVideo(video,performance.now());
+        var flm=fr&&fr.faceLandmarks&&fr.faceLandmarks[0]?fr.faceLandmarks[0]:null;
+        if(flm){
+          var sg=faceSignature(flm);
+          faceChecks++; S.draft.identityChecks=faceChecks;
+          if(sigDist(sg,faceRef)>FACE_TOL){faceFails++; S.draft.identityFails=faceFails;}
+        }
+      }catch(e){}
+    }
     if(lm){
       var q=visOK(lm),m=hipRatio(lm),ka=kneeAngle(lm);
-      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"");
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"")+(faceRef?(faceFails>0?" · <b style='color:#FCA5A5'>ตรวจใบหน้าไม่ตรง</b>":" · <b>ยืนยันตัวตนแล้ว</b>"):"");
       if(m!=null&&running){
         var ev=DET.push(m,performance.now());
         st.textContent=DET.state==="stand"?"ยืน":"นั่ง";
@@ -1053,6 +1210,12 @@ function finishTest(elapsed){
   S.draft.reps=DET.reps;
   S.draft.cv=cv;
   S.draft.gaps=gaps.map(function(g){return Math.round(g*10)/10});
+  /* สรุปผลการยืนยันตัวตน: ผ่านเมื่อมีการตรวจอย่างน้อย 1 ครั้งและไม่พบความไม่ตรงเกิน 1 ครั้ง */
+  var ck=S.draft.identityChecks||0, fl=S.draft.identityFails||0;
+  S.draft.identityVerified = (faceEnabled() && ck>=1 && fl<=1);
+  audit("ผลการยืนยันตัวตนระหว่างทดสอบ", faceEnabled()
+    ? ("ตรวจใบหน้า "+ck+" ครั้ง ไม่ตรง "+fl+" ครั้ง → "+(S.draft.identityVerified?"ยืนยันผ่าน":"ยืนยันไม่ผ่าน ผลนี้ไม่นำไปคิดส่วนลด"))
+    : "ผู้ใช้ไม่ได้ลงทะเบียนใบหน้า ผลนี้ไม่นำไปคิดส่วนลด");
   audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
   toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
   go("tug");
@@ -1170,7 +1333,7 @@ function termsBody(){
         :'<p class="sub" style="margin:8px 0 0">ประเมินต่อเนื่องทุก 3 เดือน ลดระยะรอคอยกลุ่มเรื้อรังได้ครั้งละ '+T.chronicCutPerAssess+' วัน สูงสุด '+T.chronicCutMax+' วัน</p>')+
   '<div class="rowline" style="margin-top:6px"><span class="k">ต้องช่วยตัวเองไม่ได้ติดต่อกัน</span><span class="v">'+T.elimination+' วัน</span></div>'+
   '<div class="rowline"><span class="k">บริษัทจ่ายให้นานสุด</span><span class="v">'+T.capMonths+' งวด</span></div>'+
-  '<div class="notice" style="margin:12px 0 0">ไม่คุ้มครองโรคหรือการบาดเจ็บที่เป็นมาก่อนวันเริ่มคุ้มครอง · การตัดสินว่าเข้าเกณฑ์รับเงินหรือไม่ ทำโดยพยาบาลและทีมดูแลที่มาประเมินถึงบ้าน ไม่ใช่แอปตัดสินเอง</div>';
+  '<div class="notice" style="margin:12px 0 0">เมื่อสมัคร ถือว่าคุณยินยอมให้บริษัทตรวจสอบประวัติการรักษาและการใช้ยากับสถานพยาบาลและหน่วยงานสาธารณสุขที่เกี่ยวข้อง เพื่อยืนยันข้อมูลที่แจ้งไว้ · หากพบว่าข้อมูลไม่ตรงกับความจริงในสาระสำคัญ บริษัทอาจปฏิเสธการจ่ายสินไหมหรือบอกล้างสัญญาตามที่กฎหมายกำหนด</div>'+'<div class="notice" style="margin:10px 0 0">ไม่คุ้มครองโรคหรือการบาดเจ็บที่เป็นมาก่อนวันเริ่มคุ้มครอง · การตัดสินว่าเข้าเกณฑ์รับเงินหรือไม่ ทำโดยพยาบาลและทีมดูแลที่มาประเมินถึงบ้าน ไม่ใช่แอปตัดสินเอง</div>';
 }
 /* ---------- การ์ดส่วนลดต่อเนื่อง ---------- */
 function loyaltyCard(planId){return '<div class="card">'+loyaltyBody(planId)+'</div>'}
@@ -1245,7 +1408,7 @@ function policyV(){
   document.getElementById("paySeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.pay=b.dataset.v;render()});
   document.getElementById("buy").addEventListener("click",async function(){
     var qq=premiumFor(S.planSel,p.age,p.sex,tier,S.pay);
-    S.data.policy={no:"CS-"+String(Date.now()).slice(-8), plan:S.planSel, planName:qq.plan.nm, benefit:qq.plan.benefit, prev:qq.plan.prev, premium:qq.net, disc:qq.disc, loyalty:qq.loyalty, pay:S.pay, start:todayISO(), terms:{waitAcute:CFG.terms.waitAcute, waitChronic:chronicWait().days, elimination:CFG.terms.elimination, capMonths:CFG.terms.capMonths}};
+    S.data.policy={no:"CS-"+String(Date.now()).slice(-8), plan:S.planSel, planName:qq.plan.nm, benefit:qq.plan.benefit, prev:qq.plan.prev, premium:qq.net, disc:qq.disc, loyalty:qq.loyalty, pay:S.pay, start:todayISO(), consentMedCheck:todayISO(), terms:{waitAcute:CFG.terms.waitAcute, waitChronic:chronicWait().days, elimination:CFG.terms.elimination, capMonths:CFG.terms.capMonths}};
     await saveAll();
     toast("ออกเลขที่ประกัน "+S.data.policy.no+" แล้ว");
     render();
