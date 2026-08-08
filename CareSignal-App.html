@@ -246,6 +246,14 @@ function fmt(n){return Math.round(n).toLocaleString("th-TH")}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function todayISO(){return new Date().toISOString()}
 function thDate(iso){var d=new Date(iso);return d.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"})}
+/* คำนวณอายุจากปีเกิด พ.ศ. (+เดือนเกิดถ้าระบุ) — เกณฑ์เวลากระโดดที่อายุ 60/70 พอดี
+   จึงต้องไม่นับคนที่ยังไม่ถึงวันเกิดปีนี้ให้แก่เกินจริง */
+function ageFrom(beYear,month){
+  var now=new Date(), age=(now.getFullYear()+543)-beYear;
+  if(month&&(now.getMonth()+1)<month)age--;
+  return age;
+}
+var TH_MONTHS=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
 /* ============================================================
    สถานะแอป
@@ -256,6 +264,9 @@ function blankData(){return {profile:null, assessments:[], policy:null, payments
 async function loadAll(){
   var d=await DB.get("careSignalData");
   S.data=d||blankData();
+  /* อายุคำนวณใหม่ทุกครั้งที่เปิดแอป — ไม่ค้างอยู่ที่ค่าตอนสมัคร */
+  if(S.data.profile&&S.data.profile.birthYear)
+    S.data.profile.age=ageFrom(S.data.profile.birthYear,S.data.profile.birthMonth);
   document.getElementById("dbchip").textContent=dbLabel();
 }
 async function saveAll(){
@@ -648,8 +659,49 @@ function head(kick,h,p,back){
   B.innerHTML=(back?'<button class="backb" data-go="'+back+'">‹ ย้อนกลับ</button>':'<div class="brandrow">'+LOGO+'<span style="font-weight:700;font-size:15px;letter-spacing:-.01em">Care<span style="color:#FCD34D">Signal</span></span></div>')+
   '<div class="kick">'+kick+'</div><h1>'+h+'</h1>'+(p?'<p>'+p+'</p>':'');
 }
-function go(sc,arg){S.screen=sc;render(arg);V.scrollTop=0}
+function go(sc,arg){
+  /* ปิดกล้องและตัวจับเวลาทุกครั้งที่เปลี่ยนหน้า — กันกล้องค้างเปิดหลังกดยกเลิก */
+  stopCam();
+  if(S.timer){clearInterval(S.timer);S.timer=null}
+  S.screen=sc;render(arg);V.scrollTop=0;
+}
 function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2600)}
+
+/* ---------- กล่องโต้ตอบในแอป — แทน prompt()/confirm() ของเบราว์เซอร์ ----------
+   เหตุผล: dialog ของเบราว์เซอร์ตัวอักษรเล็ก ปรับขนาดไม่ได้ และถูกบล็อกในบางบริบท
+   กล่องนี้ตัวอักษรใหญ่ ปุ่มใหญ่ สอดคล้องกับการออกแบบเพื่อผู้สูงอายุทั้งแอป */
+function dialog(opts){
+  var old=document.getElementById("csDlg"); if(old)old.remove();
+  var wrap=document.createElement("div");
+  wrap.id="csDlg";
+  wrap.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.55);z-index:999;display:flex;align-items:center;justify-content:center;padding:22px";
+  wrap.innerHTML='<div role="dialog" aria-modal="true" style="background:#fff;border-radius:22px;padding:24px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(15,27,51,.35)">'+
+    '<h3 style="margin:0 0 8px;font-size:20px;line-height:1.4">'+esc(opts.title)+'</h3>'+
+    (opts.body?'<p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#5B6B84">'+opts.body+'</p>':'')+
+    (opts.input?'<input id="dlgIn" inputmode="decimal" placeholder="'+esc(opts.placeholder||"")+'" style="width:100%;box-sizing:border-box;font-size:28px;font-family:inherit;padding:14px;border:1.5px solid #DFE7F2;border-radius:14px;text-align:center;margin-bottom:14px">':'')+
+    '<button id="dlgOk" style="display:block;width:100%;border:0;border-radius:14px;padding:17px;font-size:18px;font-weight:600;font-family:inherit;cursor:pointer;background:'+(opts.danger?"#DC2626":"#2563EB")+';color:#fff">'+esc(opts.ok||"ตกลง")+'</button>'+
+    '<button id="dlgNo" style="display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:16px;font-family:inherit;cursor:pointer;background:transparent;color:#5B6B84;margin-top:6px">'+esc(opts.cancel||"ยกเลิก")+'</button></div>';
+  document.body.appendChild(wrap);
+  var inp=document.getElementById("dlgIn");
+  if(inp)setTimeout(function(){inp.focus()},60);
+  function close(){wrap.remove()}
+  document.getElementById("dlgNo").addEventListener("click",function(){close();if(opts.onCancel)opts.onCancel()});
+  document.getElementById("dlgOk").addEventListener("click",function(){
+    if(opts.input){opts.onOk(parseFloat(inp.value))}
+    else{close();opts.onOk()}
+  });
+  if(inp)inp.addEventListener("keydown",function(e){if(e.key==="Enter")opts.onOk(parseFloat(inp.value))});
+  return {close:close};
+}
+/* ถามเวลาลุกนั่ง 5 ครั้ง (วินาที) — ตรวจช่วงค่าก่อนรับ */
+function askTime(cb,onCancel){
+  var d=dialog({title:"กรอกเวลาที่จับได้",body:"เวลาที่ใช้ลุกนั่งครบ 5 ครั้ง เป็นวินาที เช่น 11.4",
+    input:true,placeholder:"วินาที",ok:"บันทึกเวลา",onCancel:onCancel,
+    onOk:function(v){
+      if(!isFinite(v)||v<=2||v>120){toast("กรุณากรอกตัวเลขระหว่าง 2–120 วินาที");return}
+      d.close();cb(Math.round(v*10)/10);
+    }});
+}
 
 function render(arg){
   T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
@@ -679,6 +731,8 @@ function registerV(){
   '<div class="card">'+
   '<div class="field"><label>ชื่อที่ให้เราเรียก</label><input id="fName" value="'+esc(d.name||"")+'" placeholder="เช่น คุณสมศรี"></div>'+
   '<div class="field"><label>ปีเกิด (พ.ศ.)</label><input id="fYear" inputmode="numeric" value="'+esc(d.year||"")+'" placeholder="เช่น 2505"></div>'+
+  '<div class="field"><label>เดือนเกิด (ช่วยให้คำนวณอายุตรงเกณฑ์)</label><select id="fMonth" style="width:100%;box-sizing:border-box;font-size:17px;font-family:inherit;padding:13px;border:1.5px solid var(--line,#DFE7F2);border-radius:14px;background:#fff">'+
+    '<option value="">ไม่ระบุ</option>'+TH_MONTHS.map(function(m,i){return '<option value="'+(i+1)+'"'+(d.month===i+1?" selected":"")+'>'+m+'</option>'}).join("")+'</select></div>'+
   '<div class="field"><label>เพศ</label><div class="seg" id="fSex">'+
     '<button data-v="f" aria-pressed="'+(d.sex==="f")+'">หญิง</button>'+
     '<button data-v="m" aria-pressed="'+(d.sex==="m")+'">ชาย</button></div></div>'+
@@ -697,8 +751,9 @@ function registerV(){
     if(!yr||yr<2460||yr>2530){toast("กรุณากรอกปีเกิด พ.ศ. เช่น 2505");return}
     if(!S.draft.sex){toast("กรุณาเลือกเพศ");return}
     if(!document.getElementById("fConsent").checked){toast("กรุณาให้ความยินยอมตาม PDPA ก่อนเริ่มใช้งาน");return}
-    var age=(new Date().getFullYear()+543)-yr;
-    S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, age:age, sex:S.draft.sex, phone:document.getElementById("fPhone").value.trim(), joined:todayISO()};
+    var mo=parseInt(document.getElementById("fMonth").value,10)||null;
+    var age=ageFrom(yr,mo);
+    S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, birthMonth:mo, age:age, sex:S.draft.sex, phone:document.getElementById("fPhone").value.trim(), joined:todayISO()};
     S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนป้องกัน","คำนวณส่วนลดเบี้ย","ส่งต่อทีมดูแล"]};
     audit("บันทึกความยินยอม","ผู้ใช้ให้ความยินยอมตามข้อตกลง PDPA-1.0 ครบทุกวัตถุประสงค์");
     await saveAll();
@@ -951,13 +1006,11 @@ function showFallback(reason){
   V.insertBefore(box,V.firstChild.nextSibling);
   document.getElementById("fb").addEventListener("click",function(){
     stopCam();
-    var v=prompt("กรอกเวลาที่ใช้ลุกนั่ง 5 ครั้ง (วินาที) เช่น 11.4");
-    if(v==null)return;
-    var n=parseFloat(v);
-    if(!isFinite(n)||n<=2||n>120){toast("กรุณากรอกตัวเลขระหว่าง 2–120 วินาที");return}
-    S.draft.ftsst=n;S.draft.method="manual";S.draft.reps=5;S.draft.cv=null;
-    audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (กล้องใช้ไม่ได้: "+reason+")");
-    go("assessQ",0);
+    askTime(function(n){
+      S.draft.ftsst=n;S.draft.method="manual";S.draft.reps=5;S.draft.cv=null;
+      audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (กล้องใช้ไม่ได้: "+reason+")");
+      go("assessQ",0);
+    });
   });
 }
 function stopCam(){
@@ -1055,7 +1108,8 @@ function camtestV(){
   '<div class="track"><i id="trk" style="width:0%"></i></div>'+
   '<div class="coach" id="coach">กดปุ่มด้านล่างเมื่อนั่งพร้อมแล้ว<span class="statebadge" id="st">รอเริ่ม</span></div></div></div></div>'+
   '<button class="cta" id="startBtn">เริ่มจับเวลา</button>'+
-  '<button class="ghostb" data-go="assess">ยกเลิก</button></div>';
+  '<button class="ghostb" id="stopBtn" hidden>นับไม่ขึ้น · หยุดแล้วกรอกเวลาเอง</button>'+
+  '<button class="ghostb" data-go="assessIntro">ยกเลิก</button></div>';
   startPipeline("test");
 }
 async function startPipeline(mode){
@@ -1148,8 +1202,8 @@ function setupTest(video,canvas,ctx){
   DET.setRefs(S.draft.sitRef,S.draft.standRef);
   var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
       st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
-      startBtn=document.getElementById("startBtn");
-  var running=false, t0=0;
+      startBtn=document.getElementById("startBtn"),stopBtn=document.getElementById("stopBtn");
+  var running=false, t0=0, lastEvt=0;
   function loop(){
     if(S.screen!=="camtest")return;
     var r=null;
@@ -1177,22 +1231,41 @@ function setupTest(video,canvas,ctx){
         st.textContent=DET.state==="stand"?"ยืน":"นั่ง";
         repEl.textContent=DET.reps;
         trk.style.width=(DET.reps/5*100)+"%";
-        if(ev&&ev.event==="rep")coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>";
+        if(ev&&ev.event==="rep"){lastEvt=performance.now();coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>"}
+        if(ev&&ev.event==="down")lastEvt=performance.now();
         if(ev&&ev.event==="finish"){finishTest(ev.elapsed);return}
       }else if(m!=null&&!running){
         st.textContent=(m>=(S.draft.sitRef+S.draft.standRef)/2)?"ยืน":"นั่ง";
       }
       if(q<0.8)coach.textContent="เห็นตัวไม่ครบ — ขยับมือถือให้เห็นทั้งตัว";
     }else{qual.innerHTML="คุณภาพภาพ <b>—</b>"}
-    if(running){var el=(performance.now()-t0)/1000;clk.innerHTML=el.toFixed(1)+'<span style="font-size:13px"> วิ</span>'}
+    if(running){
+      var el=(performance.now()-t0)/1000;clk.innerHTML=el.toFixed(1)+'<span style="font-size:13px"> วิ</span>';
+      /* ตาข่ายนิรภัย: นับไม่ขึ้นเกิน 20 วินาที → แนะทางออก ไม่ปล่อยให้ติดค้าง */
+      if(performance.now()-lastEvt>20000){
+        coach.innerHTML="ระบบนับไม่ขึ้นใช่ไหม — ลอง<b>ลุกให้สุด นั่งให้ก้นแตะเก้าอี้</b> หรือกดปุ่มด้านล่างเพื่อกรอกเวลาเอง";
+        stopBtn.hidden=false;
+      }
+    }
     RAF=requestAnimationFrame(loop);
   }
   loop();
   startBtn.addEventListener("click",function(){
     if(running)return;
-    running=true;t0=performance.now();DET.start(t0);
+    running=true;t0=performance.now();lastEvt=t0;DET.start(t0);
     startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
+    stopBtn.hidden=false;
     coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
+  });
+  stopBtn.addEventListener("click",function(){
+    var reps=DET?DET.reps:0;
+    stopCam();
+    audit("หยุดการทดสอบด้วยกล้องกลางคัน","ผู้ใช้หยุดเองขณะนับได้ "+reps+" ครั้ง แล้วเลือกกรอกเวลาเอง");
+    askTime(function(n){
+      S.draft.ftsst=n;S.draft.method="manual";S.draft.reps=5;S.draft.cv=null;S.draft.gaps=null;
+      audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที");
+      go("tug");
+    },function(){go("assessIntro")});
   });
 }
 function finishTest(elapsed){
@@ -1290,6 +1363,9 @@ async function startTugPipeline(){
         }
       }else{ coach.textContent="กำลังรอคุณเดินกลับมา…" }
       clk.textContent=((performance.now()-t0)/1000).toFixed(1);
+      /* ตาข่ายนิรภัย: จับจังหวะนั่งลงไม่ได้เกิน 45 วินาที → บอกทางออก */
+      if(performance.now()-t0>45000)
+        coach.textContent="หากนั่งลงแล้วระบบไม่หยุดจับเวลา กดข้ามขั้นนี้ได้เลย — คะแนนส่วนอื่นยังใช้ได้ครบ";
     }
     RAF=requestAnimationFrame(loop);
   }
@@ -1475,12 +1551,17 @@ function meV(){
   '<div class="card"><h3>ความโปร่งใสและสิทธิของคุณ</h3><p class="sub">ดูได้ว่าระบบใช้กฎอะไร ตัดสินใจอะไรกับข้อมูลของคุณบ้าง และระบบทำอะไรไม่ได้</p><button class="ghostb" data-go="ai">ดูว่าระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>'+'<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';
   document.getElementById("shareOn").addEventListener("click",async function(){S.data.sharePool=true;await saveAll();toast("เปิดการแชร์ข้อมูลสรุปแล้ว");render()});
   document.getElementById("shareOff").addEventListener("click",async function(){S.data.sharePool=false;await saveAll();toast("ปิดการแชร์แล้ว — ข้อมูลอยู่กับคุณเท่านั้น");render()});
-  document.getElementById("wipe").addEventListener("click",async function(){
-    if(!confirm("ลบบัญชี ผลประเมิน กรมธรรม์ และประวัติชำระทั้งหมด? กู้คืนไม่ได้"))return;
-    await DB.del("careSignalData");
-    S.data=blankData();S.draft={};
-    toast("ลบข้อมูลเรียบร้อยตามสิทธิ PDPA");
-    go("welcome");
+  document.getElementById("wipe").addEventListener("click",function(){
+    dialog({title:"ถอนความยินยอมและลบข้อมูล",
+      body:"จะลบบัญชี ผลประเมิน กรมธรรม์ และประวัติชำระ<b>ทั้งหมด</b> กู้คืนไม่ได้",
+      ok:"ลบข้อมูลทั้งหมด",cancel:"ไม่ลบ · กลับไปก่อน",danger:true,
+      onOk:async function(){
+        await DB.del("careSignalData");
+        clearFaceSig();
+        S.data=blankData();S.draft={};
+        toast("ลบข้อมูลเรียบร้อยตามสิทธิ PDPA");
+        go("welcome");
+      }});
   });
 }
 
@@ -1493,6 +1574,9 @@ document.addEventListener("click",function(e){
   await loadAll();
   go(S.data.profile?"home":"welcome");
 })();
+/* PWA: ลงทะเบียน Service Worker เพื่อให้ใช้ออฟไลน์ได้หลังเปิดครั้งแรก */
+if("serviceWorker" in navigator&&location.protocol!=="file:")
+  navigator.serviceWorker.register("./sw.js").catch(function(){});
 </script>
 </body>
 </html>

@@ -675,6 +675,9 @@ async function renderINS(){
     if(h==="pilot")renderPilot();
   }
 })();
+/* PWA: ลงทะเบียน Service Worker เพื่อให้ใช้ออฟไลน์ได้หลังเปิดครั้งแรก */
+if("serviceWorker" in navigator&&location.protocol!=="file:")
+  navigator.serviceWorker.register("./sw.js").catch(function(){});
 </script>
 </body>
 </html>

@@ -1,0 +1,85 @@
+/* ============================================================
+   CareSignal Service Worker — ทำให้ระบบใช้ออฟไลน์ได้หลังเปิดครั้งแรก
+   ------------------------------------------------------------
+   เหตุผลที่ต้องมี: กลุ่มเป้าหมายคือผู้สูงอายุที่บ้าน ซึ่งอินเทอร์เน็ต
+   อาจไม่เสถียร โมเดลตรวจจับท่าทาง (~5MB) และไลบรารีจาก CDN
+   ต้องดาวน์โหลดครั้งเดียวแล้วเก็บไว้ใช้ต่อได้โดยไม่ต้องต่อเน็ตอีก
+
+   กลยุทธ์แคช:
+   - ไฟล์ของแอปเอง (same-origin)     → network-first: ออนไลน์ได้เวอร์ชันใหม่,
+                                        ออฟไลน์ใช้สำเนาล่าสุดที่แคชไว้
+   - CDN (MediaPipe / โมเดล / ฟอนต์) → cache-first: ไฟล์ใหญ่และแทบไม่เปลี่ยน
+                                        โหลดครั้งเดียวพอ
+   หมายเหตุความเป็นส่วนตัว: Service Worker นี้แคชเฉพาะ "ไฟล์โปรแกรม"
+   ไม่แตะข้อมูลผู้ใช้ และไม่มีการส่งข้อมูลใดออกจากเครื่อง
+   ============================================================ */
+var VERSION = "caresignal-v1";
+
+var APP_SHELL = [
+  "./",
+  "./index.html",
+  "./CareSignal-Vision.html",
+  "./CareSignal-App.html",
+  "./CareSignal-Web.html",
+  "./CareSignal-Insurer-Model.html",
+  "./manifest.json",
+  "./logo-mark.png",
+  "./icon-192.png",
+  "./icon-512.png",
+  "./favicon-64.png",
+  "./apple-touch-icon.png"
+];
+
+self.addEventListener("install", function (e) {
+  e.waitUntil(
+    caches.open(VERSION)
+      .then(function (c) { return c.addAll(APP_SHELL); })
+      .then(function () { return self.skipWaiting(); })
+  );
+});
+
+self.addEventListener("activate", function (e) {
+  e.waitUntil(
+    caches.keys()
+      .then(function (keys) {
+        return Promise.all(keys.filter(function (k) { return k !== VERSION; })
+          .map(function (k) { return caches.delete(k); }));
+      })
+      .then(function () { return self.clients.claim(); })
+  );
+});
+
+self.addEventListener("fetch", function (e) {
+  var req = e.request;
+  if (req.method !== "GET") return;
+  var url = new URL(req.url);
+
+  if (url.origin === self.location.origin) {
+    /* ไฟล์แอป: network-first */
+    e.respondWith(
+      fetch(req).then(function (res) {
+        var copy = res.clone();
+        caches.open(VERSION).then(function (c) { c.put(req, copy); });
+        return res;
+      }).catch(function () {
+        return caches.match(req).then(function (m) {
+          return m || caches.match("./index.html");
+        });
+      })
+    );
+  } else {
+    /* CDN (โมเดล ไลบรารี ฟอนต์): cache-first */
+    e.respondWith(
+      caches.match(req).then(function (m) {
+        if (m) return m;
+        return fetch(req).then(function (res) {
+          if (res && (res.ok || res.type === "opaque")) {
+            var copy = res.clone();
+            caches.open(VERSION).then(function (c) { c.put(req, copy); });
+          }
+          return res;
+        });
+      })
+    );
+  }
+});
