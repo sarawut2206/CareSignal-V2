@@ -2,7 +2,13 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="เว็บแพลตฟอร์ม CareSignal — เครื่องคำนวณเบี้ย LTC คิว Care Manager แดชบอร์ดบริษัทประกัน Model Card และแผนวัดผลนำร่อง">
+<meta name="theme-color" content="#2563EB">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./favicon-64.png">
 <title>CareSignal — แพลตฟอร์มประกันดูแลระยะยาวสำหรับสังคมสูงวัยไทย</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,6 +106,8 @@ table.dt tr:last-child td{border-bottom:0}
 :focus-visible{outline:3px solid rgba(37,99,235,.45);outline-offset:2px;border-radius:8px}
 .notice{background:var(--surf2);border-radius:14px;padding:13px 17px;font-size:12.5px;color:var(--ink2);line-height:1.65;margin:18px 0 0}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* เคารพผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหว (WCAG 2.3.3) */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -333,7 +341,7 @@ table.dt tr:last-child td{border-bottom:0}
   การเสนอขายประกันภัยจริงต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ. · ตัวเลขเบี้ยเป็นสมมติฐานสาธิตที่ประกาศชัดเจน · ระบบเคารพสิทธิ PDPA
 </div></footer>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
@@ -675,9 +683,20 @@ async function renderINS(){
     if(h==="pilot")renderPilot();
   }
 })();
-/* PWA: ลงทะเบียน Service Worker เพื่อให้ใช้ออฟไลน์ได้หลังเปิดครั้งแรก */
-if("serviceWorker" in navigator&&location.protocol!=="file:")
-  navigator.serviceWorker.register("./sw.js").catch(function(){});
+/* PWA: ลงทะเบียน Service Worker — ใช้ออฟไลน์ได้หลังเปิดครั้งแรก + แจ้งเมื่อมีเวอร์ชันใหม่ */
+if("serviceWorker" in navigator&&location.protocol!=="file:"){
+  navigator.serviceWorker.register("./sw.js").then(function(reg){
+    reg.addEventListener("updatefound",function(){
+      var nw=reg.installing; if(!nw)return;
+      nw.addEventListener("statechange",function(){
+        if(nw.state==="installed"&&navigator.serviceWorker.controller){
+          nw.postMessage("SKIP_WAITING");
+          if(typeof toast==="function")toast("อัปเดตเป็นเวอร์ชันใหม่แล้ว — มีผลเมื่อเปิดครั้งถัดไป");
+        }
+      });
+    });
+  }).catch(function(){});
+}
 </script>
 </body>
 </html>

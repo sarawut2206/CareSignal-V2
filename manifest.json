@@ -1,14 +1,18 @@
 {
+  "id": "./CareSignal-Vision.html",
   "name": "CareSignal Vision — ประเมินสมรรถภาพด้วยกล้อง",
   "short_name": "CareSignal",
-  "description": "วัดการลุกนั่ง 5 ครั้งด้วยกล้องมือถือ วิเคราะห์แนวโน้มความเสี่ยง และส่งต่อทีมดูแล",
+  "description": "วัดการลุกนั่ง 5 ครั้งด้วยกล้องมือถือ วิเคราะห์แนวโน้มความเสี่ยงภาวะพึ่งพิง และส่งต่อทีมดูแล — ประมวลผลภาพในเครื่อง ไม่ส่งภาพออกไปที่ใด",
   "start_url": "./CareSignal-Vision.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#FFFFFF",
   "theme_color": "#2563EB",
   "lang": "th",
+  "dir": "ltr",
+  "categories": ["health", "medical", "finance"],
   "icons": [
     {
       "src": "./icon-192.png",
@@ -27,6 +31,26 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "เริ่มประเมินด้วยกล้อง",
+      "short_name": "ประเมิน",
+      "url": "./CareSignal-Vision.html",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "แอปสมาชิก (วัด + ประกัน)",
+      "short_name": "แอปสมาชิก",
+      "url": "./CareSignal-App.html",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "โมเดลผลประกอบการ",
+      "short_name": "โมเดลธุรกิจ",
+      "url": "./CareSignal-Insurer-Model.html",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

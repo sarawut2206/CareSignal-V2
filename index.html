@@ -2,9 +2,17 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CareSignal — แพลตฟอร์มข้อมูลต่อเนื่องสำหรับประกันดูแลระยะยาว</title>
 <meta name="description" content="CareSignal เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุให้เป็นข้อมูลที่ป้องกันความเสี่ยงและออกแบบประกัน LTC ได้">
+<meta property="og:title" content="CareSignal — เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุให้เป็นข้อมูลประกัน LTC">
+<meta property="og:description" content="กล้องมือถือวัดสมรรถภาพที่บ้าน ประมวลผลในเครื่อง ไม่ส่งภาพออก — รู้ก่อนพึ่งพิง ป้องกันก่อนเคลม">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sarawut2206.github.io/CareSignal-V2/">
+<meta property="og:image" content="https://sarawut2206.github.io/CareSignal-V2/icon-512.png">
+<meta property="og:locale" content="th_TH">
+<meta name="twitter:card" content="summary">
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#2563EB">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -65,6 +73,8 @@ h2{font-size:21px;letter-spacing:-.015em;margin:0 0 6px;font-weight:600}
 footer{background:var(--navy);color:rgba(255,255,255,.6);padding:32px 0;font-size:12.5px;line-height:1.8;margin-top:20px}
 footer b{color:#fff}
 @media(max-width:600px){header{padding:38px 0 34px}section{padding:32px 0}}
+/* เคารพผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหว (WCAG 2.3.3) */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -157,9 +167,56 @@ footer b{color:#fff}
 </div></footer>
 
 <script>
-/* PWA: ลงทะเบียน Service Worker เพื่อให้ใช้ออฟไลน์ได้หลังเปิดครั้งแรก */
-if("serviceWorker" in navigator&&location.protocol!=="file:")
-  navigator.serviceWorker.register("./sw.js").catch(function(){});
+/* ---------- ติดตั้งเป็นแอปบนมือถือ (Add to Home Screen) ---------- */
+(function(){
+  var BOTTOM="20px";
+  if(matchMedia("(display-mode: standalone)").matches||navigator.standalone)return;
+  try{if(localStorage.getItem("csA2HS")==="no")return}catch(e){}
+  var defer=null, isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  function show(){
+    if(document.getElementById("csA2HS"))return;
+    var b=document.createElement("div");
+    b.id="csA2HS";
+    b.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc("+BOTTOM+" + env(safe-area-inset-bottom));z-index:998;display:flex;gap:10px;align-items:center;background:#0F1B33;color:#fff;border-radius:99px;padding:9px 10px 9px 18px;font-size:14px;font-family:inherit;box-shadow:0 12px 32px rgba(15,27,51,.4);max-width:92vw";
+    b.innerHTML='<span>📲 ติดตั้งเป็นแอป ใช้ได้แม้ไม่มีเน็ต</span>'+
+      '<button id="csA2HSgo" style="border:0;border-radius:99px;padding:9px 16px;font-size:14px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;cursor:pointer">ติดตั้ง</button>'+
+      '<button id="csA2HSx" aria-label="ปิด" style="border:0;background:transparent;color:#93A1B7;font-size:16px;cursor:pointer;padding:6px">✕</button>';
+    document.body.appendChild(b);
+    document.getElementById("csA2HSx").addEventListener("click",function(){b.remove();try{localStorage.setItem("csA2HS","no")}catch(e){}});
+    document.getElementById("csA2HSgo").addEventListener("click",function(){
+      if(defer){defer.prompt();defer.userChoice.then(function(){b.remove()});defer=null;return}
+      var o=document.createElement("div");
+      o.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.55);z-index:999;display:flex;align-items:flex-end;justify-content:center;padding:22px";
+      o.innerHTML='<div style="background:#fff;border-radius:22px;padding:24px;max-width:420px;width:100%;color:#16233B">'+
+        '<h3 style="margin:0 0 10px;font-size:19px">ติดตั้งบน iPhone / iPad</h3>'+
+        '<p style="margin:0 0 6px;font-size:15.5px;line-height:1.8;color:#5B6B84">1. แตะปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรขึ้น) ในแถบล่างของ Safari<br>2. เลื่อนหา <b>“เพิ่มลงหน้าจอโฮม”</b><br>3. แตะ <b>เพิ่ม</b> — ไอคอน CareSignal จะอยู่บนหน้าจอเหมือนแอปทั่วไป</p>'+
+        '<button style="display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;margin-top:12px;cursor:pointer">เข้าใจแล้ว</button></div>';
+      document.body.appendChild(o);
+      o.querySelector("button").addEventListener("click",function(){o.remove()});
+      o.addEventListener("click",function(e){if(e.target===o)o.remove()});
+    });
+  }
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();defer=e;show()});
+  window.addEventListener("appinstalled",function(){var b=document.getElementById("csA2HS");if(b)b.remove()});
+  if(isIOS)setTimeout(show,2500);
+})();
+/* ---------- แจ้งสถานะออฟไลน์/ออนไลน์ ---------- */
+window.addEventListener("offline",function(){if(typeof toast==="function")toast("ออฟไลน์ — ใช้งานต่อได้ตามปกติ ข้อมูลบันทึกในเครื่องนี้")});
+window.addEventListener("online",function(){if(typeof toast==="function")toast("กลับมาออนไลน์แล้ว")});
+/* PWA: ลงทะเบียน Service Worker — ใช้ออฟไลน์ได้หลังเปิดครั้งแรก + แจ้งเมื่อมีเวอร์ชันใหม่ */
+if("serviceWorker" in navigator&&location.protocol!=="file:"){
+  navigator.serviceWorker.register("./sw.js").then(function(reg){
+    reg.addEventListener("updatefound",function(){
+      var nw=reg.installing; if(!nw)return;
+      nw.addEventListener("statechange",function(){
+        if(nw.state==="installed"&&navigator.serviceWorker.controller){
+          nw.postMessage("SKIP_WAITING");
+          if(typeof toast==="function")toast("อัปเดตเป็นเวอร์ชันใหม่แล้ว — มีผลเมื่อเปิดครั้งถัดไป");
+        }
+      });
+    });
+  }).catch(function(){});
+}
 </script>
 </body>
 </html>
