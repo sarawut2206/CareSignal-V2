@@ -13,7 +13,7 @@
    หมายเหตุความเป็นส่วนตัว: Service Worker นี้แคชเฉพาะ "ไฟล์โปรแกรม"
    ไม่แตะข้อมูลผู้ใช้ และไม่มีการส่งข้อมูลใดออกจากเครื่อง
    ============================================================ */
-var VERSION = "caresignal-v2";
+var VERSION = "caresignal-v3";
 
 /* รับคำสั่งจากหน้าเว็บให้สลับเป็นเวอร์ชันใหม่ทันที (ใช้โดยระบบแจ้งอัปเดต) */
 self.addEventListener("message", function (e) {
@@ -35,10 +35,24 @@ var APP_SHELL = [
   "./apple-touch-icon.png"
 ];
 
+/* ดึงไฟล์โดยข้ามแคชของเบราว์เซอร์เสมอ
+   เหตุผล: GitHub Pages ส่ง Cache-Control ให้ HTML อยู่หลายนาที ถ้าไม่บังคับ
+   ตรวจกับเซิร์ฟเวอร์ Service Worker จะเก็บสำเนาเก่าไว้ต่อ ทำให้ผู้ใช้ที่
+   ติดตั้งแอปไว้ค้างเวอร์ชันเดิมแม้ deploy ใหม่แล้ว */
+function fetchFresh(req) {
+  return fetch(new Request(req.url, { cache: "no-cache", credentials: "same-origin" }));
+}
+
 self.addEventListener("install", function (e) {
   e.waitUntil(
     caches.open(VERSION)
-      .then(function (c) { return c.addAll(APP_SHELL); })
+      .then(function (c) {
+        return Promise.all(APP_SHELL.map(function (u) {
+          return fetchFresh(new Request(u))
+            .then(function (res) { if (res && res.ok) return c.put(u, res); })
+            .catch(function () { /* ไฟล์เดียวพลาด ไม่ควรทำให้ติดตั้งล้มทั้งชุด */ });
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
   );
 });
@@ -60,11 +74,13 @@ self.addEventListener("fetch", function (e) {
   var url = new URL(req.url);
 
   if (url.origin === self.location.origin) {
-    /* ไฟล์แอป: network-first */
+    /* ไฟล์แอป: network-first และบังคับตรวจกับเซิร์ฟเวอร์เสมอเมื่อออนไลน์ */
     e.respondWith(
-      fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(VERSION).then(function (c) { c.put(req, copy); });
+      fetchFresh(req).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(VERSION).then(function (c) { c.put(req, copy); });
+        }
         return res;
       }).catch(function () {
         return caches.match(req).then(function (m) {
