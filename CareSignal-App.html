@@ -204,7 +204,8 @@ var DB={
     if(window.storage){try{await window.storage.set(k,s);this.mode="cloud";return true}catch(e){}}
     try{localStorage.setItem("cs:"+k,s);this.mode="local";return true}catch(e){MEM[k]=val;this.mode="memory";return true}
   },
-  async setShared(k,val){ /* ข้อมูลสรุปนิรนาม แชร์ให้แดชบอร์ด Care Manager / บริษัทประกัน */
+  async setShared(k,val){ /* ข้อมูลสรุปแบบแฝงชื่อ (pseudonymised) แชร์ให้แดชบอร์ด Care Manager / บริษัทประกัน
+                             หมายเหตุ: ข้อมูลแฝงชื่อยังเป็นข้อมูลส่วนบุคคลตาม PDPA — ไม่ใช่ anonymised */
     if(window.storage){try{await window.storage.set(k,JSON.stringify(val),true);return true}catch(e){}}
     try{localStorage.setItem("csShared:"+k,JSON.stringify(val));return true}catch(e){return false}
   },
@@ -255,6 +256,14 @@ var CFG={
 function fmt(n){return Math.round(n).toLocaleString("th-TH")}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function todayISO(){return new Date().toISOString()}
+/* รหัสแฝงชื่อ (pseudonym) — ใช้แทนรหัสบัญชีจริงเมื่อส่งเข้าฐานข้อมูลกลาง
+   หมายเหตุตามกฎหมาย: นี่คือ pseudonymisation ไม่ใช่ anonymisation
+   ข้อมูลที่ได้ยังเป็นข้อมูลส่วนบุคคลตาม PDPA เต็มที่ */
+function pseudoId(s){
+  var h=5381; s=String(s);
+  for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0}
+  return "P-"+("0000000"+h.toString(36).toUpperCase()).slice(-7);
+}
 function thDate(iso){var d=new Date(iso);return d.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"})}
 /* คำนวณอายุจากปีเกิด พ.ศ. (+เดือนเกิดถ้าระบุ) — เกณฑ์เวลากระโดดที่อายุ 60/70 พอดี
    จึงต้องไม่นับคนที่ยังไม่ถึงวันเกิดปีนี้ให้แก่เกินจริง */
@@ -282,11 +291,12 @@ async function loadAll(){
 async function saveAll(){
   await DB.set("careSignalData",S.data);
   document.getElementById("dbchip").textContent=dbLabel();
-  /* ส่งสำเนาสรุปนิรนามเข้าคลังรวม (ผู้ใช้ปิดได้ในหน้า "ฉัน") */
+  /* ส่งสำเนาสรุปแบบแฝงชื่อเข้าคลังรวม (ผู้ใช้ปิดได้ในหน้า "ฉัน") */
   if(S.data.sharePool && S.data.profile){
     var p=S.data.profile, last=S.data.assessments[S.data.assessments.length-1]||null;
-    await DB.setShared("pool:"+p.uid,{
-      uid:p.uid, ageBand:CFG.ageBand(p.age), sex:p.sex,
+    var pid=pseudoId(p.uid);
+    await DB.setShared("pool:"+pid,{
+      uid:pid, ageBand:CFG.ageBand(p.age), sex:p.sex,
       tier:last?last.tier:null, score:last?last.score:null,
       lastAssess:last?last.at:null,
       firstAssess:S.data.assessments.length?S.data.assessments[0].at:null,
@@ -755,7 +765,7 @@ function registerV(){
   '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนป้องกัน (2) คำนวณส่วนลดเบี้ย (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
   '<label class="chk"><input type="checkbox" id="fConsent"'+(d.consent?" checked":"")+'><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
   '<button class="cta loop" id="fGo">บันทึกและเริ่มใช้งาน</button>'+
-  '<p class="hint" style="margin-top:12px">ข้อมูลสรุปแบบไม่ระบุตัวตน (ช่วงอายุ เพศ ระดับสัญญาณ) จะถูกส่งเข้าระบบกลางเพื่อให้ Care Manager ดูแลคุณได้ — ปิดได้ในหน้า "ฉัน"</p></div>';
+  '<p class="hint" style="margin-top:12px">ข้อมูลสรุปแบบแฝงชื่อ (รหัสสุ่มแทนชื่อ ช่วงอายุ เพศ ระดับสัญญาณ) จะถูกส่งเข้าระบบกลางเพื่อให้ Care Manager ดูแลคุณได้ — ไม่ส่งชื่อจริง และปิดได้ในหน้า "ฉัน"</p></div>';
   document.getElementById("fSex").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.draft.sex=b.dataset.v;this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});});
   document.getElementById("fGo").addEventListener("click",async function(){
     var nm=document.getElementById("fName").value.trim();
@@ -1558,7 +1568,7 @@ function meV(){
   '<div class="rowline"><span class="k">เพศ</span><span class="v">'+(p.sex==="f"?"หญิง":"ชาย")+'</span></div>'+
   '<div class="rowline"><span class="k">เบอร์ผู้ดูแล</span><span class="v">'+esc(p.phone||"—")+'</span></div></div>'+
   '<div class="card"><h3>ความเป็นส่วนตัว</h3>'+
-  '<p class="sub">ส่งข้อมูลสรุปแบบไม่ระบุตัวตน (ช่วงอายุ เพศ ระดับสัญญาณ) เข้าระบบกลาง เพื่อให้ Care Manager และบริษัทประกันดูแลพอร์ตได้</p>'+
+  '<p class="sub">ส่งข้อมูลสรุป<b>แบบแฝงชื่อ</b> (รหัสสุ่มแทนชื่อจริง ช่วงอายุ เพศ ระดับสัญญาณ) เข้าระบบกลาง เพื่อให้ Care Manager และบริษัทประกันดูแลพอร์ตได้ — ข้อมูลแฝงชื่อยังเป็นข้อมูลส่วนบุคคลที่ได้รับความคุ้มครองเต็มที่ตาม PDPA</p>'+
   '<div class="seg"><button id="shareOn" aria-pressed="'+S.data.sharePool+'">เปิด</button><button id="shareOff" aria-pressed="'+(!S.data.sharePool)+'">ปิด</button></div></div>'+
   '<div class="card"><h3>ที่เก็บข้อมูล</h3><p class="sub" style="margin:0">โหมดปัจจุบัน: <b>'+dbLabel().replace("DB · ","")+'</b> — CLOUD = ฐานข้อมูลถาวรของแพลตฟอร์ม · LOCAL = ในเครื่องนี้ · TEMP = ชั่วคราว</p></div>'+
   '<div class="card"><h3>ความโปร่งใสและสิทธิของคุณ</h3><p class="sub">ดูได้ว่าระบบใช้กฎอะไร ตัดสินใจอะไรกับข้อมูลของคุณบ้าง และระบบทำอะไรไม่ได้</p><button class="ghostb" data-go="ai">ดูว่าระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>'+'<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';

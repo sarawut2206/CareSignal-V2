@@ -165,6 +165,7 @@ body{margin:0;background:#0B1220;font-family:var(--sans);color:var(--ink);-webki
     <button data-go="trend"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 15v-4M12 15V8M16 15v-6"/></svg><b>แนวโน้ม</b></button>
     <button data-go="cases"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>เคส</b></button>
     <button data-go="insurer"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>บริษัทประกัน</b></button>
+    <button data-go="pilot" id="tabPilot" hidden><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/><circle cx="7" cy="9" r="1.6"/><circle cx="12" cy="5" r="1.6"/><circle cx="17" cy="12" r="1.6"/></svg><b>วิจัย</b></button>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
@@ -218,7 +219,11 @@ var DB={
     return out;
   }
 };
-function dbLabel(){return "DB · "+(DB.mode==="cloud"?"CLOUD":(DB.mode==="local"?"LOCAL":"TEMP"))}
+function dbLabel(){
+  var m="DB · "+(DB.mode==="cloud"?"CLOUD":(DB.mode==="local"?"LOCAL":"TEMP"));
+  try{if(localStorage.getItem("csv:pilot")==="1")m+=" · โหมดวิจัย"}catch(e){}
+  return m;
+}
 
 /* ============================================================
    ค่ากลาง — ชุดเดียวกับแอป เว็บ และโมเดลผู้ประกอบการ
@@ -241,6 +246,14 @@ var CFG={
 function fmt(n){return Math.round(n).toLocaleString("th-TH")}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function nowISO(){return new Date().toISOString()}
+/* รหัสแฝงชื่อ (pseudonym) — ใช้แทนรหัสบัญชีจริงเมื่อส่งเข้าฐานข้อมูลกลาง
+   หมายเหตุตามกฎหมาย: นี่คือการทำ pseudonymisation ไม่ใช่ anonymisation
+   ข้อมูลที่ได้ยังเป็นข้อมูลส่วนบุคคลตาม PDPA เต็มที่ */
+function pseudoId(s){
+  var h=5381; s=String(s);
+  for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0}
+  return "P-"+("0000000"+h.toString(36).toUpperCase()).slice(-7);
+}
 function thDate(iso){return new Date(iso).toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"})}
 function thTime(iso){return new Date(iso).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"})}
 function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
@@ -421,6 +434,89 @@ function audit(ev,detail,human){
 }
 
 /* ============================================================
+   โหมดเก็บข้อมูลนำร่อง (Preliminary Technical Validation)
+   ------------------------------------------------------------
+   วัตถุประสงค์: พิสูจน์ว่า "CareSignal วัดสิ่งที่บอกว่าวัดได้จริง"
+   โดยเทียบเวลาที่กล้องจับ กับนาฬิกาจับเวลาของผู้ประเมินที่เป็นมนุษย์
+   ⚠️ นี่ไม่ใช่ Clinical Validation — เป็นการตรวจสอบความแม่นยำของเครื่องมือวัด
+   เปิดใช้: เติม ?pilot=1 ท้าย URL · ปิด: ?pilot=0
+   ============================================================ */
+var PILOT=(function(){
+  try{
+    if(location.search.indexOf("pilot=1")>=0)localStorage.setItem("csv:pilot","1");
+    if(location.search.indexOf("pilot=0")>=0)localStorage.removeItem("csv:pilot");
+    return localStorage.getItem("csv:pilot")==="1";
+  }catch(e){return false}
+})();
+var PLOG={
+  all:function(){try{return JSON.parse(localStorage.getItem("csv:pilotLog")||"[]")}catch(e){return[]}},
+  save:function(a){try{localStorage.setItem("csv:pilotLog",JSON.stringify(a))}catch(e){toast("พื้นที่เก็บข้อมูลเต็ม — กรุณาส่งออก CSV แล้วล้างข้อมูล")}},
+  add:function(r){var a=this.all();a.push(r);this.save(a);return a.length},
+  clear:function(){try{localStorage.removeItem("csv:pilotLog")}catch(e){}}
+};
+/* สรุปสถิติตาม KPI ของการตรวจสอบเครื่องมือวัด */
+function pilotStats(){
+  var a=PLOG.all();
+  var done=a.filter(function(r){return r.csTime!=null});
+  var withRef=done.filter(function(r){return r.ref1!=null});
+  var errs=withRef.map(function(r){return r.csTime-r.ref1});
+  var abs=errs.map(function(e){return Math.abs(e)});
+  function mean(x){return x.length?x.reduce(function(p,c){return p+c},0)/x.length:null}
+  var m=mean(errs), sd=null;
+  if(errs.length>1){sd=Math.sqrt(errs.reduce(function(p,c){return p+(c-m)*(c-m)},0)/(errs.length-1))}
+  var repsOK=done.filter(function(r){return r.repsCorrect===true}).length;
+  var fails=a.filter(function(r){return r.techFail}).length;
+  var people={};a.forEach(function(r){if(r.pid)people[r.pid]=1});
+  /* ความแปรปรวนเมื่อวัดซ้ำ: ส่วนเบี่ยงเบนของแต่ละคนที่วัด ≥2 รอบ */
+  var byP={};done.forEach(function(r){if(!byP[r.pid])byP[r.pid]=[];byP[r.pid].push(r.csTime)});
+  var retest=[];
+  Object.keys(byP).forEach(function(k){
+    var v=byP[k]; if(v.length<2)return;
+    var mu=mean(v);
+    retest.push(Math.sqrt(v.reduce(function(p,c){return p+(c-mu)*(c-mu)},0)/(v.length-1)));
+  });
+  return {
+    n:a.length, nDone:done.length, nPeople:Object.keys(people).length, nRef:withRef.length,
+    completion:a.length?done.length/a.length*100:null,
+    repAcc:done.length?repsOK/done.length*100:null,
+    mae:mean(abs), bias:m, sd:sd,
+    techFailRate:a.length?fails/a.length*100:null,
+    retestSD:mean(retest), nRetest:retest.length,
+    setupMean:mean(done.filter(function(r){return r.setupSec}).map(function(r){return r.setupSec}))
+  };
+}
+function pilotCSV(){
+  var cols=["trial","participant","trial_no","datetime","method","cs_time_s","ref1_s","ref2_s",
+            "error1_s","error2_s","cs_reps","reps_correct","cadence_cv","gaps_s",
+            "sit_ref","stand_ref","setup_sec","tech_fail","notes"];
+  var rows=PLOG.all().map(function(r,i){
+    return [i+1, r.pid||"", r.trialNo||"", r.at||"", r.method||"",
+      r.csTime!=null?r.csTime.toFixed(2):"", r.ref1!=null?r.ref1.toFixed(2):"", r.ref2!=null?r.ref2.toFixed(2):"",
+      (r.csTime!=null&&r.ref1!=null)?(r.csTime-r.ref1).toFixed(2):"",
+      (r.csTime!=null&&r.ref2!=null)?(r.csTime-r.ref2).toFixed(2):"",
+      r.reps!=null?r.reps:"", r.repsCorrect===true?"1":(r.repsCorrect===false?"0":""),
+      r.cv!=null?(r.cv).toFixed(4):"", r.gaps?r.gaps.join(" "):"",
+      r.sitRef!=null?r.sitRef.toFixed(4):"", r.standRef!=null?r.standRef.toFixed(4):"",
+      r.setupSec!=null?r.setupSec:"", r.techFail?"1":"0",
+      (r.notes||"").replace(/[",\n]/g," ")];
+  });
+  return "﻿"+[cols].concat(rows).map(function(r){return r.join(",")}).join("\n");
+}
+function pilotDownload(){
+  var blob=new Blob([pilotCSV()],{type:"text/csv;charset=utf-8"});
+  var url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="caresignal-validation-"+nowISO().slice(0,10)+".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},1000);
+}
+/* บันทึกความล้มเหลวทางเทคนิค (กล้องเปิดไม่ได้ / โมเดลโหลดไม่สำเร็จ) */
+function pilotLogFail(reason){
+  if(!PILOT)return;
+  PLOG.add({at:nowISO(),pid:S.pilotPid||"",trialNo:null,csTime:null,ref1:null,ref2:null,
+            reps:null,repsCorrect:null,techFail:true,notes:"เทคนิคขัดข้อง: "+reason});
+}
+
+/* ============================================================
    สถานะแอป
    ============================================================ */
 var S={data:null,screen:"loading",draft:{},cam:null};
@@ -438,7 +534,7 @@ async function saveAll(){
   if(S.data.sharePool&&S.data.profile){
     var p=S.data.profile,last=S.data.assessments[S.data.assessments.length-1]||null,tr=null;
     try{tr=trajectory()}catch(e){}
-    await DB.putPool({uid:p.uid,ageBand:CFG.ageBand(p.age),sex:p.sex,
+    await DB.putPool({uid:pseudoId(p.uid),ageBand:CFG.ageBand(p.age),sex:p.sex,
       tier:last?last.tier:null,score:last?last.score:null,ftsst:last?last.ftsst:null,
       lastAssess:last?last.at:null,nAssess:S.data.assessments.length,
       level:tr?tr.level:null,referred:tr?!!tr.referral.need:false,
@@ -500,11 +596,12 @@ function askTime(cb,onCancel){
     }});
 }
 function render(arg){
-  T.hidden=!S.data.profile||["test","calib","q","result"].indexOf(S.screen)>=0;
-  var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer"};
+  T.hidden=!S.data.profile||["test","calib","q","result","plog"].indexOf(S.screen)>=0;
+  var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
+  var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
   var fn={loading:loadingV,welcome:welcomeV,reg:regV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
-          trend:trendV,cases:casesV,insurer:insurerV}[S.screen]||assessV;
+          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV}[S.screen]||assessV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -605,6 +702,7 @@ async function loadModel(statusEl){
   return POSE;
 }
 function showFallback(reason){
+  pilotLogFail(reason);
   var box=document.createElement("div");
   box.className="card";
   box.style.background="var(--accentb)";
@@ -626,6 +724,7 @@ function stopCam(){
   if(S.cam){S.cam.getTracks().forEach(function(t){t.stop()});S.cam=null}
 }
 function calibV(){
+  if(PILOT&&!S.pilotT0)S.pilotT0=Date.now();  /* เริ่มจับเวลา "เปิดระบบจนจบ 1 รอบ" */
   head("สอบเทียบ","ให้กล้องรู้จักท่านั่งและท่ายืนของคุณ","ขั้นตอนนี้ทำให้ระบบวัดได้แม่นยำกับสรีระและระยะกล้องของคุณโดยเฉพาะ","assess");
   V.innerHTML='<div class="anim">'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
@@ -807,7 +906,111 @@ function finishTest(elapsed){
   S.draft.gaps=gaps.map(function(g){return Math.round(g*10)/10});
   audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
   toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
+  if(PILOT){go("plog");return}
   go("q",0);
+}
+
+/* ---------- ฟอร์มบันทึกข้อมูลวิจัย (แสดงเฉพาะโหมดนำร่อง) ---------- */
+function plogV(){
+  head("บันทึกข้อมูลวิจัย","เทียบกับนาฬิกาจับเวลา","กรอกเวลาที่ผู้ประเมินจับได้ เพื่อวัดความคลาดเคลื่อนของกล้อง");
+  var d=S.draft;
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--navy);color:#fff">'+
+  '<div style="font-size:12px;opacity:.8;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase">กล้องวัดได้</div>'+
+  '<div style="font-family:var(--mono);font-size:40px;font-weight:600;line-height:1.15">'+(d.ftsst!=null?d.ftsst.toFixed(1):"—")+'<span style="font-size:17px;opacity:.75"> วินาที</span></div>'+
+  '<div style="font-size:13.5px;opacity:.85;margin-top:4px">นับได้ '+(d.reps!=null?d.reps:"—")+' ครั้ง'+(d.gaps&&d.gaps.length?' · ต่อครั้ง '+d.gaps.join(" · ")+' วิ':'')+'</div></div>'+
+  '<div class="card">'+
+  '<div class="field"><label>รหัสผู้เข้าร่วม (ห้ามใช้ชื่อจริง)</label><input id="pPid" value="'+esc(S.pilotPid||"")+'" placeholder="เช่น P01"></div>'+
+  '<div class="field"><label>รอบที่</label><input id="pTrial" inputmode="numeric" value="'+esc(S.pilotTrial||1)+'" placeholder="1"></div>'+
+  '<div class="field"><label>เวลาที่ผู้จับเวลาคนที่ 1 จับได้ (วินาที)</label><input id="pRef1" inputmode="decimal" placeholder="เช่น 11.4"></div>'+
+  '<div class="field"><label>ผู้จับเวลาคนที่ 2 (ถ้ามี)</label><input id="pRef2" inputmode="decimal" placeholder="เว้นว่างได้"></div>'+
+  '<div class="field"><label>ระบบนับครบ 5 ครั้งถูกต้องหรือไม่</label><div class="seg" id="pReps">'+
+  '<button data-v="1" aria-pressed="true">นับถูก</button><button data-v="0" aria-pressed="false">นับผิด</button></div></div>'+
+  '<div class="field"><label>หมายเหตุ (เสื้อผ้า · เก้าอี้ · แสง · ปัญหาที่พบ)</label><input id="pNote" placeholder="เช่น ใส่ผ้าถุง เก้าอี้เตี้ย"></div>'+
+  '</div>'+
+  '<button class="cta" id="pSaveNext">บันทึก แล้ววัดรอบต่อไปทันที</button>'+
+  '<button class="ghostb" id="pSaveQ">บันทึก แล้วทำแบบสอบถามต่อ</button>'+
+  '<button class="ghostb" data-go="pilot">ดูสรุปผลทั้งหมด</button>'+
+  '<div class="disc">ข้อมูลชุดนี้เก็บในเครื่องนี้เท่านั้น ใช้รหัสแทนชื่อจริง · เป็นการตรวจสอบความแม่นยำของเครื่องมือวัด ไม่ใช่การทดสอบทางคลินิก</div></div>';
+  var repsOK=true;
+  document.getElementById("pReps").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b)return;
+    repsOK=b.dataset.v==="1";
+    this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});
+  });
+  function save(){
+    var pid=document.getElementById("pPid").value.trim();
+    if(!pid){toast("กรุณากรอกรหัสผู้เข้าร่วม");return false}
+    var r1=parseFloat(document.getElementById("pRef1").value);
+    var r2=parseFloat(document.getElementById("pRef2").value);
+    var tn=parseInt(document.getElementById("pTrial").value,10)||1;
+    PLOG.add({at:nowISO(), pid:pid, trialNo:tn, method:d.method||"camera-pose",
+      csTime:d.ftsst!=null?d.ftsst:null, ref1:isFinite(r1)?r1:null, ref2:isFinite(r2)?r2:null,
+      reps:d.reps!=null?d.reps:null, repsCorrect:repsOK, cv:d.cv!=null?d.cv:null, gaps:d.gaps||null,
+      sitRef:d.sitRef!=null?d.sitRef:null, standRef:d.standRef!=null?d.standRef:null,
+      setupSec:S.pilotT0?Math.round((Date.now()-S.pilotT0)/1000):null,
+      techFail:false, notes:document.getElementById("pNote").value.trim()});
+    S.pilotPid=pid; S.pilotTrial=tn+1;
+    toast("บันทึกแล้ว (รวม "+PLOG.all().length+" รอบ)");
+    return true;
+  }
+  document.getElementById("pSaveNext").addEventListener("click",function(){
+    if(!save())return;
+    S.draft={sitRef:d.sitRef,standRef:d.standRef};  /* คงค่าสอบเทียบไว้ ไม่ต้องทำใหม่ */
+    S.pilotT0=Date.now();
+    go("test");
+  });
+  document.getElementById("pSaveQ").addEventListener("click",function(){if(save())go("q",0)});
+}
+
+/* ---------- สรุปผลการตรวจสอบเครื่องมือวัด ---------- */
+function pilotV(){
+  head("ผลการตรวจสอบเครื่องมือวัด","Preliminary Technical Validation","เทียบเวลาที่กล้องจับ กับนาฬิกาของผู้ประเมิน — ไม่ใช่การทดสอบทางคลินิก");
+  var s=pilotStats(), a=PLOG.all();
+  if(!a.length){
+    V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0 0 12px">ยังไม่มีข้อมูล — ทำการวัดด้วยกล้อง 1 รอบ ระบบจะถามเวลาที่จับด้วยนาฬิกาให้บันทึกเทียบกัน</p>'+
+      '<button class="cta" style="margin:0" data-go="assess">ไปหน้าประเมิน</button></div></div>';return;
+  }
+  function num(v,dp,unit){return v==null?"—":v.toFixed(dp||1)+(unit||"")}
+  V.innerHTML='<div class="anim">'+
+  '<div class="kpis">'+
+  '<div class="kpi"><div class="l">จำนวนรอบที่วัด</div><div class="n">'+s.n+'</div></div>'+
+  '<div class="kpi"><div class="l">จำนวนผู้เข้าร่วม</div><div class="n">'+s.nPeople+'</div></div>'+
+  '<div class="kpi"><div class="l">ทำสำเร็จ</div><div class="n">'+num(s.completion,0,"%")+'</div></div>'+
+  '<div class="kpi"><div class="l">นับครั้งถูกต้อง</div><div class="n">'+num(s.repAcc,0,"%")+'</div></div></div>'+
+  '<div class="card"><h3>ความคลาดเคลื่อนเทียบนาฬิกาจับเวลา</h3>'+
+  '<div class="rowline"><span class="k">ความคลาดเคลื่อนสัมบูรณ์เฉลี่ย (MAE)</span><span class="v">'+num(s.mae,2," วิ")+'</span></div>'+
+  '<div class="rowline"><span class="k">ค่าเอนเอียงเฉลี่ย (bias)</span><span class="v">'+(s.bias==null?"—":(s.bias>0?"+":"")+s.bias.toFixed(2)+" วิ")+'</span></div>'+
+  '<div class="rowline"><span class="k">ส่วนเบี่ยงเบนมาตรฐานของความคลาดเคลื่อน</span><span class="v">'+num(s.sd,2," วิ")+'</span></div>'+
+  '<div class="rowline"><span class="k">จำนวนรอบที่มีเวลาอ้างอิง</span><span class="v">'+s.nRef+' / '+s.n+'</span></div>'+
+  '<p class="sub" style="margin:10px 0 0">ค่าเอนเอียงเป็นบวก = กล้องจับเวลาได้<b>นานกว่า</b>คนจับ · ตีความคู่กับเกณฑ์ MCID 2.3 วินาทีของ FTSST</p></div>'+
+  '<div class="card"><h3>ความคงเส้นคงวาและความพร้อมใช้</h3>'+
+  '<div class="rowline"><span class="k">ส่วนเบี่ยงเบนเมื่อวัดซ้ำคนเดิม</span><span class="v">'+num(s.retestSD,2," วิ")+(s.nRetest?" (n="+s.nRetest+" คน)":"")+'</span></div>'+
+  '<div class="rowline"><span class="k">อัตราขัดข้องทางเทคนิค</span><span class="v">'+num(s.techFailRate,0,"%")+'</span></div>'+
+  '<div class="rowline"><span class="k">เวลาเฉลี่ยตั้งแต่เริ่มจนจบ 1 รอบ</span><span class="v">'+(s.setupMean==null?"—":Math.round(s.setupMean)+" วินาที")+'</span></div></div>'+
+  '<div class="card"><h3>ข้อมูลรายรอบ</h3>'+
+  '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+  '<thead><tr>'+["รหัส","รอบ","กล้อง","นาฬิกา","ต่าง","นับ"].map(function(h){
+    return '<th style="text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)">'+h+'</th>'}).join("")+'</tr></thead><tbody>'+
+  a.slice().reverse().slice(0,40).map(function(r){
+    var e=(r.csTime!=null&&r.ref1!=null)?(r.csTime-r.ref1):null;
+    return '<tr><td style="padding:7px 8px;border-bottom:1px solid var(--line2)">'+esc(r.pid||"—")+'</td>'+
+    '<td style="padding:7px 8px;border-bottom:1px solid var(--line2)">'+(r.trialNo||"—")+'</td>'+
+    '<td style="padding:7px 8px;border-bottom:1px solid var(--line2);font-family:var(--mono)">'+(r.csTime!=null?r.csTime.toFixed(1):"—")+'</td>'+
+    '<td style="padding:7px 8px;border-bottom:1px solid var(--line2);font-family:var(--mono)">'+(r.ref1!=null?r.ref1.toFixed(1):"—")+'</td>'+
+    '<td style="padding:7px 8px;border-bottom:1px solid var(--line2);font-family:var(--mono);color:'+(e!=null&&Math.abs(e)>1?"var(--c2)":"var(--ink2)")+'">'+(e!=null?(e>0?"+":"")+e.toFixed(2):"—")+'</td>'+
+    '<td style="padding:7px 8px;border-bottom:1px solid var(--line2)">'+(r.techFail?'<span style="color:var(--c1)">ขัดข้อง</span>':(r.repsCorrect===false?'<span style="color:var(--c2)">ผิด</span>':'<span style="color:var(--c4)">ถูก</span>'))+'</td></tr>';
+  }).join("")+'</tbody></table></div>'+
+  (a.length>40?'<p class="sub" style="margin:10px 0 0">แสดง 40 รอบล่าสุด — ส่งออก CSV เพื่อดูทั้งหมด</p>':'')+'</div>'+
+  '<button class="cta" id="pCsv">ส่งออกเป็นไฟล์ CSV</button>'+
+  '<button class="ghostb danger" id="pClear">ล้างข้อมูลวิจัยทั้งหมด</button>'+
+  '<div class="disc">⚠️ นี่คือการตรวจสอบความแม่นยำของเครื่องมือวัด (Technical Feasibility) <b>ไม่ใช่ Clinical Validation</b> และไม่ใช่หลักฐานว่าระบบลดการล้มหรือลดการเคลมได้ · ส่งออก CSV ก่อนล้างข้อมูลเสมอ</div></div>';
+  document.getElementById("pCsv").addEventListener("click",function(){pilotDownload();toast("ส่งออกไฟล์ CSV แล้ว")});
+  document.getElementById("pClear").addEventListener("click",function(){
+    dialog({title:"ล้างข้อมูลวิจัยทั้งหมด",body:"จะลบข้อมูล "+a.length+" รอบ กู้คืนไม่ได้ — <b>ส่งออก CSV ไว้แล้วหรือยัง?</b>",
+      ok:"ล้างข้อมูล",cancel:"ยังไม่ล้าง",danger:true,
+      onOk:function(){PLOG.clear();toast("ล้างข้อมูลวิจัยแล้ว");render()}});
+  });
 }
 
 /* ---------- คำถามเสริม 4 ข้อ ---------- */
@@ -985,7 +1188,7 @@ function casesV(){
 /* ---------- แดชบอร์ดบริษัทประกัน ---------- */
 async function insurerV(){
   if(!S.roleAck){roleGateV("insurer","เจ้าหน้าที่บริษัทประกัน");return}
-  head("บริษัทประกัน","ภาพรวมพอร์ต","ข้อมูลสรุปแบบไม่ระบุตัวตนจากฐานข้อมูลกลาง ตามหลัก data minimization ของ PDPA");
+  head("บริษัทประกัน","ภาพรวมพอร์ต","ข้อมูลแบบแฝงชื่อ (pseudonymised) จากฐานข้อมูลกลาง ตามหลัก data minimization — ยังเป็นข้อมูลส่วนบุคคลตาม PDPA");
   V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">กำลังอ่านฐานข้อมูล…</p></div></div>';
   var pool=await DB.listPool();
   if(!pool.length){
