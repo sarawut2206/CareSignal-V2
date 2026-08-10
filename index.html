@@ -73,11 +73,62 @@ h2{font-size:21px;letter-spacing:-.015em;margin:0 0 6px;font-weight:600}
 footer{background:var(--navy);color:rgba(255,255,255,.6);padding:32px 0;font-size:12.5px;line-height:1.8;margin-top:20px}
 footer b{color:#fff}
 @media(max-width:600px){header{padding:38px 0 34px}section{padding:32px 0}}
+/* ===== แถบนำทางบน (สไตล์เว็บผลิตภัณฑ์) ===== */
+html{scroll-behavior:smooth}
+.topnav{position:sticky;top:0;z-index:50;background:rgba(15,27,51,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08)}
+.topnav .in{max-width:960px;margin:0 auto;padding:9px 22px;display:flex;align-items:center;gap:12px}
+.topnav img{width:30px;height:30px;background:#fff;border-radius:8px;padding:3px;flex:none}
+.topnav b{color:#fff;font-size:15px;letter-spacing:-.01em;flex:none}
+.topnav .links{display:flex;gap:2px;overflow-x:auto;margin-left:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.topnav .links::-webkit-scrollbar{display:none}
+.topnav a{color:rgba(255,255,255,.72);text-decoration:none;font-size:12.5px;padding:7px 10px;border-radius:8px;white-space:nowrap}
+.topnav a:hover{background:rgba(255,255,255,.1);color:#fff}
+.topnav a.hot{background:var(--brand);color:#fff;font-weight:600}
+section[id]{scroll-margin-top:60px}
+/* ===== ปุ่ม CTA ใน hero ===== */
+.heroCtas{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.btnP{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 26px;border-radius:14px;box-shadow:0 10px 26px rgba(37,99,235,.4)}
+.btnP:hover{background:var(--brand2)}
+.btnG{display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 26px;border-radius:14px}
+.btnG:hover{background:rgba(255,255,255,.18)}
+/* ===== การ์ดคุณสมบัติพิเศษ ===== */
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px}
+.feat{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--sh)}
+.feat .ic{font-size:26px;margin-bottom:8px}
+.feat h3{margin:0 0 6px;font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.feat p{margin:0;font-size:13px;color:var(--ink2);line-height:1.65}
+/* ===== ถาม/ตอบ ===== */
+.faq{background:var(--surf);border:1px solid var(--line);border-radius:16px;margin-bottom:10px;box-shadow:var(--sh);overflow:hidden}
+.faq summary{cursor:pointer;padding:16px 18px;font-weight:600;font-size:14.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;line-height:1.5}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:21px;color:var(--brand);flex:none;font-weight:400;line-height:1}
+.faq[open] summary::after{content:"−"}
+.faq .a{padding:0 18px 16px;font-size:13.5px;color:var(--ink2);line-height:1.8}
+.faq .a b{color:var(--ink)}
+.faq .a a{color:var(--brand);font-weight:600;text-decoration:none}
+/* ===== วิธีติดตั้ง ===== */
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.dlc{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--sh)}
+.dlc h3{margin:0 0 8px;font-size:15px;font-weight:600}
+.dlc ol{margin:0;padding-left:20px;font-size:13px;color:var(--ink2);line-height:1.85}
 /* เคารพผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหว (WCAG 2.3.3) */
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
+
+<nav class="topnav" aria-label="เมนูหลัก"><div class="in">
+  <img src="./logo-mark.png" alt=""><b>CareSignal</b>
+  <div class="links">
+    <a href="#what">คืออะไร</a>
+    <a href="#why">ทำไมต้องมี</a>
+    <a href="#features">คุณสมบัติ</a>
+    <a href="#results">ผลลัพธ์</a>
+    <a href="#faq">ถาม/ตอบ</a>
+    <a href="#insurers">สำหรับบริษัทประกัน</a>
+    <a class="hot" href="#install">ติดตั้งฟรี</a>
+  </div>
+</div></nav>
 
 <header><div class="wrap">
   <div class="brand"><img src="./logo-mark.png" alt="โลโก้ CareSignal"><b>CareSignal</b></div>
@@ -85,9 +136,13 @@ footer b{color:#fff}
   <h1>เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุ ให้เป็นข้อมูลที่<em>ป้องกันความเสี่ยง</em>และออกแบบประกัน LTC ได้</h1>
   <p class="lead">บริษัทประกันไทยออกผลิตภัณฑ์ดูแลระยะยาวได้ยาก เพราะไม่มีข้อมูลสมรรถภาพของคนไทยแบบต่อเนื่อง CareSignal สร้างข้อมูลชุดนั้นจากการประเมินที่บ้าน โดยประมวลผลในเครื่องและส่งขึ้นระบบเฉพาะคะแนน</p>
   <span class="tagline">รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม</span>
+  <div class="heroCtas">
+    <a class="btnP" href="./CareSignal-Vision.html">เปิดใช้เลย · ฟรี ไม่ต้องสมัครก่อน</a>
+    <a class="btnG" href="#install">📲 ติดตั้งเป็นแอปบนมือถือ</a>
+  </div>
 </div></header>
 
-<section style="padding-bottom:0"><div class="wrap">
+<section style="padding-bottom:0" id="why"><div class="wrap">
   <figure style="margin:0;background:var(--navy);border-radius:22px;padding:30px 30px 26px;color:#fff;position:relative;overflow:hidden">
     <div style="position:absolute;right:-120px;top:-120px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.35),transparent 65%)"></div>
     <div style="position:relative">
@@ -101,7 +156,7 @@ footer b{color:#fff}
   </figure>
 </div></section>
 
-<section><div class="wrap">
+<section id="what"><div class="wrap">
   <div class="note" style="border-left-color:var(--brand);margin-bottom:26px">
     <b style="font-size:16px;color:var(--ink)">CareSignal คืออะไร — อธิบายในประโยคเดียว</b><br>
     <span style="font-size:16px;color:var(--ink);line-height:1.8">ใช้กล้องมือถือวัดความถดถอยของสมรรถภาพผู้สูงอายุที่บ้าน เพื่อให้บริษัทประกันป้องกันภาวะพึ่งพิงก่อนเกิดเคลม LTC โดยไม่ส่งภาพออกจากเครื่อง</span>
@@ -120,7 +175,20 @@ footer b{color:#fff}
   </div>
 </div></section>
 
-<section style="padding-top:0"><div class="wrap">
+<section style="padding-top:0" id="features"><div class="wrap">
+  <h2>คุณสมบัติพิเศษ</h2>
+  <p class="secsub">ทุกข้อทำงานได้จริงในระบบวันนี้ ไม่ใช่แผนอนาคต — กดเปิดใช้แล้วตรวจสอบได้ทันที</p>
+  <div class="feats">
+    <div class="feat"><div class="ic">📷</div><h3>กล้องนับให้ ไม่ต้องกดปุ่ม</h3><p>วางมือถือแล้วลุกนั่ง กล้องตรวจจับ 33 จุดบนร่างกาย นับครบ 5 ครั้งและจับเวลาเองอัตโนมัติ พร้อมสอบเทียบกับสรีระของแต่ละคนก่อนวัดทุกครั้ง</p></div>
+    <div class="feat"><div class="ic">🔒</div><h3>ภาพไม่ออกจากเครื่อง</h3><p>ประมวลผลท่าทางในเครื่องทั้งหมด ส่งขึ้นระบบเฉพาะตัวเลข — ในโค้ดไม่มีคำสั่งอัปโหลดภาพแม้แต่บรรทัดเดียว ตรวจสอบได้บน GitHub</p></div>
+    <div class="feat"><div class="ic">📈</div><h3>อ่านแนวโน้ม พร้อมเหตุผลทุกคำเตือน</h3><p>เอนจินกฎ 7 ข้อที่อ้างอิงงานวิจัย เทียบคุณกับตัวคุณเองในอดีต ไม่ใช่ค่าเฉลี่ยคนอื่น — ทุกคำเตือนอธิบายเป็นตัวเลขว่าเพราะอะไร</p></div>
+    <div class="feat"><div class="ic">👩‍⚕️</div><h3>เสี่ยงสูง ส่งต่อทีมดูแล</h3><p>ผลเข้าเกณฑ์ถดถอย ระบบสร้างเคสพร้อมหลักฐานเข้าคิวให้พยาบาล/Care Manager ยืนยัน — AI ไม่มีสิทธิ์ตัดสินใจเองในทุกกรณี</p></div>
+    <div class="feat"><div class="ic">💸</div><h3>ผลดี ลดเบี้ยได้ทันที</h3><p>เขียว −15% เหลือง −8% และ<b>ลดได้ทางเดียวเท่านั้น</b> — ไม่มีเส้นทางใดในระบบที่เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนนที่แย่ลง</p></div>
+    <div class="feat"><div class="ic">📴</div><h3>ติดตั้งเป็นแอป ใช้ได้ไม่มีเน็ต</h3><p>เป็น PWA เต็มรูปแบบ ติดตั้งลงหน้าจอเหมือนแอปทั่วไป เปิดครั้งแรกครั้งเดียว หลังจากนั้นทำงานออฟไลน์ได้ครบทุกหน้า — ออกแบบเพื่อบ้านที่เน็ตไม่เสถียร</p></div>
+  </div>
+</div></section>
+
+<section style="padding-top:0" id="systems"><div class="wrap">
   <h2>สิ่งที่ตามมาเมื่อมีข้อมูลชุดนี้</h2>
   <p class="secsub">สามระบบนี้ไม่ใช่ผลิตภัณฑ์แยก แต่คือปลายทางของข้อมูลเดียวกัน — ผู้ใช้เห็นแนวโน้มตัวเอง ทีมดูแลเห็นคิวที่ต้องช่วย และบริษัทประกันเห็นความเสี่ยงของพอร์ต</p>
   <div class="grid">
@@ -155,7 +223,7 @@ footer b{color:#fff}
   </div>
 </div></section>
 
-<section style="padding-top:0"><div class="wrap">
+<section style="padding-top:0" id="results"><div class="wrap">
   <h2>ผลลัพธ์ที่นำเสนอเป็นตัวเลข</h2>
   <p class="secsub">แยกชัดเจนระหว่างสิ่งที่<b>กลไกในระบบวัดได้แล้ววันนี้</b> กับ<b>เป้าหมายที่ประกาศเกณฑ์ล่วงหน้า</b>เพื่อพิสูจน์ในโครงการนำร่อง 30–100 ราย — เราไม่นำตัวเลขสมมติมาแสดงเป็นผลจริง</p>
   <div class="facts" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
@@ -205,6 +273,89 @@ footer b{color:#fff}
   </div>
 </div></section>
 
+<section style="padding-top:0" id="faq"><div class="wrap">
+  <h2>ถาม/ตอบ — คำถามที่ยากที่สุด เราตอบไว้ล่วงหน้า</h2>
+  <p class="secsub">รวมคำถามที่บริษัทประกัน นักคณิตศาสตร์ประกันภัย และกรรมการมักถาม พร้อมลิงก์ไปหลักฐานในระบบจริงทุกข้อ</p>
+
+  <details class="faq"><summary>ทำไมบริษัทประกันต้องใช้ CareSignal?</summary><div class="a">
+    เพราะวันนี้<b>ประเทศไทยไม่มีตารางอุบัติการณ์ LTC มาตรฐาน</b> — นักคณิตศาสตร์ประกันภัยตั้งราคาผลิตภัณฑ์ดูแลระยะยาวไม่ได้ จึงไม่มีสินค้าในตลาด CareSignal สร้างข้อมูลสมรรถภาพต่อเนื่องที่ทำให้ <b>(1) ออกผลิตภัณฑ์ได้จริง</b> <b>(2) ป้องกัน adverse selection</b> (พอร์ตไม่คัดกรองเผชิญอุบัติการณ์ส่วนเพิ่ม +25% ในโมเดล) และ <b>(3) ลดสินไหมด้วยการป้องกันก่อนเกิดเหตุ</b> — <a href="./CareSignal-Insurer-Model.html">เปิดโมเดลผลประกอบการ ›</a>
+  </div></details>
+
+  <details class="faq"><summary>ใครจ่ายเงิน?</summary><div class="a">
+    <b>บริษัทประกันจ่าย ผู้สูงอายุใช้ฟรีตลอด</b> — ค่าแพลตฟอร์มคิดเป็น % ของเบี้ยรับ (ตั้งต้น 3% ปรับได้ในโมเดล) เหตุผล: กลุ่มเป้าหมายรายได้จำกัด และการเก็บเงินคนที่เราอยากให้ประเมินบ่อย ๆ คือการออกแบบที่ขัดกันเอง ส่วนการคิดตามเบี้ยทำให้รายได้เราโตพร้อมพอร์ตของบริษัท — ผลประโยชน์ตรงกัน
+  </div></details>
+
+  <details class="faq"><summary>ผู้สูงอายุใช้จริงหรือไม่?</summary><div class="a">
+    ตอบตรง ๆ: <b>ยังไม่ได้พิสูจน์ในภาคสนาม และเราเขียนไว้ในหน้าแรกของระบบเอง</b> แต่สิ่งที่ออกแบบไว้แล้วเพื่อข้อนี้: กล้องนับให้เองไม่ต้องกดปุ่มระหว่างทำ · มีทางสำรองทุกจุด (กรอกเวลาเองได้ คะแนนเท่ากัน) · ตัวอักษรและปุ่มใหญ่ทั้งระบบ · ใช้ออฟไลน์ได้ · ออกแบบให้มีลูกหลานอยู่ด้วย — และตัวชี้วัดแรกของแผนนำร่องคือ<b>อัตราทำการประเมินจนจบ ≥80%</b> ประกาศเกณฑ์ไว้ล่วงหน้า — <a href="./CareSignal-Web.html#pilot">ดูแผนวัดผลนำร่อง ›</a>
+  </div></details>
+
+  <details class="faq"><summary>CareSignal ลดเคลมได้อย่างไร?</summary><div class="a">
+    3 กลไกที่มีตัวเลขในโมเดล: <b>ป้องกันก่อนเกิด</b> (เข้าโปรแกรม 60% × ประสิทธิผล 20% = −12% ต้นทุนสินไหม) · <b>ระยะรอคอยแบบชั้น</b> (ตัดเคสได้ 42%) · <b>ระยะปลอดผลประโยชน์ 90 วัน</b> (ตัดเคสฟื้นได้ 5%) — คณิตง่าย ๆ: การล้ม 1 ครั้งที่ป้องกันได้ อาจเท่ากับสินไหม 16,000 บ./เดือน × 36 เดือน = <b>576,000 บาท</b> ขณะที่งบป้องกันคือ 1,500 บ./คน/ปี — <a href="./CareSignal-Insurer-Model.html">ตรวจตัวเลขเองในโมเดล ›</a>
+  </div></details>
+
+  <details class="faq"><summary>มีหลักฐานวิจัยไหมว่า Functional Decline ทำนายความเสี่ยงได้?</summary><div class="a">
+    มี และเอนจินของเราอ้างอิงเป็นรายกฎ: สมรรถภาพขาส่วนล่างทำนายความพิการในอนาคต (SPPB — Guralnik et al.) · เกณฑ์การเปลี่ยนแปลงที่มีความหมายทางคลินิก <b>MCID ≈ 2.3 วินาที</b> (Meretta 2006; Goldberg 2012) · <b>ค่าตัดของประชากรไทย</b> 10.0/11.5/12.1 วินาทีตามช่วงอายุ (Poncumhak 2014; Intaruk 2021) ไม่ใช่ยกเกณฑ์ต่างชาติมาใช้ดิบ ๆ · การล้มซ้ำ (WHO Step Safely 2021) — สิ่งที่<b>ยังไม่ได้</b>พิสูจน์ก็ประกาศไว้เปิดเผยเช่นกัน — <a href="./CareSignal-Web.html#evi">เปิดฐานหลักฐานวิชาการ ›</a>
+  </div></details>
+
+  <details class="faq"><summary>AI วิเคราะห์ผิดจะเกิดอะไรขึ้น?</summary><div class="a">
+    ออกแบบให้<b>ผิดแล้วไม่มีใครเสียหายทางการเงิน</b>: คะแนนแย่ลงไม่มีทางเพิ่มเบี้ยหรือถูกปฏิเสธ (ในโค้ดมีแต่เส้นทางลดเบี้ย) · เตือนเกิน = มีคนโทรไปถาม ไม่มีใครเสียสิทธิ์ · เตือนพลาด = มีรอบประเมินซ้ำถี่ตามระดับสัญญาณดักอีกชั้น · การส่งต่อทุกเคสต้องมี<b>มนุษย์กดยืนยัน</b> และทุกการตัดสินใจอยู่ใน audit log ที่ผู้ใช้เปิดดูได้เอง — และเราแยกชัด: กล้องคือ AI จริง แต่การอ่านแนวโน้มคือกฎที่ตรวจสอบได้ ไม่ใช่ black box
+  </div></details>
+
+  <details class="faq"><summary>ข้อมูลสุขภาพกับ PDPA จัดการอย่างไร?</summary><div class="a">
+    <b>ในโค้ดไม่มีคำสั่งส่งข้อมูลออกจากเครื่องแม้แต่บรรทัดเดียว</b> — ค้นทั้งโปรเจกต์บน GitHub จะไม่พบ fetch / XMLHttpRequest / sendBeacon เลย นอกจากนี้: ขอความยินยอมชัดแจ้งพร้อมวัตถุประสงค์ · ข้อมูลชีวมิติขอความยินยอม<b>แยกตามมาตรา 26</b> ปฏิเสธได้โดยยังใช้ระบบได้ · เก็บเป็นตัวเลข 6 ค่าไม่ใช่ภาพ และอยู่ในเครื่องเท่านั้น · ข้อมูลแดชบอร์ดเป็นสรุปนิรนามตามหลัก data minimization · ถอนความยินยอมและลบทั้งหมดได้ทุกเมื่อ
+  </div></details>
+
+  <details class="faq"><summary>ต่างจาก Smartwatch / Health App / Telemedicine อย่างไร?</summary><div class="a">
+    ของพวกนั้นวัดว่า<b>วันนี้เป็นอย่างไร</b> เราวัดว่า<b>กำลังจะเป็นอย่างไร</b> — ด้วยการทดสอบมาตรฐานคลินิก (ลุกนั่ง 5 ครั้ง / ลุกเดิน 3 เมตร) ที่ใช้ในเวชปฏิบัติจริง จึงผูกกับการตั้งราคากรมธรรม์ได้ Smartwatch บอกจำนวนก้าว แต่บอกไม่ได้ว่าคุณ<b>ลุกจากเก้าอี้ช้าลง 2.3 วินาทีเทียบกับ 3 เดือนก่อน</b> — และผู้ใช้ไม่ต้องซื้ออุปกรณ์ใหม่ ไม่ต้องชาร์จ ไม่ต้องใส่นอน แค่มือถือเครื่องเดิมกับเก้าอี้หนึ่งตัว
+  </div></details>
+
+  <details class="faq"><summary>ถ้าบริษัทประกันมีแอปของตัวเองอยู่แล้ว จะใช้ CareSignal ทำไม?</summary><div class="a">
+    เราไม่ได้แข่งกับแอปของบริษัท — <b>เราเป็นเครื่องยนต์วัดสมรรถภาพที่ฝังเข้าแอปเขาได้</b> (SDK / white-label) แอปประกันทั่วไปทำเคลม จ่ายเบี้ย ดูกรมธรรม์ แต่ไม่มีอันไหนวัดสมรรถภาพร่างกายด้วยกล้องได้ ชั้นข้อมูลของเราออกแบบเป็น adapter มาตั้งแต่ต้นเพื่อเสียบเข้าระบบของบริษัท — "บริษัทประกันไม่ได้ขาดแอป เขาขาดข้อมูลสมรรถภาพ และนั่นคือสิ่งเดียวที่เราขาย"
+  </div></details>
+
+  <details class="faq"><summary>Business Model ทำเงินอย่างไร?</summary><div class="a">
+    3 ชั้น: <b>(1) ค่าแพลตฟอร์ม % ของเบี้ยรับ</b> (ตั้งต้น 3% — พอร์ต 5,000 กรมธรรม์ × เบี้ยเฉลี่ย 1,400 บ./เดือน ≈ รายได้ ~2.5 ล้านบาท/ปีจากบริษัทเดียว และโตตามพอร์ต) <b>(2) ค่าติดตั้งเชื่อมระบบ</b>ครั้งเดียวต่อบริษัท <b>(3) ระยะยาว:</b> ข้อมูลรวมแบบนิรนามจะกลายเป็น<b>ตารางอุบัติการณ์ LTC ชุดแรกของไทย</b> ซึ่งมีมูลค่าต่อทั้งอุตสาหกรรม
+  </div></details>
+
+  <details class="faq"><summary>จะทดลองจริงกับใคร และต้องใช้เงินเท่าไร?</summary><div class="a">
+    นำร่อง <b>30–100 ราย</b>กับชมรมผู้สูงอายุ / รพ.สต. / ศูนย์ดูแลผู้สูงอายุ โดยผ่านคณะกรรมการจริยธรรมการวิจัยในมนุษย์ก่อน ไทม์ไลน์ ~3 เดือน งบประมาณราว <b>250,000 บาท</b> (ค่าตอบแทนผู้เข้าร่วม + ผู้เชี่ยวชาญประเมินแบบตาบอดคู่ขนานทุกราย + จริยธรรมวิจัย + ดำเนินการ) — ตัวชี้วัดทั้ง 7 ข้อพร้อมเกณฑ์ผ่านประกาศไว้ล่วงหน้าแล้ว — <a href="./CareSignal-Web.html#pilot">เปิดแผนวัดผลนำร่อง ›</a>
+  </div></details>
+</div></section>
+
+<section style="padding-top:0" id="insurers"><div class="wrap">
+  <h2>สำหรับบริษัทประกันภัย — เปิดรับพันธมิตรนำร่อง</h2>
+  <p class="secsub">เราไม่มีโลโก้พันธมิตรมาแสดง เพราะยังไม่มีสัญญาจริง — สิ่งที่เรามีคือระบบที่ทำงานได้วันนี้ และเป้าหมายที่ประกาศชัด: หนังสือแสดงความสนใจ (LOI) ≥2 ฉบับ โดยมีบริษัทประกันอย่างน้อย 1 (ตัวชี้วัดที่ 7 ของแผนนำร่อง)</p>
+  <div class="feats">
+    <div class="feat"><div class="ic">🏗️</div><h3>ออกผลิตภัณฑ์ LTC ได้จริง</h3><p>ข้อมูลสมรรถภาพต่อเนื่องรายบุคคล = ฐานที่ฝ่ายคณิตศาสตร์ประกันภัยใช้ตั้งราคาและตั้งสำรองได้ พร้อมโมเดล 5 ปีให้สอบทานทุกสมมติฐาน</p></div>
+    <div class="feat"><div class="ic">🤝</div><h3>จ่ายตามเบี้ย ไม่มีก้อนใหญ่ล่วงหน้า</h3><p>ค่าแพลตฟอร์มเป็น % ของเบี้ยรับ — เราได้เงินเมื่อพอร์ตของท่านโต ผลประโยชน์ตรงกันตั้งแต่วันแรก</p></div>
+    <div class="feat"><div class="ic">🧩</div><h3>ฝังเข้าแอปของท่านได้</h3><p>สถาปัตยกรรมออกแบบเป็น adapter — ใช้เป็น white-label ในแอปของบริษัท หรือใช้แอปของเราก็ได้ ข้อมูลเป็นของพอร์ตท่านเสมอ</p></div>
+  </div>
+  <div class="heroCtas" style="margin-top:18px">
+    <a class="btnP" href="./CareSignal-Insurer-Model.html" style="box-shadow:none">เปิดโมเดลผลประกอบการ 5 ปี</a>
+    <a class="btnG" href="./CareSignal-Web.html#ins" style="background:var(--surf2);border-color:var(--line);color:var(--brand2)">ดูแดชบอร์ดพอร์ตตัวอย่าง</a>
+  </div>
+</div></section>
+
+<section style="padding-top:0" id="install"><div class="wrap">
+  <h2>ติดตั้งใช้งาน — ฟรี ไม่มีโฆษณา ไม่ต้องผ่าน Store</h2>
+  <p class="secsub">CareSignal เป็น Progressive Web App: ติดตั้งจากเบราว์เซอร์ได้เลย เปิดครั้งแรกครั้งเดียว หลังจากนั้น<b>ใช้ได้แม้ไม่มีอินเทอร์เน็ต</b></p>
+  <div class="dl">
+    <div class="dlc"><h3>🤖 Android (Chrome)</h3><ol><li>เปิดเว็บนี้บนมือถือ</li><li>แตะปุ่ม "ติดตั้ง" ที่ระบบเสนอ หรือเมนู ⋮ → "ติดตั้งแอป"</li><li>ไอคอน CareSignal ขึ้นบนหน้าจอ ใช้เหมือนแอปทั่วไป</li></ol></div>
+    <div class="dlc"><h3>🍎 iPhone / iPad (Safari)</h3><ol><li>แตะปุ่มแชร์ (สี่เหลี่ยมลูกศรขึ้น)</li><li>เลื่อนหา "เพิ่มลงหน้าจอโฮม"</li><li>แตะ "เพิ่ม" — เสร็จแล้ว</li></ol></div>
+    <div class="dlc"><h3>💻 คอมพิวเตอร์ (Chrome/Edge)</h3><ol><li>เปิดเว็บนี้</li><li>กดไอคอนติดตั้ง ⊕ ในแถบที่อยู่</li><li>เปิดจาก Start Menu / Dock ได้เลย</li></ol></div>
+  </div>
+  <div class="heroCtas" style="margin-top:18px">
+    <a class="btnP" href="./CareSignal-Vision.html">เริ่มใช้เลยตอนนี้ →</a>
+  </div>
+</div></section>
+
+<section style="padding-top:0" id="award"><div class="wrap">
+  <div class="note" style="border-left-color:var(--accent)">
+    <b>เวทีที่เรากำลังพิสูจน์ตัวเอง</b><br>
+    CareSignal เป็นผลงานส่งเข้าประกวด <b>OIC InsurTech Award 2026</b> จัดโดยศูนย์ส่งเสริมเทคโนโลยีด้านการประกันภัย (CIT) สำนักงาน คปภ. — โจทย์ "InsurTech Ready for the Future's Emerging Risks" สนามความเสี่ยงด้านสังคมสูงวัย · ซอร์สโค้ดทั้งหมดเปิดให้ตรวจสอบบน <a href="https://github.com/sarawut2206/CareSignal-V2" style="color:var(--brand);font-weight:600">GitHub</a>
+  </div>
+</div></section>
+
 <section style="padding-top:0"><div class="wrap">
   <div class="note">
     <b>สถานะของงานชิ้นนี้</b><br>
@@ -215,8 +366,31 @@ footer b{color:#fff}
 </div></section>
 
 <footer><div class="wrap">
-  <b>CareSignal</b> — ผลงานเพื่อการแข่งขัน OIC InsurTech Award 2026 (โจทย์: ความเสี่ยงด้านสังคมสูงวัย)<br>
-  ระบบเคารพสิทธิตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 · ผู้ใช้ถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อ
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px;margin-bottom:22px">
+    <div>
+      <b>CareSignal</b><br>
+      แพลตฟอร์มข้อมูลต่อเนื่องสำหรับประกันดูแลระยะยาว<br>
+      รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม
+    </div>
+    <div>
+      <b>ระบบทั้งหมด</b><br>
+      <a href="./CareSignal-Vision.html" style="color:inherit">CareSignal Vision (กล้อง)</a><br>
+      <a href="./CareSignal-App.html" style="color:inherit">แอปสมาชิก</a><br>
+      <a href="./CareSignal-Web.html" style="color:inherit">เว็บแพลตฟอร์ม · Care Manager</a><br>
+      <a href="./CareSignal-Insurer-Model.html" style="color:inherit">โมเดลผลประกอบการ</a>
+    </div>
+    <div>
+      <b>ความโปร่งใส</b><br>
+      <a href="./CareSignal-Web.html#evi" style="color:inherit">ฐานหลักฐานวิชาการ</a><br>
+      <a href="./CareSignal-Web.html#pilot" style="color:inherit">แผนวัดผลนำร่อง</a><br>
+      <a href="./CareSignal-Web.html#ai" style="color:inherit">Model Card · Responsible AI</a><br>
+      <a href="https://github.com/sarawut2206/CareSignal-V2" style="color:inherit">ซอร์สโค้ดบน GitHub</a>
+    </div>
+  </div>
+  <div style="border-top:1px solid rgba(255,255,255,.12);padding-top:16px">
+    <b>CareSignal</b> — ผลงานเพื่อการแข่งขัน OIC InsurTech Award 2026 (โจทย์: ความเสี่ยงด้านสังคมสูงวัย)<br>
+    ระบบเคารพสิทธิตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 · ผู้ใช้ถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อ · ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์
+  </div>
 </div></footer>
 
 <script>
