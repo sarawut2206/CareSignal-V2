@@ -382,7 +382,7 @@ function scoreOf(d,age){
 }
 
 var ENGINE={
-  version:"1.2.0-vision",
+  version:"1.3.0-vision",
   kind:"rule-based-explainable",
   rules:{
     R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ",src:"MCID ของ Five-Times Sit-to-Stand ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
@@ -391,13 +391,16 @@ var ENGINE={
     R4:{nm:"คะแนนรวมถดถอยจากค่าดีที่สุดของตนเอง",src:"เทียบกับตนเองแทนค่าเฉลี่ยประชากร เพื่อลดอคติระหว่างกลุ่ม"},
     R5:{nm:"ใช้ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง",src:"STOPPFall 2021; Beers Criteria — ปฏิสัมพันธ์แบบทวีคูณ"},
     R6:{nm:"สูญเสียความสามารถทำกิจวัตร",src:"Lawton IADL; Barthel Index — สัญญาณเริ่มต้นภาวะพึ่งพิง"},
-    R7:{nm:"ความสม่ำเสมอของจังหวะลดลง",src:"ความแปรปรวนของเวลาต่อครั้งสะท้อนความล้าของกล้ามเนื้อขา"}
+    R7:{nm:"ความสม่ำเสมอของจังหวะลดลง",src:"ความแปรปรวนของเวลาต่อครั้งสะท้อนความล้าของกล้ามเนื้อขา"},
+    R8:{nm:"การทรงตัวถดถอยเป็นท่า",src:"CDC STEADI 4-Stage Balance Test — ท่าที่เคยยืนได้ครบ 10 วินาทีแล้วทำไม่ได้ คือการสูญเสียความสามารถที่วัดซ้ำได้"},
+    R9:{nm:"คะแนนบาร์เธลลดลงก่อนข้ามระดับ",src:"Barthel ADL Index 20 คะแนน — ตรวจจับการถดถอยภายในระดับเดียวกัน ก่อนจะตกไปอีกระดับ"}
   },
   cadence:{stable:90,watch:45,decline:21,urgent:7},
   levelNm:{stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"ต้องดูแลเร่งด่วน"},
   levelColor:{stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"}
 };
 
+function hasADLFlag(out){return out.flags.some(function(f){return f.id==="R6"})}
 function trajectory(){
   var A=S.data.assessments, p=S.data.profile;
   if(!A.length||!p)return null;
@@ -446,6 +449,33 @@ function trajectory(){
     out.flags.push({id:"R7",sev:1,
       text:"จังหวะการลุกแต่ละครั้งไม่สม่ำเสมอ (ครั้งท้าย ๆ ช้ากว่าครั้งแรกอย่างชัดเจน)",
       why:"กล้องวัดเวลาแยกรายครั้งได้ ความแปรปรวน "+(last.cv*100).toFixed(0)+"% บ่งชี้ความล้าของกล้ามเนื้อขาเร็วกว่าปกติ"});
+
+  /* R8 — การทรงตัวถดถอยเป็นรายท่า (CDC 4-Stage Balance Test)
+     เหตุผลที่ต้องแยกจาก R4: คะแนนรวมอาจไม่ขยับเลยเพราะช่วงคะแนนทรงตัวหยาบ
+     แต่การที่เคยยืนต่อเท้าได้ครบ 10 วินาทีแล้ววันนี้ทำไม่ได้ คือการสูญเสียที่ชัดเจน */
+  var bals=A.filter(function(x){return x.balPassed!=null});
+  if(last.balPassed!=null&&bals.length>1){
+    var bestBal=Math.max.apply(null,bals.map(function(x){return x.balPassed}));
+    if(last.balPassed<bestBal){
+      var lostN=bestBal-last.balPassed;
+      out.flags.push({id:"R8",sev:(last.balPassed<=1||lostN>=2)?2:1,
+        text:"การทรงตัวถดถอย "+lostN+" ท่า — เคยยืนผ่าน "+bestBal+" จาก 4 ท่า ครั้งนี้ผ่าน "+last.balPassed+" ท่า"+
+             (BAL_STAGES[last.balPassed]?" (ท่าที่ทำไม่ได้: "+BAL_STAGES[last.balPassed].nm+")":""),
+        why:"ท่ายืนของ 4-Stage Balance Test เรียงจากง่ายไปยาก การทำท่าที่เคยผ่านไม่ได้ จึงเป็นการสูญเสียความสามารถ ไม่ใช่ความผันผวนของการวัด"});
+    }
+  }
+  /* R9 — คะแนนบาร์เธลลดลงแม้ยังอยู่ระดับเดิม
+     เหตุผล: R6 จับเฉพาะตอนข้ามระดับ (ติดสังคม → ติดบ้าน) ซึ่งช้าเกินไป
+     คนที่ตกจาก 20 เหลือ 14 คะแนน ยังเป็น "ติดสังคม" อยู่ แต่เสียความสามารถไป 6 คะแนนแล้ว */
+  var bars=A.filter(function(x){return x.barthelTotal!=null});
+  if(last.barthelTotal!=null&&bars.length>1){
+    var bestBar=Math.max.apply(null,bars.map(function(x){return x.barthelTotal}));
+    var dBar=bestBar-last.barthelTotal;
+    if(dBar>=2&&!hasADLFlag(out))
+      out.flags.push({id:"R9",sev:dBar>=4?2:1,
+        text:"คะแนนดัชนีบาร์เธลลดลง "+dBar+" คะแนน ("+bestBar+" → "+last.barthelTotal+" จาก 20) โดยยังไม่ข้ามระดับ",
+        why:"เป็นการเตือนล่วงหน้าก่อนจะตกไปสู่ระดับพึ่งพิงที่สูงขึ้น ซึ่งเป็นจุดที่กรมธรรม์เริ่มจ่ายสินไหม"});
+  }
 
   var sev=out.flags.reduce(function(a,b){return a+b.sev},0);
   var hasADL=out.flags.some(function(f){return f.id==="R6"});
@@ -1433,7 +1463,7 @@ function finishTest(elapsed){
 
 /* ---------- ฟอร์มบันทึกข้อมูลวิจัย (แสดงเฉพาะโหมดนำร่อง) ---------- */
 function plogV(){
-  head("บันทึกข้อมูลวิจัย","เทียบกับนาฬิกาจับเวลา","กรอกเวลาที่ผู้ประเมินจับได้ เพื่อวัดความคลาดเคลื่อนของกล้อง");
+  head("บันทึกข้อมูลวิจัย","เทียบกับนาฬิกาจับเวลา","กรอกเวลาที่ผู้ประเมินจับได้ เพื่อวัดความคลาดเคลื่อนของกล้อง","assess");
   var d=S.draft;
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--navy);color:#fff">'+
@@ -1488,7 +1518,7 @@ function plogV(){
 
 /* ---------- สรุปผลการตรวจสอบเครื่องมือวัด ---------- */
 function pilotV(){
-  head("ผลการตรวจสอบเครื่องมือวัด","Preliminary Technical Validation","เทียบเวลาที่กล้องจับ กับนาฬิกาของผู้ประเมิน — ไม่ใช่การทดสอบทางคลินิก");
+  head("ผลการตรวจสอบเครื่องมือวัด","Preliminary Technical Validation","เทียบเวลาที่กล้องจับ กับนาฬิกาของผู้ประเมิน — ไม่ใช่การทดสอบทางคลินิก","assess");
   var s=pilotStats(), a=PLOG.all();
   if(!a.length){
     V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0 0 12px">ยังไม่มีข้อมูล — ทำการวัดด้วยกล้อง 1 รอบ ระบบจะถามเวลาที่จับด้วยนาฬิกาให้บันทึกเทียบกัน</p>'+
@@ -1842,7 +1872,7 @@ function qV(i){
 
   /* ---- แบบรูบริก: ดัชนีบาร์เธล 10 รายการ ---- */
   if(q.barthel){
-    head("ข้อ "+(i+1)+" จาก "+QS.length,"ความสามารถในการทำกิจวัตรประจำวัน","ติ๊กทีละรายการตามความเป็นจริง · ใช้เกณฑ์ดัชนีบาร์เธลเดียวกับระบบสาธารณสุขไทย");
+    head("ข้อ "+(i+1)+" จาก "+QS.length,"ความสามารถในการทำกิจวัตรประจำวัน","ติ๊กทีละรายการตามความเป็นจริง · ใช้เกณฑ์ดัชนีบาร์เธลเดียวกับระบบสาธารณสุขไทย","assess");
     if(!S.draft.barthel)S.draft.barthel={};
     var b=S.draft.barthel;
     V.innerHTML='<div class="anim">'+
@@ -1899,7 +1929,7 @@ function qV(i){
   }
 
   /* ---- แบบเลือกตอบปกติ ---- */
-  head("ข้อ "+(i+1)+" จาก "+QS.length,q.q,"ตอบตามความเป็นจริง ผลที่ตรงช่วยให้ระบบดูแลคุณได้ถูกต้อง");
+  head("ข้อ "+(i+1)+" จาก "+QS.length,q.q,"ตอบตามความเป็นจริง ผลที่ตรงช่วยให้ระบบดูแลคุณได้ถูกต้อง","assess");
   V.innerHTML='<div class="anim">'+
     (q.fromCamera?cameraObs():"")+
     q.o.map(function(o,k){
@@ -2080,6 +2110,8 @@ async function mydataV(){
   }).join(""):'<p class="sub" style="margin:0">ยังไม่ได้เชื่อมบัญชีระบบกลาง</p>';
 
   V.innerHTML='<div class="anim">'+
+  '<a href="./CareSignal-Flow.html" style="display:block;text-decoration:none;background:var(--surf2);border:1px solid #CFE0FD;border-radius:14px;padding:16px 18px;margin-bottom:14px;color:inherit"><b style="color:var(--brand)">เปิดคู่มือ: ข้อมูลของคุณเดินทางไปไหน &rsaquo;</b><span style="display:block;font-size:13.5px;color:var(--ink2);margin-top:4px">อธิบายทีละขั้นว่าผลตรวจถูกส่งไปที่ใด ใครเห็นอะไรบ้าง และสีเขียว เหลือง ส้ม แดง ใช้เกณฑ์ตัวเลขอะไรตัดสิน</span></a>'+
+  
   '<div class="card"><h3>1 · เก็บในเครื่องนี้</h3>'+
   '<div class="rowline"><span class="k">ผลประเมิน</span><span class="v">'+A.length+' ครั้ง</span></div>'+
   '<div class="rowline"><span class="k">เคสส่งต่อ</span><span class="v">'+cases.length+' เคส</span></div>'+
@@ -2106,7 +2138,7 @@ async function mydataV(){
 function resultV(rec){
   rec=rec||S.data.assessments[S.data.assessments.length-1];
   var t=CFG.tiers[rec.tier], d=CFG.discount[rec.tier], p=S.data.profile;
-  head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at)+" · "+(rec.method==="camera-pose"?"วัดด้วยกล้อง":"จับเวลาเอง"));
+  head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at)+" · "+(rec.method==="camera-pose"?"วัดด้วยกล้อง":"จับเวลาเอง"),"assess");
   var gapsRow = rec.gaps&&rec.gaps.length? '<div class="rowline"><span class="k">เวลาต่อครั้ง</span><span class="v">'+rec.gaps.join(" · ")+' วิ</span></div>':"";
   V.innerHTML='<div class="anim">'+
   savedCard(rec)+
@@ -2139,7 +2171,7 @@ function resultV(rec){
 /* ---------- แนวโน้ม ---------- */
 function trendV(){
   var A=S.data.assessments;
-  head("แนวโน้ม","ผลย้อนหลังของคุณ","ระบบเปรียบเทียบคุณกับตัวคุณเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น");
+  head("แนวโน้ม","ผลย้อนหลังของคุณ","ระบบเปรียบเทียบคุณกับตัวคุณเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น","assess");
   if(!A.length){V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ยังไม่มีผลประเมิน</p></div><button class="cta" data-go="assess">เริ่มประเมินครั้งแรก</button></div>';return}
   var a=A.slice(-7);
   var maxFt=Math.max.apply(null,a.map(function(x){return x.ftsst||0}))||1;
@@ -2177,7 +2209,7 @@ function trendV(){
    เดโมนี้ไม่มี backend จึงให้ผู้ชมประกาศบทบาทอย่างชัดเจนก่อนเข้า
    เพื่อสื่อว่าผู้ใช้ทั่วไปไม่ได้เห็นหน้านี้ในระบบจริง */
 function roleGateV(target,roleName){
-  head("พื้นที่ผู้เชี่ยวชาญ","หน้านี้ไม่ใช่ของผู้เอาประกัน","ในระบบจริงต้องเข้าสู่ระบบด้วยบัญชี"+roleName+"ก่อน");
+  head("พื้นที่ผู้เชี่ยวชาญ","หน้านี้ไม่ใช่ของผู้เอาประกัน","ในระบบจริงต้องเข้าสู่ระบบด้วยบัญชี"+roleName+"ก่อน","assess");
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">คุณกำลังจะเข้าชมในบทบาท: '+esc(roleName)+'</h3>'+
   '<p class="sub" style="margin:0">เดโมนี้เปิดให้เข้าชมได้เพื่อการนำเสนอ แต่ในระบบใช้งานจริง หน้านี้อยู่หลังการยืนยันตัวตนและการกำหนดสิทธิ์ (role-based access) — ผู้เอาประกันจะไม่เห็นข้อมูลของผู้อื่น และ AI ไม่มีสิทธิ์ตัดสินใจแทน'+esc(roleName)+'ในทุกกรณี</p></div>'+
@@ -2193,7 +2225,7 @@ function roleGateV(target,roleName){
 /* ---------- คิวเคสสำหรับผู้เชี่ยวชาญ ---------- */
 function casesV(){
   if(!S.roleAck){roleGateV("cases","พยาบาล / Care Manager");return}
-  head("เคสรอตรวจสอบ","ผู้เชี่ยวชาญเป็นผู้ตัดสิน","ระบบรวบรวมหลักฐานและจัดลำดับความเร่งด่วน แต่ไม่ส่งต่อเองโดยอัตโนมัติ");
+  head("เคสรอตรวจสอบ","ผู้เชี่ยวชาญเป็นผู้ตัดสิน","ระบบรวบรวมหลักฐานและจัดลำดับความเร่งด่วน แต่ไม่ส่งต่อเองโดยอัตโนมัติ","assess");
   var cs=(S.data.cases||[]).slice().reverse();
   if(!cs.length){
     V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ยังไม่มีเคสในคิว — เคสจะถูกสร้างอัตโนมัติเมื่อผลประเมินเข้าเกณฑ์ถดถอยหรือเสี่ยงสูง</p></div>'+
@@ -2228,7 +2260,7 @@ function casesV(){
 /* ---------- แดชบอร์ดบริษัทประกัน ---------- */
 async function insurerV(){
   if(!S.roleAck){roleGateV("insurer","เจ้าหน้าที่บริษัทประกัน");return}
-  head("บริษัทประกัน","ภาพรวมพอร์ต","ข้อมูลแบบแฝงชื่อ (pseudonymised) จากฐานข้อมูลกลาง ตามหลัก data minimization — ยังเป็นข้อมูลส่วนบุคคลตาม PDPA");
+  head("บริษัทประกัน","ภาพรวมพอร์ต","ข้อมูลแบบแฝงชื่อ (pseudonymised) จากฐานข้อมูลกลาง ตามหลัก data minimization — ยังเป็นข้อมูลส่วนบุคคลตาม PDPA","assess");
   V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">กำลังอ่านฐานข้อมูล…</p></div></div>';
   var pool=await DB.listPool();
   if(!pool.length){

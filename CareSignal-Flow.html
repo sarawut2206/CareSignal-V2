@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ข้อมูลจากแอป CareSignal เดินทางไปไหน ประมวลผลอย่างไร และสีเขียว เหลือง ส้ม แดง หมายถึงอะไร — อธิบายด้วยเกณฑ์ตัวเลขจริงที่ระบบใช้">
+<meta name="theme-color" content="#2563EB">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./favicon-64.png">
+<title>เส้นทางข้อมูลและรหัสสี — CareSignal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE; --navy:#101B31;
+  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7;
+  --line:#DFE7F2; --line2:#EDF2FA; --brand:#2563EB; --brand2:#1D4ED8;
+  --accent:#F59E0B; --accent2:#B45309;
+  --c4:#0E9F6E; --c3:#C79200; --c2:#D97706; --c1:#DC2626;
+  --c4b:#E3F6EF; --c3b:#FEF6DE; --c2b:#FDECD8; --c1b:#FEE9E9;
+  --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sh:0 1px 2px rgba(22,35,59,.04),0 8px 24px rgba(22,35,59,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:16px;line-height:1.68;-webkit-font-smoothing:antialiased}
+a{color:var(--brand)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+.topnav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topnav .wrap{display:flex;align-items:center;gap:16px;height:62px}
+.logo{font-weight:700;font-size:18px;letter-spacing:-.02em;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:9px}
+.logo b{color:var(--brand)}
+.backlink{margin-left:auto;font-size:14px;color:var(--ink2);text-decoration:none;border:1px solid var(--line);padding:8px 16px;border-radius:10px;background:#fff}
+.backlink:hover{border-color:var(--brand);color:var(--brand)}
+
+.hero{background:linear-gradient(180deg,#fff,var(--bg));border-bottom:1px solid var(--line);padding:44px 0 38px}
+.kick{font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-weight:600}
+h1{font-size:clamp(28px,4.6vw,42px);line-height:1.24;letter-spacing:-.025em;margin:10px 0 14px}
+.lead{font-size:17.5px;color:var(--ink2);max-width:70ch;margin:0}
+
+section{padding:44px 0;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(21px,3vw,27px);letter-spacing:-.02em;margin:0 0 6px}
+.sec-sub{color:var(--ink2);margin:0 0 26px;max-width:74ch}
+h3{font-size:17px;margin:0 0 8px;letter-spacing:-.01em}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--sh)}
+.grid{display:grid;gap:16px}
+@media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}}
+.small{font-size:14px;color:var(--ink2)}
+.mono{font-family:var(--mono);font-size:14px}
+
+/* --- แผนภาพเส้นทางข้อมูล --- */
+.flow{display:grid;gap:14px}
+@media(min-width:900px){.flow{grid-template-columns:repeat(4,1fr);gap:0}}
+.step{position:relative;background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--sh)}
+@media(min-width:900px){
+  .flow .step{border-radius:0;border-right:0}
+  .flow .step:first-child{border-radius:16px 0 0 16px}
+  .flow .step:last-child{border-radius:0 16px 16px 0;border-right:1px solid var(--line)}
+}
+.stepno{width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:12px}
+.step ul{margin:10px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)}
+.step li{margin-bottom:5px}
+.arrowrow{display:none}
+@media(min-width:900px){
+  .arrowrow{display:flex;justify-content:space-around;margin:-1px 0 0;padding:0 12%}
+  .arrowrow span{color:var(--brand);font-size:20px;line-height:1}
+}
+
+/* --- ตารางสี --- */
+.legend{display:grid;gap:14px}
+@media(min-width:900px){.legend{grid-template-columns:repeat(4,1fr)}}
+.lg{border-radius:16px;padding:20px;border:1px solid;box-shadow:var(--sh)}
+.lg .dot{width:46px;height:46px;border-radius:50%;margin-bottom:14px;box-shadow:inset 0 -3px 8px rgba(0,0,0,.12)}
+.lg h3{font-size:19px;margin:0 0 2px}
+.lg .lvl{font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;opacity:.75}
+.lg dl{margin:14px 0 0;font-size:14px}
+.lg dt{font-weight:600;margin-top:10px;font-size:13px;color:var(--ink2)}
+.lg dd{margin:2px 0 0}
+.lg-4{background:var(--c4b);border-color:#B7E6D3} .lg-4 .dot{background:var(--c4)} .lg-4 h3,.lg-4 .lvl{color:#0A6E4C}
+.lg-3{background:var(--c3b);border-color:#EDD79A} .lg-3 .dot{background:#EAB308} .lg-3 h3,.lg-3 .lvl{color:#8A6500}
+.lg-2{background:var(--c2b);border-color:#EFC694} .lg-2 .dot{background:var(--c2)} .lg-2 h3,.lg-2 .lvl{color:#9A5209}
+.lg-1{background:var(--c1b);border-color:#F3B5B5} .lg-1 .dot{background:var(--c1)} .lg-1 h3,.lg-1 .lvl{color:#A81E1E}
+
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
+th{font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--line)}
+td.num{font-family:var(--mono);white-space:nowrap}
+.tblwrap{overflow-x:auto;background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:6px 14px 4px;box-shadow:var(--sh)}
+
+.pill{display:inline-block;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.p4{background:var(--c4b);color:#0A6E4C} .p3{background:var(--c3b);color:#8A6500}
+.p2{background:var(--c2b);color:#9A5209} .p1{background:var(--c1b);color:#A81E1E}
+
+.note{background:var(--surf2);border:1px solid #CFE0FD;border-radius:14px;padding:16px 18px;font-size:14.5px;color:#1E3A6E}
+.warn{background:#FEF6DE;border:1px solid #EDD79A;border-radius:14px;padding:16px 18px;font-size:14.5px;color:#6B4E00}
+
+/* --- เครื่องคำนวณ --- */
+.calc{display:grid;gap:14px}
+@media(min-width:760px){.calc{grid-template-columns:1fr 1fr}}
+.field label{display:block;font-size:13.5px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.field select,.field input{width:100%;font-family:inherit;font-size:15.5px;padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+.out{margin-top:18px;border-radius:16px;padding:22px;border:1px solid;text-align:center}
+.out .big{font-size:42px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.out .lbl{font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;opacity:.8}
+.rowline{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.rowline:last-child{border-bottom:0}
+.rowline .k{color:var(--ink2)}
+.rowline .v{font-family:var(--mono);font-weight:600}
+
+footer{background:var(--navy);color:#B8C4D9;padding:34px 0;font-size:13.5px}
+footer a{color:#93B4F5}
+</style>
+</head>
+<body>
+
+<nav class="topnav"><div class="wrap">
+  <a class="logo" href="./index.html"><span>Care<b>Signal</b></span></a>
+  <a class="backlink" href="./index.html">‹ กลับหน้าแรก</a>
+</div></nav>
+
+<div class="hero"><div class="wrap">
+  <div class="kick">คู่มือทำความเข้าใจระบบ</div>
+  <h1>ข้อมูลจากแอปเดินทางไปไหน<br>และสีแต่ละสีหมายความว่าอะไร</h1>
+  <p class="lead">หน้านี้อธิบายทุกอย่างที่เกิดขึ้นตั้งแต่ผู้สูงอายุลุกนั่งหน้ากล้อง จนกลายเป็นเคสสีแดงบนจอของ Care Manager — ด้วย<b>ตัวเลขเกณฑ์จริงที่โปรแกรมใช้</b> ไม่ใช่คำอธิบายลอย ๆ ทุกค่าในหน้านี้ตรงกับเอนจินเวอร์ชัน <span class="mono">1.3.0</span></p>
+</div></div>
+
+<!-- ============ 1. เส้นทางข้อมูล ============ -->
+<section><div class="wrap">
+  <h2>เส้นทางข้อมูล 4 ขั้น</h2>
+  <p class="sec-sub">ข้อมูลไม่ได้หายไปไหน และไม่ได้ถูกส่งไปให้บริษัทประกันโดยตรง — มันผ่านการแปลงเป็นคะแนนและถูกลดทอนรายละเอียดตัวตนในแต่ละขั้น</p>
+
+  <div class="flow">
+    <div class="step">
+      <div class="stepno">1</div>
+      <h3>วัดที่บ้าน</h3>
+      <p class="small" style="margin:0">แอปบนมือถือ ใช้กล้องหน้าอย่างเดียว</p>
+      <ul>
+        <li>ลุกนั่ง 5 ครั้ง — จับเวลา</li>
+        <li>ลุกเดิน 3 เมตร (TUG)</li>
+        <li>ทรงตัว 4 ท่า ท่าละ 10 วินาที</li>
+        <li>ประวัติหกล้ม / จำนวนยา</li>
+        <li>ดัชนีบาร์เธล 10 ด้าน</li>
+      </ul>
+      <p class="small" style="margin:12px 0 0"><b>ภาพวิดีโอไม่ถูกบันทึกและไม่ถูกส่งออก</b> กล้องแปลงร่างเป็นจุดข้อต่อ 33 จุดในเครื่อง แล้วเก็บเฉพาะ<b>ตัวเลขเวลา</b></p>
+    </div>
+    <div class="step">
+      <div class="stepno">2</div>
+      <h3>ส่งขึ้นฐานข้อมูลกลาง</h3>
+      <p class="small" style="margin:0">Supabase (PostgreSQL) เข้ารหัสระหว่างทาง</p>
+      <ul>
+        <li><span class="mono">assessments</span> — ผลตรวจแต่ละครั้ง</li>
+        <li><span class="mono">risk_signals</span> — กฎที่จุดติด</li>
+        <li><span class="mono">referrals</span> — คิวส่งต่อ</li>
+        <li><span class="mono">consents</span> — ความยินยอม</li>
+        <li><span class="mono">audit_logs</span> — ใครดูอะไรเมื่อไร</li>
+      </ul>
+      <p class="small" style="margin:12px 0 0">ทุกตารางบังคับสิทธิ์ด้วย <b>Row Level Security</b> — ผู้ใช้เห็นได้เฉพาะแถวของตัวเอง แม้จะรู้รหัสคนอื่นก็อ่านไม่ได้</p>
+    </div>
+    <div class="step">
+      <div class="stepno">3</div>
+      <h3>ประมวลผลด้วยกฎ</h3>
+      <p class="small" style="margin:0">คิดคะแนนเต็ม 12 แล้วเทียบกับอดีตของคนคนนั้น</p>
+      <ul>
+        <li>รวมคะแนน 5 องค์ประกอบ → ระดับ 1–4</li>
+        <li>ตรวจกฎถดถอย R1–R7</li>
+        <li>รวมน้ำหนักความรุนแรง → สีสถานะ</li>
+        <li>กำหนดวันนัดประเมินซ้ำ</li>
+      </ul>
+      <p class="small" style="margin:12px 0 0"><b>ไม่ใช่กล่องดำ</b> เป็นกฎที่เขียนไว้ชัด อธิบายได้ทุกข้อว่าทำไมถึงได้สีนี้</p>
+    </div>
+    <div class="step">
+      <div class="stepno">4</div>
+      <h3>ถึงมือคนที่ต้องเห็น</h3>
+      <p class="small" style="margin:0">คนละชุดข้อมูล ตามหน้าที่</p>
+      <ul>
+        <li><b>ผู้เอาประกัน</b> — เห็นของตัวเองครบ</li>
+        <li><b>Care Manager</b> — เห็นเฉพาะเคสที่ต้องดูแล</li>
+        <li><b>บริษัทประกัน</b> — เห็นเฉพาะรหัสแฝง ช่วงอายุ เพศ ระดับสัญญาณ</li>
+      </ul>
+      <p class="small" style="margin:12px 0 0">บริษัทประกัน <b>ไม่เห็นชื่อและเบอร์โทร</b> ตลอดกระบวนการ</p>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:22px"><b>จุดที่คนมักเข้าใจผิด:</b> ถ้าผู้ใช้สมัครแบบไม่กรอกเบอร์โทรและรหัส 4 หลัก ระบบจะทำงานแบบ<b>ออฟไลน์ในเครื่องเท่านั้น</b> ผลตรวจจะไม่ขึ้นบนแดชบอร์ดของ Care Manager หรือบริษัทประกันเลย — ในแอปจะมีป้ายมุมขวาบนบอกสถานะว่า <span class="mono">DB · CLOUD ✓</span> (เชื่อมแล้ว) หรือ <span class="mono">DB · LOCAL</span> (อยู่ในเครื่อง)</div>
+</div></section>
+
+<!-- ============ 2. คะแนน ============ -->
+<section><div class="wrap">
+  <h2>คะแนนเต็ม 12 มาจากไหน</h2>
+  <p class="sec-sub">ห้าองค์ประกอบ ยิ่งได้คะแนนมากยิ่งแข็งแรง — ตรงข้ามกับแบบประเมินความเสี่ยงทั่วไป เพราะเราออกแบบให้ผู้สูงอายุเห็นแล้วรู้สึกอยากทำคะแนนให้ดีขึ้น</p>
+
+  <div class="tblwrap">
+  <table>
+    <thead><tr><th>องค์ประกอบ</th><th style="width:78px">เต็ม</th><th>วัดอย่างไร</th><th>ให้คะแนนอย่างไร</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>ลุกนั่ง 5 ครั้ง</b><br><span class="small">Five-Times Sit-to-Stand</span></td>
+        <td class="num">4</td>
+        <td>กล้องนับการลุกนั่ง จับเวลาตั้งแต่<b>เริ่มขยับครั้งแรก</b>จนนั่งลงครบ 5 ครั้ง</td>
+        <td class="small">เทียบกับค่าตัดตามอายุ (เรียกว่า <span class="mono">cut</span>)<br>
+          ≤ cut = 4 · ≤ cut+2 = 3 · ≤ cut+4.5 = 2 · ≤ 60 วินาที = 1 · เกินนั้น = 0</td>
+      </tr>
+      <tr>
+        <td><b>การทรงตัว</b><br><span class="small">4-Stage Balance Test</span></td>
+        <td class="num">3</td>
+        <td>ยืน 4 ท่า ท่าละ 10 วินาที ลืมตา ไม่จับอะไร — กล้องเฝ้าดูการโคลงของลำตัว</td>
+        <td class="small">ผ่านครบ 4 ท่า = 3 · ผ่าน 3 ท่า = 2 · ผ่าน 2 ท่า = 1 · น้อยกว่านั้น = 0</td>
+      </tr>
+      <tr>
+        <td><b>ประวัติหกล้ม</b></td>
+        <td class="num">2</td>
+        <td>ถามย้อนหลัง 12 เดือน (ต้องยืนยันกับเวชระเบียนภายหลัง)</td>
+        <td class="small">ไม่เคยล้ม = 2 · ล้ม 1 ครั้ง = 1 · ล้มตั้งแต่ 2 ครั้ง = 0</td>
+      </tr>
+      <tr>
+        <td><b>จำนวนยาที่ใช้ประจำ</b></td>
+        <td class="num">1</td>
+        <td>ถามจำนวนชนิด (ต้องยืนยันกับเวชระเบียนภายหลัง)</td>
+        <td class="small">น้อยกว่า 4 ชนิด = 1 · ตั้งแต่ 4 ชนิดขึ้นไป = 0</td>
+      </tr>
+      <tr>
+        <td><b>กิจวัตรประจำวัน</b><br><span class="small">ดัชนีบาร์เธล 20 คะแนน</span></td>
+        <td class="num">2</td>
+        <td>ตอบ 10 ด้าน — กินข้าว แต่งตัว ย้ายตัว เข้าห้องน้ำ เดิน ขึ้นบันได อาบน้ำ ขับถ่าย</td>
+        <td class="small">12–20 คะแนน (ติดสังคม) = 2 · 5–11 (ติดบ้าน) = 1 · 0–4 (ติดเตียง) = 0</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:18px">
+    <div class="card">
+      <h3>ค่าตัดเกณฑ์ลุกนั่งแยกตามอายุ</h3>
+      <p class="small" style="margin:0 0 10px">ใช้ค่าจากงานวิจัยในประชากรไทย ไม่ใช่ค่าฝรั่ง เพราะสรีระและวิถีชีวิตต่างกัน</p>
+      <div class="rowline"><span class="k">อายุต่ำกว่า 60 ปี</span><span class="v">10.0 วินาที</span></div>
+      <div class="rowline"><span class="k">อายุ 60–69 ปี</span><span class="v">11.5 วินาที</span></div>
+      <div class="rowline"><span class="k">อายุ 70 ปีขึ้นไป</span><span class="v">12.1 วินาที</span></div>
+      <p class="small" style="margin:12px 0 0">อ้างอิง: Poncumhak 2014; Intaruk 2021</p>
+    </div>
+    <div class="card">
+      <h3>คะแนนรวมแปลงเป็นระดับ (tier)</h3>
+      <p class="small" style="margin:0 0 10px">ระดับนี้ใช้ตัดสินส่วนลดเบี้ยประกัน และเป็นวัตถุดิบขั้นแรกของสีสถานะ</p>
+      <div class="rowline"><span class="k"><span class="pill p4">ระดับ 4</span> แข็งแรงมาก</span><span class="v">10–12 คะแนน</span></div>
+      <div class="rowline"><span class="k"><span class="pill p3">ระดับ 3</span> แข็งแรงดี</span><span class="v">8–9 คะแนน</span></div>
+      <div class="rowline"><span class="k"><span class="pill p2">ระดับ 2</span> ควรเฝ้าระวัง</span><span class="v">5–7 คะแนน</span></div>
+      <div class="rowline"><span class="k"><span class="pill p1">ระดับ 1</span> เสี่ยงสูง</span><span class="v">0–4 คะแนน</span></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ============ 3. กฎ R1–R7 ============ -->
+<section><div class="wrap">
+  <h2>กฎ 9 ข้อที่ทำให้สถานะเปลี่ยนสี</h2>
+  <p class="sec-sub">คะแนนอย่างเดียวไม่พอ เพราะคนที่คะแนน 9 มาตลอดแล้วอยู่ ๆ ตกเหลือ 6 น่าห่วงกว่าคนที่ได้ 6 มาตั้งแต่แรก ระบบจึงเทียบผู้ใช้<b>กับตัวเองในอดีต</b> เป็นหลัก แต่ละกฎมี<b>น้ำหนักความรุนแรง</b> ซึ่งจะถูกนำไปบวกกันในขั้นถัดไป</p>
+
+  <div class="tblwrap">
+  <table>
+    <thead><tr><th style="width:52px">รหัส</th><th>กฎ</th><th>เงื่อนไขที่ทำให้จุดติด</th><th style="width:74px">น้ำหนัก</th><th>ที่มา</th></tr></thead>
+    <tbody>
+      <tr><td class="num"><b>R1</b></td><td>ลุกนั่งช้าลงมาก</td>
+        <td>ช้ากว่าสถิติดีที่สุดของตัวเอง ≥ 2.3 วินาที หรือ ≥ 15%</td>
+        <td class="num">1–2</td><td class="small">MCID ของ FTSST ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)</td></tr>
+      <tr><td class="num"><b>R2</b></td><td>ข้ามเกณฑ์เสี่ยงตามอายุครั้งแรก</td>
+        <td>ครั้งก่อนยังต่ำกว่าค่าตัด แต่ครั้งนี้เกิน</td>
+        <td class="num">2</td><td class="small">ค่าตัดประชากรไทย (Poncumhak 2014; Intaruk 2021)</td></tr>
+      <tr><td class="num"><b>R3</b></td><td>มีเหตุหกล้มใหม่</td>
+        <td>คะแนนหมวดหกล้มลดลงจากครั้งก่อน</td>
+        <td class="num">2</td><td class="small">WHO Step Safely 2021</td></tr>
+      <tr><td class="num"><b>R4</b></td><td>คะแนนรวมถดถอย</td>
+        <td>ต่ำกว่าคะแนนดีที่สุดของตัวเอง ≥ 2 คะแนน</td>
+        <td class="num">1–2</td><td class="small">เทียบกับตนเอง เพื่อลดอคติระหว่างกลุ่มประชากร</td></tr>
+      <tr><td class="num"><b>R5</b></td><td>ใช้ยาหลายชนิด + ทรงตัวไม่ผ่าน</td>
+        <td>ยา ≥ 4 ชนิด และคะแนนทรงตัว ≤ 1</td>
+        <td class="num">2</td><td class="small">STOPPFall 2021; Beers Criteria — เสี่ยงแบบทวีคูณ</td></tr>
+      <tr><td class="num"><b>R6</b></td><td>ทำกิจวัตรประจำวันได้น้อยลง</td>
+        <td>คะแนนบาร์เธลลดระดับจากครั้งก่อน</td>
+        <td class="num">3</td><td class="small">Barthel Index — สัญญาณเริ่มต้นของภาวะพึ่งพิง</td></tr>
+      <tr><td class="num"><b>R7</b></td><td>จังหวะลุกไม่สม่ำเสมอ</td>
+        <td>ความแปรปรวนของเวลาต่อครั้ง ≥ 25%</td>
+        <td class="num">1</td><td class="small">สะท้อนความล้าของกล้ามเนื้อขาที่มาเร็วผิดปกติ</td></tr>
+      <tr><td class="num"><b>R8</b></td><td>การทรงตัวถดถอยเป็นท่า</td>
+        <td>ท่าที่เคยยืนผ่านครบ 10 วินาที ทำไม่ได้แล้ว</td>
+        <td class="num">1–2</td><td class="small">CDC STEADI 4-Stage Balance Test — ท่าเรียงจากง่ายไปยาก การถอยหนึ่งท่าจึงวัดซ้ำได้</td></tr>
+      <tr><td class="num"><b>R9</b></td><td>บาร์เธลลดลงก่อนข้ามระดับ</td>
+        <td>คะแนนบาร์เธลต่ำกว่าสถิติดีที่สุดของตัวเอง ≥ 2 คะแนน ทั้งที่ยังอยู่ระดับเดิม</td>
+        <td class="num">1–2</td><td class="small">Barthel ADL Index — เตือนก่อนตกไประดับพึ่งพิงที่สูงขึ้น</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn" style="margin-top:18px"><b>R6 มีอำนาจพิเศษ</b> — ถ้ากฎข้อนี้จุดติดเพียงข้อเดียว สถานะจะเป็น<b>สีแดง</b>ทันทีโดยไม่ต้องรอคะแนนรวม เพราะการสูญเสียความสามารถทำกิจวัตรประจำวันคือเหตุการณ์ที่กรมธรรม์ LTC คุ้มครองโดยตรง ปล่อยไว้ไม่ได้</div>
+
+  <div class="note" style="margin-top:14px"><b>R8 และ R9 เพิ่มเข้ามาในเวอร์ชัน 1.3.0</b> เพื่อปิดช่องว่างที่เอนจินเดิมมองไม่เห็น — เดิมระบบเก็บผลทรงตัวรายท่าและคะแนนบาร์เธลเต็ม 20 ไว้ แต่ไม่ได้นำมาเฝ้าระวังแนวโน้ม จึงเกิดกรณีที่ผู้สูงอายุตกจาก “ยืนขาเดียวได้” เหลือ “ยืนต่อเท้าไม่ได้” หรือบาร์เธลตกจาก 20 เหลือ 14 แล้วระบบยังรายงานว่าคงที่ ตอนนี้ทั้งสองกรณีถูกจับได้แล้ว</div>
+</div></section>
+
+<!-- ============ 4. รหัสสี ============ -->
+<section id="colors"><div class="wrap">
+  <h2>สีนี้มาจากตรงไหน</h2>
+  <p class="sec-sub">นี่คือคำตอบของคำถามที่พบบ่อยที่สุด — ระบบเอาน้ำหนักของกฎทุกข้อที่จุดติดมาบวกกันเป็น <b>คะแนนความรุนแรงรวม</b> แล้วตัดสินตามลำดับจากบนลงล่าง ข้อไหนเข้าเงื่อนไขก่อนใช้ข้อนั้น</p>
+
+  <div class="legend">
+    <div class="lg lg-4">
+      <div class="dot"></div>
+      <div class="lvl">Stable</div>
+      <h3>เขียว · คงที่</h3>
+      <dl>
+        <dt>เข้าเงื่อนไขเมื่อ</dt>
+        <dd>ไม่มีกฎข้อใดจุดติดเลย (ความรุนแรงรวม = 0)</dd>
+        <dt>แปลว่า</dt>
+        <dd>สมรรถภาพไม่เปลี่ยนแปลงจากครั้งก่อนอย่างมีนัยสำคัญ</dd>
+        <dt>ระบบทำอะไรต่อ</dt>
+        <dd>นัดประเมินซ้ำใน <b>90 วัน</b><br>ไม่ส่งต่อใคร</dd>
+      </dl>
+    </div>
+
+    <div class="lg lg-3">
+      <div class="dot"></div>
+      <div class="lvl">Watch</div>
+      <h3>เหลือง · เฝ้าสังเกต</h3>
+      <dl>
+        <dt>เข้าเงื่อนไขเมื่อ</dt>
+        <dd>ความรุนแรงรวม <b>1–2</b><br><span class="small">เช่น R1 เบา ๆ ข้อเดียว หรือ R7 ข้อเดียว</span></dd>
+        <dt>แปลว่า</dt>
+        <dd>เริ่มมีสัญญาณเปลี่ยนแปลง แต่ยังไม่ถึงระดับที่ต้องมีคนเข้าไปดู</dd>
+        <dt>ระบบทำอะไรต่อ</dt>
+        <dd>นัดประเมินซ้ำใน <b>45 วัน</b><br>ส่งแผนป้องกันให้ทำเองที่บ้าน</dd>
+      </dl>
+    </div>
+
+    <div class="lg lg-2">
+      <div class="dot"></div>
+      <div class="lvl">Decline</div>
+      <h3>ส้ม · ถดถอย</h3>
+      <dl>
+        <dt>เข้าเงื่อนไขเมื่อ</dt>
+        <dd>ความรุนแรงรวม <b>3–4</b><br>หรือ คะแนนรวมตกอยู่ใน<b>ระดับ 2</b> (5–7 คะแนน)</dd>
+        <dt>แปลว่า</dt>
+        <dd>ถดถอยจริง ไม่ใช่ความผันผวนของการวัด</dd>
+        <dt>ระบบทำอะไรต่อ</dt>
+        <dd>นัดประเมินซ้ำใน <b>21 วัน</b><br><b>เข้าคิว Care Manager โทรติดตามภายใน 7 วัน</b></dd>
+      </dl>
+    </div>
+
+    <div class="lg lg-1">
+      <div class="dot"></div>
+      <div class="lvl">Urgent</div>
+      <h3>แดง · ต้องดูแลเร่งด่วน</h3>
+      <dl>
+        <dt>เข้าเงื่อนไขเมื่อ</dt>
+        <dd>ความรุนแรงรวม <b>≥ 5</b><br>หรือ กฎ <b>R6</b> จุดติด<br>หรือ คะแนนรวมอยู่ใน<b>ระดับ 1</b> (0–4 คะแนน)</dd>
+        <dt>แปลว่า</dt>
+        <dd>มีความเสี่ยงเข้าสู่ภาวะพึ่งพิงในระยะอันใกล้</dd>
+        <dt>ระบบทำอะไรต่อ</dt>
+        <dd>นัดประเมินซ้ำใน <b>7 วัน</b><br><b>ส่งต่อพยาบาลไปประเมินที่บ้านภายใน 72 ชั่วโมง</b></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:22px">
+    <h3>ลำดับการตัดสิน — อ่านจากบนลงล่าง หยุดที่ข้อแรกที่เป็นจริง</h3>
+    <div class="rowline"><span class="k">1 · ระดับ = 1 <b>หรือ</b> R6 จุดติด <b>หรือ</b> ความรุนแรงรวม ≥ 5</span><span class="v"><span class="pill p1">แดง</span></span></div>
+    <div class="rowline"><span class="k">2 · ระดับ = 2 <b>หรือ</b> ความรุนแรงรวม ≥ 3</span><span class="v"><span class="pill p2">ส้ม</span></span></div>
+    <div class="rowline"><span class="k">3 · ความรุนแรงรวม ≥ 1</span><span class="v"><span class="pill p3">เหลือง</span></span></div>
+    <div class="rowline"><span class="k">4 · นอกเหนือจากนั้นทั้งหมด</span><span class="v"><span class="pill p4">เขียว</span></span></div>
+    <p class="small" style="margin:14px 0 0">ลำดับนี้สำคัญ — คนที่คะแนนรวมยังดี (ระดับ 3) แต่กฎจุดติดหนักถึง 5 จะยังได้<b>สีแดง</b> เพราะทิศทางการเปลี่ยนแปลงสำคัญกว่าตัวเลขวันนี้</p>
+  </div>
+</div></section>
+
+<!-- ============ 5. ลองคำนวณ ============ -->
+<section><div class="wrap">
+  <h2>ลองเปลี่ยนตัวเลขดูว่าสีเปลี่ยนอย่างไร</h2>
+  <p class="sec-sub">เครื่องมือนี้ใช้สูตรเดียวกับที่อยู่ในแอปทุกบรรทัด ปรับค่าแล้วดูว่าอะไรทำให้สถานะพลิก</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>ผลตรวจครั้งล่าสุด</h3>
+      <div class="calc">
+        <div class="field"><label>อายุ (ปี)</label><input id="iAge" type="number" value="68" min="45" max="95"></div>
+        <div class="field"><label>เวลาลุกนั่ง 5 ครั้ง (วินาที)</label><input id="iFt" type="number" step="0.1" value="13.4"></div>
+        <div class="field"><label>ทรงตัว — ผ่านกี่ท่า จาก 4</label>
+          <select id="iBal"><option value="4">ผ่านครบ 4 ท่า</option><option value="3">ผ่าน 3 ท่า</option><option value="2" selected>ผ่าน 2 ท่า</option><option value="1">ผ่าน 1 ท่า</option><option value="0">ไม่ผ่านเลย</option></select></div>
+        <div class="field"><label>หกล้มใน 12 เดือน</label>
+          <select id="iFall"><option value="2">ไม่เคยล้ม</option><option value="1" selected>ล้ม 1 ครั้ง</option><option value="0">ล้มตั้งแต่ 2 ครั้ง</option></select></div>
+        <div class="field"><label>ยาประจำ</label>
+          <select id="iMed"><option value="1">น้อยกว่า 4 ชนิด</option><option value="0" selected>ตั้งแต่ 4 ชนิดขึ้นไป</option></select></div>
+        <div class="field"><label>ดัชนีบาร์เธล (เต็ม 20)</label><input id="iBar" type="number" value="15" min="0" max="20"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>เทียบกับประวัติเดิมของคนคนนี้</h3>
+      <div class="calc">
+        <div class="field"><label>เวลาลุกนั่งที่ดีที่สุดเคยทำได้ (วินาที)</label><input id="iBestFt" type="number" step="0.1" value="10.2"></div>
+        <div class="field"><label>เวลาลุกนั่งครั้งก่อนหน้า (วินาที)</label><input id="iPrevFt" type="number" step="0.1" value="11.0"></div>
+        <div class="field"><label>คะแนนรวมที่ดีที่สุดเคยทำได้ (เต็ม 12)</label><input id="iBestSc" type="number" value="10" min="0" max="12"></div>
+        <div class="field"><label>ครั้งก่อนหกล้มกี่ครั้ง</label>
+          <select id="iPrevFall"><option value="2" selected>ไม่เคยล้ม</option><option value="1">ล้ม 1 ครั้ง</option><option value="0">ล้มตั้งแต่ 2 ครั้ง</option></select></div>
+        <div class="field"><label>ระดับบาร์เธลครั้งก่อน</label>
+          <select id="iPrevAdl"><option value="2" selected>ติดสังคม (12–20)</option><option value="1">ติดบ้าน (5–11)</option><option value="0">ติดเตียง (0–4)</option></select></div>
+        <div class="field"><label>ความแปรปรวนจังหวะลุก (%)</label><input id="iCv" type="number" value="18" min="0" max="80"></div>
+        <div class="field"><label>ทรงตัวที่เคยทำได้ดีที่สุด (ท่า)</label>
+          <select id="iBestBal"><option value="4" selected>ผ่านครบ 4 ท่า</option><option value="3">ผ่าน 3 ท่า</option><option value="2">ผ่าน 2 ท่า</option><option value="1">ผ่าน 1 ท่า</option><option value="0">ไม่ผ่านเลย</option></select></div>
+        <div class="field"><label>บาร์เธลที่เคยทำได้ดีที่สุด (เต็ม 20)</label><input id="iBestBar" type="number" value="18" min="0" max="20"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="out" id="out"></div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>รายละเอียดการคิด</h3>
+    <div id="detail"></div>
+  </div>
+</div></section>
+
+<!-- ============ 6. ใครเห็นอะไร ============ -->
+<section><div class="wrap">
+  <h2>ใครเห็นอะไรบ้าง</h2>
+  <p class="sec-sub">ข้อมูลชุดเดียวกันถูกตัดทอนต่างกันตามหน้าที่ของผู้ดู — บังคับด้วยกฎในฐานข้อมูล ไม่ใช่แค่ซ่อนบนหน้าจอ</p>
+  <div class="tblwrap">
+  <table>
+    <thead><tr><th>ข้อมูล</th><th>ผู้เอาประกัน</th><th>Care Manager</th><th>บริษัทประกัน</th><th>ผู้ตรวจสอบ</th></tr></thead>
+    <tbody>
+      <tr><td>ชื่อ-นามสกุล</td><td>✓ เห็น</td><td>✓ เฉพาะเคสที่รับผิดชอบ</td><td>✗ ไม่เห็น</td><td>✗ ไม่เห็น</td></tr>
+      <tr><td>เบอร์โทรศัพท์</td><td>✓ เห็น</td><td>✓ เฉพาะเคสที่ต้องติดต่อ</td><td>✗ ไม่เห็น</td><td>✗ ไม่เห็น</td></tr>
+      <tr><td>รหัสแฝง <span class="mono">P-XXXXXXX</span></td><td>✓ เห็น</td><td>✓ เห็น</td><td>✓ เห็น</td><td>✓ เห็น</td></tr>
+      <tr><td>เวลาลุกนั่ง เวลา TUG ทรงตัว</td><td>✓ เห็นเต็ม</td><td>✓ เห็นเต็ม</td><td>✓ เห็นเต็ม</td><td>✗ ไม่เห็น</td></tr>
+      <tr><td>ช่วงอายุ (ไม่ใช่วันเกิด) และเพศ</td><td>✓ เห็น</td><td>✓ เห็น</td><td>✓ เห็น</td><td>✗ ไม่เห็น</td></tr>
+      <tr><td>สีสถานะและกฎที่จุดติด</td><td>✓ พร้อมคำอธิบาย</td><td>✓ พร้อมคำอธิบาย</td><td>✓ เฉพาะสี</td><td>✗ ไม่เห็น</td></tr>
+      <tr><td>ภาพวิดีโอขณะทดสอบ</td><td colspan="4"><b>ไม่มีใครเห็น — ระบบไม่บันทึกวิดีโอเลย</b></td></tr>
+      <tr><td>บันทึกว่าใครเปิดดูข้อมูลใคร</td><td>✓ ดูของตัวเองได้</td><td>✗ แก้ไม่ได้</td><td>✗ แก้ไม่ได้</td><td>✓ อ่านได้อย่างเดียว</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note" style="margin-top:18px"><b>ข้อมูลแฝงชื่อยังคงเป็นข้อมูลส่วนบุคคลตาม PDPA</b> — การแทนชื่อด้วยรหัสสุ่มไม่ทำให้ข้อมูลกลายเป็นข้อมูลนิรนาม เพราะยังเชื่อมกลับหาตัวบุคคลได้ ระบบจึงยังคุ้มครองข้อมูลชุดนี้เต็มรูปแบบ และผู้ใช้ถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อจากหน้า “ข้อมูลของฉัน” ในแอป</div>
+</div></section>
+
+<!-- ============ 7. แก้ปัญหา ============ -->
+<section><div class="wrap">
+  <h2>กรอกในแอปแล้วแดชบอร์ดไม่ขึ้น ทำอย่างไร</h2>
+  <div class="grid g3">
+    <div class="card">
+      <h3>1 · ดูป้ายสถานะในแอป</h3>
+      <p class="small" style="margin:0">มุมขวาบนของแอปมีป้ายเล็ก ๆ ถ้าขึ้นว่า <span class="mono">DB · LOCAL</span> แปลว่ายังไม่ได้เชื่อมระบบกลาง ข้อมูลอยู่ในเครื่องนั้นเครื่องเดียว</p>
+    </div>
+    <div class="card">
+      <h3>2 · เชื่อมบัญชี</h3>
+      <p class="small" style="margin:0">ตอนสมัคร ต้องกรอก<b>เบอร์โทรของผู้ใช้เอง</b>และ<b>ตั้งรหัส 4 หลัก</b>ในกล่อง “เชื่อมกับระบบกลาง” ถ้าสมัครไปแล้วโดยไม่กรอก ให้ออกจากระบบแล้วสมัครใหม่พร้อมกรอกเบอร์</p>
+    </div>
+    <div class="card">
+      <h3>3 · เข้าสู่ระบบฝั่งเจ้าหน้าที่</h3>
+      <p class="small" style="margin:0">แดชบอร์ด Care Manager และบริษัทประกันจะแสดงเคสจริงก็ต่อเมื่อ<b>ล็อกอินด้วยบัญชีเจ้าหน้าที่</b>แล้วเท่านั้น ถ้ายังไม่ล็อกอินจะเห็นเฉพาะข้อมูลสาธิตในเครื่อง</p>
+    </div>
+  </div>
+  <div class="warn" style="margin-top:18px"><b>ข้อมูลสาธิตกับข้อมูลจริงแยกกันคนละที่</b> — ข้อมูลสาธิต (รหัสขึ้นต้นด้วย <span class="mono">demo-</span>) เก็บอยู่ในเบราว์เซอร์ของเครื่องที่กดปุ่มเท่านั้น ไม่เคยขึ้นระบบกลาง ลบได้ด้วยปุ่ม <b>“ลบข้อมูลสาธิต”</b> ข้าง ๆ ปุ่มเติมข้อมูลสาธิตในหน้าแดชบอร์ด</div>
+</div></section>
+
+<footer><div class="wrap">
+  <p style="margin:0 0 8px"><b style="color:#fff">CareSignal</b> — ระบบต้นแบบเพื่อการประกวด OIC InsurTech Award 2026</p>
+  <p style="margin:0">ยังไม่ใช่ผลิตภัณฑ์ประกันภัยที่เสนอขายจริง · การเสนอขายประกันภัยต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ. · เกณฑ์ทุกค่าในหน้านี้ตรงกับเอนจินเวอร์ชัน 1.3.0 ที่ทำงานอยู่ในแอปจริง<br>
+  <a href="./index.html">หน้าแรก</a> · <a href="./CareSignal-Vision.html">เปิดแอปประเมิน</a> · <a href="./CareSignal-Web.html">แดชบอร์ดเจ้าหน้าที่</a> · <a href="./CareSignal-Actuarial.html">แบบจำลองคำนวณเบี้ย</a></p>
+</div></footer>
+
+<script>
+/* ============================================================
+   สูตรชุดเดียวกับที่อยู่ใน CareSignal-Vision.html (ENGINE 1.2.0)
+   คัดลอกมาตรง ๆ เพื่อให้หน้านี้อธิบายสิ่งที่ระบบทำจริง ไม่ใช่สิ่งที่เราคิดว่ามันทำ
+   ============================================================ */
+function ftsstCut(age){return age<60?10.0:(age<70?11.5:12.1)}
+function ftsstPoints(sec,age){
+  var cut=ftsstCut(age);
+  if(sec==null)return 0;
+  return sec<=cut?4 : sec<=cut+2?3 : sec<=cut+4.5?2 : sec<=60?1 : 0;
+}
+function balancePoints(passed){return passed>=4?3:passed>=3?2:passed>=2?1:0}
+function barthelAdl(t){return t>=12?2:(t>=5?1:0)}
+
+var LV={
+  stable:{nm:"คงที่",  th:"เขียว", cls:"lg-4", pill:"p4", days:90, ref:"ไม่ต้องส่งต่อ · ดูแลตนเองตามแผนปกติ"},
+  watch: {nm:"เฝ้าสังเกต",th:"เหลือง",cls:"lg-3", pill:"p3", days:45, ref:"ไม่ต้องส่งต่อ · ส่งแผนป้องกันให้ทำเองที่บ้าน"},
+  decline:{nm:"ถดถอย", th:"ส้ม",  cls:"lg-2", pill:"p2", days:21, ref:"Care Manager โทรติดตามภายใน 7 วัน"},
+  urgent:{nm:"ต้องดูแลเร่งด่วน",th:"แดง",cls:"lg-1", pill:"p1", days:7,  ref:"ส่งต่อพยาบาลประเมินที่บ้านภายใน 72 ชั่วโมง"}
+};
+
+function num(id){return parseFloat(document.getElementById(id).value)}
+function calc(){
+  var age=num("iAge"), ft=num("iFt"), balPass=num("iBal"),
+      fall=num("iFall"), med=num("iMed"), bar=num("iBar"),
+      bestFt=num("iBestFt"), prevFt=num("iPrevFt"), bestSc=num("iBestSc"),
+      prevFall=num("iPrevFall"), prevAdl=num("iPrevAdl"), cv=num("iCv")/100,
+      bestBal=num("iBestBal"), bestBar=num("iBestBar");
+
+  var parts={ftsst:ftsstPoints(ft,age), balance:balancePoints(balPass),
+             falls:fall, meds:med, adl:barthelAdl(bar)};
+  var score=parts.ftsst+parts.balance+parts.falls+parts.meds+parts.adl;
+  var tier=score>=10?4:score>=8?3:score>=5?2:1;
+
+  /* ---- กฎ R1–R7 ---- */
+  var flags=[];
+  if(ft>bestFt){
+    var d=ft-bestFt, pct=d/bestFt*100;
+    if(d>=2.3||pct>=15) flags.push({id:"R1",sev:(pct>=30||d>=4)?2:1,
+      t:"ลุกนั่งช้าลง "+pct.toFixed(0)+"% ("+bestFt.toFixed(1)+" → "+ft.toFixed(1)+" วินาที) เทียบกับสถิติดีที่สุดของตัวเอง"});
+  }
+  var cut=ftsstCut(age);
+  if(ft>cut&&prevFt<=cut) flags.push({id:"R2",sev:2,
+    t:"ข้ามค่าตัดเกณฑ์ตามอายุเป็นครั้งแรก ("+cut.toFixed(1)+" วินาที) — ครั้งก่อนยังอยู่ที่ "+prevFt.toFixed(1)+" วินาที"});
+  if(fall<prevFall) flags.push({id:"R3",sev:2,t:"มีเหตุหกล้มใหม่นับจากการประเมินครั้งก่อน"});
+  if(parts.adl<prevAdl) flags.push({id:"R6",sev:3,t:"ความสามารถทำกิจวัตรประจำวันลดลงจากครั้งก่อน"});
+  if(score<=bestSc-2) flags.push({id:"R4",sev:score<=bestSc-3?2:1,
+    t:"คะแนนรวมลดลง "+(bestSc-score)+" คะแนนจากค่าดีที่สุดของตัวเอง ("+bestSc+" → "+score+")"});
+  if(med===0&&parts.balance<=1) flags.push({id:"R5",sev:2,
+    t:"ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป ร่วมกับผลทรงตัวที่ยังไม่ผ่านเกณฑ์"});
+  if(cv>=0.25) flags.push({id:"R7",sev:1,
+    t:"จังหวะการลุกไม่สม่ำเสมอ ความแปรปรวน "+(cv*100).toFixed(0)+"%"});
+  if(balPass<bestBal){
+    var lostN=bestBal-balPass;
+    flags.push({id:"R8",sev:(balPass<=1||lostN>=2)?2:1,
+      t:"การทรงตัวถดถอย "+lostN+" ท่า — เคยยืนผ่าน "+bestBal+" จาก 4 ท่า ครั้งนี้ผ่าน "+balPass+" ท่า"});
+  }
+  var dBar=bestBar-bar;
+  if(dBar>=2&&parts.adl>=prevAdl) flags.push({id:"R9",sev:dBar>=4?2:1,
+    t:"คะแนนดัชนีบาร์เธลลดลง "+dBar+" คะแนน ("+bestBar+" → "+bar+" จาก 20) โดยยังไม่ข้ามระดับ"});
+
+  var sev=flags.reduce(function(a,b){return a+b.sev},0);
+  var hasADL=flags.some(function(f){return f.id==="R6"});
+  var level=(tier===1||hasADL||sev>=5)?"urgent":(tier===2||sev>=3)?"decline":sev>=1?"watch":"stable";
+
+  /* ---- แสดงผล ---- */
+  var L=LV[level], o=document.getElementById("out");
+  o.className="out "+L.cls;
+  o.innerHTML='<div class="lbl">สถานะที่ระบบสรุปได้</div>'+
+    '<div class="big">'+L.th+' · '+L.nm+'</div>'+
+    '<div style="font-size:15px;margin-top:8px">คะแนนรวม '+score+' / 12 · ระดับ '+tier+
+    ' · ความรุนแรงรวมจากกฎ '+sev+'</div>'+
+    '<div style="font-size:15px;margin-top:6px"><b>นัดประเมินซ้ำใน '+L.days+' วัน · '+L.ref+'</b></div>';
+
+  var why;
+  if(level==="urgent")  why = tier===1?"คะแนนรวมตกอยู่ในระดับ 1":(hasADL?"กฎ R6 จุดติด (ทำกิจวัตรได้น้อยลง)":"ความรุนแรงรวม "+sev+" ≥ 5");
+  else if(level==="decline") why = tier===2?"คะแนนรวมอยู่ในระดับ 2":"ความรุนแรงรวม "+sev+" ≥ 3";
+  else if(level==="watch") why = "มีกฎจุดติด ความรุนแรงรวม "+sev;
+  else why = "ไม่มีกฎข้อใดจุดติด";
+
+  document.getElementById("detail").innerHTML=
+    '<div class="rowline"><span class="k">ลุกนั่ง '+ft.toFixed(1)+' วินาที (ค่าตัดอายุนี้ '+cut.toFixed(1)+')</span><span class="v">'+parts.ftsst+' / 4</span></div>'+
+    '<div class="rowline"><span class="k">ทรงตัว ผ่าน '+balPass+' ท่า</span><span class="v">'+parts.balance+' / 3</span></div>'+
+    '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+parts.falls+' / 2</span></div>'+
+    '<div class="rowline"><span class="k">จำนวนยา</span><span class="v">'+parts.meds+' / 1</span></div>'+
+    '<div class="rowline"><span class="k">บาร์เธล '+bar+' / 20</span><span class="v">'+parts.adl+' / 2</span></div>'+
+    '<div class="rowline" style="border-top:2px solid var(--line);margin-top:6px;padding-top:12px"><span class="k"><b>คะแนนรวม</b></span><span class="v"><b>'+score+' / 12 → ระดับ '+tier+'</b></span></div>'+
+    '<h3 style="margin:20px 0 8px">กฎที่จุดติด'+(flags.length?" ("+flags.length+" ข้อ)":"")+'</h3>'+
+    (flags.length
+      ? flags.map(function(f){return '<div class="rowline"><span class="k"><b>'+f.id+'</b> · '+f.t+'</span><span class="v">+'+f.sev+'</span></div>'}).join("")
+        +'<div class="rowline" style="border-top:2px solid var(--line);margin-top:6px;padding-top:12px"><span class="k"><b>ความรุนแรงรวม</b></span><span class="v"><b>'+sev+'</b></span></div>'
+      : '<p class="small" style="margin:0">ไม่มีกฎข้อใดจุดติด — ผลการวัดไม่ต่างจากประวัติเดิมอย่างมีนัยสำคัญ</p>')+
+    '<div class="note" style="margin-top:18px"><b>เหตุผลที่ได้สี'+L.th+':</b> '+why+
+    ' → ตามลำดับการตัดสิน ข้อนี้เป็นข้อแรกที่เป็นจริง</div>';
+}
+
+Array.prototype.forEach.call(document.querySelectorAll("input,select"),function(el){
+  el.addEventListener("input",calc); el.addEventListener("change",calc);
+});
+calc();
+</script>
+</body>
+</html>

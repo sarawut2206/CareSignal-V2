@@ -224,7 +224,7 @@ table.dt tr:last-child td{border-bottom:0}
   <div id="cloudCM"></div>
   <div class="kpirow" id="cmKpi"></div>
   <div id="cmTable"></div>
-  <div class="notice">ข้อมูลในตารางเป็นข้อมูล<b>แบบแฝงชื่อ (pseudonymised)</b> — รหัสสุ่มแทนชื่อจริง ช่วงอายุ เพศ ระดับสัญญาณ ตามหลัก data minimization · <b>ข้อมูลแฝงชื่อยังคงเป็นข้อมูลส่วนบุคคลตาม PDPA</b> ไม่ใช่ข้อมูลนิรนาม จึงได้รับความคุ้มครองตามกฎหมายเต็มที่ · <button class="btn lite" id="cmSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต 12 ราย</button> <button class="btn lite" id="cmRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
+  <div class="notice">ข้อมูลในตารางเป็นข้อมูล<b>แบบแฝงชื่อ (pseudonymised)</b> — รหัสสุ่มแทนชื่อจริง ช่วงอายุ เพศ ระดับสัญญาณ ตามหลัก data minimization · <b>ข้อมูลแฝงชื่อยังคงเป็นข้อมูลส่วนบุคคลตาม PDPA</b> ไม่ใช่ข้อมูลนิรนาม จึงได้รับความคุ้มครองตามกฎหมายเต็มที่ · <button class="btn lite" id="cmSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต 12 ราย</button> <button class="btn lite" id="cmClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="cmRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
 </div></div>
 
 <!-- ==================== บริษัทประกัน ==================== -->
@@ -239,7 +239,7 @@ table.dt tr:last-child td{border-bottom:0}
     <div class="card"><h3 style="margin-bottom:14px">เบี้ยรับตามแผน</h3><div id="insPlan"></div></div>
   </div>
   <div style="margin-top:16px" id="insTable"></div>
-  <div class="notice">ต้องการโมเดลผลประกอบการเต็มรูปแบบ (รายได้ 5 ปี, Loss Ratio, ความเสี่ยง, ผลตอบแทน)? เปิดไฟล์ <b>CareSignal-Insurer-Model.html</b> ที่มาพร้อมแพลตฟอร์มนี้ · <button class="btn lite" id="insSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต</button> <button class="btn lite" id="insRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
+  <div class="notice">ต้องการโมเดลผลประกอบการเต็มรูปแบบ (รายได้ 5 ปี, Loss Ratio, ความเสี่ยง, ผลตอบแทน)? เปิดไฟล์ <b>CareSignal-Insurer-Model.html</b> ที่มาพร้อมแพลตฟอร์มนี้ · <button class="btn lite" id="insSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต</button> <button class="btn lite" id="insClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="insRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
 </div></div>
 
 
@@ -397,6 +397,33 @@ var DB={
   async putPool(rec){
     if(window.storage){try{await window.storage.set("pool:"+rec.uid,JSON.stringify(rec),true);return}catch(e){}}
     try{localStorage.setItem("csShared:pool:"+rec.uid,JSON.stringify(rec))}catch(e){}
+  },
+  /* ลบเฉพาะข้อมูลสาธิต ไม่แตะข้อมูลผู้ใช้จริง
+     เกณฑ์: เรคคอร์ดที่ตั้งธง demo:true หรือรหัสขึ้นต้นด้วย demo- */
+  async clearDemo(){
+    var n=0;
+    if(window.storage){
+      try{
+        var idx=await window.storage.list("pool:",true), keys=idx.keys||[];
+        for(var i=0;i<keys.length;i++){
+          var key=keys[i], id=key.replace(/^pool:/,""), r=null;
+          try{var g=await window.storage.get(key,true); if(g)r=JSON.parse(g.value)}catch(e){}
+          if(id.indexOf("demo-")===0||(r&&r.demo===true)){await window.storage.delete(key,true);n++}
+        }
+      }catch(e){}
+    }
+    try{
+      var kill=[];
+      for(var j=0;j<localStorage.length;j++){
+        var k=localStorage.key(j);
+        if(!k||k.indexOf("csShared:pool:")!==0)continue;
+        var uid=k.slice("csShared:pool:".length), rec=null;
+        try{rec=JSON.parse(localStorage.getItem(k))}catch(e){}
+        if(uid.indexOf("demo-")===0||(rec&&rec.demo===true))kill.push(k);
+      }
+      kill.forEach(function(k){localStorage.removeItem(k);n++});
+    }catch(e){}
+    return n;
   }
 };
 
@@ -600,6 +627,11 @@ document.getElementById("cPlan").addEventListener("click",function(e){
 buildPlans();calc();
 
 /* ===== ข้อมูลสาธิต ===== */
+async function clearDemo(){
+  if(!confirm("ลบข้อมูลสาธิตทั้งหมดออกจากฐานข้อมูลในเครื่องนี้? ข้อมูลของผู้ใช้จริงและเคสจากระบบกลางจะไม่ถูกลบ"))return;
+  var n=await DB.clearDemo();
+  toast(n?("ลบข้อมูลสาธิตแล้ว "+n+" ราย"):"ไม่พบข้อมูลสาธิตในเครื่องนี้");
+}
 async function seed(){
   var names=["a","b","c","d","e","f","g","h","i","j","k","l"];
   var bands=["55–59","60–65","60–65","66–70","50–54","60–65","66–70","55–59","60–65","66–70","60–65","55–59"];
@@ -621,6 +653,7 @@ document.getElementById("cmFilter").addEventListener("click",function(e){
   renderCM();
 });
 document.getElementById("cmSeed").addEventListener("click",async function(){await seed();renderCM()});
+document.getElementById("cmClear").addEventListener("click",async function(){await clearDemo();renderCM()});
 document.getElementById("cmRefresh").addEventListener("click",renderCM);
 async function renderCM(){
   if(typeof renderCloudCM==="function")renderCloudCM();
@@ -651,6 +684,7 @@ function kpi(l,n,d){return '<div class="kpi"><div class="l">'+l+'</div><div clas
 
 /* ===== บริษัทประกัน ===== */
 document.getElementById("insSeed").addEventListener("click",async function(){await seed();renderINS()});
+document.getElementById("insClear").addEventListener("click",async function(){await clearDemo();renderINS()});
 document.getElementById("insRefresh").addEventListener("click",renderINS);
 async function renderINS(){
   if(typeof renderCloudINS==="function")renderCloudINS();

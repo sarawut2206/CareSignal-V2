@@ -875,7 +875,7 @@ function render(arg){
   T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,register:registerV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={loading:loadingV,welcome:welcomeV,register:registerV,login:loginV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -890,7 +890,8 @@ function welcomeV(){
   '<div class="rowline"><span class="k">ผลดี ลดเบี้ยได้สูงสุด</span><span class="v">15%</span></div>'+
   '<div class="rowline"><span class="k">ผลเสี่ยง ส่งต่อพยาบาล</span><span class="v">72 ชม.</span></div></div>'+
   '<div class="notice">ข้อสัญญาที่เราให้ไว้กับคุณ: ผลตรวจใช้<b>ลดค่าเบี้ยได้อย่างเดียว</b> ไม่มีการขึ้นค่าเบี้ยหรือไม่รับประกันเพราะผลตรวจแย่ลง และการอนุมัติเงินทุกครั้งตัดสินโดยคนจริง ไม่ใช่คอมพิวเตอร์</div>'+
-  '<button class="cta loop" data-go="register">เริ่มใช้งาน · สร้างบัญชี</button></div>';
+  '<button class="cta loop" data-go="register">เริ่มใช้งาน · สร้างบัญชี</button>'+
+  '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button></div>';
 }
 function registerV(){
   head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้คำนวณเกณฑ์อายุและเบี้ยประกันของคุณ เก็บในฐานข้อมูลของคุณเอง","welcome");
@@ -904,8 +905,12 @@ function registerV(){
   '<div class="field"><label>เพศ</label><div class="seg" id="fSex">'+
     '<button data-v="f" aria-pressed="'+(d.sex==="f")+'">หญิง</button>'+
     '<button data-v="m" aria-pressed="'+(d.sex==="m")+'">ชาย</button></div></div>'+
-  '<div class="field"><label>เบอร์โทรผู้ดูแล/ครอบครัว (ไม่บังคับ)</label><input id="fPhone" inputmode="tel" value="'+esc(d.phone||"")+'" placeholder="สำหรับแจ้งเตือนเมื่อสัญญาณเปลี่ยน"></div>'+
+  '<div class="field"><label>เบอร์โทรผู้ดูแล/ครอบครัว (ไม่บังคับ)</label><input id="fCarer" inputmode="tel" value="'+esc(d.carer||"")+'" placeholder="สำหรับแจ้งเตือนเมื่อสัญญาณเปลี่ยน"></div>'+
   '</div>'+
+  '<div class="card"><h3 style="font-size:15px;margin:0 0 6px">เชื่อมกับระบบกลาง (แนะนำ)</h3>'+
+  '<p class="sub" style="margin:0 0 12px">กรอกเบอร์และตั้งรหัส 4 หลัก เพื่อให้ผลตรวจของท่าน<b>ส่งถึงทีมดูแลได้จริง</b> และเปิดใช้บนเครื่องอื่นได้ · เว้นว่างไว้ก็ใช้งานแบบออฟไลน์ได้ แต่ทีมดูแลจะไม่เห็นผลของท่าน</p>'+
+  '<div class="field"><label>เบอร์โทรของท่าน (ใช้เข้าสู่ระบบ)</label><input id="fPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
+  '<div class="field"><label>ตั้งรหัส 4 หลัก</label><input id="fPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
   '<div class="card"><h3 style="font-size:15px;margin:0 0 10px">ความยินยอมตาม PDPA</h3>'+
   '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนป้องกัน (2) คำนวณส่วนลดเบี้ย (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
   '<label class="chk"><input type="checkbox" id="fConsent"'+(d.consent?" checked":"")+'><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
@@ -920,14 +925,72 @@ function registerV(){
     if(!S.draft.sex){toast("กรุณาเลือกเพศ");return}
     if(!document.getElementById("fConsent").checked){toast("กรุณาให้ความยินยอมตาม PDPA ก่อนเริ่มใช้งาน");return}
     var mo=parseInt(document.getElementById("fMonth").value,10)||null;
+    var ph=document.getElementById("fPhone").value.trim();
+    var pin=document.getElementById("fPin").value.trim();
+    if(ph&&!/^0\d{8,9}$/.test(ph)){toast("เบอร์โทรไม่ถูกต้อง (หรือเว้นว่างเพื่อใช้แบบออฟไลน์)");return}
+    if(ph&&!/^\d{4}$/.test(pin)){toast("กรุณาตั้งรหัสเป็นตัวเลข 4 หลัก");return}
     var age=ageFrom(yr,mo);
-    S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, birthMonth:mo, age:age, sex:S.draft.sex, phone:document.getElementById("fPhone").value.trim(), joined:todayISO()};
+    S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, birthMonth:mo, age:age, sex:S.draft.sex,
+      phone:ph||null, carerPhone:document.getElementById("fCarer").value.trim()||null, joined:todayISO()};
     S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนป้องกัน","คำนวณส่วนลดเบี้ย","ส่งต่อทีมดูแล"]};
     audit("บันทึกความยินยอม","ผู้ใช้ให้ความยินยอมตามข้อตกลง PDPA-1.0 ครบทุกวัตถุประสงค์");
     await saveAll();
     S.draft={};
-    toast("สร้างบัญชีสำเร็จ ยินดีต้อนรับคุณ"+nm);
+    if(ph){
+      this.disabled=true;this.textContent="กำลังเชื่อมระบบกลาง…";
+      var ok=await cloudRegisterApp(ph,pin,S.data.profile);
+      var c=document.getElementById("dbchip"); if(c)c.textContent=ok?"DB · CLOUD ✓":dbLabel();
+      toast(ok?"สร้างบัญชีสำเร็จ · เชื่อมระบบกลางแล้ว":"สร้างบัญชีสำเร็จ (โหมดออฟไลน์ — ทีมดูแลจะยังไม่เห็นผล)");
+    }else{
+      toast("สร้างบัญชีสำเร็จ ยินดีต้อนรับคุณ"+nm);
+    }
     go("home");
+  });
+}
+
+/* ---------- เชื่อมระบบกลาง: สมัคร / เข้าสู่ระบบ ---------- */
+async function cloudRegisterApp(phone,pin,p){
+  if(!CSBackend.isCloud())return false;
+  try{
+    await CSBackend.signUpUser(phone,pin);
+    await new Promise(function(r){setTimeout(r,800)});
+    await CSBackend.updateProfile({display_name:p.name,birth_year_be:p.birthYear,
+      birth_month:p.birthMonth,sex:p.sex,phone:phone});
+    await CSBackend.grantConsent("assessment","PDPA-1.0");
+    await CSBackend.grantConsent("share_pool","PDPA-1.0");
+    CLOUD.session=true;
+    return true;
+  }catch(e){console.warn("cloud register",e);return false}
+}
+function loginV(){
+  head("เข้าสู่ระบบ","มีบัญชีอยู่แล้ว","ใช้เบอร์โทรและรหัส 4 หลักที่ตั้งไว้ตอนสมัคร","welcome");
+  V.innerHTML='<div class="anim senior"><div class="card">'+
+  '<div class="field"><label>เบอร์โทรศัพท์</label><input id="lPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
+  '<div class="field"><label>รหัส 4 หลัก</label><input id="lPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
+  '<button class="cta loop" id="lGo">เข้าสู่ระบบ</button>'+
+  '<div class="disc">ข้อมูลของคุณจะถูกดึงกลับมาจากระบบกลางโดยอัตโนมัติ</div></div>';
+  document.getElementById("lGo").addEventListener("click",async function(){
+    var ph=document.getElementById("lPhone").value.trim(), pin=document.getElementById("lPin").value.trim();
+    if(!/^0\d{8,9}$/.test(ph)){toast("กรุณากรอกเบอร์โทรให้ถูกต้อง");return}
+    if(!/^\d{4}$/.test(pin)){toast("รหัสต้องเป็นตัวเลข 4 หลัก");return}
+    this.disabled=true;this.textContent="กำลังเข้าสู่ระบบ…";
+    try{
+      await CSBackend.signInUser(ph,pin);
+      CLOUD.session=true;
+      var cp=CSBackend.getProfile();
+      S.data.profile={uid:"u"+Date.now().toString(36),name:cp.display_name||"สมาชิก",
+        birthYear:cp.birth_year_be,birthMonth:cp.birth_month,
+        age:ageFrom(cp.birth_year_be,cp.birth_month),sex:cp.sex,phone:ph,joined:cp.created_at};
+      var rows=await CSBackend.listAssessments(100);
+      S.data.assessments=rows.map(function(r){return{
+        at:r.assessed_at,score:r.score,max:r.score_max,tier:r.tier,
+        ftsst:r.ftsst_seconds!=null?+r.ftsst_seconds:null,
+        tug:r.tug_seconds!=null?+r.tug_seconds:null,parts:r.parts,
+        method:r.method,reps:r.reps,verified:r.identity_verified}});
+      await saveAll();
+      toast("ยินดีต้อนรับกลับ · ดึงผล "+rows.length+" รายการ");
+      go("home");
+    }catch(e){this.disabled=false;this.textContent="เข้าสู่ระบบ";toast("เข้าสู่ระบบไม่สำเร็จ ตรวจสอบเบอร์และรหัสอีกครั้ง")}
   });
 }
 
@@ -1087,7 +1150,7 @@ var QS=[
 ];
 function assessQV(i){
   i=i||0;var q=QS[i];
-  head("ขั้นที่ "+(i+2)+" / 5",q.q,"","");
+  head("ขั้นที่ "+(i+2)+" / 5",q.q,"","assessIntro");
   var extra="";
   if(q.verify){
     extra='<div class="card" style="border:1.5px solid var(--accent);margin-top:14px">'+
@@ -1146,7 +1209,7 @@ async function finishAssess(){
 function assessResultV(rec){
   rec=rec||S.data.assessments[S.data.assessments.length-1];
   var t=CFG.tiers[rec.tier], p=S.data.profile;
-  head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at));
+  head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at),"home");
   var d=CFG.discount[rec.tier];
   V.innerHTML='<div class="anim">'+
   '<div class="hero"><p class="eyebrow">คะแนนรวม</p>'+
@@ -1690,7 +1753,7 @@ function policyV(){
   var p=S.data.profile, pol=S.data.policy;
   var last=S.data.assessments[S.data.assessments.length-1];
   var tier=last?last.tier:null;
-  head("ประกันของฉัน","ประกันดูแลยามช่วยตัวเองไม่ได้","ค่าเบี้ยคิดจากอายุ เพศ และผลตรวจล่าสุดของคุณ");
+  head("ประกันของฉัน","ประกันดูแลยามช่วยตัวเองไม่ได้","ค่าเบี้ยคิดจากอายุ เพศ และผลตรวจล่าสุดของคุณ","home");
   if(pol){
     var paid=S.data.payments.length;
     V.innerHTML='<div class="anim">'+
@@ -1773,6 +1836,8 @@ function aiV(){
   var log=(S.data.audit||[]).slice(-12).reverse();
   var c=S.data.consent;
   V.innerHTML='<div class="anim">'+
+  '<a href="./CareSignal-Flow.html" style="display:block;text-decoration:none;background:var(--surf2);border:1px solid #CFE0FD;border-radius:14px;padding:16px 18px;margin-bottom:14px;color:inherit"><b style="color:var(--brand)">เปิดคู่มือ: ข้อมูลของคุณเดินทางไปไหน &rsaquo;</b><span style="display:block;font-size:13.5px;color:var(--ink2);margin-top:4px">อธิบายทีละขั้นว่าผลตรวจถูกส่งไปที่ใด ใครเห็นอะไรบ้าง และสีเขียว เหลือง ส้ม แดง ใช้เกณฑ์ตัวเลขอะไรตัดสิน</span></a>'+
+  
   '<div class="card"><h3>ระบบนี้คืออะไร (Model Card ฉบับผู้ใช้)</h3>'+
   '<div class="rowline"><span class="k">กล้องตรวจจับท่าทาง</span><span class="v">AI จริง</span></div>'+'<div class="rowline"><span class="k">การอ่านแนวโน้ม</span><span class="v">กฎที่ตรวจสอบได้</span></div>'+
   '<div class="rowline"><span class="k">รุ่น</span><span class="v">v'+ENGINE.version+'</span></div>'+
@@ -1799,7 +1864,7 @@ function aiV(){
 
 function meV(){
   var p=S.data.profile;
-  head("ตั้งค่า",esc(p.name),"สมาชิกตั้งแต่ "+thDate(p.joined));
+  head("ตั้งค่า",esc(p.name),"สมาชิกตั้งแต่ "+thDate(p.joined),"home");
   V.innerHTML='<div class="anim">'+
   '<div class="card"><h3>ข้อมูลส่วนตัว</h3>'+
   '<div class="rowline"><span class="k">รหัสสมาชิก</span><span class="v">'+esc(p.uid)+'</span></div>'+
