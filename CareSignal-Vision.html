@@ -161,6 +161,8 @@ body{margin:0;background:#0B1220;font-family:var(--sans);color:var(--ink);-webki
   font-size:17px;line-height:1.55;opacity:0;transform:translateY(9px);transition:.25s;pointer-events:none;z-index:60}
 .toast.on{opacity:1;transform:none}
 :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+@keyframes csPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.75}}
+#statusLight.pulse{animation:csPulse 1.1s ease-in-out infinite}
 /* เคารพผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหว (WCAG 2.3.3) */
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
@@ -709,6 +711,7 @@ function askTime(cb,onCancel){
     }});
 }
 function render(arg){
+  setTimeout(bindFontBar,0);
   T.hidden=!S.data.profile||["test","calib","q","result","plog","mrv","face"].indexOf(S.screen)>=0;
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
@@ -802,6 +805,7 @@ function assessV(){
   '<p class="sub" style="color:rgba(255,255,255,.75);margin:0 0 4px">นั่งบนเก้าอี้ กอดอกไว้ แล้วลุกยืนสุดและนั่งลงให้ครบ 5 ครั้ง เร็วที่สุดเท่าที่ทำได้อย่างปลอดภัย</p>'+
   '<p class="sub" style="color:#FCD34D;margin:8px 0 0">กล้องจะนับครั้งและจับเวลาให้เอง ไม่ต้องกดปุ่มระหว่างทำ</p></div>'+
   lastCard+
+  fontBarHTML()+
   '<button class="cta" data-go="face">เปิดกล้องและเริ่มทดสอบ</button>'+
   '<button class="ghostb" id="manual">ทำแบบจับเวลาเอง (กรณีกล้องใช้ไม่ได้)</button>'+
   '<div class="disc">ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์ · หากรู้สึกเวียนศีรษะหรือเจ็บระหว่างทำ ให้หยุดทันที</div></div>';
@@ -811,6 +815,97 @@ function assessV(){
       audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (ไม่ได้ใช้กล้อง)");
       go("q",0);
     });
+  });
+}
+
+/* ============================================================
+   ไฟสถานะ 3 สี + เสียงพูดภาษาไทย + ปรับขนาดตัวอักษร
+   ------------------------------------------------------------
+   ออกแบบสำหรับผู้สูงอายุ:
+   - ไฟวงกลมใหญ่ 3 สี: เขียว=พร้อม/สำเร็จ เหลือง=กำลังเตรียม แดง=ติดปัญหา
+   - เสียงพูดไทย (Web Speech API) นับครั้ง บอกสถานะ นับถอยหลัง
+   - ปุ่ม ก+ / ก- ปรับขนาดตัวอักษรทั้งแอป จำค่าไว้ถาวร
+   ============================================================ */
+
+/* ---------- ไฟสถานะ ---------- */
+var STATUS_COLORS={green:"#0E9F6E",yellow:"#F5B93E",red:"#DC2626"};
+var STATUS_LAST=null;
+function setStatus(color,text,speakText){
+  var el=document.getElementById("statusLight");
+  var tx=document.getElementById("statusText");
+  if(el){
+    el.style.background=STATUS_COLORS[color]||STATUS_COLORS.yellow;
+    el.style.boxShadow="0 0 0 8px "+(STATUS_COLORS[color]||"#F5B93E")+"33, 0 4px 14px rgba(0,0,0,.3)";
+    el.classList.toggle("pulse",color==="yellow");
+  }
+  if(tx)tx.textContent=text||"";
+  /* พูดเฉพาะเมื่อสถานะเปลี่ยน กันเสียงรัวซ้ำ */
+  var key=color+"|"+(speakText||text||"");
+  if(key!==STATUS_LAST){STATUS_LAST=key; if(speakText!==false)speak(speakText||text)}
+}
+function statusHTML(){
+  return '<div id="statusBar" style="display:flex;align-items:center;gap:14px;background:rgba(11,18,32,.78);backdrop-filter:blur(10px);border-radius:18px;padding:12px 16px;margin-top:10px">'+
+    '<div id="statusLight" style="width:44px;height:44px;border-radius:50%;flex:none;background:#F5B93E;transition:background .25s"></div>'+
+    '<div id="statusText" style="font-size:17px;font-weight:600;color:#fff;line-height:1.45;flex:1">กำลังเตรียมระบบ…</div></div>';
+}
+
+/* ---------- เสียงพูดภาษาไทย ---------- */
+var VOICE={on:(function(){try{return localStorage.getItem("csv:voice")!=="off"}catch(e){return true}})()};
+function speak(text,opts){
+  if(!VOICE.on||!text)return;
+  try{
+    if(!("speechSynthesis" in window))return;
+    opts=opts||{};
+    if(opts.interrupt!==false)speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(text);
+    u.lang="th-TH"; u.rate=opts.rate||0.95; u.volume=1;
+    var v=speechSynthesis.getVoices().filter(function(x){return /th/i.test(x.lang)});
+    if(v.length)u.voice=v[0];
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function voiceToggle(){
+  VOICE.on=!VOICE.on;
+  try{localStorage.setItem("csv:voice",VOICE.on?"on":"off")}catch(e){}
+  if(VOICE.on)speak("เปิดเสียงแนะนำแล้ว");
+  return VOICE.on;
+}
+/* iOS/Android ต้องมี user gesture ก่อนถึงจะพูดได้ — ปลดล็อกตอนแตะครั้งแรก */
+document.addEventListener("click",function unlock(){
+  try{if("speechSynthesis" in window){var u=new SpeechSynthesisUtterance("");speechSynthesis.speak(u)}}catch(e){}
+  document.removeEventListener("click",unlock);
+},{once:true});
+
+/* ---------- ปรับขนาดตัวอักษรทั้งแอป ---------- */
+var FONTSCALE=(function(){try{return parseFloat(localStorage.getItem("csv:fontScale"))||1}catch(e){return 1}})();
+function applyFontScale(){
+  document.documentElement.style.fontSize=(16*FONTSCALE)+"px";
+  /* ไฟล์นี้ใช้ px เป็นหลัก จึง scale ที่ .phone ด้วย zoom สำหรับเนื้อหา */
+  var v=document.querySelector(".view");
+  if(v)v.style.zoom=FONTSCALE;
+}
+function fontScaleSet(delta){
+  FONTSCALE=Math.min(1.6,Math.max(1,Math.round((FONTSCALE+delta)*10)/10));
+  try{localStorage.setItem("csv:fontScale",FONTSCALE)}catch(e){}
+  applyFontScale();
+  var b=document.getElementById("fsVal"); if(b)b.textContent=Math.round(FONTSCALE*100)+"%";
+}
+function fontBarHTML(){
+  return '<div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:8px 0 2px">'+
+    '<span style="font-size:12.5px;color:var(--ink3)">ขนาดตัวอักษร</span>'+
+    '<button id="fsMinus" style="width:44px;height:40px;border:1.5px solid var(--line);border-radius:12px;background:var(--surf);font-size:16px;font-family:inherit;cursor:pointer">ก-</button>'+
+    '<b id="fsVal" style="font-size:13px;min-width:44px;text-align:center">'+Math.round(FONTSCALE*100)+'%</b>'+
+    '<button id="fsPlus" style="width:44px;height:40px;border:1.5px solid var(--line);border-radius:12px;background:var(--surf);font-size:19px;font-weight:600;font-family:inherit;cursor:pointer">ก+</button>'+
+    '<button id="voiceBtn" style="height:40px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;background:'+(VOICE.on?"var(--surf2)":"var(--surf)")+';font-size:13.5px;font-family:inherit;cursor:pointer">'+(VOICE.on?"🔊 เสียง: เปิด":"🔇 เสียง: ปิด")+'</button></div>';
+}
+function bindFontBar(){
+  var m=document.getElementById("fsMinus"),p=document.getElementById("fsPlus"),vb=document.getElementById("voiceBtn");
+  if(m)m.addEventListener("click",function(){fontScaleSet(-0.1)});
+  if(p)p.addEventListener("click",function(){fontScaleSet(+0.1)});
+  if(vb)vb.addEventListener("click",function(){
+    var on=voiceToggle();
+    vb.textContent=on?"🔊 เสียง: เปิด":"🔇 เสียง: ปิด";
+    vb.style.background=on?"var(--surf2)":"var(--surf)";
   });
 }
 
@@ -894,6 +989,7 @@ function faceV(){
   '<div class="stage" style="aspect-ratio:1/1"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
   '<div class="hudbot"><div class="coach" id="coach">มองตรงมาที่กล้อง ให้เห็นใบหน้าเต็ม</div></div></div></div>'+
+  statusHTML()+
   '<label class="chk" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(already?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
   '<button class="cta" id="fcSave" disabled>บันทึกใบหน้าและไปต่อ</button>'+
   '<button class="ghostb" id="fcSkip">ข้าม · ทำต่อโดยไม่ยืนยันตัวตน</button>'+
@@ -917,8 +1013,10 @@ async function startFacePipeline(){
   var tag=document.getElementById("tag"),coach=document.getElementById("coach"),
       save=document.getElementById("fcSave"),chk=document.getElementById("fcConsent");
   var stream,cur=null;
+  setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480},height:{ideal:480}},audio:false})}
-  catch(e){tag.textContent="เปิดกล้องไม่ได้";coach.textContent="ข้ามขั้นนี้ได้ ผลจะระบุว่าไม่ได้ยืนยันตัวตน";return}
+  catch(e){tag.textContent="เปิดกล้องไม่ได้";coach.textContent="ข้ามขั้นนี้ได้ ผลจะระบุว่าไม่ได้ยืนยันตัวตน";
+    setStatus("red","เปิดกล้องไม่ได้ — ข้ามขั้นนี้ได้ กดปุ่มข้ามด้านล่าง");return}
   S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
   try{await loadFaceModel(tag)}
   catch(e){tag.textContent="โหลดตัวตรวจใบหน้าไม่สำเร็จ";coach.textContent="ข้ามขั้นนี้ได้ ต้องต่ออินเทอร์เน็ตครั้งแรก";return}
@@ -937,8 +1035,10 @@ async function startFacePipeline(){
       });
       var sg=faceSignature(lm);
       if(sg){cur=sg;tag.textContent="พบใบหน้าแล้ว";coach.textContent="เห็นชัดแล้ว — ติ๊กยินยอมด้านล่างแล้วกดบันทึก";
+        setStatus("green","พร้อมบันทึก — ติ๊กยินยอมแล้วกดปุ่มบันทึก");
         save.disabled=!chk.checked;}
-    }else{tag.textContent="ยังไม่พบใบหน้า";coach.textContent="ขยับให้เห็นใบหน้าเต็มในกรอบ";save.disabled=true}
+    }else{tag.textContent="ยังไม่พบใบหน้า";coach.textContent="ขยับให้เห็นใบหน้าเต็มในกรอบ";save.disabled=true;
+      setStatus("yellow","ยังไม่พบใบหน้า — ขยับให้เห็นใบหน้าเต็มในกรอบ")}
     RAF=requestAnimationFrame(loop);
   }
   loop();
@@ -999,6 +1099,7 @@ function calibV(){
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
   '<div class="hudbot"><div id="cstep" style="font-size:14px;font-weight:600">ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว</div>'+
   '<div class="coach" id="coach">วางมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า</div></div></div></div>'+
+  statusHTML()+
   '<button class="cta" id="cap" disabled>บันทึกท่านั่ง</button>'+
   '<button class="ghostb" data-go="assess">ยกเลิก</button>'+
   '<div class="disc">ภาพจากกล้องประมวลผลในเครื่องนี้เท่านั้น ไม่มีการอัปโหลดภาพหรือวิดีโอไปที่ใด</div></div>';
@@ -1013,6 +1114,7 @@ function testV(){
   '<span class="clock" id="clk">0.0<span style="font-size:13px"> วิ</span></span></div>'+
   '<div class="track"><i id="trk" style="width:0%"></i></div>'+
   '<div class="coach" id="coach">กดปุ่มด้านล่างเมื่อนั่งพร้อมแล้ว<span class="statebadge" id="st">รอเริ่ม</span></div></div></div></div>'+
+  statusHTML()+
   '<button class="cta" id="startBtn">เริ่มจับเวลา</button>'+
   '<button class="ghostb" id="stopBtn" hidden>นับไม่ขึ้น · หยุดแล้วกรอกเวลาเอง</button>'+
   '<button class="ghostb" data-go="assess">ยกเลิก</button></div>';
@@ -1022,27 +1124,31 @@ async function startPipeline(mode){
   var video=document.getElementById("vid"), canvas=document.getElementById("cv"), ctx=canvas.getContext("2d");
   var tag=document.getElementById("tag"), coach=document.getElementById("coach");
   var stream;
+  setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false});
   }catch(e){
     tag.textContent="เปิดกล้องไม่ได้";
     coach.innerHTML="เบราว์เซอร์ปฏิเสธการเข้าถึงกล้อง ให้อนุญาตในการตั้งค่าแล้วลองใหม่";
+    setStatus("red","เปิดกล้องไม่ได้ — ใช้วิธีจับเวลาเองแทนได้");
     showFallback("กล้องใช้ไม่ได้ในเครื่องนี้");
     return;
   }
   S.cam=stream; video.srcObject=stream;
   await video.play().catch(function(){});
+  setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง รอสักครู่",false);
   try{ await loadModel(tag); }
   catch(e){
     tag.textContent="โหลดโมเดลไม่สำเร็จ";
     coach.innerHTML="ต้องต่ออินเทอร์เน็ตครั้งแรกเพื่อโหลดโมเดลตรวจจับท่าทาง";
+    setStatus("red","โหลดระบบไม่สำเร็จ — ใช้วิธีจับเวลาเองแทนได้");
     showFallback("โหลดโมเดลไม่สำเร็จ");
     return;
   }
   tag.textContent="ตรวจจับท่าทางแล้ว";
 
   if(mode==="calib")setupCalib(video,canvas,ctx);
-  else setupTest(video,canvas,ctx);
+  else{setStatus("green","พร้อมแล้ว — นั่งบนเก้าอี้ แล้วกดปุ่มเริ่มจับเวลา");setupTest(video,canvas,ctx);}
 }
 function drawPose(ctx,canvas,video,lm){
   if(canvas.width!==video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight}
@@ -1071,11 +1177,15 @@ function setupCalib(video,canvas,ctx){
     drawPose(ctx,canvas,video,lm);
     if(lm){
       var q=visOK(lm), m=hipRatio(lm);
-      if(q<0.85){coach.textContent="ขยับมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า";cap.disabled=true}
-      else if(m==null){coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";cap.disabled=true}
+      if(q<0.85){coach.textContent="ขยับมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า";cap.disabled=true;
+        setStatus("yellow","ยังเห็นตัวไม่ครบ — ถอยมือถือให้เห็นตั้งแต่หัวถึงเท้า")}
+      else if(m==null){coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";cap.disabled=true;
+        setStatus("yellow","ถอยห่างอีกนิด ให้เห็นทั้งตัว")}
       else{cur=m;cap.disabled=false;
-        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งให้สบายแล้วกดบันทึกท่านั่ง":"เห็นชัดแล้ว — ยืนตรงแล้วกดบันทึกท่ายืน";}
-    }else{coach.textContent="ยังไม่พบคนในภาพ";cap.disabled=true}
+        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งให้สบายแล้วกดบันทึกท่านั่ง":"เห็นชัดแล้ว — ยืนตรงแล้วกดบันทึกท่ายืน";
+        setStatus("green",step===0?"พร้อมแล้ว — นั่งให้สบาย แล้วกดปุ่มบันทึกท่านั่ง":"พร้อมแล้ว — ยืนตรง แล้วกดปุ่มบันทึกท่ายืน");}
+    }else{coach.textContent="ยังไม่พบคนในภาพ";cap.disabled=true;
+      setStatus("yellow","ยังไม่พบคนในภาพ — เข้ามาในกรอบกล้อง")}
     RAF=requestAnimationFrame(loop);
   }
   loop();
@@ -1138,7 +1248,10 @@ function setupTest(video,canvas,ctx){
         st.textContent=DET.state==="stand"?"ยืน":"นั่ง";
         repEl.textContent=DET.reps;
         trk.style.width=(DET.reps/5*100)+"%";
-        if(ev&&ev.event==="rep"){lastEvt=performance.now();coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>"}
+        if(ev&&ev.event==="rep"){lastEvt=performance.now();
+          coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>";
+          setStatus("green","นับได้ "+ev.reps+" ครั้ง จาก 5 ครั้ง",false);
+          speak(["","หนึ่ง","สอง","สาม","สี่","ห้า"][ev.reps]);}
         if(ev&&ev.event==="down")lastEvt=performance.now();
         if(ev&&ev.event==="finish"){finishTest(ev.elapsed);return}
       }else if(m!=null&&!running){
@@ -1151,18 +1264,34 @@ function setupTest(video,canvas,ctx){
       /* ตาข่ายนิรภัย: นับไม่ขึ้นเกิน 20 วินาที → แนะทางออก ไม่ปล่อยให้ติดค้าง */
       if(performance.now()-lastEvt>20000){
         coach.innerHTML="ระบบนับไม่ขึ้นใช่ไหม — ลอง<b>ลุกให้สุด นั่งให้ก้นแตะเก้าอี้</b> หรือกดปุ่มด้านล่างเพื่อกรอกเวลาเอง";
+        setStatus("red","ระบบนับไม่ขึ้น — ลุกให้สุด นั่งให้สุด หรือกดปุ่มกรอกเวลาเอง");
         stopBtn.hidden=false;
       }
     }
     RAF=requestAnimationFrame(loop);
   }
   loop();
+  var counting=false;
   startBtn.addEventListener("click",function(){
-    if(running)return;
-    running=true;t0=performance.now();lastEvt=t0;DET.start(t0);
-    startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
-    stopBtn.hidden=false;
-    coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
+    if(running||counting)return;
+    counting=true;startBtn.disabled=true;
+    var n=3;
+    var nm={3:"สาม",2:"สอง",1:"หนึ่ง"};
+    setStatus("yellow","เตรียมตัว… "+n,false);speak("เตรียมตัว "+nm[n]);
+    startBtn.textContent="เตรียมตัว… "+n;
+    var iv=setInterval(function(){
+      if(S.screen!=="test"){clearInterval(iv);counting=false;return}
+      n--;
+      if(n>=1){setStatus("yellow","เตรียมตัว… "+n,false);speak(nm[n]);startBtn.textContent="เตรียมตัว… "+n;}
+      else{
+        clearInterval(iv);counting=false;
+        running=true;t0=performance.now();lastEvt=t0;DET.start(t0);
+        startBtn.textContent="กำลังจับเวลา…";
+        stopBtn.hidden=false;
+        setStatus("green","เริ่ม! ลุก-นั่งให้ครบ 5 ครั้ง",false);speak("เริ่มได้เลย");
+        coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
+      }
+    },1000);
   });
   stopBtn.addEventListener("click",function(){
     var reps=DET?DET.reps:0;
@@ -1197,6 +1326,7 @@ function finishTest(elapsed){
     ? ("ตรวจใบหน้า "+ck+" ครั้ง ไม่ตรง "+fl+" ครั้ง → "+(S.draft.identityVerified?"ยืนยันผ่าน":"ยืนยันไม่ผ่าน"))
     : "ผู้ใช้ไม่ได้ลงทะเบียนใบหน้า ผลนี้ไม่ได้ยืนยันตัวตน");
   audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
+  speak("ครบห้าครั้ง เสร็จเรียบร้อย ใช้เวลา "+S.draft.ftsst.toFixed(0)+" วินาที เก่งมากค่ะ");
   toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
   if(PILOT){go("plog");return}
   go("q",0);
@@ -1690,6 +1820,7 @@ document.addEventListener("click",function(e){
   if(g){go(g.dataset.go)}
 });
 (async function(){
+  applyFontScale();
   await loadAll();
   go(S.data.profile?"assess":"welcome");
   cloudBoot();   /* เชื่อมระบบกลางเบื้องหลัง ไม่บล็อกการเปิดแอป */
