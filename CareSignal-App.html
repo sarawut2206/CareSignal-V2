@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
-<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,viewport-fit=cover">
+<!-- ล็อก layout ไว้ที่ 430 หน่วยแล้วให้เบราว์เซอร์ขยายเต็มจอจริง — ขนาดตัวอักษรเป็นสัดส่วนเดียวกันทุกเครื่อง -->
+<meta name="viewport" content="width=430, viewport-fit=cover">
 <meta name="description" content="แอปสมาชิก CareSignal — วัดสมรรถภาพด้วยกล้อง ดูแนวโน้ม สมัครประกัน LTC ที่เบี้ยลดได้ทางเดียวตามผลตรวจ">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -701,11 +702,11 @@ function dialog(opts){
   wrap.id="csDlg";
   wrap.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.55);z-index:999;display:flex;align-items:center;justify-content:center;padding:22px";
   wrap.innerHTML='<div role="dialog" aria-modal="true" style="background:#fff;border-radius:22px;padding:24px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(15,27,51,.35)">'+
-    '<h3 style="margin:0 0 8px;font-size:20px;line-height:1.4">'+esc(opts.title)+'</h3>'+
-    (opts.body?'<p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#5B6B84">'+opts.body+'</p>':'')+
-    (opts.input?'<input id="dlgIn" inputmode="decimal" placeholder="'+esc(opts.placeholder||"")+'" style="width:100%;box-sizing:border-box;font-size:28px;font-family:inherit;padding:14px;border:1.5px solid #DFE7F2;border-radius:14px;text-align:center;margin-bottom:14px">':'')+
-    '<button id="dlgOk" style="display:block;width:100%;border:0;border-radius:14px;padding:17px;font-size:18px;font-weight:600;font-family:inherit;cursor:pointer;background:'+(opts.danger?"#DC2626":"#2563EB")+';color:#fff">'+esc(opts.ok||"ตกลง")+'</button>'+
-    '<button id="dlgNo" style="display:block;width:100%;border:0;border-radius:14px;padding:14px;font-size:16px;font-family:inherit;cursor:pointer;background:transparent;color:#5B6B84;margin-top:6px">'+esc(opts.cancel||"ยกเลิก")+'</button></div>';
+    '<h3 style="margin:0 0 8px;font-size:23px;line-height:1.4">'+esc(opts.title)+'</h3>'+
+    (opts.body?'<p style="margin:0 0 18px;font-size:18px;line-height:1.7;color:#5B6B84">'+opts.body+'</p>':'')+
+    (opts.input?'<input id="dlgIn" inputmode="decimal" placeholder="'+esc(opts.placeholder||"")+'" style="width:100%;box-sizing:border-box;font-size:30px;font-family:inherit;padding:16px;border:1.5px solid #DFE7F2;border-radius:14px;text-align:center;margin-bottom:14px">':'')+
+    '<button id="dlgOk" style="display:block;width:100%;border:0;border-radius:14px;padding:19px;font-size:20px;font-weight:600;font-family:inherit;cursor:pointer;background:'+(opts.danger?"#DC2626":"#2563EB")+';color:#fff">'+esc(opts.ok||"ตกลง")+'</button>'+
+    '<button id="dlgNo" style="display:block;width:100%;border:0;border-radius:14px;padding:16px;font-size:18px;font-family:inherit;cursor:pointer;background:transparent;color:#5B6B84;margin-top:6px">'+esc(opts.cancel||"ยกเลิก")+'</button></div>';
   document.body.appendChild(wrap);
   var inp=document.getElementById("dlgIn");
   var prevFocus=document.activeElement;
