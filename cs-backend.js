@@ -322,6 +322,107 @@ var CSBackend = (function () {
   }
 
   /* ============================================================
+     ข้อมูลตรวจสอบความแม่นยำเครื่องมือวัด (Preliminary Technical Validation)
+     ------------------------------------------------------------
+     ผู้เข้าร่วมนำร่องไม่ต้องมีบัญชี — นักวิจัยที่ล็อกอินเป็นผู้บันทึกแทน
+     เก็บรหัสผู้เข้าร่วม (P01, P02) ไม่ใช่ชื่อจริง
+     ============================================================ */
+  async function saveTrial(t) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("validation_trials").insert({
+      researcher_id: u.id, site: t.site || null,
+      participant_code: t.pid, trial_no: t.trialNo || 1, method: t.method || null,
+      cs_seconds: t.csTime != null ? t.csTime : null,
+      ref1_seconds: t.ref1 != null ? t.ref1 : null,
+      ref2_seconds: t.ref2 != null ? t.ref2 : null,
+      reps: t.reps != null ? t.reps : null,
+      reps_correct: t.repsCorrect === true ? true : (t.repsCorrect === false ? false : null),
+      cadence_cv: t.cv != null ? t.cv : null, gaps: t.gaps || null,
+      sit_ref: t.sitRef != null ? t.sitRef : null,
+      stand_ref: t.standRef != null ? t.standRef : null,
+      setup_sec: t.setupSec != null ? t.setupSec : null,
+      tech_fail: !!t.techFail, notes: t.notes || null
+    }).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+
+  async function listTrials(limit) {
+    if (!isCloud()) return [];
+    var r = await sb.from("validation_trials").select("*")
+      .order("created_at", { ascending: true }).limit(limit || 1000);
+    return r.data || [];
+  }
+
+  /* ============================================================
+     การตรวจสอบกับเวชระเบียน (Medical Record Verification)
+     ------------------------------------------------------------
+     ขอบเขตรายครั้ง: ระบุโรงพยาบาล ข้อมูลที่ขอ ช่วงเวลา และวัตถุประสงค์
+     ฐานข้อมูลจะปฏิเสธถ้าไม่มีความยินยอมที่ยังไม่ถูกถอน
+     ============================================================ */
+  async function requestMedicalCheck(req) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("mrv_requests").insert({
+      user_id: u.id, assessment_id: req.assessmentId || null,
+      hospital: req.hospital, data_items: req.items, period: req.period,
+      purpose: req.purpose || "underwriting"
+    }).select().single();
+    if (r.error) throw r.error;
+    await audit("mrv.request", u.id,
+      "ขอตรวจสอบเวชระเบียนที่ " + req.hospital + " · " + (req.items || []).join(", ") + " · ช่วง " + req.period);
+    return r.data;
+  }
+
+  async function listMedicalChecks() {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("mrv_requests").select("*")
+      .eq("user_id", u.id).order("requested_at", { ascending: false });
+    return r.data || [];
+  }
+
+  /* สำหรับเจ้าหน้าที่: บันทึกผลการตรวจสอบ → ระบบปรับธงแหล่งข้อมูลให้อัตโนมัติ */
+  async function completeMedicalCheck(id, outcome) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("mrv_requests").update({
+      status: "completed", outcome: outcome, handled_by: u.id
+    }).eq("id", id).select().single();
+    if (r.error) throw r.error;
+    await audit("mrv.complete", r.data.user_id, "บันทึกผลตรวจสอบเวชระเบียน: " + JSON.stringify(outcome));
+    return r.data;
+  }
+
+  /* ============================================================
+     ลายเซ็นใบหน้า — ผูกกับบัญชีคลาวด์แต่ "ไม่อัปโหลด"
+     ------------------------------------------------------------
+     สำคัญ: ตัวลายเซ็นเก็บใน localStorage ของเครื่องเท่านั้น
+     ระบบกลางเก็บเพียงผลการยืนยัน (identity_verified) ซึ่งเป็นค่าจริง/เท็จ
+     การผูกกับบัญชีทำโดยใช้ user id ของคลาวด์เป็นกุญแจในเครื่อง
+     เพื่อให้คนละบัญชีบนเครื่องเดียวกันไม่ปะปนกัน
+     ============================================================ */
+  function faceKey(uid) { return "cs:faceSig:" + uid; }
+  async function faceStoreLocal(sig) {
+    var u = await currentUser();
+    var uid = u ? u.id : "local";
+    try { localStorage.setItem(faceKey(uid), JSON.stringify(sig)); } catch (e) {}
+    if (u) await audit("biometric.enroll", u.id,
+      "ลงทะเบียนลายเซ็นใบหน้า 6 ค่าไว้ในเครื่องผู้ใช้ · ไม่อัปโหลดภาพหรือลายเซ็นขึ้นระบบกลาง");
+  }
+  async function faceLoadLocal() {
+    var u = await currentUser();
+    var uid = u ? u.id : "local";
+    try { var s = localStorage.getItem(faceKey(uid)); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+  }
+  async function faceClearLocal() {
+    var u = await currentUser();
+    var uid = u ? u.id : "local";
+    try { localStorage.removeItem(faceKey(uid)); } catch (e) {}
+  }
+
+  /* ============================================================
      สิทธิลบข้อมูลทั้งหมดตาม PDPA
      ------------------------------------------------------------
      ลบ profile แล้ว cascade ลบ consents/assessments/risk_signals/referrals
@@ -349,6 +450,10 @@ var CSBackend = (function () {
     saveRiskSignal: saveRiskSignal, createReferral: createReferral,
     listReferralQueue: listReferralQueue, decideReferral: decideReferral,
     insurerPortfolio: insurerPortfolio,
+    saveTrial: saveTrial, listTrials: listTrials,
+    requestMedicalCheck: requestMedicalCheck, listMedicalChecks: listMedicalChecks,
+    completeMedicalCheck: completeMedicalCheck,
+    faceStoreLocal: faceStoreLocal, faceLoadLocal: faceLoadLocal, faceClearLocal: faceClearLocal,
     audit: audit, listAudit: listAudit,
     deleteAllMyData: deleteAllMyData
   };

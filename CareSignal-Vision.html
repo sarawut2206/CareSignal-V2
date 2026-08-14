@@ -463,7 +463,21 @@ var PILOT=(function(){
 var PLOG={
   all:function(){try{return JSON.parse(localStorage.getItem("csv:pilotLog")||"[]")}catch(e){return[]}},
   save:function(a){try{localStorage.setItem("csv:pilotLog",JSON.stringify(a))}catch(e){toast("พื้นที่เก็บข้อมูลเต็ม — กรุณาส่งออก CSV แล้วล้างข้อมูล")}},
-  add:function(r){var a=this.all();a.push(r);this.save(a);return a.length},
+  add:function(r){
+    var a=this.all();a.push(r);this.save(a);
+    /* ซิงก์ขึ้นระบบกลางถ้านักวิจัยล็อกอินไว้ — เก็บรหัสผู้เข้าร่วม ไม่ใช่ชื่อจริง */
+    if(typeof CLOUD!=="undefined"&&CLOUD.session&&CSBackend.isCloud()){
+      CSBackend.saveTrial({site:PLOG.site(),pid:r.pid,trialNo:r.trialNo,method:r.method,
+        csTime:r.csTime,ref1:r.ref1,ref2:r.ref2,reps:r.reps,repsCorrect:r.repsCorrect,
+        cv:r.cv,gaps:r.gaps,sitRef:r.sitRef,standRef:r.standRef,setupSec:r.setupSec,
+        techFail:r.techFail,notes:r.notes})
+        .then(function(){toast("บันทึกขึ้นระบบกลางแล้ว")})
+        .catch(function(e){console.warn("trial sync",e)});
+    }
+    return a.length;
+  },
+  site:function(){try{return localStorage.getItem("csv:pilotSite")||null}catch(e){return null}},
+  setSite:function(v){try{localStorage.setItem("csv:pilotSite",v)}catch(e){}},
   clear:function(){try{localStorage.removeItem("csv:pilotLog")}catch(e){}}
 };
 /* สรุปสถิติตาม KPI ของการตรวจสอบเครื่องมือวัด */
@@ -554,6 +568,8 @@ async function cloudSync(rec,tr){
       at:rec.at,method:rec.method,ftsst:rec.ftsst,reps:rec.reps,cv:rec.cv,gaps:rec.gaps,
       score:rec.score,max:rec.max,tier:rec.tier,parts:rec.parts,
       verified:false,engine:ENGINE.version});
+    rec.cloudId=a.id;
+    try{var L=S.data.assessments;for(var i=L.length-1;i>=0;i--){if(L[i].at===rec.at){L[i].cloudId=a.id;break}}await DB.set("visionData",S.data)}catch(e){}
     if(tr){
       var rs=await CSBackend.saveRiskSignal(a.id,{level:tr.level,nextDays:tr.nextDays,
         engine:ENGINE.version,flags:tr.flags.map(function(f){return{id:f.id,text:f.text,why:f.why}})});
@@ -693,12 +709,12 @@ function askTime(cb,onCancel){
     }});
 }
 function render(arg){
-  T.hidden=!S.data.profile||["test","calib","q","result","plog"].indexOf(S.screen)>=0;
+  T.hidden=!S.data.profile||["test","calib","q","result","plog","mrv"].indexOf(S.screen)>=0;
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
   var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
-          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV}[S.screen]||assessV;
+          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV}[S.screen]||assessV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -1032,6 +1048,7 @@ function plogV(){
   '<div style="font-family:var(--mono);font-size:40px;font-weight:600;line-height:1.15">'+(d.ftsst!=null?d.ftsst.toFixed(1):"—")+'<span style="font-size:17px;opacity:.75"> วินาที</span></div>'+
   '<div style="font-size:13.5px;opacity:.85;margin-top:4px">นับได้ '+(d.reps!=null?d.reps:"—")+' ครั้ง'+(d.gaps&&d.gaps.length?' · ต่อครั้ง '+d.gaps.join(" · ")+' วิ':'')+'</div></div>'+
   '<div class="card">'+
+  '<div class="field"><label>สถานที่เก็บข้อมูล</label><input id="pSite" value="'+esc(PLOG.site()||"")+'" placeholder="เช่น ชมรมผู้สูงอายุ ต.บ้านใหม่"></div>'+
   '<div class="field"><label>รหัสผู้เข้าร่วม (ห้ามใช้ชื่อจริง)</label><input id="pPid" value="'+esc(S.pilotPid||"")+'" placeholder="เช่น P01"></div>'+
   '<div class="field"><label>รอบที่</label><input id="pTrial" inputmode="numeric" value="'+esc(S.pilotTrial||1)+'" placeholder="1"></div>'+
   '<div class="field"><label>เวลาที่ผู้จับเวลาคนที่ 1 จับได้ (วินาที)</label><input id="pRef1" inputmode="decimal" placeholder="เช่น 11.4"></div>'+
@@ -1053,6 +1070,7 @@ function plogV(){
   function save(){
     var pid=document.getElementById("pPid").value.trim();
     if(!pid){toast("กรุณากรอกรหัสผู้เข้าร่วม");return false}
+    var st=document.getElementById("pSite").value.trim(); if(st)PLOG.setSite(st);
     var r1=parseFloat(document.getElementById("pRef1").value);
     var r2=parseFloat(document.getElementById("pRef2").value);
     var tn=parseInt(document.getElementById("pTrial").value,10)||1;
@@ -1148,7 +1166,9 @@ function qV(i){
 async function finishAssess(){
   var p=S.data.profile, r=scoreOf(S.draft,p.age);
   var rec={at:nowISO(),score:r.score,max:r.max,tier:r.tier,ftsst:S.draft.ftsst,parts:r.parts,
-           method:S.draft.method,reps:S.draft.reps,cv:S.draft.cv,gaps:S.draft.gaps||null};
+           method:S.draft.method,reps:S.draft.reps,cv:S.draft.cv,gaps:S.draft.gaps||null,
+           /* แหล่งที่มาของคำตอบเชิงประวัติ — เริ่มต้นเป็น "ผู้ใช้กรอกเอง" เสมอ */
+           src:{balance:"self_reported",falls:"self_reported",meds:"self_reported",adl:"self_reported"}};
   S.data.assessments.push(rec);
   audit("ให้คะแนนการประเมิน","คะแนน "+r.score+"/"+r.max+" ระดับ "+CFG.tiers[r.tier].nm+" · วิธีวัด: "+(rec.method==="camera-pose"?"กล้องตรวจจับท่าทาง":"จับเวลาเอง"));
   var tr=trajectory();
@@ -1166,6 +1186,79 @@ async function finishAssess(){
   cloudSync(rec,tr);   /* ซิงก์ขึ้นระบบกลางแบบไม่บล็อกผู้ใช้ */
   S.draft={};
   go("result",rec);
+}
+
+/* ---------- ป้ายแหล่งที่มาของข้อมูล ----------
+   แยกให้ชัดว่าอะไรคือคำตอบที่ผู้ใช้กรอกเอง อะไรคือสิ่งที่ยืนยันกับเวชระเบียนแล้ว
+   ค่าเริ่มต้นทุกคำตอบคือ "ยังไม่ยืนยัน" เสมอ */
+function srcTag(v){
+  return v==="verified_medical_record"
+    ? '<span class="pill t4" style="font-size:10.5px;padding:2px 8px;margin-left:5px">ยืนยันแล้ว</span>'
+    : '<span class="pill" style="font-size:10.5px;padding:2px 8px;margin-left:5px;background:var(--line2);color:var(--ink2)">ผู้ใช้กรอกเอง</span>';
+}
+
+/* ---------- ขอตรวจสอบกับประวัติการรักษา (Medical Record Verification) ----------
+   หลักการ: ขอบเขตรายครั้ง ระบุโรงพยาบาล ข้อมูล และช่วงเวลา
+   ไม่ใช่ใบยินยอมใบเดียวที่เปิดดูได้ทุกโรงพยาบาลตลอดชีวิต */
+async function mrvV(){
+  head("ตรวจสอบกับประวัติการรักษา","ยืนยันคำตอบที่กรอกเอง","ขอความยินยอมเฉพาะครั้ง ระบุโรงพยาบาลและช่วงเวลาชัดเจน","result");
+  if(!CLOUD.session){
+    V.innerHTML='<div class="anim"><div class="card"><h3>ต้องเชื่อมระบบกลางก่อน</h3>'+
+    '<p class="sub" style="margin:0">การขอตรวจสอบกับสถานพยาบาลต้องมีบัญชีในระบบกลาง เพื่อบันทึกความยินยอมและติดตามสถานะคำขอได้</p></div>'+
+    '<button class="ghostb" data-go="result">กลับ</button></div>';return;
+  }
+  var reqs=[];try{reqs=await CSBackend.listMedicalChecks()}catch(e){}
+  var stNm={pending:"รอดำเนินการ",sent:"ส่งคำขอแล้ว",completed:"ตรวจสอบเสร็จ",cancelled:"ยกเลิกแล้ว"};
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ทำไมต้องมีขั้นตอนนี้</h3>'+
+  '<p class="sub" style="margin:0">คำตอบเรื่องการหกล้มและยาประจำเป็นข้อมูลที่คุณกรอกเอง ระบบจึงระบุว่า <b>"ผู้ใช้กรอกเอง"</b> เสมอ · หากคุณยินยอม เราจะขอตรวจสอบกับสถานพยาบาลที่คุณระบุ เพื่อให้ข้อมูลมีน้ำหนักพอใช้ประกอบการรับประกันหรือการพิจารณาสินไหมได้</p></div>'+
+  '<div class="card"><h3>ขอบเขตที่คุณอนุญาต</h3>'+
+  '<div class="field"><label>สถานพยาบาล</label><input id="mHosp" placeholder="เช่น โรงพยาบาลประจำจังหวัด"></div>'+
+  '<div class="field"><label>ช่วงเวลาที่อนุญาตให้ตรวจสอบ</label><input id="mPeriod" value="2568-2569" placeholder="เช่น 2568-2569"></div>'+
+  '<div class="field"><label>ข้อมูลที่อนุญาต (เลือกได้หลายข้อ)</label>'+
+  '<label class="chk" style="margin-bottom:8px"><input type="checkbox" id="mFalls" checked><span>ประวัติการหกล้ม</span></label>'+
+  '<label class="chk" style="margin-bottom:8px"><input type="checkbox" id="mMeds" checked><span>รายการยาประจำ</span></label>'+
+  '<label class="chk"><input type="checkbox" id="mAdl"><span>การประเมินกิจวัตรประจำวัน (ADL)</span></label></div>'+
+  '<label class="chk" style="margin-top:12px"><input type="checkbox" id="mConsent"><span>ข้าพเจ้ายินยอมให้ตรวจสอบข้อมูลตามขอบเขตข้างต้นเท่านั้น และทราบว่าถอนความยินยอมได้ทุกเมื่อ</span></label></div>'+
+  '<button class="cta" id="mGo">ยื่นคำขอตรวจสอบ</button>'+
+  (reqs.length?'<div class="card"><h3>คำขอของคุณ</h3>'+reqs.map(function(r){
+    return '<div class="rowline"><span class="k">'+esc(r.hospital)+'<br><span style="font-size:12px;color:var(--ink3)">'+(r.data_items||[]).join(" · ")+' · '+esc(r.period)+'</span></span>'+
+    '<span class="v">'+(stNm[r.status]||r.status)+'</span></div>'}).join("")+
+    '<button class="ghostb danger" id="mRevoke" style="margin:12px 0 0">ถอนความยินยอมและยกเลิกคำขอทั้งหมด</button></div>':'')+
+  '<div class="disc">ระบบสร้าง<b>คำขอเฉพาะครั้ง</b> ไม่ใช่ใบยินยอมถาวร · ถอนความยินยอมเมื่อใด คำขอที่ยังไม่เสร็จจะถูกยกเลิกทันทีโดยอัตโนมัติ · แอปเตรียมข้อมูลคำขอให้ ส่วนหนังสือยินยอมที่มีผลทางกฎหมายต้องลงนามกับสถานพยาบาลตามระเบียบของแต่ละแห่ง</div></div>';
+
+  document.getElementById("mGo").addEventListener("click",async function(){
+    var h=document.getElementById("mHosp").value.trim();
+    var pd=document.getElementById("mPeriod").value.trim();
+    var items=[];
+    if(document.getElementById("mFalls").checked)items.push("ประวัติหกล้ม");
+    if(document.getElementById("mMeds").checked)items.push("ยาประจำ");
+    if(document.getElementById("mAdl").checked)items.push("ADL");
+    if(!h){toast("กรุณาระบุสถานพยาบาล");return}
+    if(!items.length){toast("เลือกข้อมูลที่อนุญาตอย่างน้อย 1 รายการ");return}
+    if(!document.getElementById("mConsent").checked){toast("กรุณาให้ความยินยอมก่อนยื่นคำขอ");return}
+    this.disabled=true;this.textContent="กำลังยื่นคำขอ…";
+    try{
+      await CSBackend.grantConsent("medical_record_check","PDPA-1.0",{hospital:h,data:items,period:pd});
+      var last=S.data.assessments[S.data.assessments.length-1];
+      await CSBackend.requestMedicalCheck({hospital:h,items:items,period:pd,purpose:"underwriting",
+        assessmentId:last&&last.cloudId?last.cloudId:null});
+      audit("ยื่นคำขอตรวจสอบเวชระเบียน","สถานพยาบาล "+h+" · "+items.join(", ")+" · ช่วง "+pd);
+      toast("ยื่นคำขอแล้ว — เจ้าหน้าที่จะดำเนินการต่อ");
+      render();
+    }catch(e){this.disabled=false;this.textContent="ยื่นคำขอตรวจสอบ";toast("ยื่นคำขอไม่สำเร็จ: "+(e.message||""))}
+  });
+  var rv=document.getElementById("mRevoke");
+  if(rv)rv.addEventListener("click",function(){
+    dialog({title:"ถอนความยินยอม",body:"คำขอที่ยังไม่เสร็จจะถูก<b>ยกเลิกทันที</b> และเราจะไม่ตรวจสอบข้อมูลกับสถานพยาบาลอีก",
+      ok:"ถอนความยินยอม",cancel:"ไม่ถอน",danger:true,
+      onOk:async function(){
+        try{await CSBackend.revokeConsent("medical_record_check");
+          audit("ถอนความยินยอมตรวจสอบเวชระเบียน","คำขอที่ค้างถูกยกเลิกทั้งหมด");
+          toast("ถอนความยินยอมแล้ว");render()}
+        catch(e){toast("ถอนไม่สำเร็จ")}
+      }});
+  });
 }
 
 /* ---------- ผลลัพธ์ ---------- */
@@ -1200,10 +1293,12 @@ function resultV(rec){
   (rec.cv!=null?'<div class="rowline"><span class="k">ความสม่ำเสมอของจังหวะ</span><span class="v">'+(100-rec.cv*100).toFixed(0)+'%</span></div>':"")+
   '<div class="rowline"><span class="k">คะแนนส่วนลุกนั่ง</span><span class="v">'+rec.parts.ftsst+' / 4</span></div></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
-  '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
-  '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
-  '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
-  '<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+rec.parts.adl+' / 2</span></div></div>'+
+  '<div class="rowline"><span class="k">การทรงตัว '+srcTag(rec.src&&rec.src.balance)+'</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
+  '<div class="rowline"><span class="k">ประวัติหกล้ม '+srcTag(rec.src&&rec.src.falls)+'</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
+  '<div class="rowline"><span class="k">การใช้ยา '+srcTag(rec.src&&rec.src.meds)+'</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
+  '<div class="rowline"><span class="k">กิจวัตรประจำวัน '+srcTag(rec.src&&rec.src.adl)+'</span><span class="v">'+rec.parts.adl+' / 2</span></div>'+
+  '<p class="sub" style="margin:10px 0 0"><b>สิ่งที่กล้องวัดเอง</b>เป็นข้อมูลที่ระบบสังเกตได้โดยตรง ส่วน<b>คำตอบ 4 ข้อ</b>ข้างบนเป็นข้อมูลที่ผู้ใช้กรอกเอง ระบบจึงไม่ถือเป็นข้อเท็จจริงจนกว่าจะตรวจสอบกับสถานพยาบาล</p>'+
+  '<button class="ghostb" data-go="mrv" style="margin:12px 0 0">ขอตรวจสอบกับประวัติการรักษา</button></div>'+
   warnBlock()+
   (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">สิทธิ์ที่เปิดใช้ได้ทันที</h3><p class="sub" style="margin:0">ผลระดับนี้ลดเบี้ยประกัน CareSignal LTC ได้ <b>'+(d*100)+'%</b> — ผลประเมินใช้ลดเบี้ยได้เท่านั้น ไม่มีการเพิ่มเบี้ยจากคะแนนที่ลดลง</p></div>':'')+
   '<button class="cta" data-go="trend">ดูแนวโน้มย้อนหลัง</button>'+

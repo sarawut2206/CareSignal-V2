@@ -683,7 +683,7 @@ async function renderINS(){
    แดชบอร์ดจะแสดงข้อมูลจริงจากฐานข้อมูลกลางเหนือข้อมูลสาธิต
    สิทธิ์ถูกบังคับที่ฐานข้อมูล (RLS) — บัญชีผิดบทบาทจะได้ข้อมูลว่างเปล่า
    ============================================================ */
-var CLOUD={session:false,role:null,email:null};
+var CLOUD={session:false,role:null,email:null,mfaOn:false};
 function cloudPanel(inner){
   return '<div style="background:#fff;border:1.5px solid var(--brand,#2563EB);border-radius:16px;padding:18px;margin-bottom:16px">'+inner+'</div>';
 }
@@ -708,11 +708,20 @@ function bindStaffAuth(container,target,rerender){
     this.textContent="กำลังเข้า…";this.disabled=true;
     try{
       await CSBackend.signInStaff(em,pw);
+      /* ถ้าบัญชีนี้เปิด MFA ไว้ ต้องผ่านการยืนยันรหัส 6 หลักก่อนจึงจะได้สิทธิ์เต็ม (AAL2) */
+      var f=await CSBackend.mfaFactors();
+      var v=(f.totp||[]).filter(function(x){return x.status==="verified"});
+      if(v.length){
+        var code=await mfaPrompt();
+        if(!code){await CSBackend.signOut();this.textContent="เข้าสู่ระบบ";this.disabled=false;toast("ยกเลิกการเข้าสู่ระบบ");return}
+        await CSBackend.mfaVerify(v[0].id,code);
+      }
       var p=await CSBackend.loadProfile();
       CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=em;
-      toast("เข้าสู่ระบบแล้ว · บทบาท "+(CLOUD.role||"—"));
+      await refreshMfaState();
+      toast("เข้าสู่ระบบแล้ว · บทบาท "+(CLOUD.role||"—")+(v.length?" · ผ่าน MFA":""));
       rerender();
-    }catch(e){this.textContent="เข้าสู่ระบบ";this.disabled=false;toast("เข้าสู่ระบบไม่สำเร็จ")}
+    }catch(e){this.textContent="เข้าสู่ระบบ";this.disabled=false;toast("เข้าสู่ระบบไม่สำเร็จ: "+(e.message||""))}
   });
   if(su)su.addEventListener("click",async function(){
     var em=document.getElementById("stEmail-"+target).value.trim();
@@ -725,9 +734,63 @@ function bindStaffAuth(container,target,rerender){
   });
 }
 function staffBarHTML(){
+  var mfa=CLOUD.mfaOn?'<span style="background:#E3F6EF;color:#0E9F6E;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;margin-left:6px">🔐 MFA เปิดอยู่</span>'
+                     :'<button id="csMfaOn" style="margin-left:6px;padding:5px 12px;border:1px solid #F5B93E;border-radius:99px;background:#FEF3C7;color:#B45309;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer">เปิดใช้ MFA</button>';
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
-    '<span style="font-size:13.5px"><b style="color:#0E9F6E">● เชื่อมระบบกลางแล้ว</b> · '+esc(CLOUD.email||"")+' · บทบาท <b>'+esc(CLOUD.role||"—")+'</b></span>'+
+    '<span style="font-size:13.5px"><b style="color:#0E9F6E">● เชื่อมระบบกลางแล้ว</b> · '+esc(CLOUD.email||"")+' · บทบาท <b>'+esc(CLOUD.role||"—")+'</b>'+mfa+'</span>'+
     '<button id="csLogout" style="padding:8px 14px;border:1px solid #DFE7F2;border-radius:10px;background:#fff;color:#5B6B84;font-family:inherit;font-size:12.5px;cursor:pointer">ออกจากระบบ</button></div>';
+}
+/* ---------- กล่องกรอกรหัส MFA 6 หลัก ---------- */
+function mfaPrompt(){
+  return new Promise(function(resolve){
+    var w=document.createElement("div");
+    w.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px";
+    w.innerHTML='<div style="background:#fff;border-radius:20px;padding:26px;max-width:380px;width:100%;font-family:inherit">'+
+      '<h3 style="margin:0 0 8px;font-size:18px;color:#16233B">🔐 ยืนยันตัวตนสองชั้น</h3>'+
+      '<p style="margin:0 0 14px;font-size:13.5px;color:#5B6B84;line-height:1.6">เปิดแอป Authenticator แล้วกรอกรหัส 6 หลักของบัญชีนี้</p>'+
+      '<input id="mfaCode" inputmode="numeric" maxlength="6" placeholder="000000" style="width:100%;box-sizing:border-box;font-size:30px;letter-spacing:.35em;text-align:center;padding:14px;border:1.5px solid #DFE7F2;border-radius:14px;font-family:ui-monospace,monospace;margin-bottom:12px">'+
+      '<button id="mfaOk" style="display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;cursor:pointer">ยืนยัน</button>'+
+      '<button id="mfaNo" style="display:block;width:100%;border:0;border-radius:14px;padding:12px;font-size:14px;font-family:inherit;background:transparent;color:#5B6B84;cursor:pointer;margin-top:6px">ยกเลิก</button></div>';
+    document.body.appendChild(w);
+    var inp=w.querySelector("#mfaCode"); setTimeout(function(){inp.focus()},60);
+    function done(v){w.remove();resolve(v)}
+    w.querySelector("#mfaOk").addEventListener("click",function(){done(inp.value.trim())});
+    w.querySelector("#mfaNo").addEventListener("click",function(){done(null)});
+    inp.addEventListener("keydown",function(e){if(e.key==="Enter")done(inp.value.trim())});
+  });
+}
+/* ---------- ลงทะเบียน MFA: แสดง QR ให้สแกน แล้วยืนยันรหัส ---------- */
+async function mfaEnrollFlow(){
+  try{
+    var d=await CSBackend.mfaEnroll();
+    var w=document.createElement("div");
+    w.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto";
+    w.innerHTML='<div style="background:#fff;border-radius:20px;padding:26px;max-width:400px;width:100%;font-family:inherit">'+
+      '<h3 style="margin:0 0 8px;font-size:18px;color:#16233B">เปิดใช้ยืนยันตัวตนสองชั้น</h3>'+
+      '<p style="margin:0 0 12px;font-size:13px;color:#5B6B84;line-height:1.6">1. เปิดแอป Google Authenticator หรือ Microsoft Authenticator<br>2. สแกน QR ด้านล่าง<br>3. กรอกรหัส 6 หลักที่ได้</p>'+
+      '<div style="background:#fff;border:1px solid #DFE7F2;border-radius:14px;padding:10px;text-align:center;margin-bottom:10px">'+(d.totp&&d.totp.qr_code?d.totp.qr_code:"")+'</div>'+
+      '<p style="margin:0 0 12px;font-size:11.5px;color:#93A1B7;word-break:break-all">หรือกรอกรหัสลับเอง: <code>'+esc((d.totp&&d.totp.secret)||"")+'</code></p>'+
+      '<input id="enCode" inputmode="numeric" maxlength="6" placeholder="000000" style="width:100%;box-sizing:border-box;font-size:28px;letter-spacing:.3em;text-align:center;padding:13px;border:1.5px solid #DFE7F2;border-radius:14px;font-family:ui-monospace,monospace;margin-bottom:12px">'+
+      '<button id="enOk" style="display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;cursor:pointer">ยืนยันและเปิดใช้</button>'+
+      '<button id="enNo" style="display:block;width:100%;border:0;border-radius:14px;padding:12px;font-size:14px;font-family:inherit;background:transparent;color:#5B6B84;cursor:pointer;margin-top:6px">ยกเลิก</button></div>';
+    document.body.appendChild(w);
+    w.querySelector("#enNo").addEventListener("click",function(){w.remove()});
+    w.querySelector("#enOk").addEventListener("click",async function(){
+      var c=w.querySelector("#enCode").value.trim();
+      if(!/^\d{6}$/.test(c)){toast("กรอกรหัส 6 หลัก");return}
+      this.disabled=true;this.textContent="กำลังยืนยัน…";
+      try{
+        await CSBackend.mfaVerify(d.id,c);
+        CLOUD.mfaOn=true; w.remove();
+        toast("เปิดใช้ MFA สำเร็จ · ครั้งต่อไปต้องกรอกรหัสจากแอป Authenticator");
+        renderCloudCM();renderCloudINS();
+      }catch(e){this.disabled=false;this.textContent="ยืนยันและเปิดใช้";toast("รหัสไม่ถูกต้อง ลองใหม่")}
+    });
+  }catch(e){toast("เปิดใช้ MFA ไม่สำเร็จ: "+(e.message||""))}
+}
+async function refreshMfaState(){
+  try{var f=await CSBackend.mfaFactors();CLOUD.mfaOn=(f.totp||[]).some(function(x){return x.status==="verified"})}
+  catch(e){CLOUD.mfaOn=false}
 }
 async function renderCloudCM(){
   var el=document.getElementById("cloudCM"); if(!el)return;
@@ -752,7 +815,8 @@ async function renderCloudCM(){
     '<p style="font-size:13px;margin:12px 0 8px"><b>คิวเคสจริงจากฐานข้อมูลกลาง</b> · รอตัดสิน '+pending.length+' จากทั้งหมด '+q.length+' เคส · <button id="csReload" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
     (q.length?'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>รหัสแฝงชื่อ</th><th>ชื่อ</th><th>ระดับ</th><th>การดำเนินการ</th><th>กฎ</th><th>ตัดสินใจ</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
              :'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีเคสในระบบกลาง — เมื่อสมาชิกวัดผ่านมือถือและเข้าเกณฑ์ส่งต่อ เคสจะขึ้นที่นี่ทันที</p>'));
-  el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;renderCloudCM();renderCloudINS()});
+  el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;CLOUD.mfaOn=false;renderCloudCM();renderCloudINS()});
+  var mf=el.querySelector("#csMfaOn"); if(mf)mf.addEventListener("click",mfaEnrollFlow);
   var rl=el.querySelector("#csReload"); if(rl)rl.addEventListener("click",renderCloudCM);
   el.querySelectorAll("[data-csok],[data-csno]").forEach(function(b){
     b.addEventListener("click",async function(){
@@ -781,14 +845,15 @@ async function renderCloudINS(){
     '<p style="font-size:13px;margin:12px 0 8px"><b>พอร์ตจริงจากฐานข้อมูลกลาง</b> — ข้อมูลแฝงชื่อผ่าน view เท่านั้น (บังคับที่ฐานข้อมูล) · '+port.length+' ราย · เขียว '+mix[4]+' เหลือง '+mix[3]+' ส้ม '+mix[2]+' แดง '+mix[1]+' · <button id="csReloadIns" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
     (port.length?'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>รหัสแฝงชื่อ</th><th>ช่วงอายุ</th><th>เพศ</th><th>คะแนน</th><th>ลุกนั่ง</th><th>ระดับ</th><th>ครั้ง</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
               :'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีข้อมูลในพอร์ต — หากบทบาทของบัญชีนี้ไม่ใช่ insurer/care_manager ระบบจะคืนค่าว่างเปล่าโดยอัตโนมัติ (RLS)</p>'));
-  el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;renderCloudCM();renderCloudINS()});
+  el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;CLOUD.mfaOn=false;renderCloudCM();renderCloudINS()});
+  var mf2=el.querySelector("#csMfaOn"); if(mf2)mf2.addEventListener("click",mfaEnrollFlow);
   var rl=el.querySelector("#csReloadIns"); if(rl)rl.addEventListener("click",renderCloudINS);
 }
 (async function(){
   try{
     var ok=await CSBackend.init(); if(!ok)return;
     var u=await CSBackend.currentUser();
-    if(u){var p=await CSBackend.loadProfile();CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=u.email}
+    if(u){var p=await CSBackend.loadProfile();CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=u.email;await refreshMfaState()}
   }catch(e){}
   renderCloudCM();renderCloudINS();
 })();

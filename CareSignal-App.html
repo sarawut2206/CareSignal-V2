@@ -199,6 +199,9 @@ var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidde
    3) หน่วยความจำชั่วคราว (fallback สุดท้าย)
    โครงนี้ออกแบบให้สลับเป็น REST API ของ backend จริงได้ทันที
    ============================================================ */
+/* ระบบกลาง: ใช้ session ร่วมกับหน้าอื่นใน origin เดียวกัน (ล็อกอินที่ Vision ครั้งเดียวพอ) */
+var CLOUD={session:false};
+
 var MEM={};
 var DB={
   mode:"memory",
@@ -414,9 +417,24 @@ function sigDist(a,b){
 }
 var FACE_TOL=0.16;   /* ระยะห่างที่ยอมรับว่าเป็นคนเดิม — ตั้งแบบผ่อนปรนเพื่อลดการปฏิเสธผิดพลาด */
 /* ลายเซ็นเก็บในเครื่องนี้เท่านั้น ไม่ผ่านชั้นฐานข้อมูลที่อาจซิงก์ขึ้นคลาวด์ */
-function saveFaceSig(sig){try{localStorage.setItem("cs:faceSig:"+S.data.profile.uid,JSON.stringify(sig))}catch(e){}}
-function loadFaceSig(){try{var s=localStorage.getItem("cs:faceSig:"+S.data.profile.uid);return s?JSON.parse(s):null}catch(e){return null}}
-function clearFaceSig(){try{localStorage.removeItem("cs:faceSig:"+S.data.profile.uid)}catch(e){}}
+/* กุญแจเก็บลายเซ็น: ผูกกับบัญชีคลาวด์เมื่อล็อกอินแล้ว ไม่งั้นใช้ uid ในเครื่อง
+   เหตุผล: เครื่องเดียวอาจมีหลายบัญชี (เช่น อสม. ช่วยหลายคนทดสอบ) ต้องไม่ปะปนกัน
+   ⚠️ ลายเซ็นไม่เคยถูกอัปโหลด — ระบบกลางเก็บเพียงผลการยืนยันเป็นค่าจริง/เท็จ */
+function faceKeyId(){
+  try{ if(CLOUD.session&&CSBackend.getProfile())return CSBackend.getProfile().id }catch(e){}
+  return S.data.profile.uid;
+}
+function saveFaceSig(sig){
+  try{localStorage.setItem("cs:faceSig:"+faceKeyId(),JSON.stringify(sig))}catch(e){}
+  /* บันทึกความยินยอมชีวมิติขึ้นระบบกลาง (มาตรา 26) — เก็บแค่ "ยินยอมแล้ว" ไม่ใช่ตัวลายเซ็น */
+  if(CLOUD.session)CSBackend.grantConsent("biometric_face","PDPA-1.0",
+    {stored:"on-device-only",values:6,uploaded:false}).catch(function(){});
+}
+function loadFaceSig(){try{var s=localStorage.getItem("cs:faceSig:"+faceKeyId());return s?JSON.parse(s):null}catch(e){return null}}
+function clearFaceSig(){
+  try{localStorage.removeItem("cs:faceSig:"+faceKeyId())}catch(e){}
+  if(CLOUD.session)CSBackend.revokeConsent("biometric_face").catch(function(){});
+}
 function faceEnabled(){return !!(S.data.consentFace && loadFaceSig())}
 
 /* ============================================================
@@ -1615,8 +1633,6 @@ document.addEventListener("click",function(e){
   var g=e.target.closest("[data-go]");
   if(g){go(g.dataset.go)}
 });
-/* ระบบกลาง: ใช้ session ร่วมกับหน้าอื่นใน origin เดียวกัน (ล็อกอินที่ Vision ครั้งเดียวพอ) */
-var CLOUD={session:false};
 (async function(){
   await loadAll();
   go(S.data.profile?"home":"welcome");
