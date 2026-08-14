@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- ล็อก layout ไว้ที่ 430 หน่วยแล้วให้เบราว์เซอร์ขยายเต็มจอจริง — ขนาดตัวอักษรเป็นสัดส่วนเดียวกันทุกเครื่อง -->
 <meta name="viewport" content="width=430, viewport-fit=cover">
 <meta name="description" content="แอปสมาชิก CareSignal — วัดสมรรถภาพด้วยกล้อง ดูแนวโน้ม สมัครประกัน LTC ที่เบี้ยลดได้ทางเดียวตามผลตรวจ">
@@ -188,6 +188,7 @@ body{background:#D9DEE2;font-family:var(--sans);color:var(--ink);font-size:17px;
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
+<script src="./cs-backend.js"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
 
@@ -985,6 +986,21 @@ async function finishAssess(){
     if(tr.referral.need) audit("สร้างคำแนะนำส่งต่อ", tr.referral.nm+" "+tr.referral.sla+" — สถานะ: รอผู้เชี่ยวชาญยืนยัน","ต้องมีพยาบาล/Care Manager ยืนยันก่อนดำเนินการ");
   }
   await saveAll();
+  /* ซิงก์ขึ้นระบบกลางถ้ามี session (ล็อกอินไว้จากหน้าใดก็ได้ใน origin เดียวกัน) */
+  (async function(){
+    try{
+      if(!CLOUD.session||!CSBackend.isCloud())return;
+      var a=await CSBackend.saveAssessment({at:rec.at,method:rec.method,ftsst:rec.ftsst,
+        tug:rec.tug,reps:rec.reps,cv:rec.cv,gaps:rec.gaps,score:rec.score,max:rec.max,
+        tier:rec.tier,parts:rec.parts,verified:rec.verified,engine:ENGINE.version,durSec:rec.durSec});
+      if(tr){
+        var rs=await CSBackend.saveRiskSignal(a.id,{level:tr.level,nextDays:tr.nextDays,
+          engine:ENGINE.version,flags:tr.flags.map(function(f){return{id:f.id,text:f.text,why:f.why}})});
+        if(tr.referral.need)await CSBackend.createReferral(rs.id,tr);
+      }
+      toast("ซิงก์ขึ้นระบบกลางแล้ว");
+    }catch(e){console.warn("cloud sync",e)}
+  })();
   go("assessResult",rec);
 }
 function assessResultV(rec){
@@ -1599,9 +1615,19 @@ document.addEventListener("click",function(e){
   var g=e.target.closest("[data-go]");
   if(g){go(g.dataset.go)}
 });
+/* ระบบกลาง: ใช้ session ร่วมกับหน้าอื่นใน origin เดียวกัน (ล็อกอินที่ Vision ครั้งเดียวพอ) */
+var CLOUD={session:false};
 (async function(){
   await loadAll();
   go(S.data.profile?"home":"welcome");
+  (async function(){
+    try{
+      var ok=await CSBackend.init(); if(!ok)return;
+      var u=await CSBackend.currentUser();
+      if(u){CLOUD.session=true;await CSBackend.loadProfile();
+        var c=document.getElementById("dbchip"); if(c)c.textContent="DB · CLOUD ✓";}
+    }catch(e){}
+  })();
 })();
 /* ---------- ติดตั้งเป็นแอปบนมือถือ (Add to Home Screen) ---------- */
 (function(){

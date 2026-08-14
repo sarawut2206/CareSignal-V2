@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="เว็บแพลตฟอร์ม CareSignal — เครื่องคำนวณเบี้ย LTC คิว Care Manager แดชบอร์ดบริษัทประกัน Model Card และแผนวัดผลนำร่อง">
 <meta name="theme-color" content="#2563EB">
@@ -221,6 +221,7 @@ table.dt tr:last-child td{border-bottom:0}
     <button data-f="2">ส้ม — ติดต่อใน 7 วัน</button>
     <button data-f="34">เขียว/เหลือง — เฝ้าระวัง</button>
   </div>
+  <div id="cloudCM"></div>
   <div class="kpirow" id="cmKpi"></div>
   <div id="cmTable"></div>
   <div class="notice">ข้อมูลในตารางเป็นข้อมูล<b>แบบแฝงชื่อ (pseudonymised)</b> — รหัสสุ่มแทนชื่อจริง ช่วงอายุ เพศ ระดับสัญญาณ ตามหลัก data minimization · <b>ข้อมูลแฝงชื่อยังคงเป็นข้อมูลส่วนบุคคลตาม PDPA</b> ไม่ใช่ข้อมูลนิรนาม จึงได้รับความคุ้มครองตามกฎหมายเต็มที่ · <button class="btn lite" id="cmSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต 12 ราย</button> <button class="btn lite" id="cmRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
@@ -231,6 +232,7 @@ table.dt tr:last-child td{border-bottom:0}
   <div class="kick">INSURER PORTFOLIO CONSOLE</div>
   <h2 class="sec">ภาพรวมพอร์ตกรมธรรม์</h2>
   <p class="secsub">สถานะพอร์ตจริงจากฐานข้อมูลกลาง: จำนวนสมาชิก การกระจายความเสี่ยง เบี้ยรับ และสัดส่วนที่เข้าโปรแกรมป้องกัน</p>
+  <div id="cloudINS"></div>
   <div class="kpirow" id="insKpi"></div>
   <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px" id="insGrid">
     <div class="card"><h3 style="margin-bottom:14px">การกระจายระดับสัญญาณ (Risk Mix)</h3><div id="insMix"></div></div>
@@ -343,6 +345,7 @@ table.dt tr:last-child td{border-bottom:0}
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="./cs-backend.js"></script>
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
@@ -614,6 +617,7 @@ document.getElementById("cmFilter").addEventListener("click",function(e){
 document.getElementById("cmSeed").addEventListener("click",async function(){await seed();renderCM()});
 document.getElementById("cmRefresh").addEventListener("click",renderCM);
 async function renderCM(){
+  if(typeof renderCloudCM==="function")renderCloudCM();
   var pool=await DB.listPool();
   var withT=pool.filter(function(x){return x.tier});
   var red=withT.filter(function(x){return x.tier===1}).length;
@@ -643,6 +647,7 @@ function kpi(l,n,d){return '<div class="kpi"><div class="l">'+l+'</div><div clas
 document.getElementById("insSeed").addEventListener("click",async function(){await seed();renderINS()});
 document.getElementById("insRefresh").addEventListener("click",renderINS);
 async function renderINS(){
+  if(typeof renderCloudINS==="function")renderCloudINS();
   var pool=await DB.listPool();
   var insured=pool.filter(function(x){return x.plan});
   var gwpM=insured.reduce(function(s,x){return s+(x.premium||0)},0);
@@ -671,6 +676,123 @@ async function renderINS(){
     insured.map(function(x){var p=CFG.plans.find(function(y){return y.id===x.plan});var t=x.tier?CFG.tiers[x.tier]:null;
       return '<tr><td class="mono">'+esc(x.uid)+'</td><td>'+esc(x.ageBand)+'</td><td>'+(p?p.nm:x.plan)+'</td><td class="mono">'+fmt(x.premium||0)+'</td><td>'+(t?'<span class="tag '+t.b+'" style="margin:0">'+t.nm+'</span>':"—")+'</td><td>'+thDate(x.updated)+'</td></tr>'}).join("")+'</tbody></table>':"";
 }
+/* ============================================================
+   ระบบกลาง (Supabase) — โหมดเจ้าหน้าที่จริง
+   ------------------------------------------------------------
+   เมื่อล็อกอินด้วยบัญชีเจ้าหน้าที่ (care_manager / insurer / admin)
+   แดชบอร์ดจะแสดงข้อมูลจริงจากฐานข้อมูลกลางเหนือข้อมูลสาธิต
+   สิทธิ์ถูกบังคับที่ฐานข้อมูล (RLS) — บัญชีผิดบทบาทจะได้ข้อมูลว่างเปล่า
+   ============================================================ */
+var CLOUD={session:false,role:null,email:null};
+function cloudPanel(inner){
+  return '<div style="background:#fff;border:1.5px solid var(--brand,#2563EB);border-radius:16px;padding:18px;margin-bottom:16px">'+inner+'</div>';
+}
+function staffLoginHTML(target){
+  return cloudPanel(
+    '<b style="font-size:15px">🔐 ระบบกลาง — เข้าสู่ระบบเจ้าหน้าที่</b>'+
+    '<p style="font-size:12.5px;color:#5B6B84;margin:6px 0 12px">ด้านล่างคือข้อมูลสาธิตในเครื่อง · ล็อกอินเพื่อดูเคสจริงจากฐานข้อมูลกลาง (สิทธิ์บังคับด้วย Row Level Security)</p>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+    '<input id="stEmail-'+target+'" type="email" placeholder="อีเมลเจ้าหน้าที่" style="flex:2;min-width:180px;padding:11px;border:1.5px solid #DFE7F2;border-radius:10px;font-family:inherit;font-size:14px">'+
+    '<input id="stPass-'+target+'" type="password" placeholder="รหัสผ่าน" style="flex:1;min-width:130px;padding:11px;border:1.5px solid #DFE7F2;border-radius:10px;font-family:inherit;font-size:14px">'+
+    '<button data-cslogin="'+target+'" style="padding:11px 20px;border:0;border-radius:10px;background:var(--brand,#2563EB);color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer">เข้าสู่ระบบ</button>'+
+    '<button data-cssignup="'+target+'" style="padding:11px 14px;border:1px solid #DFE7F2;border-radius:10px;background:#fff;color:#5B6B84;font-family:inherit;font-size:13px;cursor:pointer">สมัครบัญชีเจ้าหน้าที่</button></div>'+
+    '<p style="font-size:11.5px;color:#93A1B7;margin:8px 0 0">บัญชีที่สมัครใหม่ต้องให้ผู้ดูแลระบบตั้งบทบาทจากหลังบ้านก่อน (supabase/03_seed_staff.sql) — ผู้ใช้เลื่อนขั้นบทบาทเองไม่ได้</p>');
+}
+function bindStaffAuth(container,target,rerender){
+  var lg=container.querySelector('[data-cslogin]');
+  var su=container.querySelector('[data-cssignup]');
+  if(lg)lg.addEventListener("click",async function(){
+    var em=document.getElementById("stEmail-"+target).value.trim();
+    var pw=document.getElementById("stPass-"+target).value;
+    if(!em||!pw){toast("กรอกอีเมลและรหัสผ่าน");return}
+    this.textContent="กำลังเข้า…";this.disabled=true;
+    try{
+      await CSBackend.signInStaff(em,pw);
+      var p=await CSBackend.loadProfile();
+      CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=em;
+      toast("เข้าสู่ระบบแล้ว · บทบาท "+(CLOUD.role||"—"));
+      rerender();
+    }catch(e){this.textContent="เข้าสู่ระบบ";this.disabled=false;toast("เข้าสู่ระบบไม่สำเร็จ")}
+  });
+  if(su)su.addEventListener("click",async function(){
+    var em=document.getElementById("stEmail-"+target).value.trim();
+    var pw=document.getElementById("stPass-"+target).value;
+    if(!em||pw.length<8){toast("กรอกอีเมล และรหัสผ่านอย่างน้อย 8 ตัวอักษร");return}
+    try{
+      await CSBackend.signUpStaff(em,pw);
+      toast("สมัครแล้ว — แจ้งผู้ดูแลระบบตั้งบทบาทให้ (03_seed_staff.sql) แล้วจึงล็อกอิน");
+    }catch(e){toast("สมัครไม่สำเร็จ: "+(e.message||""))}
+  });
+}
+function staffBarHTML(){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+    '<span style="font-size:13.5px"><b style="color:#0E9F6E">● เชื่อมระบบกลางแล้ว</b> · '+esc(CLOUD.email||"")+' · บทบาท <b>'+esc(CLOUD.role||"—")+'</b></span>'+
+    '<button id="csLogout" style="padding:8px 14px;border:1px solid #DFE7F2;border-radius:10px;background:#fff;color:#5B6B84;font-family:inherit;font-size:12.5px;cursor:pointer">ออกจากระบบ</button></div>';
+}
+async function renderCloudCM(){
+  var el=document.getElementById("cloudCM"); if(!el)return;
+  if(!CSBackend.isCloud()){el.innerHTML="";return}
+  if(!CLOUD.session){el.innerHTML=staffLoginHTML("cm");bindStaffAuth(el,"cm",renderCloudCM);return}
+  var q=await CSBackend.listReferralQueue();
+  var pending=q.filter(function(x){return x.status==="pending"});
+  var lvNm={stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"เร่งด่วน"};
+  var lvC={urgent:"#DC2626",decline:"#D97706",watch:"#C79200",stable:"#0E9F6E"};
+  var rows=q.slice(0,20).map(function(c){
+    var pr=c.profiles||{};
+    return '<tr><td class="mono">'+esc(pr.pseudonym||"—")+'</td>'+
+    '<td>'+esc(pr.display_name||"—")+'</td>'+
+    '<td><span style="background:'+(lvC[c.level]||"#93A1B7")+';color:#fff;font-size:11px;padding:3px 10px;border-radius:99px">'+(lvNm[c.level]||c.level)+'</span></td>'+
+    '<td style="font-size:12px">'+esc(c.action)+' · <b>'+esc(c.sla)+'</b></td>'+
+    '<td style="font-size:12px">'+(c.reasons||[]).map(function(r){return r.id}).join(", ")+'</td>'+
+    '<td>'+(c.status==="pending"
+      ?'<button data-csok="'+c.id+'" style="padding:6px 12px;border:0;border-radius:8px;background:#0E9F6E;color:#fff;font-size:12px;cursor:pointer;font-family:inherit">ยืนยัน</button> <button data-csno="'+c.id+'" style="padding:6px 12px;border:0;border-radius:8px;background:#EDF2FA;color:#5B6B84;font-size:12px;cursor:pointer;font-family:inherit">ไม่ส่งต่อ</button>'
+      :'<span style="font-size:12px;color:'+(c.status==="approved"?"#0E9F6E":"#93A1B7")+'">'+(c.status==="approved"?"ยืนยันแล้ว":"ไม่ส่งต่อ")+'</span>')+'</td></tr>';
+  }).join("");
+  el.innerHTML=cloudPanel(staffBarHTML()+
+    '<p style="font-size:13px;margin:12px 0 8px"><b>คิวเคสจริงจากฐานข้อมูลกลาง</b> · รอตัดสิน '+pending.length+' จากทั้งหมด '+q.length+' เคส · <button id="csReload" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
+    (q.length?'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>รหัสแฝงชื่อ</th><th>ชื่อ</th><th>ระดับ</th><th>การดำเนินการ</th><th>กฎ</th><th>ตัดสินใจ</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+             :'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีเคสในระบบกลาง — เมื่อสมาชิกวัดผ่านมือถือและเข้าเกณฑ์ส่งต่อ เคสจะขึ้นที่นี่ทันที</p>'));
+  el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;renderCloudCM();renderCloudINS()});
+  var rl=el.querySelector("#csReload"); if(rl)rl.addEventListener("click",renderCloudCM);
+  el.querySelectorAll("[data-csok],[data-csno]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      var ok=b.hasAttribute("data-csok"), id=b.dataset.csok||b.dataset.csno;
+      b.disabled=true;
+      try{await CSBackend.decideReferral(id,ok);toast(ok?"ยืนยันส่งต่อแล้ว":"บันทึกว่ายังไม่ส่งต่อ");renderCloudCM()}
+      catch(e){toast("ตัดสินเคสไม่สำเร็จ — ต้องเป็นบัญชี Care Manager เท่านั้น");b.disabled=false}
+    });
+  });
+}
+async function renderCloudINS(){
+  var el=document.getElementById("cloudINS"); if(!el)return;
+  if(!CSBackend.isCloud()){el.innerHTML="";return}
+  if(!CLOUD.session){el.innerHTML=staffLoginHTML("ins");bindStaffAuth(el,"ins",renderCloudINS);return}
+  var port=await CSBackend.insurerPortfolio();
+  var mix={4:0,3:0,2:0,1:0};port.forEach(function(r){if(mix[r.tier]!==undefined)mix[r.tier]++});
+  var rows=port.slice(0,15).map(function(r){
+    var t=CFG.tiers[r.tier]||{nm:"—",b:""};
+    return '<tr><td class="mono">'+esc(r.pseudonym)+'</td><td>'+esc(r.age_band||"—")+'</td><td>'+(r.sex==="f"?"หญิง":"ชาย")+'</td>'+
+    '<td class="mono">'+(r.score!=null?r.score+" / 12":"—")+'</td>'+
+    '<td class="mono">'+(r.ftsst_seconds!=null?(+r.ftsst_seconds).toFixed(1)+" วิ":"—")+'</td>'+
+    '<td>'+(r.tier?'<span class="tag '+t.b+'" style="margin:0">'+t.nm+'</span>':"—")+'</td>'+
+    '<td>'+r.n_assessments+'</td></tr>';
+  }).join("");
+  el.innerHTML=cloudPanel(staffBarHTML()+
+    '<p style="font-size:13px;margin:12px 0 8px"><b>พอร์ตจริงจากฐานข้อมูลกลาง</b> — ข้อมูลแฝงชื่อผ่าน view เท่านั้น (บังคับที่ฐานข้อมูล) · '+port.length+' ราย · เขียว '+mix[4]+' เหลือง '+mix[3]+' ส้ม '+mix[2]+' แดง '+mix[1]+' · <button id="csReloadIns" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
+    (port.length?'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>รหัสแฝงชื่อ</th><th>ช่วงอายุ</th><th>เพศ</th><th>คะแนน</th><th>ลุกนั่ง</th><th>ระดับ</th><th>ครั้ง</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+              :'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีข้อมูลในพอร์ต — หากบทบาทของบัญชีนี้ไม่ใช่ insurer/care_manager ระบบจะคืนค่าว่างเปล่าโดยอัตโนมัติ (RLS)</p>'));
+  el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;renderCloudCM();renderCloudINS()});
+  var rl=el.querySelector("#csReloadIns"); if(rl)rl.addEventListener("click",renderCloudINS);
+}
+(async function(){
+  try{
+    var ok=await CSBackend.init(); if(!ok)return;
+    var u=await CSBackend.currentUser();
+    if(u){var p=await CSBackend.loadProfile();CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=u.email}
+  }catch(e){}
+  renderCloudCM();renderCloudINS();
+})();
+
 /* ===== เปิดหน้าโดยตรงผ่าน #ชื่อหน้า เช่น CareSignal-Web.html#evi ===== */
 (function(){
   var h=(location.hash||"").replace("#","");

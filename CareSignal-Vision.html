@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- ล็อก layout ไว้ที่ 430 หน่วยแล้วให้เบราว์เซอร์ขยายเต็มจอจริง —
      ทำให้ขนาดตัวอักษรเป็นสัดส่วนเดียวกันทุกเครื่อง แม้อุปกรณ์ที่ตั้งค่าการแสดงผล
      ให้รายงานจอกว้างผิดปกติ (เช่น 800+ CSS px) ก็ไม่ทำให้ตัวอักษรหดเล็ก -->
@@ -179,6 +179,7 @@ body{margin:0;background:#0B1220;font-family:var(--sans);color:var(--ink);-webki
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
+<script src="./cs-backend.js"></script>
 <script>
 "use strict";
 var LOGO='<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none">'+
@@ -229,7 +230,9 @@ var DB={
   }
 };
 function dbLabel(){
-  var m="DB · "+(DB.mode==="cloud"?"CLOUD":(DB.mode==="local"?"LOCAL":"TEMP"));
+  var m;
+  if(typeof CLOUD!=="undefined"&&CLOUD.session)m="DB · CLOUD ✓";
+  else m="DB · "+(DB.mode==="cloud"?"CLOUD":(DB.mode==="local"?"LOCAL":"TEMP"));
   try{if(localStorage.getItem("csv:pilot")==="1")m+=" · โหมดวิจัย"}catch(e){}
   return m;
 }
@@ -526,6 +529,91 @@ function pilotLogFail(reason){
 }
 
 /* ============================================================
+   ระบบกลาง (Supabase) — ซิงก์ข้อมูลขึ้นคลาวด์เมื่อล็อกอินแล้ว
+   ------------------------------------------------------------
+   หลักการ: localStorage ยังเป็นที่เก็บหลักเสมอ (ใช้ออฟไลน์ได้)
+   คลาวด์เป็นชั้นเสริม — ซิงก์ล้มเหลวต้องไม่ขวางผู้ใช้
+   ============================================================ */
+var CLOUD={session:false};
+async function cloudBoot(){
+  try{
+    var ok=await CSBackend.init();
+    if(!ok)return;
+    var u=await CSBackend.currentUser();
+    if(u){CLOUD.session=true;await CSBackend.loadProfile();}
+  }catch(e){}
+  var chip=document.getElementById("chip");
+  if(chip)chip.textContent=dbLabel();
+}
+function cloudLabel(){return CLOUD.session?"DB · CLOUD":null}
+/* ซิงก์ผลประเมิน + สัญญาณเสี่ยง + เคสส่งต่อ ขึ้นระบบกลาง */
+async function cloudSync(rec,tr){
+  if(!CLOUD.session||!CSBackend.isCloud())return;
+  try{
+    var a=await CSBackend.saveAssessment({
+      at:rec.at,method:rec.method,ftsst:rec.ftsst,reps:rec.reps,cv:rec.cv,gaps:rec.gaps,
+      score:rec.score,max:rec.max,tier:rec.tier,parts:rec.parts,
+      verified:false,engine:ENGINE.version});
+    if(tr){
+      var rs=await CSBackend.saveRiskSignal(a.id,{level:tr.level,nextDays:tr.nextDays,
+        engine:ENGINE.version,flags:tr.flags.map(function(f){return{id:f.id,text:f.text,why:f.why}})});
+      if(tr.referral.need)await CSBackend.createReferral(rs.id,tr);
+    }
+    toast("ซิงก์ขึ้นระบบกลางแล้ว");
+  }catch(e){console.warn("cloud sync",e)}
+}
+/* สมัคร/เข้าสู่ระบบด้วยเบอร์โทร + PIN — ล้มเหลวก็ใช้แบบออฟไลน์ต่อได้ */
+async function cloudRegister(phone,pin,p){
+  if(!CSBackend.isCloud())return false;
+  try{
+    await CSBackend.signUpUser(phone,pin);
+    await new Promise(function(r){setTimeout(r,800)});
+    await CSBackend.updateProfile({display_name:p.name,birth_year_be:p.birthYear,
+      birth_month:p.birthMonth,sex:p.sex,phone:phone});
+    await CSBackend.grantConsent("assessment","PDPA-1.0");
+    await CSBackend.grantConsent("share_pool","PDPA-1.0");
+    CLOUD.session=true;
+    return true;
+  }catch(e){console.warn("cloud register",e);return false}
+}
+function loginV(){
+  head("เข้าสู่ระบบ","มีบัญชีอยู่แล้ว","ใช้เบอร์โทรและรหัส 4 หลักที่ตั้งไว้ตอนสมัคร","welcome");
+  V.innerHTML='<div class="anim"><div class="card">'+
+  '<div class="field"><label>เบอร์โทรศัพท์</label><input id="lPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
+  '<div class="field"><label>รหัส 4 หลัก</label><input id="lPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
+  '<button class="cta" id="lGo">เข้าสู่ระบบ</button>'+
+  '<div class="disc">ข้อมูลของคุณจะถูกดึงกลับมาจากระบบกลางโดยอัตโนมัติ</div></div>';
+  document.getElementById("lGo").addEventListener("click",async function(){
+    var ph=document.getElementById("lPhone").value.trim(), pin=document.getElementById("lPin").value.trim();
+    if(!/^0\d{8,9}$/.test(ph)){toast("กรุณากรอกเบอร์โทรให้ถูกต้อง");return}
+    if(!/^\d{4}$/.test(pin)){toast("รหัสต้องเป็นตัวเลข 4 หลัก");return}
+    this.disabled=true;this.textContent="กำลังเข้าสู่ระบบ…";
+    try{
+      await CSBackend.signInUser(ph,pin);
+      CLOUD.session=true;
+      var cp=CSBackend.getProfile();
+      /* สร้างโปรไฟล์ในเครื่องจากข้อมูลคลาวด์ */
+      S.data.profile={uid:"v"+Date.now().toString(36),name:cp.display_name||"สมาชิก",
+        birthYear:cp.birth_year_be,birthMonth:cp.birth_month,
+        age:ageFrom(cp.birth_year_be,cp.birth_month),sex:cp.sex,joined:cp.created_at};
+      /* ดึงผลประเมินย้อนหลังจากคลาวด์ */
+      var rows=await CSBackend.listAssessments(100);
+      S.data.assessments=rows.map(function(r){return{
+        at:r.assessed_at,score:r.score,max:r.score_max,tier:r.tier,
+        ftsst:r.ftsst_seconds!=null?+r.ftsst_seconds:null,parts:r.parts,
+        method:r.method,reps:r.reps,cv:r.cadence_cv!=null?+r.cadence_cv:null,
+        gaps:r.gaps?r.gaps.map(Number):null}});
+      await saveAll();
+      toast("ยินดีต้อนรับกลับ คุณ"+S.data.profile.name+" · ดึงผล "+rows.length+" รายการ");
+      go("assess");
+    }catch(e){
+      this.disabled=false;this.textContent="เข้าสู่ระบบ";
+      toast("เข้าสู่ระบบไม่สำเร็จ ตรวจสอบเบอร์และรหัสอีกครั้ง");
+    }
+  });
+}
+
+/* ============================================================
    สถานะแอป
    ============================================================ */
 var S={data:null,screen:"loading",draft:{},cam:null};
@@ -609,7 +697,7 @@ function render(arg){
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,reg:regV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
+  var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
           trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV}[S.screen]||assessV;
   fn(arg);
 }
@@ -627,7 +715,8 @@ function welcomeV(){
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ก่อนเริ่ม โปรดเตรียม</h3>'+
   '<p class="sub" style="margin:0">เก้าอี้มีพนักพิงวางชิดผนัง · พื้นที่ว่างด้านหน้าประมาณ 2 เมตร · วางมือถือให้เห็นตัวคุณตั้งแต่ศีรษะถึงเท้า · มีคนอยู่ใกล้ ๆ เผื่อต้องช่วยพยุง</p></div>'+
   '<div class="card"><h3>หลักคุ้มครองผู้ใช้</h3><p class="sub" style="margin:0">ผลประเมิน<b>ลดเบี้ยได้เท่านั้น</b> ไม่มีการเพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนน · AI คัดกรองเท่านั้น การส่งต่อและการพิจารณาสินไหมทุกกรณีตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์</p></div>'+
-  '<button class="cta" data-go="reg">เริ่มใช้งาน · สร้างบัญชี</button></div>';
+  '<button class="cta" data-go="reg">เริ่มใช้งาน · สร้างบัญชี</button>'+
+  '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button></div>';
 }
 function regV(){
   head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้เลือกเกณฑ์เวลาตามช่วงอายุและคำนวณเบี้ยของคุณ","welcome");
@@ -639,7 +728,9 @@ function regV(){
   '<div class="field"><label>เดือนเกิด (ช่วยให้คำนวณอายุตรงเกณฑ์)</label><select id="fMonth" style="width:100%;box-sizing:border-box;font-size:17px;font-family:inherit;padding:13px;border:1.5px solid #DFE7F2;border-radius:14px;background:#fff;color:#16233B">'+
   '<option value="">ไม่ระบุ</option>'+TH_MONTHS.map(function(m,i){return '<option value="'+(i+1)+'"'+(d.month===i+1?" selected":"")+'>'+m+'</option>'}).join("")+'</select></div>'+
   '<div class="field"><label>เพศ</label><div class="seg" id="fSex">'+
-  '<button data-v="f" aria-pressed="'+(d.sex==="f")+'">หญิง</button><button data-v="m" aria-pressed="'+(d.sex==="m")+'">ชาย</button></div></div></div>'+
+  '<button data-v="f" aria-pressed="'+(d.sex==="f")+'">หญิง</button><button data-v="m" aria-pressed="'+(d.sex==="m")+'">ชาย</button></div></div>'+
+  '<div class="field"><label>เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ)</label><input id="fPhone" inputmode="tel" value="'+esc(d.phone||"")+'" placeholder="เช่น 0812345678"></div>'+
+  '<div class="field"><label>ตั้งรหัส 4 หลัก (จำง่าย ๆ ของคุณเอง)</label><input id="fPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
   '<div class="card"><h3>ความยินยอมตาม PDPA</h3>'+
   '<p class="sub" style="margin:0 0 12px">กล้องประมวลผลท่าทาง<b>ภายในเครื่องของคุณ</b> ระบบเก็บเฉพาะตัวเลข (เวลาที่ใช้ จำนวนครั้ง คะแนน) ไม่เก็บและไม่ส่งภาพหรือวิดีโอ · ใช้เพื่อประเมินความเสี่ยง คำนวณส่วนลดเบี้ย และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · ถอนความยินยอมและลบข้อมูลได้ทุกเมื่อ</p>'+
   '<label class="chk"><input type="checkbox" id="fConsent"><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
@@ -655,12 +746,24 @@ function regV(){
     if(!S.draft.sex){toast("กรุณาเลือกเพศ");return}
     if(!document.getElementById("fConsent").checked){toast("กรุณาให้ความยินยอมตาม PDPA ก่อนเริ่มใช้งาน");return}
     var mo=parseInt(document.getElementById("fMonth").value,10)||null;
+    var ph=document.getElementById("fPhone").value.trim();
+    var pin=document.getElementById("fPin").value.trim();
+    if(ph&&!/^0\d{8,9}$/.test(ph)){toast("เบอร์โทรไม่ถูกต้อง (หรือเว้นว่างเพื่อใช้แบบออฟไลน์)");return}
+    if(ph&&!/^\d{4}$/.test(pin)){toast("กรุณาตั้งรหัสเป็นตัวเลข 4 หลัก");return}
     var age=ageFrom(yr,mo);
-    S.data.profile={uid:"v"+Date.now().toString(36),name:nm,birthYear:yr,birthMonth:mo,age:age,sex:S.draft.sex,joined:nowISO()};
+    S.data.profile={uid:"v"+Date.now().toString(36),name:nm,birthYear:yr,birthMonth:mo,age:age,sex:S.draft.sex,phone:ph||null,joined:nowISO()};
     S.data.consent={version:"PDPA-1.0",at:nowISO()};
     audit("บันทึกความยินยอม","ผู้ใช้ยินยอมตามข้อตกลง PDPA-1.0 รวมถึงการประมวลผลภาพในเครื่อง");
     await saveAll(); S.draft={};
-    toast("สร้างบัญชีสำเร็จ ยินดีต้อนรับคุณ"+nm);
+    /* สมัครเข้าระบบกลางถ้ากรอกเบอร์ไว้ — ล้มเหลวก็ใช้แบบออฟไลน์ต่อได้ */
+    if(ph){
+      this.disabled=true;this.textContent="กำลังเชื่อมระบบกลาง…";
+      var ok=await cloudRegister(ph,pin,S.data.profile);
+      document.getElementById("chip").textContent=dbLabel();
+      toast(ok?"สร้างบัญชีสำเร็จ · เชื่อมระบบกลางแล้ว":"สร้างบัญชีสำเร็จ (โหมดออฟไลน์ — เชื่อมระบบกลางภายหลังได้)");
+    }else{
+      toast("สร้างบัญชีสำเร็จ ยินดีต้อนรับคุณ"+nm);
+    }
     go("assess");
   });
 }
@@ -1060,6 +1163,7 @@ async function finishAssess(){
     }
   }
   await saveAll();
+  cloudSync(rec,tr);   /* ซิงก์ขึ้นระบบกลางแบบไม่บล็อกผู้ใช้ */
   S.draft={};
   go("result",rec);
 }
@@ -1135,6 +1239,7 @@ function trendV(){
       body:"จะลบบัญชี ผลประเมิน และเคส<b>ทั้งหมด</b> กู้คืนไม่ได้",
       ok:"ลบข้อมูลทั้งหมด",cancel:"ไม่ลบ · กลับไปก่อน",danger:true,
       onOk:async function(){
+        if(CLOUD.session){try{await CSBackend.deleteAllMyData();CLOUD.session=false}catch(e){}}
         await DB.del("visionData");S.data=blank();S.draft={};
         toast("ลบข้อมูลเรียบร้อยตามสิทธิ PDPA");go("welcome");
       }});
@@ -1258,6 +1363,7 @@ document.addEventListener("click",function(e){
 (async function(){
   await loadAll();
   go(S.data.profile?"assess":"welcome");
+  cloudBoot();   /* เชื่อมระบบกลางเบื้องหลัง ไม่บล็อกการเปิดแอป */
 })();
 /* ---------- ติดตั้งเป็นแอปบนมือถือ (Add to Home Screen) ---------- */
 (function(){
