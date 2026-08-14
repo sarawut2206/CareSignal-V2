@@ -1188,7 +1188,9 @@ function assessIntroV(){
   '<div class="bigrow" style="margin-top:6px"><div class="ic">⏱️</div><div class="tx"><b>จับเวลาเอง</b><span>ถ้ากล้องใช้ไม่ได้ หรือมีคนช่วยจับเวลาให้</span></div></div>'+
   '<button class="ghostb" id="aStart">จับเวลาเอง</button></div>'+
   '<div class="disc">ผลตรวจทั้งสองวิธีเก็บในที่เดียวกัน และระบบบันทึกไว้ด้วยว่าครั้งนั้นวัดด้วยวิธีใด</div>'+
+  logoutBtnHTML()+
   '</div>';
+  bindLogoutBtn();
   document.getElementById("aCam").addEventListener("click",function(){S.draft={t0:Date.now()};go("faceEnroll")});
   document.getElementById("aStart").addEventListener("click",function(){S.draft={t0:Date.now()};go("assessTimer")});
 }
@@ -2531,6 +2533,51 @@ function aiV(){
   '<button class="cta" data-go="me">กลับ</button></div>';
 }
 
+
+/* ============================================================
+   ออกจากระบบ
+   ------------------------------------------------------------
+   แยกสองกรณีให้ชัด เพราะผลลัพธ์ต่างกันมาก:
+   - บัญชีที่เชื่อมระบบกลางแล้ว: ข้อมูลอยู่บนเซิร์ฟเวอร์ ออกได้ปลอดภัย
+     ล้างสำเนาในเครื่องทิ้งเพื่อไม่ให้คนถัดไปที่ใช้เครื่องนี้เห็นข้อมูล
+     แล้วเข้าใหม่ด้วยเบอร์กับรหัส 4 หลักได้ทุกเมื่อ
+   - บัญชีออฟไลน์ (ไม่ได้กรอกเบอร์ตอนสมัคร): ข้อมูลมีที่นี่ที่เดียว
+     ออกจากระบบ = ลบทิ้งถาวร จึงต้องเตือนตรง ๆ ก่อน ไม่ใช่ปล่อยให้
+     กดแล้วข้อมูลหายโดยไม่รู้ตัว
+   ============================================================ */
+function logoutFlow(){
+  var cloud = (typeof CLOUD!=="undefined" && CLOUD.session);
+  dialog({
+    title: cloud ? "ออกจากระบบ" : "ออกจากระบบ (บัญชีออฟไลน์)",
+    body: cloud
+      ? "ข้อมูลของท่าน<b>ยังอยู่บนระบบกลาง</b> เข้าใหม่ด้วยเบอร์โทรและรหัส 4 หลักได้ทุกเมื่อ<br><br>ระบบจะล้างสำเนาข้อมูลในเครื่องนี้ เพื่อไม่ให้คนถัดไปที่ใช้เครื่องนี้เห็นข้อมูลของท่าน"
+      : "บัญชีนี้<b>ไม่ได้เชื่อมกับระบบกลาง</b> ข้อมูลทั้งหมดอยู่ในเครื่องนี้ที่เดียว<br><br><b style=\"color:var(--c1)\">หากออกจากระบบตอนนี้ ผลตรวจทั้งหมดจะหายถาวร กู้คืนไม่ได้</b><br><br>หากต้องการเก็บข้อมูลไว้ ให้กดยกเลิก แล้วสมัครใหม่พร้อมกรอกเบอร์โทรเพื่อเชื่อมระบบกลางก่อน",
+    ok: cloud ? "ออกจากระบบ" : "ออกจากระบบ และลบข้อมูลในเครื่อง",
+    cancel: "ยกเลิก · ใช้งานต่อ",
+    danger: !cloud,
+    onOk: async function(){
+      audit("ออกจากระบบ", cloud ? "ผู้ใช้ออกจากระบบ · ข้อมูลยังอยู่บนระบบกลาง"
+                                : "ผู้ใช้ออกจากระบบบัญชีออฟไลน์ · ข้อมูลในเครื่องถูกลบ");
+      if(cloud){ try{ await CSBackend.signOut() }catch(e){} }
+      if(typeof CLOUD!=="undefined"){ CLOUD.session=false; }
+      try{ clearFaceSig() }catch(e){}
+      try{ await DB.del("careSignalData") }catch(e){}
+      S.data=blankData(); S.draft={};
+      stopCam();
+      toast(cloud ? "ออกจากระบบแล้ว" : "ออกจากระบบและลบข้อมูลในเครื่องแล้ว");
+      go("welcome");
+    }
+  });
+}
+/* ปุ่มออกจากระบบ ใช้ซ้ำได้ทุกหน้า */
+function logoutBtnHTML(){
+  return '<button class="ghostb" id="csLogout" style="margin-top:6px">ออกจากระบบ</button>';
+}
+function bindLogoutBtn(){
+  var b=document.getElementById("csLogout");
+  if(b)b.addEventListener("click",logoutFlow);
+}
+
 function meV(){
   var p=S.data.profile;
   head("ตั้งค่า",esc(p.name),"สมาชิกตั้งแต่ "+thDate(p.joined),"home");
@@ -2544,7 +2591,9 @@ function meV(){
   '<p class="sub">ส่งข้อมูลสรุป<b>แบบแฝงชื่อ</b> (รหัสสุ่มแทนชื่อจริง ช่วงอายุ เพศ ระดับสัญญาณ) เข้าระบบกลาง เพื่อให้ Care Manager และบริษัทประกันดูแลพอร์ตได้ — ข้อมูลแฝงชื่อยังเป็นข้อมูลส่วนบุคคลที่ได้รับความคุ้มครองเต็มที่ตาม PDPA</p>'+
   '<div class="seg"><button id="shareOn" aria-pressed="'+S.data.sharePool+'">เปิด</button><button id="shareOff" aria-pressed="'+(!S.data.sharePool)+'">ปิด</button></div></div>'+
   '<div class="card"><h3>ที่เก็บข้อมูล</h3><p class="sub" style="margin:0">โหมดปัจจุบัน: <b>'+dbLabel().replace("DB · ","")+'</b> — CLOUD = ฐานข้อมูลถาวรของแพลตฟอร์ม · LOCAL = ในเครื่องนี้ · TEMP = ชั่วคราว</p></div>'+
-  '<div class="card"><h3>ความโปร่งใสและสิทธิของคุณ</h3><p class="sub">ดูได้ว่าระบบใช้กฎอะไร ตัดสินใจอะไรกับข้อมูลของคุณบ้าง และระบบทำอะไรไม่ได้</p><button class="ghostb" data-go="ai">ดูว่าระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>'+'<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';
+  '<div class="card"><h3>ความโปร่งใสและสิทธิของคุณ</h3><p class="sub">ดูได้ว่าระบบใช้กฎอะไร ตัดสินใจอะไรกับข้อมูลของคุณบ้าง และระบบทำอะไรไม่ได้</p><button class="ghostb" data-go="ai">ดูว่าระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>'+logoutBtnHTML()+
+  '<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';
+  bindLogoutBtn();
   document.getElementById("shareOn").addEventListener("click",async function(){S.data.sharePool=true;await saveAll();toast("เปิดการแชร์ข้อมูลสรุปแล้ว");render()});
   document.getElementById("shareOff").addEventListener("click",async function(){S.data.sharePool=false;await saveAll();toast("ปิดการแชร์แล้ว — ข้อมูลอยู่กับคุณเท่านั้น");render()});
   document.getElementById("wipe").addEventListener("click",function(){

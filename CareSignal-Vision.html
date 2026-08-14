@@ -878,6 +878,51 @@ function regV(){
 }
 
 /* ---------- หน้าประเมิน ---------- */
+
+/* ============================================================
+   ออกจากระบบ
+   ------------------------------------------------------------
+   แยกสองกรณีให้ชัด เพราะผลลัพธ์ต่างกันมาก:
+   - บัญชีที่เชื่อมระบบกลางแล้ว: ข้อมูลอยู่บนเซิร์ฟเวอร์ ออกได้ปลอดภัย
+     ล้างสำเนาในเครื่องทิ้งเพื่อไม่ให้คนถัดไปที่ใช้เครื่องนี้เห็นข้อมูล
+     แล้วเข้าใหม่ด้วยเบอร์กับรหัส 4 หลักได้ทุกเมื่อ
+   - บัญชีออฟไลน์ (ไม่ได้กรอกเบอร์ตอนสมัคร): ข้อมูลมีที่นี่ที่เดียว
+     ออกจากระบบ = ลบทิ้งถาวร จึงต้องเตือนตรง ๆ ก่อน ไม่ใช่ปล่อยให้
+     กดแล้วข้อมูลหายโดยไม่รู้ตัว
+   ============================================================ */
+function logoutFlow(){
+  var cloud = (typeof CLOUD!=="undefined" && CLOUD.session);
+  dialog({
+    title: cloud ? "ออกจากระบบ" : "ออกจากระบบ (บัญชีออฟไลน์)",
+    body: cloud
+      ? "ข้อมูลของท่าน<b>ยังอยู่บนระบบกลาง</b> เข้าใหม่ด้วยเบอร์โทรและรหัส 4 หลักได้ทุกเมื่อ<br><br>ระบบจะล้างสำเนาข้อมูลในเครื่องนี้ เพื่อไม่ให้คนถัดไปที่ใช้เครื่องนี้เห็นข้อมูลของท่าน"
+      : "บัญชีนี้<b>ไม่ได้เชื่อมกับระบบกลาง</b> ข้อมูลทั้งหมดอยู่ในเครื่องนี้ที่เดียว<br><br><b style=\"color:var(--c1)\">หากออกจากระบบตอนนี้ ผลตรวจทั้งหมดจะหายถาวร กู้คืนไม่ได้</b><br><br>หากต้องการเก็บข้อมูลไว้ ให้กดยกเลิก แล้วสมัครใหม่พร้อมกรอกเบอร์โทรเพื่อเชื่อมระบบกลางก่อน",
+    ok: cloud ? "ออกจากระบบ" : "ออกจากระบบ และลบข้อมูลในเครื่อง",
+    cancel: "ยกเลิก · ใช้งานต่อ",
+    danger: !cloud,
+    onOk: async function(){
+      audit("ออกจากระบบ", cloud ? "ผู้ใช้ออกจากระบบ · ข้อมูลยังอยู่บนระบบกลาง"
+                                : "ผู้ใช้ออกจากระบบบัญชีออฟไลน์ · ข้อมูลในเครื่องถูกลบ");
+      if(cloud){ try{ await CSBackend.signOut() }catch(e){} }
+      if(typeof CLOUD!=="undefined"){ CLOUD.session=false; }
+      try{ clearFaceSig() }catch(e){}
+      try{ await DB.del("visionData") }catch(e){}
+      S.data=blank(); S.draft={};
+      stopCam();
+      toast(cloud ? "ออกจากระบบแล้ว" : "ออกจากระบบและลบข้อมูลในเครื่องแล้ว");
+      go("welcome");
+    }
+  });
+}
+/* ปุ่มออกจากระบบ ใช้ซ้ำได้ทุกหน้า */
+function logoutBtnHTML(){
+  return '<button class="ghostb" id="csLogout" style="margin-top:6px">ออกจากระบบ</button>';
+}
+function bindLogoutBtn(){
+  var b=document.getElementById("csLogout");
+  if(b)b.addEventListener("click",logoutFlow);
+}
+
 function assessV(){
   var p=S.data.profile, last=S.data.assessments[S.data.assessments.length-1];
   head("ประเมิน","สวัสดี คุณ"+esc(p.name),"อายุ "+p.age+" ปี · เกณฑ์เวลาของช่วงอายุนี้คือ "+CFG.ftsstCut(p.age).toFixed(1)+" วินาที");
@@ -898,7 +943,9 @@ function assessV(){
   fontBarHTML()+
   '<button class="cta" data-go="face">เปิดกล้องและเริ่มทดสอบ</button>'+
   '<button class="ghostb" id="manual">ทำแบบจับเวลาเอง (กรณีกล้องใช้ไม่ได้)</button>'+
+  logoutBtnHTML()+
   '<div class="disc">ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์ · หากรู้สึกเวียนศีรษะหรือเจ็บระหว่างทำ ให้หยุดทันที</div></div>';
+  bindLogoutBtn();
   document.getElementById("manual").addEventListener("click",function(){
     askTime(function(n){
       S.draft={ftsst:n,method:"manual",reps:5,cv:null};
@@ -2656,7 +2703,9 @@ function trendV(){
     return '<div style="border-top:1px solid var(--line2);padding:9px 0;font-size:12px;line-height:1.6;color:var(--ink2)">'+
     '<b style="color:var(--ink);font-family:var(--mono);font-size:11px">'+thDate(x.at)+' '+thTime(x.at)+' · '+esc(x.ev)+'</b><br>'+esc(x.detail)+'</div>'}).join("")+
   '<p class="sub" style="margin:10px 0 0">ทุกการตัดสินใจของระบบถูกบันทึกไว้ ตรวจสอบย้อนหลังได้ว่าทำอะไรด้วยเหตุผลใด</p></div>'+
+  logoutBtnHTML()+
   '<button class="ghostb danger" id="wipe">ถอนความยินยอมและลบข้อมูลทั้งหมด (PDPA)</button></div>';
+  bindLogoutBtn();
   document.getElementById("wipe").addEventListener("click",function(){
     dialog({title:"ถอนความยินยอมและลบข้อมูล",
       body:"จะลบบัญชี ผลประเมิน และเคส<b>ทั้งหมด</b> กู้คืนไม่ได้",
