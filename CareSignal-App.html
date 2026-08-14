@@ -1043,9 +1043,11 @@ function assessIntroV(){
   V.innerHTML='<div class="anim senior">'+
   '<div class="card"><h2 style="font-size:19px">เตรียมตัวก่อนเริ่ม</h2>'+
   '<div class="rowline"><span class="k">① เก้าอี้มีพนักพิง ไม่มีล้อ</span><span class="v">1 ตัว</span></div>'+
-  '<div class="rowline"><span class="k">② พื้นที่ยืนข้างผนัง/โต๊ะ</span><span class="v">กันล้ม</span></div>'+
-  '<div class="rowline"><span class="k">③ รองเท้าหุ้มส้น หรือเท้าเปล่า</span><span class="v">ห้ามถุงเท้า</span></div>'+
-  '<p class="qhelp" style="margin:14px 0 0">หากวันนี้เวียนหัว หน้ามืด หรือเพิ่งกินยาใหม่ ให้เลื่อนไปวันอื่น ความปลอดภัยสำคัญกว่า</p></div>'+
+  '<div class="rowline"><span class="k">② พื้นที่ว่างด้านหน้าเก้าอี้</span><span class="v">4–5 เมตร</span></div>'+
+  '<div class="rowline"><span class="k">③ ผนังหรือโต๊ะให้จับกันล้ม</span><span class="v">ใกล้มือ</span></div>'+
+  '<div class="rowline"><span class="k">④ รองเท้าหุ้มส้น หรือเท้าเปล่า</span><span class="v">ห้ามถุงเท้า</span></div>'+
+  '<p class="qhelp" style="margin:14px 0 0"><b>ทำไมต้อง 4–5 เมตร:</b> การทดสอบลุกเดินเป็นมาตรฐาน Timed Up and Go ที่ต้องเดินออกไป <b>3 เมตรพอดี</b> แล้วหมุนกลับมานั่ง จึงต้องเผื่อพื้นที่หมุนตัวและระยะวางมือถือ · ถ้าพื้นที่ไม่พอ ข้ามการทดสอบนี้ได้ คะแนนส่วนอื่นยังใช้ได้ครบ</p>'+
+  '<p class="qhelp" style="margin:10px 0 0">หากวันนี้เวียนหัว หน้ามืด หรือเพิ่งกินยาใหม่ ให้เลื่อนไปวันอื่น ความปลอดภัยสำคัญกว่า</p></div>'+
   '<div class="card"><h2 style="font-size:19px">เลือกวิธีวัด</h2>'+
   '<p class="sub" style="margin:0 0 14px">ทั้งสองวิธีให้คะแนนแบบเดียวกัน เลือกวิธีไหนก็ได้</p>'+
   '<div class="bigrow"><div class="ic">📷</div><div class="tx"><b>ให้กล้องนับให้</b><span>วางมือถือแล้วลุกนั่ง กล้องนับครั้งและจับเวลาเอง แม่นกว่าและบอกได้ว่าเหนื่อยเร็วแค่ไหน · ภาพไม่ออกจากเครื่อง</span></div></div>'+
@@ -1570,7 +1572,7 @@ function tugV(){
   head("ขั้นที่ 3","ลุกเดิน 3 เมตร แล้วกลับมานั่ง","ทำได้ก็ดี ข้ามได้ถ้าไม่สะดวก กล้องจับเวลาให้เอง","assessIntro");
   V.innerHTML='<div class="anim">'+
   '<div class="card"><h3>วิธีทำ</h3>'+
-  '<div class="bigrow"><div class="ic">1</div><div class="tx"><b>วัดระยะ 3 เมตรจากเก้าอี้</b><span>ใช้ก้าวเดินของผู้ใหญ่ราว 4 ก้าว หรือวางของไว้เป็นจุดหมาย</span></div></div>'+
+  '<div class="bigrow"><div class="ic">1</div><div class="tx"><b>วัดระยะ 3 เมตรจากเก้าอี้พอดี</b><span>ประมาณ 4–5 ก้าวของผู้ใหญ่ · วางของเป็นจุดหมายไว้ตรงนั้น · ต้องมีพื้นที่ว่างรวม 4–5 เมตร เพื่อเผื่อการหมุนตัวกลับ</span></div></div>'+
   '<div class="bigrow"><div class="ic">2</div><div class="tx"><b>นั่งบนเก้าอี้ให้กล้องเห็นเต็มตัว</b><span>วางมือถือให้เห็นทั้งเก้าอี้และทางเดิน</span></div></div>'+
   '<div class="bigrow"><div class="ic">3</div><div class="tx"><b>ลุก เดินไปถึงจุดหมาย หมุนกลับ แล้วนั่งลง</b><span>เดินด้วยความเร็วปกติของคุณ ใช้ไม้เท้าได้ตามปกติ</span></div></div></div>'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+

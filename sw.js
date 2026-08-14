@@ -27,6 +27,7 @@ var APP_SHELL = [
   "./CareSignal-App.html",
   "./CareSignal-Web.html",
   "./CareSignal-Insurer-Model.html",
+  "./CareSignal-Actuarial.html",
   "./manifest.json",
   "./logo-mark.png",
   "./icon-192.png",
