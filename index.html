@@ -2,10 +2,10 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CareSignal — แพลตฟอร์มข้อมูลต่อเนื่องสำหรับประกันดูแลระยะยาว</title>
-<meta name="description" content="CareSignal เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุให้เป็นข้อมูลที่ป้องกันความเสี่ยงและออกแบบประกัน LTC ได้">
+<meta name="description" content="CareSignal เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุให้เป็นข้อมูลที่ป้องกันความเสี่ยงและออกแบบประกัน LTC ได้ — วัดด้วยกล้องมือถือ ประมวลผลในเครื่อง ไม่ส่งภาพออก">
 <meta property="og:title" content="CareSignal — เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุให้เป็นข้อมูลประกัน LTC">
 <meta property="og:description" content="กล้องมือถือวัดสมรรถภาพที่บ้าน ประมวลผลในเครื่อง ไม่ส่งภาพออก — รู้ก่อนพึ่งพิง ป้องกันก่อนเคลม">
 <meta property="og:type" content="website">
@@ -22,260 +22,435 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE; --navy:#0F1B33;
-  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7; --line:#DFE7F2; --line2:#EDF2FA;
-  --brand:#2563EB; --brand2:#1D4ED8; --teal:#2DD4BF;
+  --bg:#FFFFFF; --soft:#F5F8FD; --surf:#FFF; --navy:#0F1B33;
+  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7; --line:#E4EAF4; --line2:#EFF3FA;
+  --brand:#2563EB; --brand2:#1D4ED8; --brandsoft:#EAF1FE;
   --accent:#F59E0B; --accent2:#B45309; --accentb:#FEF3C7;
+  --ok:#0E9F6E; --oksoft:#E3F6EF; --warn:#D97706; --danger:#DC2626;
   --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,monospace;
-  --sh:0 1px 2px rgba(22,35,59,.04),0 8px 24px rgba(22,35,59,.06);
+  --sh:0 1px 2px rgba(22,35,59,.04),0 6px 20px rgba(22,35,59,.07);
+  --shx:0 4px 12px rgba(22,35,59,.07),0 20px 48px rgba(22,35,59,.11);
+  --nav:68px;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
-.wrap{max-width:960px;margin:0 auto;padding:0 22px}
-header{background:var(--navy);color:#fff;padding:52px 0 46px;position:relative;overflow:hidden}
-header::after{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;border-radius:50%;
-  background:radial-gradient(circle,rgba(37,99,235,.38),transparent 65%)}
-header::before{content:"";position:absolute;left:-170px;bottom:-220px;width:480px;height:480px;border-radius:50%;
-  background:radial-gradient(circle,rgba(245,158,11,.15),transparent 62%)}
-header .wrap{position:relative;z-index:1}
-.brand{display:flex;align-items:center;gap:14px;margin-bottom:22px}
-.brand img{width:56px;height:56px;background:#fff;border-radius:14px;padding:5px}
-.brand b{font-size:22px;letter-spacing:-.02em;font-weight:700}
-.kick{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#FCD34D}
-h1{font-size:clamp(26px,4.2vw,40px);line-height:1.25;letter-spacing:-.025em;margin:12px 0 14px;font-weight:700;max-width:720px}
-h1 em{font-style:normal;color:#FBBF24}
-.lead{color:rgba(255,255,255,.74);max-width:620px;margin:0 0 26px;font-size:16px}
-.tagline{display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
-  border-radius:99px;padding:8px 18px;font-size:13.5px}
-section{padding:44px 0}
-h2{font-size:21px;letter-spacing:-.015em;margin:0 0 6px;font-weight:600}
-.secsub{color:var(--ink2);font-size:14px;margin:0 0 22px;max-width:660px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.tile{background:var(--surf);border-radius:20px;padding:22px;box-shadow:var(--sh);border:1px solid var(--line);
-  display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
-.tile:hover{transform:translateY(-2px);box-shadow:0 2px 8px rgba(22,35,59,.08),0 20px 44px rgba(22,35,59,.12)}
-.tile .no{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--accent2);text-transform:uppercase}
-.tile h3{margin:8px 0 7px;font-size:17.5px;letter-spacing:-.01em;font-weight:600}
-.tile p{margin:0 0 14px;color:var(--ink2);font-size:13.5px;line-height:1.65;flex:1}
-.tile .go{font-size:13.5px;font-weight:600;color:var(--brand)}
-.tile.hero{border:1.5px solid var(--brand);background:linear-gradient(180deg,#fff,#F7FAFF)}
-.tile.hero .no{color:var(--brand2)}
-.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;
-  background:var(--accentb);color:var(--accent2);margin-left:7px;vertical-align:middle}
-.note{background:var(--surf);border-left:3px solid var(--accent);border-radius:0 14px 14px 0;padding:16px 18px;
-  font-size:13.5px;color:var(--ink2);line-height:1.75;box-shadow:var(--sh)}
-.note b{color:var(--ink)}
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:8px}
-.fact{background:var(--surf);border-radius:16px;padding:16px;box-shadow:var(--sh)}
-.fact .n{font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:-.02em;color:var(--brand2)}
-.fact .l{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.5}
-footer{background:var(--navy);color:rgba(255,255,255,.6);padding:32px 0;font-size:12.5px;line-height:1.8;margin-top:20px}
-footer b{color:#fff}
-@media(max-width:600px){header{padding:38px 0 34px}section{padding:32px 0}}
-/* ===== แถบนำทางบน (สไตล์เว็บผลิตภัณฑ์) ===== */
 html{scroll-behavior:smooth}
-.topnav{position:sticky;top:0;z-index:50;background:rgba(15,27,51,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08)}
-.topnav .in{max-width:960px;margin:0 auto;padding:9px 22px;display:flex;align-items:center;gap:12px}
-.topnav img{width:30px;height:30px;background:#fff;border-radius:8px;padding:3px;flex:none}
-.topnav b{color:#fff;font-size:15px;letter-spacing:-.01em;flex:none}
-.topnav .links{display:flex;gap:2px;overflow-x:auto;margin-left:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.topnav .links::-webkit-scrollbar{display:none}
-.topnav a{color:rgba(255,255,255,.72);text-decoration:none;font-size:12.5px;padding:7px 10px;border-radius:8px;white-space:nowrap}
-.topnav a:hover{background:rgba(255,255,255,.1);color:#fff}
-.topnav a.hot{background:var(--brand);color:#fff;font-weight:600}
-section[id]{scroll-margin-top:60px}
-/* ===== ปุ่ม CTA ใน hero ===== */
-.heroCtas{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
-.btnP{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 26px;border-radius:14px;box-shadow:0 10px 26px rgba(37,99,235,.4)}
-.btnP:hover{background:var(--brand2)}
-.btnG{display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:14px 26px;border-radius:14px}
-.btnG:hover{background:rgba(255,255,255,.18)}
-/* ===== การ์ดคุณสมบัติพิเศษ ===== */
-.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px}
-.feat{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--sh)}
-.feat .ic{font-size:26px;margin-bottom:8px}
-.feat h3{margin:0 0 6px;font-size:15.5px;font-weight:600;letter-spacing:-.01em}
-.feat p{margin:0;font-size:13px;color:var(--ink2);line-height:1.65}
-/* ===== ถาม/ตอบ ===== */
-.faq{background:var(--surf);border:1px solid var(--line);border-radius:16px;margin-bottom:10px;box-shadow:var(--sh);overflow:hidden}
-.faq summary{cursor:pointer;padding:16px 18px;font-weight:600;font-size:14.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;line-height:1.5}
+body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1140px;margin:0 auto;padding:0 22px}
+a{color:var(--brand);text-decoration:none}
+img{max-width:100%}
+
+/* ===================== แถบนำทางบนสุด ===================== */
+.topbar{background:var(--navy);color:rgba(255,255,255,.72);font-size:12.5px}
+.topbar .wrap{display:flex;justify-content:space-between;align-items:center;gap:14px;padding-top:7px;padding-bottom:7px;flex-wrap:wrap}
+.topbar b{color:#FCD34D}
+.nav{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 3px rgba(22,35,59,.05)}
+.nav .wrap{display:flex;align-items:center;gap:10px;height:var(--nav)}
+.brand{display:flex;align-items:center;gap:10px;flex:none;text-decoration:none;color:inherit}
+.brand img{width:40px;height:40px}
+.brand .t{font-weight:700;font-size:19px;letter-spacing:-.02em;line-height:1.15}
+.brand .s{display:block;font-size:10.5px;font-weight:400;color:var(--ink3);letter-spacing:.02em}
+.menu{display:flex;align-items:center;gap:2px;margin-left:auto}
+.mi{position:relative}
+.mi>button{display:flex;align-items:center;gap:6px;background:none;border:0;font-family:inherit;font-size:15.5px;font-weight:500;
+  color:var(--ink);padding:22px 16px;cursor:pointer;line-height:1}
+.mi>button::after{content:"";width:7px;height:7px;border-right:2px solid var(--ink3);border-bottom:2px solid var(--ink3);
+  transform:rotate(45deg) translateY(-2px);transition:transform .18s}
+.mi:hover>button,.mi.open>button{color:var(--brand)}
+.mi:hover>button::after,.mi.open>button::after{border-color:var(--brand);transform:rotate(-135deg) translateY(-2px)}
+.dd{position:absolute;top:100%;left:0;min-width:290px;background:#fff;border:1px solid var(--line);border-radius:14px;
+  box-shadow:var(--shx);padding:8px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:.18s}
+.mi:hover .dd,.mi.open .dd{opacity:1;visibility:visible;transform:none}
+.dd a{display:block;padding:11px 14px;border-radius:10px;color:var(--ink);font-size:14.5px;line-height:1.45}
+.dd a span{display:block;font-size:12px;color:var(--ink3);margin-top:1px}
+.dd a:hover{background:var(--brandsoft);color:var(--brand2)}
+.navcta{flex:none;margin-left:14px;background:var(--brand);color:#fff;border-radius:99px;padding:12px 24px;font-weight:600;font-size:15px;
+  box-shadow:0 6px 18px rgba(37,99,235,.32);white-space:nowrap}
+.navcta:hover{background:var(--brand2)}
+.burger{display:none;margin-left:auto;background:none;border:0;padding:10px;cursor:pointer}
+.burger span{display:block;width:24px;height:2px;background:var(--ink);margin:5px 0;border-radius:2px;transition:.2s}
+@media(max-width:940px){
+  .burger{display:block}
+  .menu{position:fixed;top:var(--nav);left:0;right:0;bottom:0;background:#fff;flex-direction:column;align-items:stretch;
+    gap:0;margin:0;padding:14px 22px 40px;overflow-y:auto;display:none}
+  .menu.on{display:flex}
+  .mi>button{width:100%;justify-content:space-between;padding:16px 4px;font-size:17px;border-bottom:1px solid var(--line2)}
+  .dd{position:static;opacity:1;visibility:visible;transform:none;box-shadow:none;border:0;min-width:0;
+    max-height:0;overflow:hidden;padding:0 0 0 8px;transition:max-height .25s}
+  .mi.open .dd{max-height:420px;padding:6px 0 10px 8px}
+  .navcta{display:block;margin:16px 0 0;text-align:center}
+  .navcta.desk{display:none}
+}
+@media(min-width:941px){.navcta.mob{display:none}}
+section[id]{scroll-margin-top:calc(var(--nav) + 10px)}
+
+/* ===================== Hero ===================== */
+.hero{background:linear-gradient(160deg,#0F1B33 0%,#16294D 45%,#1D3E7A 100%);color:#fff;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-180px;top:-140px;width:620px;height:620px;border-radius:50%;
+  background:radial-gradient(circle,rgba(37,99,235,.42),transparent 66%)}
+.hero::before{content:"";position:absolute;left:-160px;bottom:-260px;width:520px;height:520px;border-radius:50%;
+  background:radial-gradient(circle,rgba(245,158,11,.16),transparent 62%)}
+.hero .wrap{position:relative;z-index:1;padding-top:60px;padding-bottom:56px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr;gap:28px;padding-top:40px;padding-bottom:40px}}
+.kick{display:inline-block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#FCD34D;
+  background:rgba(252,211,77,.12);border:1px solid rgba(252,211,77,.28);border-radius:99px;padding:6px 14px;margin-bottom:18px}
+.hero h1{font-size:clamp(28px,4.2vw,44px);line-height:1.28;letter-spacing:-.025em;margin:0 0 16px;font-weight:700}
+.hero h1 em{font-style:normal;color:#FBBF24}
+.hero p.lead{color:rgba(255,255,255,.8);font-size:17px;margin:0 0 26px;max-width:600px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;border-radius:14px;padding:15px 28px;font-weight:600;font-size:16px;border:0;cursor:pointer;font-family:inherit;text-align:center}
+.btn-p{background:var(--brand);color:#fff;box-shadow:0 10px 26px rgba(37,99,235,.4)}
+.btn-p:hover{background:#3B82F6}
+.btn-g{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff}
+.btn-g:hover{background:rgba(255,255,255,.18)}
+.btn-o{background:#fff;border:1.5px solid var(--line);color:var(--brand2)}
+.btn-o:hover{border-color:var(--brand);background:var(--brandsoft)}
+.trust{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;padding-top:22px;border-top:1px solid rgba(255,255,255,.14)}
+.trust div{font-size:13px;color:rgba(255,255,255,.72);line-height:1.45}
+.trust b{display:block;color:#fff;font-size:17px;font-weight:600}
+.heroCard{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:24px;backdrop-filter:blur(8px)}
+.heroCard h3{margin:0 0 14px;font-size:16px;color:#fff;font-weight:600}
+.hrow{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.1);font-size:14.5px;color:rgba(255,255,255,.78)}
+.hrow:first-of-type{border-top:0}
+.hrow b{color:#fff;font-family:var(--mono);font-weight:600}
+
+/* ===================== ส่วนทั่วไป ===================== */
+section{padding:64px 0}
+section.soft{background:var(--soft)}
+.head{text-align:center;max-width:720px;margin:0 auto 40px}
+.head .eyebrow{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);font-weight:600;margin-bottom:10px}
+.head h2{font-size:clamp(24px,3.2vw,34px);letter-spacing:-.02em;margin:0 0 12px;font-weight:700;line-height:1.35}
+.head p{color:var(--ink2);font-size:16px;margin:0}
+.left{text-align:left;margin-left:0}
+
+/* ขั้นตอน */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
+.step{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px 22px;position:relative;box-shadow:var(--sh)}
+.step .n{width:46px;height:46px;border-radius:14px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:20px;font-weight:600;margin-bottom:14px}
+.step h3{margin:0 0 8px;font-size:17.5px;font-weight:600;letter-spacing:-.01em}
+.step p{margin:0;color:var(--ink2);font-size:14.5px;line-height:1.65}
+
+/* การ์ดแผน */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;align-items:start}
+.plan{background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:26px 22px;position:relative;box-shadow:var(--sh);transition:.18s}
+.plan:hover{transform:translateY(-3px);box-shadow:var(--shx)}
+.plan.pop{border-color:var(--brand);box-shadow:0 8px 30px rgba(37,99,235,.16)}
+.plan .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--brand);color:#fff;font-size:12px;
+  font-weight:600;padding:5px 16px;border-radius:99px;white-space:nowrap}
+.plan h3{margin:0 0 4px;font-size:19px;font-weight:700}
+.plan .ben{color:var(--ink2);font-size:13.5px;margin:0 0 16px}
+.plan .price{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:-.03em;color:var(--ink);line-height:1.1}
+.plan .price small{font-size:14px;color:var(--ink2);font-family:var(--sans);font-weight:400}
+.plan .disc{display:inline-block;background:var(--oksoft);color:var(--ok);font-size:12.5px;font-weight:600;padding:4px 11px;border-radius:99px;margin:10px 0 16px}
+.plan ul{margin:0 0 18px;padding:0;list-style:none;font-size:14px;color:var(--ink2)}
+.plan li{padding:7px 0 7px 24px;position:relative;line-height:1.55}
+.plan li::before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700}
+.plan .go{display:block;text-align:center;border-radius:12px;padding:13px;font-weight:600;font-size:15px;
+  background:var(--soft);color:var(--brand2);border:1px solid var(--line)}
+.plan.pop .go{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* คุณสมบัติ */
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feat{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px 24px;box-shadow:var(--sh)}
+.feat .ic{width:52px;height:52px;border-radius:15px;background:var(--brandsoft);display:flex;align-items:center;justify-content:center;font-size:25px;margin-bottom:14px}
+.feat h3{margin:0 0 8px;font-size:17px;font-weight:600;letter-spacing:-.01em}
+.feat p{margin:0;color:var(--ink2);font-size:14.5px;line-height:1.7}
+
+/* ตัวเลขผลลัพธ์ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:18px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:20px;padding:24px 22px;box-shadow:var(--sh)}
+.stat .n{font-family:var(--mono);font-size:27px;font-weight:600;letter-spacing:-.025em;color:var(--brand2);line-height:1.2}
+.stat .l{font-size:14px;color:var(--ink2);margin-top:8px;line-height:1.6}
+.stat .l b{color:var(--ink)}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;margin:8px 6px 0 0}
+.b-ok{background:var(--oksoft);color:var(--ok)}
+.b-wait{background:var(--accentb);color:var(--accent2)}
+
+/* กล่องคำพูด */
+.quote{background:var(--navy);border-radius:24px;padding:38px;color:#fff;position:relative;overflow:hidden}
+.quote::after{content:"";position:absolute;right:-120px;top:-120px;width:380px;height:380px;border-radius:50%;
+  background:radial-gradient(circle,rgba(37,99,235,.36),transparent 66%)}
+.quote>div{position:relative;z-index:1}
+.quote blockquote{margin:0;font-size:clamp(19px,2.5vw,25px);line-height:1.6;font-weight:600;letter-spacing:-.015em}
+.quote blockquote span{color:#FBBF24}
+.quote p{margin:16px 0 0;font-size:14.5px;color:rgba(255,255,255,.7);line-height:1.75;max-width:700px}
+
+/* FAQ */
+.faq{background:#fff;border:1px solid var(--line);border-radius:16px;margin-bottom:10px;box-shadow:var(--sh);overflow:hidden}
+.faq summary{cursor:pointer;padding:18px 22px;font-weight:600;font-size:15.5px;list-style:none;display:flex;justify-content:space-between;
+  align-items:center;gap:14px;line-height:1.5}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";font-size:21px;color:var(--brand);flex:none;font-weight:400;line-height:1}
+.faq summary::after{content:"+";font-size:24px;color:var(--brand);flex:none;font-weight:400;line-height:1}
 .faq[open] summary::after{content:"−"}
-.faq .a{padding:0 18px 16px;font-size:13.5px;color:var(--ink2);line-height:1.8}
+.faq .a{padding:0 22px 20px;font-size:14.5px;color:var(--ink2);line-height:1.85}
 .faq .a b{color:var(--ink)}
-.faq .a a{color:var(--brand);font-weight:600;text-decoration:none}
-/* ===== วิธีติดตั้ง ===== */
-.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-.dlc{background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--sh)}
-.dlc h3{margin:0 0 8px;font-size:15px;font-weight:600}
-.dlc ol{margin:0;padding-left:20px;font-size:13px;color:var(--ink2);line-height:1.85}
-/* เคารพผู้ใช้ที่ตั้งค่าลดการเคลื่อนไหว (WCAG 2.3.3) */
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* ติดตั้ง */
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.dlc{background:#fff;border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--sh)}
+.dlc h3{margin:0 0 12px;font-size:16px;font-weight:600}
+.dlc ol{margin:0;padding-left:20px;font-size:14.5px;color:var(--ink2);line-height:1.9}
+
+/* กล่องเตือน */
+.notice{background:var(--accentb);border:1px solid rgba(245,158,11,.35);border-radius:18px;padding:22px 26px;font-size:14.5px;color:var(--ink2);line-height:1.8}
+.notice b{color:var(--accent2)}
+.notice.blue{background:var(--brandsoft);border-color:rgba(37,99,235,.25)}
+.notice.blue b{color:var(--brand2)}
+
+/* Footer */
+footer{background:var(--navy);color:rgba(255,255,255,.62);padding:52px 0 28px;font-size:14px;line-height:1.85}
+.fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:32px;margin-bottom:34px}
+@media(max-width:860px){.fgrid{grid-template-columns:1fr 1fr;gap:26px}}
+@media(max-width:520px){.fgrid{grid-template-columns:1fr}}
+footer h4{color:#fff;font-size:14.5px;font-weight:600;margin:0 0 12px}
+footer a{color:rgba(255,255,255,.62);display:block;padding:3px 0}
+footer a:hover{color:#fff}
+.fbrand{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.fbrand img{width:42px;height:42px;background:#fff;border-radius:11px;padding:4px}
+.fbrand b{color:#fff;font-size:19px}
+.fbot{border-top:1px solid rgba(255,255,255,.13);padding-top:22px;font-size:12.5px;line-height:1.9;color:rgba(255,255,255,.5)}
+.fbot b{color:rgba(255,255,255,.82)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 
-<nav class="topnav" aria-label="เมนูหลัก"><div class="in">
-  <img src="./logo-mark.png" alt=""><b>CareSignal</b>
-  <div class="links">
-    <a href="#what">คืออะไร</a>
-    <a href="#why">ทำไมต้องมี</a>
-    <a href="#features">คุณสมบัติ</a>
-    <a href="#results">ผลลัพธ์</a>
-    <a href="#faq">ถาม/ตอบ</a>
-    <a href="#insurers">สำหรับบริษัทประกัน</a>
-    <a class="hot" href="#install">ติดตั้งฟรี</a>
+<!-- ============ แถบบนสุด ============ -->
+<div class="topbar"><div class="wrap">
+  <span>ผลงานเข้าประกวด <b>OIC InsurTech Award 2026</b> · โจทย์ความเสี่ยงด้านสังคมสูงวัย</span>
+  <span>ต้นแบบเพื่อการประกวด — ยังไม่ใช่ผลิตภัณฑ์ประกันภัยที่เปิดขายจริง</span>
+</div></div>
+
+<!-- ============ แถบเมนู ============ -->
+<nav class="nav" aria-label="เมนูหลัก"><div class="wrap">
+  <a class="brand" href="#top">
+    <img src="./logo-mark.png" alt="">
+    <span class="t">CareSignal<span class="s">รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม</span></span>
+  </a>
+
+  <button class="burger" id="burger" aria-label="เปิดเมนู" aria-expanded="false"><span></span><span></span><span></span></button>
+
+  <div class="menu" id="menu">
+    <div class="mi">
+      <button type="button">แนะนำ CareSignal</button>
+      <div class="dd">
+        <a href="#about">CareSignal คืออะไร<span>อธิบายในประโยคเดียว</span></a>
+        <a href="#why">ทำไมต้องมี<span>ปัญหาที่เราแก้</span></a>
+        <a href="#how">ขั้นตอนง่าย ๆ 4 ขั้น<span>ใช้งานอย่างไร</span></a>
+        <a href="#features">คุณสมบัติเด่น<span>สิ่งที่ระบบทำได้จริงวันนี้</span></a>
+        <a href="#results">ผลลัพธ์เป็นตัวเลข<span>พิสูจน์แล้ว vs เป้าหมาย</span></a>
+        <a href="./CareSignal-Web.html#evi">หลักฐานทางวิชาการ<span>งานวิจัยที่รองรับ</span></a>
+        <a href="#faq">คำถามที่พบบ่อย<span>11 คำถามสำคัญ</span></a>
+      </div>
+    </div>
+
+    <div class="mi">
+      <button type="button">ผู้เอาประกัน</button>
+      <div class="dd">
+        <a href="./CareSignal-Vision.html">เริ่มประเมินด้วยกล้อง<span>วัดลุกนั่ง 5 ครั้ง · ฟรี</span></a>
+        <a href="./CareSignal-App.html">แอปสมาชิก<span>ผลย้อนหลัง · แผนป้องกัน · กรมธรรม์</span></a>
+        <a href="#plans">แผนความคุ้มครองและเบี้ย<span>4 แผน · ผลตรวจดีลดเบี้ยได้</span></a>
+        <a href="./CareSignal-Web.html#site">เครื่องคำนวณเบี้ย<span>ประเมินค่าเบี้ยของคุณ</span></a>
+        <a href="#install">ติดตั้งเป็นแอปบนมือถือ<span>ใช้ได้แม้ไม่มีเน็ต</span></a>
+      </div>
+    </div>
+
+    <div class="mi">
+      <button type="button">ผู้ดูแลระบบ</button>
+      <div class="dd">
+        <a href="./CareSignal-Web.html#cm">Care Manager · คิวเคส<span>พยาบาลยืนยันการส่งต่อ</span></a>
+        <a href="./CareSignal-Web.html#ins">แดชบอร์ดบริษัทประกัน<span>พอร์ตความเสี่ยงแบบแฝงชื่อ</span></a>
+        <a href="./CareSignal-Insurer-Model.html">โมเดลผลประกอบการ<span>ประมาณการ 5 ปี · 14 ตัวแปร</span></a>
+        <a href="./CareSignal-Web.html#ai">Model Card · Responsible AI<span>ความโปร่งใสของระบบ</span></a>
+        <a href="./CareSignal-Web.html#pilot">แผนวัดผลนำร่อง<span>7 ตัวชี้วัด ประกาศล่วงหน้า</span></a>
+      </div>
+    </div>
+
+    <a class="navcta mob" href="./CareSignal-Vision.html">เริ่มประเมินฟรี</a>
   </div>
+
+  <a class="navcta desk" href="./CareSignal-Vision.html">เริ่มประเมินฟรี</a>
 </div></nav>
 
-<header><div class="wrap">
-  <div class="brand"><img src="./logo-mark.png" alt="โลโก้ CareSignal"><b>CareSignal</b></div>
-  <div class="kick">OIC InsurTech Award 2026 · ความเสี่ยงด้านสังคมสูงวัย</div>
-  <h1>เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุ ให้เป็นข้อมูลที่<em>ป้องกันความเสี่ยง</em>และออกแบบประกัน LTC ได้</h1>
-  <p class="lead">บริษัทประกันไทยออกผลิตภัณฑ์ดูแลระยะยาวได้ยาก เพราะไม่มีข้อมูลสมรรถภาพของคนไทยแบบต่อเนื่อง CareSignal สร้างข้อมูลชุดนั้นจากการประเมินที่บ้าน โดยประมวลผลในเครื่องและส่งขึ้นระบบเฉพาะคะแนน</p>
-  <span class="tagline">รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม</span>
-  <div class="heroCtas">
-    <a class="btnP" href="./CareSignal-Vision.html">เปิดใช้เลย · ฟรี ไม่ต้องสมัครก่อน</a>
-    <a class="btnG" href="#install">📲 ติดตั้งเป็นแอปบนมือถือ</a>
+<!-- ============ Hero ============ -->
+<header class="hero" id="top"><div class="wrap">
+  <div>
+    <span class="kick">ประกันดูแลระยะยาว · Long-Term Care</span>
+    <h1>เปลี่ยนสัญญาณความถดถอยของผู้สูงอายุ ให้เป็นข้อมูลที่<em>ป้องกันความเสี่ยง</em>และออกแบบประกัน LTC ได้</h1>
+    <p class="lead">วัดสมรรถภาพด้วยกล้องมือถือที่บ้าน ประมวลผลในเครื่อง ไม่ส่งภาพออกไปที่ใด — ผู้สูงอายุใช้ฟรี บริษัทประกันได้ข้อมูลที่ใช้ตั้งราคาและป้องกันเคลมได้จริง</p>
+    <div class="btns">
+      <a class="btn btn-p" href="./CareSignal-Vision.html">เริ่มประเมินฟรี · ใช้เวลา 6 นาที</a>
+      <a class="btn btn-g" href="#how">ดูขั้นตอนการใช้งาน</a>
+    </div>
+    <div class="trust">
+      <div><b>ไม่ส่งภาพออก</b>ประมวลผลในเครื่อง</div>
+      <div><b>ลดเบี้ยทางเดียว</b>ไม่มีเพิ่มเบี้ย ไม่ปฏิเสธ</div>
+      <div><b>มนุษย์ตัดสิน</b>AI ไม่อนุมัติเคสเอง</div>
+      <div><b>ใช้ออฟไลน์ได้</b>ติดตั้งเป็นแอป</div>
+    </div>
+  </div>
+  <div class="heroCard">
+    <h3>สิ่งที่ระบบวัดและบันทึก</h3>
+    <div class="hrow"><span>ทดสอบลุกนั่ง 5 ครั้ง (FTSST)</span><b>อัตโนมัติ</b></div>
+    <div class="hrow"><span>จุดตรวจจับบนร่างกาย</span><b>33 จุด</b></div>
+    <div class="hrow"><span>เกณฑ์เวลาประชากรไทย</span><b>10.0–12.1 วิ</b></div>
+    <div class="hrow"><span>ยืนยันตัวตนด้วยใบหน้า</span><b>ระหว่างวัด</b></div>
+    <div class="hrow"><span>ภาพหรือวิดีโอที่ส่งออก</span><b style="color:#6EE7B7">ไม่มี</b></div>
+    <div class="hrow"><span>ส่วนลดเบี้ยสูงสุด</span><b style="color:#FCD34D">15%</b></div>
   </div>
 </div></header>
 
-<section style="padding-bottom:0" id="why"><div class="wrap">
-  <figure style="margin:0;background:var(--navy);border-radius:22px;padding:30px 30px 26px;color:#fff;position:relative;overflow:hidden">
-    <div style="position:absolute;right:-120px;top:-120px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.35),transparent 65%)"></div>
-    <div style="position:relative">
-      <div style="font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#FCD34D;margin-bottom:12px">ทำไมต้องมี CareSignal</div>
-      <blockquote style="margin:0;font-size:clamp(18px,2.6vw,23px);line-height:1.65;font-weight:600;letter-spacing:-.01em">
-        “การล้มหนึ่งครั้งของผู้สูงอายุ อาจเปลี่ยนจากการดูแลที่บ้าน เป็นค่าใช้จ่ายระยะยาวของครอบครัวและบริษัทประกัน<br>
-        <span style="color:#FBBF24">เราจึงตรวจจับสัญญาณการเสื่อมถอย ก่อนเกิดเหตุ</span>”
-      </blockquote>
-      <p style="margin:14px 0 0;font-size:13.5px;color:rgba(255,255,255,.68);line-height:1.75;max-width:680px">ผู้สูงอายุราว 1 ใน 3 ล้มอย่างน้อยปีละหนึ่งครั้ง และการล้มคือจุดเริ่มต้นที่พบบ่อยที่สุดของภาวะพึ่งพิง (WHO Step Safely 2021) — แต่ความเสื่อมถอยของกำลังขาที่นำไปสู่การล้ม ปรากฏในการทดสอบลุกนั่ง 5 ครั้ง<b style="color:#fff">ก่อนเหตุการณ์จริง</b> และนั่นคือสิ่งที่กล้องของเราวัดถึงบ้าน</p>
-    </div>
-  </figure>
-</div></section>
-
-<section id="what"><div class="wrap">
-  <div class="note" style="border-left-color:var(--brand);margin-bottom:26px">
-    <b style="font-size:16px;color:var(--ink)">CareSignal คืออะไร — อธิบายในประโยคเดียว</b><br>
-    <span style="font-size:16px;color:var(--ink);line-height:1.8">ใช้กล้องมือถือวัดความถดถอยของสมรรถภาพผู้สูงอายุที่บ้าน เพื่อให้บริษัทประกันป้องกันภาวะพึ่งพิงก่อนเกิดเคลม LTC โดยไม่ส่งภาพออกจากเครื่อง</span>
+<!-- ============ CareSignal คืออะไร ============ -->
+<section id="about"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">CareSignal คืออะไร</div>
+    <h2>อธิบายในประโยคเดียว</h2>
+    <p>ใช้กล้องมือถือวัดความถดถอยของสมรรถภาพผู้สูงอายุที่บ้าน เพื่อให้บริษัทประกันป้องกันภาวะพึ่งพิง<b>ก่อน</b>เกิดเคลม LTC โดยไม่ส่งภาพออกจากเครื่อง</p>
   </div>
-  <h2>แกนกลาง — จุดเดียวที่ต้องจำ</h2>
-  <p class="secsub">ระบบอื่นทั้งหมดในหน้านี้เกิดขึ้น <b>เพราะ</b> มีข้อมูลชุดนี้ ไม่ใช่ไอเดียคู่ขนาน</p>
-  <div class="grid">
-
-    <a class="tile hero" href="./CareSignal-Vision.html">
-      <span class="no">ระบบหลัก · ใช้กล้อง</span>
-      <h3>CareSignal Vision<span class="badge">แนะนำให้เริ่มที่นี่</span></h3>
-      <p>กล้องมือถือตรวจจับ 33 จุดบนร่างกาย นับท่าลุกนั่ง 5 ครั้งและจับเวลาให้อัตโนมัติ วิเคราะห์แนวโน้มพร้อมอธิบายเหตุผลเป็นตัวเลข ส่งเคสเข้าคิวให้ผู้เชี่ยวชาญยืนยัน และมีแดชบอร์ดพอร์ตของบริษัทประกันในตัว</p>
-      <span class="go">เปิดระบบ · ต้องอนุญาตใช้กล้อง →</span>
-    </a>
-
-  </div>
-</div></section>
-
-<section style="padding-top:0" id="features"><div class="wrap">
-  <h2>คุณสมบัติพิเศษ</h2>
-  <p class="secsub">ทุกข้อทำงานได้จริงในระบบวันนี้ ไม่ใช่แผนอนาคต — กดเปิดใช้แล้วตรวจสอบได้ทันที</p>
   <div class="feats">
-    <div class="feat"><div class="ic">📷</div><h3>กล้องนับให้ ไม่ต้องกดปุ่ม</h3><p>วางมือถือแล้วลุกนั่ง กล้องตรวจจับ 33 จุดบนร่างกาย นับครบ 5 ครั้งและจับเวลาเองอัตโนมัติ พร้อมสอบเทียบกับสรีระของแต่ละคนก่อนวัดทุกครั้ง</p></div>
+    <div class="feat"><div class="ic">👵</div><h3>สำหรับผู้เอาประกัน</h3><p>วัดสมรรถภาพเองที่บ้านด้วยมือถือ ใช้เวลา 6 นาที เห็นแนวโน้มของตัวเอง และผลดีช่วยลดเบี้ยประกันได้ทันที</p></div>
+    <div class="feat"><div class="ic">👩‍⚕️</div><h3>สำหรับทีมดูแล</h3><p>ระบบจัดลำดับเคสที่ต้องช่วยก่อน พร้อมหลักฐานเหตุผลรายข้อ พยาบาลรีวิวเฉพาะเคสที่เข้าเกณฑ์ แทนการติดตามทุกราย</p></div>
+    <div class="feat"><div class="ic">🏢</div><h3>สำหรับบริษัทประกัน</h3><p>ได้ข้อมูลสมรรถภาพต่อเนื่องของคนไทย ซึ่งเป็นสิ่งที่ตลาดยังไม่มี ใช้ตั้งราคา ออกแบบผลิตภัณฑ์ และบริหารความเสี่ยงพอร์ต</p></div>
+  </div>
+</div></section>
+
+<!-- ============ ทำไมต้องมี ============ -->
+<section class="soft" id="why"><div class="wrap">
+  <div class="quote"><div>
+    <blockquote>“การล้มหนึ่งครั้งของผู้สูงอายุ อาจเปลี่ยนจากการดูแลที่บ้าน เป็นค่าใช้จ่ายระยะยาวของครอบครัวและบริษัทประกัน<br><span>เราจึงตรวจจับสัญญาณการเสื่อมถอย ก่อนเกิดเหตุ</span>”</blockquote>
+    <p>ผู้สูงอายุราว 1 ใน 3 ล้มอย่างน้อยปีละหนึ่งครั้ง และการล้มคือจุดเริ่มต้นที่พบบ่อยที่สุดของภาวะพึ่งพิง (WHO Step Safely 2021) — ขณะเดียวกันบริษัทประกันไทยออกผลิตภัณฑ์ดูแลระยะยาวได้ยาก เพราะ<b style="color:#fff">ไม่มีตารางอุบัติการณ์ LTC ของคนไทย</b> จึงตั้งราคาไม่ได้ CareSignal สร้างข้อมูลชุดนั้นจากการประเมินที่บ้าน</p>
+  </div></div>
+</div></section>
+
+<!-- ============ ขั้นตอนง่าย ๆ ============ -->
+<section id="how"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">ใช้งานอย่างไร</div>
+    <h2>ขั้นตอนง่าย ๆ เพียง 4 ขั้น</h2>
+    <p>ทำเองที่บ้านได้ ไม่ต้องซื้ออุปกรณ์เพิ่ม ใช้แค่มือถือกับเก้าอี้หนึ่งตัว</p>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>เตรียมและยืนยันตัวตน</h3><p>วางมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า นั่งเก้าอี้มีพนักพิงชิดผนัง แล้วให้กล้องจำใบหน้าไว้ครั้งเดียว</p></div>
+    <div class="step"><div class="n">2</div><h3>ลุกนั่ง 5 ครั้ง</h3><p>กล้องตรวจจับ 33 จุดบนร่างกาย นับครั้งและจับเวลาให้เอง ไม่ต้องกดปุ่มระหว่างทำ พร้อมตรวจว่ายังเป็นคนเดิม</p></div>
+    <div class="step"><div class="n">3</div><h3>ตอบคำถาม 4 ข้อ</h3><p>การทรงตัว ประวัติหกล้ม ยาประจำ และกิจวัตรประจำวัน รวมเป็นคะแนนเต็ม 12 พร้อมระดับสัญญาณ 4 สี</p></div>
+    <div class="step"><div class="n">4</div><h3>รับผลและสิทธิ์</h3><p>เห็นแนวโน้มพร้อมเหตุผลเป็นตัวเลข ผลดีลดเบี้ยได้ทันที ผลเสี่ยงระบบส่งเคสให้พยาบาลยืนยันและติดต่อกลับ</p></div>
+  </div>
+  <div class="notice blue" style="margin-top:26px">
+    <b>ถ้ากล้องใช้ไม่ได้ล่ะ?</b> ระบบมีทางสำรองทุกจุด — ให้คนข้าง ๆ จับเวลาด้วยนาฬิกาแล้วกรอกตัวเลข ระบบให้คะแนนและวิเคราะห์แนวโน้มเหมือนกันทุกอย่าง และบันทึกไว้เสมอว่าครั้งนั้นวัดด้วยวิธีใด
+  </div>
+</div></section>
+
+<!-- ============ แผนความคุ้มครอง ============ -->
+<section class="soft" id="plans"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">แผนความคุ้มครอง</div>
+    <h2>ประกันดูแลระยะยาว 4 แผน</h2>
+    <p>เบี้ยเริ่มต้นสำหรับอายุ 50–54 ปี เพศชาย · <b>ผลตรวจดีลดเบี้ยได้ถึง 15% และไม่มีทางทำให้เบี้ยแพงขึ้น</b></p>
+  </div>
+  <div class="plans">
+    <div class="plan">
+      <h3>เริ่มต้น</h3>
+      <p class="ben">รับเดือนละ 10,000 บาทเมื่อเข้าภาวะพึ่งพิง</p>
+      <div class="price">590<small> บาท/เดือน</small></div>
+      <span class="disc">ผลตรวจเขียว เหลือ 502 บ.</span>
+      <ul><li>งบป้องกันปีละ 3,000 บาท</li><li>อุบัติเหตุคุ้มครองทันที</li><li>จ่ายสูงสุด 60 งวด</li></ul>
+      <a class="go" href="./CareSignal-App.html">ดูรายละเอียด</a>
+    </div>
+    <div class="plan pop">
+      <span class="tag">ได้รับความนิยมสูงสุด</span>
+      <h3>มาตรฐาน</h3>
+      <p class="ben">รับเดือนละ 15,000 บาทเมื่อเข้าภาวะพึ่งพิง</p>
+      <div class="price">890<small> บาท/เดือน</small></div>
+      <span class="disc">ผลตรวจเขียว เหลือ 757 บ.</span>
+      <ul><li>งบป้องกันปีละ 5,000 บาท</li><li>อุบัติเหตุคุ้มครองทันที</li><li>จ่ายสูงสุด 60 งวด</li><li>ส่วนลดต่อเนื่องรายเดือน</li></ul>
+      <a class="go" href="./CareSignal-App.html">ดูรายละเอียด</a>
+    </div>
+    <div class="plan">
+      <h3>พรีเมียม</h3>
+      <p class="ben">รับเดือนละ 25,000 บาทเมื่อเข้าภาวะพึ่งพิง</p>
+      <div class="price">1,490<small> บาท/เดือน</small></div>
+      <span class="disc">ผลตรวจเขียว เหลือ 1,267 บ.</span>
+      <ul><li>งบป้องกันปีละ 8,000 บาท</li><li>อุบัติเหตุคุ้มครองทันที</li><li>จ่ายสูงสุด 60 งวด</li></ul>
+      <a class="go" href="./CareSignal-App.html">ดูรายละเอียด</a>
+    </div>
+    <div class="plan">
+      <h3>สูงสุด</h3>
+      <p class="ben">รับเดือนละ 40,000 บาทเมื่อเข้าภาวะพึ่งพิง</p>
+      <div class="price">2,290<small> บาท/เดือน</small></div>
+      <span class="disc">ผลตรวจเขียว เหลือ 1,947 บ.</span>
+      <ul><li>งบป้องกันปีละ 12,000 บาท</li><li>อุบัติเหตุคุ้มครองทันที</li><li>จ่ายสูงสุด 60 งวด</li></ul>
+      <a class="go" href="./CareSignal-App.html">ดูรายละเอียด</a>
+    </div>
+  </div>
+  <div class="notice" style="margin-top:26px">
+    <b>⚠️ อัตราเบี้ยข้างต้นเป็นตัวเลขจำลองเพื่อการสาธิตเท่านั้น</b> — ยังไม่ใช่ผลิตภัณฑ์ที่ได้รับความเห็นชอบจากสำนักงาน คปภ. และยังไม่เปิดขายจริง · ระยะรอคอย: อุบัติเหตุคุ้มครองทันที · เจ็บป่วยเฉียบพลัน 180 วัน · ภาวะเสื่อมถอยเรื้อรัง 730 วัน (สั้นลงได้เมื่อประเมินต่อเนื่อง) · ต้องพึ่งพิงต่อเนื่อง 90 วันก่อนเริ่มจ่าย
+  </div>
+</div></section>
+
+<!-- ============ คุณสมบัติเด่น ============ -->
+<section id="features"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">คุณสมบัติเด่น</div>
+    <h2>สิ่งที่ระบบทำได้จริงวันนี้</h2>
+    <p>ทุกข้อทำงานอยู่ในระบบแล้ว ไม่ใช่แผนอนาคต — กดเปิดใช้แล้วตรวจสอบได้ทันที</p>
+  </div>
+  <div class="feats">
+    <div class="feat"><div class="ic">📷</div><h3>กล้องนับให้ ไม่ต้องกดปุ่ม</h3><p>ตรวจจับ 33 จุดบนร่างกาย นับครบ 5 ครั้งและจับเวลาเองอัตโนมัติ พร้อมสอบเทียบกับสรีระของแต่ละคนก่อนวัดทุกครั้ง</p></div>
     <div class="feat"><div class="ic">🔒</div><h3>ภาพไม่ออกจากเครื่อง</h3><p>ประมวลผลท่าทางในเครื่องทั้งหมด ส่งขึ้นระบบเฉพาะตัวเลข — ในโค้ดไม่มีคำสั่งอัปโหลดภาพแม้แต่บรรทัดเดียว ตรวจสอบได้บน GitHub</p></div>
-    <div class="feat"><div class="ic">📈</div><h3>อ่านแนวโน้ม พร้อมเหตุผลทุกคำเตือน</h3><p>เอนจินกฎ 7 ข้อที่อ้างอิงงานวิจัย เทียบคุณกับตัวคุณเองในอดีต ไม่ใช่ค่าเฉลี่ยคนอื่น — ทุกคำเตือนอธิบายเป็นตัวเลขว่าเพราะอะไร</p></div>
-    <div class="feat"><div class="ic">👩‍⚕️</div><h3>เสี่ยงสูง ส่งต่อทีมดูแล</h3><p>ผลเข้าเกณฑ์ถดถอย ระบบสร้างเคสพร้อมหลักฐานเข้าคิวให้พยาบาล/Care Manager ยืนยัน — AI ไม่มีสิทธิ์ตัดสินใจเองในทุกกรณี</p></div>
-    <div class="feat"><div class="ic">💸</div><h3>ผลดี ลดเบี้ยได้ทันที</h3><p>เขียว −15% เหลือง −8% และ<b>ลดได้ทางเดียวเท่านั้น</b> — ไม่มีเส้นทางใดในระบบที่เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนนที่แย่ลง</p></div>
-    <div class="feat"><div class="ic">📴</div><h3>ติดตั้งเป็นแอป ใช้ได้ไม่มีเน็ต</h3><p>เป็น PWA เต็มรูปแบบ ติดตั้งลงหน้าจอเหมือนแอปทั่วไป เปิดครั้งแรกครั้งเดียว หลังจากนั้นทำงานออฟไลน์ได้ครบทุกหน้า — ออกแบบเพื่อบ้านที่เน็ตไม่เสถียร</p></div>
+    <div class="feat"><div class="ic">🪪</div><h3>ยืนยันตัวตนด้วยใบหน้า</h3><p>ตรวจระหว่างทดสอบว่ายังเป็นคนเดิม กันการให้ผู้อื่นทำแทน — เก็บเป็นตัวเลข 6 ค่าในเครื่อง ไม่เก็บภาพ ไม่อัปโหลด</p></div>
+    <div class="feat"><div class="ic">📈</div><h3>อ่านแนวโน้มพร้อมเหตุผล</h3><p>เอนจินกฎ 7 ข้อที่อ้างอิงงานวิจัย เทียบคุณกับตัวคุณเองในอดีต ไม่ใช่ค่าเฉลี่ยคนอื่น ทุกคำเตือนอธิบายเป็นตัวเลขว่าเพราะอะไร</p></div>
+    <div class="feat"><div class="ic">👩‍⚕️</div><h3>เสี่ยงสูง ส่งต่อทีมดูแล</h3><p>ผลเข้าเกณฑ์ถดถอย ระบบสร้างเคสพร้อมหลักฐานเข้าคิวให้พยาบาลยืนยัน — AI ไม่มีสิทธิ์ตัดสินใจเองในทุกกรณี บังคับที่ฐานข้อมูล</p></div>
+    <div class="feat"><div class="ic">📴</div><h3>ติดตั้งเป็นแอป ใช้ได้ไม่มีเน็ต</h3><p>เป็น PWA เต็มรูปแบบ ติดตั้งลงหน้าจอเหมือนแอปทั่วไป เปิดครั้งแรกครั้งเดียว หลังจากนั้นทำงานออฟไลน์ได้ครบทุกหน้า</p></div>
   </div>
 </div></section>
 
-<section style="padding-top:0" id="systems"><div class="wrap">
-  <h2>สิ่งที่ตามมาเมื่อมีข้อมูลชุดนี้</h2>
-  <p class="secsub">สามระบบนี้ไม่ใช่ผลิตภัณฑ์แยก แต่คือปลายทางของข้อมูลเดียวกัน — ผู้ใช้เห็นแนวโน้มตัวเอง ทีมดูแลเห็นคิวที่ต้องช่วย และบริษัทประกันเห็นความเสี่ยงของพอร์ต</p>
-  <div class="grid">
-    <a class="tile" href="./CareSignal-App.html">
-      <span class="no">แอปผู้เอาประกัน · มีกล้อง</span>
-      <h3>แอปสมาชิกฉบับเต็ม</h3>
-      <p>รวมทุกอย่างไว้ในแอปเดียว: วัดลุกนั่ง 5 ครั้งและลุกเดิน 3 เมตรด้วยกล้อง (หรือจับเวลาเองก็ได้) ดูผลย้อนหลัง สมัครประกันที่คิดเบี้ยจากผลตรวจ และแผนป้องกันเฉพาะบุคคล — ออกแบบตัวอักษรและปุ่มให้ผู้สูงอายุใช้เอง</p>
-      <span class="go">เปิดแอป →</span>
-    </a>
-
-    <a class="tile" href="./CareSignal-Web.html">
-      <span class="no">เว็บแพลตฟอร์ม</span>
-      <h3>เว็บไซต์ · Care Manager · Responsible AI</h3>
-      <p>หน้าเว็บสาธารณะพร้อมเครื่องคำนวณเบี้ย คิวดูแลของ Care Manager แดชบอร์ดบริษัทประกัน Model Card พร้อมการตรวจสอบอคติ และแผนวัดผลนำร่อง 7 ตัวชี้วัด</p>
-      <span class="go">เปิดเว็บไซต์ →</span>
-    </a>
-
-    <a class="tile" href="./CareSignal-Web.html#evi">
-      <span class="no">หลักฐาน</span>
-      <h3>ฐานหลักฐานทางวิชาการ</h3>
-      <p>งานวิจัยที่ตีพิมพ์แล้วซึ่งรองรับสองคำถามหลัก: กล้องวัดได้แม่นเท่าคนจับเวลาหรือไม่ และเวลาลุกนั่งทำนายภาวะพึ่งพิงได้จริงหรือไม่ พร้อมรายการสิ่งที่ยัง<b>ไม่ได้</b>พิสูจน์อย่างเปิดเผย</p>
-      <span class="go">เปิดในเว็บแพลตฟอร์ม · เมนู “หลักฐานวิชาการ” →</span>
-    </a>
-
-    <a class="tile" href="./CareSignal-Insurer-Model.html">
-      <span class="no">สำหรับผู้ประกอบการ</span>
-      <h3>โมเดลผลประกอบการ</h3>
-      <p>ตารางอัตราเบี้ยเต็ม ประมาณการ 5 ปีที่ปรับสมมติฐานได้ 14 ตัวแปร เปรียบเทียบพอร์ตที่มีและไม่มีการคัดกรอง ทะเบียนความเสี่ยง 6 ข้อ และตารางคำถามที่ผู้กำกับดูแลจะถาม</p>
-      <span class="go">เปิดโมเดล →</span>
-    </a>
-
+<!-- ============ ผลลัพธ์เป็นตัวเลข ============ -->
+<section class="soft" id="results"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">ผลลัพธ์</div>
+    <h2>ตัวเลขที่เรานำเสนอ — และสถานะจริงของแต่ละตัว</h2>
+    <p>แยกชัดเจนระหว่างสิ่งที่กลไกในระบบ<b>วัดได้แล้ววันนี้</b> กับ<b>เป้าหมายที่ประกาศเกณฑ์ล่วงหน้า</b> เราไม่นำตัวเลขสมมติมาแสดงเป็นผลจริง</p>
   </div>
-</div></section>
-
-<section style="padding-top:0" id="results"><div class="wrap">
-  <h2>ผลลัพธ์ที่นำเสนอเป็นตัวเลข</h2>
-  <p class="secsub">แยกชัดเจนระหว่างสิ่งที่<b>กลไกในระบบวัดได้แล้ววันนี้</b> กับ<b>เป้าหมายที่ประกาศเกณฑ์ล่วงหน้า</b>เพื่อพิสูจน์ในโครงการนำร่อง 30–100 ราย — เราไม่นำตัวเลขสมมติมาแสดงเป็นผลจริง</p>
-  <div class="facts" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
-
-    <div class="fact">
+  <div class="stats">
+    <div class="stat">
       <div class="n">ทุก 7 วัน</div>
-      <div class="l"><b>รอบติดตามที่ถี่ที่สุดเมื่อพบสัญญาณเร่งด่วน</b> — ระบบปรับรอบนัดประเมินซ้ำตามระดับสัญญาณโดยอัตโนมัติ (คงที่ 90 · เฝ้าสังเกต 45 · ถดถอย 21 · เร่งด่วน 7 วัน) และแจ้งทันทีที่เวลาลุกนั่งช้าลงเกิน 2.3 วินาที ซึ่งเป็นเกณฑ์การเปลี่ยนแปลงที่มีความหมายทางคลินิก (MCID)<br><b style="color:var(--accent2)">ยังไม่ทราบ:</b> ระบบตรวจพบล่วงหน้าก่อนการล้มจริงกี่วัน — เป็นคำถามของโครงการนำร่อง</div>
-      <div style="margin-top:9px"><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:#DCFCE7;color:#15803D">กลไกทำงานในระบบแล้ว</span> <span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--accentb);color:var(--accent2)">ระยะนำหน้าการล้มจริง — ยังไม่วัด</span></div>
+      <div class="l"><b>รอบติดตามที่ถี่ที่สุดเมื่อพบสัญญาณเร่งด่วน</b> — ระบบปรับรอบนัดตามระดับสัญญาณอัตโนมัติ (คงที่ 90 · เฝ้าสังเกต 45 · ถดถอย 21 · เร่งด่วน 7 วัน) และแจ้งทันทีที่ช้าลงเกิน 2.3 วินาที (MCID)</div>
+      <span class="badge b-ok">กลไกทำงานแล้ว</span><span class="badge b-wait">ระยะนำหน้าการล้มจริง — ยังไม่วัด</span>
     </div>
-
-    <div class="fact">
+    <div class="stat">
       <div class="n">−20–25%</div>
-      <div class="l"><b>การล้มในกลุ่มที่เข้าโปรแกรมป้องกัน</b> — งานทบทวนวรรณกรรมโปรแกรมออกกำลังป้องกันล้ม (Cochrane 2019; Otago) รายงานการลดราวนี้ ซึ่งลดเหตุบาดเจ็บที่ต้องส่งโรงพยาบาลตามสัดส่วน — ระบบใช้ค่าอนุรักษนิยม 20% ในโมเดลฐาน</div>
-      <div style="margin-top:9px"><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--accentb);color:var(--accent2)">เป้าหมายนำร่อง · อ้างอิงวรรณกรรม ไม่ใช่ผลของระบบนี้เอง</span></div>
+      <div class="l"><b>การล้มในกลุ่มที่เข้าโปรแกรมป้องกัน</b> — งานทบทวนวรรณกรรมโปรแกรมออกกำลังป้องกันล้มรายงานการลดราวนี้ ระบบใช้ค่าอนุรักษนิยม 20% ในโมเดลฐาน</div>
+      <span class="badge b-wait">อ้างอิงวรรณกรรม ไม่ใช่ผลของระบบนี้</span>
     </div>
-
-    <div class="fact">
+    <div class="stat">
       <div class="n">−12%</div>
-      <div class="l"><b>ต้นทุนสินไหม LTC ในโมเดลฐาน</b> — จากสมาชิกเข้าโปรแกรมป้องกัน 60% × ประสิทธิผล 20% และยังห่างจากพอร์ตที่ไม่คัดกรองซึ่งเผชิญ adverse selection +25% — เปิดดูผลต่อ Loss Ratio สด ๆ และปรับสมมติฐานเองได้ทั้ง 14 ตัวแปรในโมเดลผลประกอบการ</div>
-      <div style="margin-top:9px"><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--accentb);color:var(--accent2)">สมมติฐานโมเดล · ประกาศชัด ปรับได้ทุกตัวแปร</span></div>
+      <div class="l"><b>ต้นทุนสินไหม LTC ในโมเดลฐาน</b> — จากสมาชิกเข้าโปรแกรม 60% × ประสิทธิผล 20% และยังห่างจากพอร์ตที่ไม่คัดกรองซึ่งเผชิญ adverse selection +25%</div>
+      <span class="badge b-wait">สมมติฐานโมเดล · ปรับได้ 14 ตัวแปร</span>
     </div>
-
-    <div class="fact">
+    <div class="stat">
       <div class="n">2–3 จาก 10</div>
-      <div class="l"><b>จำนวนเคสที่ Care Manager ต้องรีวิว แทนการติดตามทุกราย</b> — เอนจินกฎจัดลำดับความเร่งด่วนอัตโนมัติพร้อมหลักฐานเหตุผลรายข้อ ตัวเลขนี้<b>สังเกตได้ตรงจากพอร์ตสาธิตในระบบ</b> กดดูเองได้<br><b style="color:var(--accent2)">ยังไม่ทราบ:</b> ประหยัดเวลาทำงานจริงกี่นาทีต่อเคส — ต้องวัดกับ Care Manager จริงในนำร่อง</div>
-      <div style="margin-top:9px"><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:#DCFCE7;color:#15803D">สังเกตได้จากระบบ</span> <span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--accentb);color:var(--accent2)">เวลาที่ประหยัดจริง — ยังไม่วัด</span></div>
+      <div class="l"><b>จำนวนเคสที่ Care Manager ต้องรีวิว</b> แทนการติดตามทุกราย — เอนจินกฎจัดลำดับความเร่งด่วนอัตโนมัติ ตัวเลขนี้สังเกตได้ตรงจากพอร์ตสาธิตในระบบ</div>
+      <span class="badge b-ok">สังเกตได้จากระบบ</span><span class="badge b-wait">เวลาที่ประหยัดจริง — ยังไม่วัด</span>
     </div>
-
-    <div class="fact">
+    <div class="stat">
       <div class="n">≥60%</div>
-      <div class="l"><b>ผู้ใช้กลับมาประเมินซ้ำภายใน 90 วัน และเห็นพัฒนาการของตนเอง</b> — ระบบเปรียบเทียบคะแนนทุกครั้งกับค่าดีที่สุดของตัวผู้ใช้เองโดยอัตโนมัติ (กฎ R4) จึงตอบได้ทันทีว่าดีขึ้นหรือถดถอย — เกณฑ์ผ่านนี้ประกาศไว้ล่วงหน้าเป็นตัวชี้วัดที่ 6 ของแผนนำร่อง</div>
-      <div style="margin-top:9px"><span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:#DCFCE7;color:#15803D">ระบบวัดอัตโนมัติแล้ว</span> <span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--accentb);color:var(--accent2)">เกณฑ์ผ่านประกาศล่วงหน้า</span></div>
+      <div class="l"><b>ผู้ใช้กลับมาประเมินซ้ำใน 90 วัน</b> — ระบบเทียบคะแนนกับค่าดีที่สุดของตัวผู้ใช้เองอัตโนมัติ (กฎ R4) เกณฑ์ผ่านนี้ประกาศไว้ล่วงหน้าเป็นตัวชี้วัดที่ 6 ของแผนนำร่อง</div>
+      <span class="badge b-ok">ระบบวัดอัตโนมัติแล้ว</span><span class="badge b-wait">เกณฑ์ผ่านประกาศล่วงหน้า</span>
     </div>
-
   </div>
-  <div class="note" style="margin-top:16px">ตัวชี้วัดทุกข้อมี<b>นิยามการวัดและเกณฑ์ผ่านประกาศไว้ล่วงหน้า</b>ในหน้า “แผนวัดผลนำร่อง” ของ<a href="./CareSignal-Web.html#pilot" style="color:var(--brand);font-weight:600">เว็บแพลตฟอร์ม</a> และตัวเลขการเงินตรวจสอบ-ปรับสมมติฐานได้ใน<a href="./CareSignal-Insurer-Model.html" style="color:var(--brand);font-weight:600">โมเดลผลประกอบการ</a> — ช่องที่ยังไม่มีหลักฐานจริง ระบบแสดงว่า “รอเก็บข้อมูลนำร่อง” แทนการใส่ตัวเลขสมมติ</div>
-</div></section>
-
-<section style="padding-top:0"><div class="wrap">
-  <h2>หลักการที่ยึดไว้ตั้งแต่การออกแบบ</h2>
-  <p class="secsub">ข้อจำกัดเหล่านี้เขียนอยู่ในโค้ด ไม่ใช่คำสัญญาในเอกสาร</p>
-  <div class="facts">
-    <div class="fact"><div class="n">ลดเบี้ยทางเดียว</div><div class="l">ไม่มีเส้นทางใดในระบบที่เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนนที่แย่ลง</div></div>
-    <div class="fact"><div class="n">ไม่ส่งภาพออก</div><div class="l">กล้องประมวลผลในเครื่อง ส่งขึ้นระบบเฉพาะตัวเลขคะแนนและเวลา</div></div>
-    <div class="fact"><div class="n">มนุษย์ตัดสิน</div><div class="l">AI คัดกรองและรวบรวมหลักฐาน การส่งต่อและสินไหมตัดสินโดยผู้เชี่ยวชาญเท่านั้น</div></div>
-    <div class="fact"><div class="n">แยก AI ออกจากกฎ</div><div class="l">กล้องตรวจจับท่าทางใช้ AI จริง ส่วนการอ่านแนวโน้มใช้กฎที่ตรวจสอบได้ทุกข้อ ไม่เรียกรวมว่า “AI ทำนายโรค”</div></div>
+  <div class="notice blue" style="margin-top:26px">
+    ตัวชี้วัดทุกข้อมี<b>นิยามการวัดและเกณฑ์ผ่านประกาศไว้ล่วงหน้า</b>ใน<a href="./CareSignal-Web.html#pilot">แผนวัดผลนำร่อง</a> และตัวเลขการเงินตรวจสอบ-ปรับสมมติฐานได้ใน<a href="./CareSignal-Insurer-Model.html">โมเดลผลประกอบการ</a> — ช่องที่ยังไม่มีหลักฐานจริง ระบบแสดงว่า "รอเก็บข้อมูลนำร่อง" แทนการใส่ตัวเลขสมมติ
   </div>
 </div></section>
 
-<section style="padding-top:0" id="faq"><div class="wrap">
-  <h2>ถาม/ตอบ — คำถามที่ยากที่สุด เราตอบไว้ล่วงหน้า</h2>
-  <p class="secsub">รวมคำถามที่บริษัทประกัน นักคณิตศาสตร์ประกันภัย และกรรมการมักถาม พร้อมลิงก์ไปหลักฐานในระบบจริงทุกข้อ</p>
+<!-- ============ FAQ ============ -->
+<section id="faq"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">คำถามที่พบบ่อย</div>
+    <h2>คำถามที่ยากที่สุด เราตอบไว้ล่วงหน้า</h2>
+    <p>รวมคำถามที่บริษัทประกัน นักคณิตศาสตร์ประกันภัย และผู้กำกับดูแลมักถาม พร้อมลิงก์ไปหลักฐานในระบบจริงทุกข้อ</p>
+  </div>
 
   <details class="faq"><summary>ทำไมบริษัทประกันต้องใช้ CareSignal?</summary><div class="a">
     เพราะวันนี้<b>ประเทศไทยไม่มีตารางอุบัติการณ์ LTC มาตรฐาน</b> — นักคณิตศาสตร์ประกันภัยตั้งราคาผลิตภัณฑ์ดูแลระยะยาวไม่ได้ จึงไม่มีสินค้าในตลาด CareSignal สร้างข้อมูลสมรรถภาพต่อเนื่องที่ทำให้ <b>(1) ออกผลิตภัณฑ์ได้จริง</b> <b>(2) ป้องกัน adverse selection</b> (พอร์ตไม่คัดกรองเผชิญอุบัติการณ์ส่วนเพิ่ม +25% ในโมเดล) และ <b>(3) ลดสินไหมด้วยการป้องกันก่อนเกิดเหตุ</b> — <a href="./CareSignal-Insurer-Model.html">เปิดโมเดลผลประกอบการ ›</a>
@@ -298,14 +473,18 @@ section[id]{scroll-margin-top:60px}
   </div></details>
 
   <details class="faq"><summary>AI วิเคราะห์ผิดจะเกิดอะไรขึ้น?</summary><div class="a">
-    ออกแบบให้<b>ผิดแล้วไม่มีใครเสียหายทางการเงิน</b>: คะแนนแย่ลงไม่มีทางเพิ่มเบี้ยหรือถูกปฏิเสธ (ในโค้ดมีแต่เส้นทางลดเบี้ย) · เตือนเกิน = มีคนโทรไปถาม ไม่มีใครเสียสิทธิ์ · เตือนพลาด = มีรอบประเมินซ้ำถี่ตามระดับสัญญาณดักอีกชั้น · การส่งต่อทุกเคสต้องมี<b>มนุษย์กดยืนยัน</b> และทุกการตัดสินใจอยู่ใน audit log ที่ผู้ใช้เปิดดูได้เอง — และเราแยกชัด: กล้องคือ AI จริง แต่การอ่านแนวโน้มคือกฎที่ตรวจสอบได้ ไม่ใช่ black box
+    ออกแบบให้<b>ผิดแล้วไม่มีใครเสียหายทางการเงิน</b>: คะแนนแย่ลงไม่มีทางเพิ่มเบี้ยหรือถูกปฏิเสธ (ในโค้ดมีแต่เส้นทางลดเบี้ย) · เตือนเกิน = มีคนโทรไปถาม ไม่มีใครเสียสิทธิ์ · เตือนพลาด = มีรอบประเมินซ้ำถี่ตามระดับสัญญาณดักอีกชั้น · การส่งต่อทุกเคสต้องมี<b>มนุษย์กดยืนยัน</b> ซึ่งบังคับด้วย trigger ในฐานข้อมูล ต่อให้แอปถูกแฮ็กก็ข้ามไม่ได้ · ทุกการตัดสินใจอยู่ใน audit log ที่แก้ไม่ได้ ลบไม่ได้ แม้แต่ผู้ดูแลระบบ
   </div></details>
 
   <details class="faq"><summary>ข้อมูลสุขภาพกับ PDPA จัดการอย่างไร?</summary><div class="a">
-    <b>ในโค้ดไม่มีคำสั่งส่งข้อมูลออกจากเครื่องแม้แต่บรรทัดเดียว</b> — ค้นทั้งโปรเจกต์บน GitHub จะไม่พบ fetch / XMLHttpRequest / sendBeacon เลย นอกจากนี้: ขอความยินยอมชัดแจ้งพร้อมวัตถุประสงค์ · ข้อมูลชีวมิติขอความยินยอม<b>แยกตามมาตรา 26</b> ปฏิเสธได้โดยยังใช้ระบบได้ · เก็บเป็นตัวเลข 6 ค่าไม่ใช่ภาพ และอยู่ในเครื่องเท่านั้น · ข้อมูลแดชบอร์ดเป็นสรุป<b>แบบแฝงชื่อ (pseudonymised)</b> ตามหลัก data minimization ซึ่ง<b>ยังเป็นข้อมูลส่วนบุคคลตาม PDPA</b> ไม่ใช่ข้อมูลนิรนาม จึงได้รับความคุ้มครองเต็มที่ · ถอนความยินยอมและลบทั้งหมดได้ทุกเมื่อ
+    <b>ในโค้ดไม่มีคำสั่งส่งภาพออกจากเครื่องแม้แต่บรรทัดเดียว</b> นอกจากนี้: ขอความยินยอม<b>แยกตามวัตถุประสงค์</b> ถอนได้ทีละอัน · ข้อมูลชีวมิติขอความยินยอม<b>แยกตามมาตรา 26</b> ปฏิเสธได้โดยยังใช้ระบบได้ · เก็บเป็นตัวเลข 6 ค่าไม่ใช่ภาพ และอยู่ในเครื่องเท่านั้น · ข้อมูลแดชบอร์ดเป็นสรุป<b>แบบแฝงชื่อ (pseudonymised)</b> ซึ่ง<b>ยังเป็นข้อมูลส่วนบุคคลตาม PDPA</b> ไม่ใช่ข้อมูลนิรนาม จึงได้รับความคุ้มครองเต็มที่ · ถอนความยินยอมและลบทั้งหมดได้ทุกเมื่อ
   </div></details>
 
-  <details class="faq"><summary>ต่างจาก Smartwatch / Health App / Telemedicine อย่างไร?</summary><div class="a">
+  <details class="faq"><summary>ข้อมูลที่ผู้ใช้กรอกเอง เชื่อถือได้แค่ไหน?</summary><div class="a">
+    ระบบ<b>ไม่ถือว่าเป็นข้อเท็จจริง</b> — คำตอบเรื่องหกล้ม ยาประจำ และกิจวัตรประจำวัน ติดป้าย <b>"ผู้ใช้กรอกเอง"</b> ไว้ทุกข้อในหน้าผลลัพธ์ และจะเปลี่ยนเป็น <b>"ยืนยันแล้ว"</b> ได้ทางเดียวคือผ่านการตรวจสอบกับเวชระเบียน โดยความยินยอม<b>ระบุขอบเขตรายครั้ง</b> — โรงพยาบาลไหน ข้อมูลอะไร ช่วงเวลาใด ไม่ใช่ใบเดียวเปิดดูได้ตลอดชีวิต และถ้าถอนความยินยอม คำขอที่ค้างถูกยกเลิกทันที
+  </div></details>
+
+  <details class="faq"><summary>ต่างจาก Smartwatch / Health App อย่างไร?</summary><div class="a">
     ของพวกนั้นวัดว่า<b>วันนี้เป็นอย่างไร</b> เราวัดว่า<b>กำลังจะเป็นอย่างไร</b> — ด้วยการทดสอบมาตรฐานคลินิก (ลุกนั่ง 5 ครั้ง / ลุกเดิน 3 เมตร) ที่ใช้ในเวชปฏิบัติจริง จึงผูกกับการตั้งราคากรมธรรม์ได้ Smartwatch บอกจำนวนก้าว แต่บอกไม่ได้ว่าคุณ<b>ลุกจากเก้าอี้ช้าลง 2.3 วินาทีเทียบกับ 3 เดือนก่อน</b> — และผู้ใช้ไม่ต้องซื้ออุปกรณ์ใหม่ ไม่ต้องชาร์จ ไม่ต้องใส่นอน แค่มือถือเครื่องเดิมกับเก้าอี้หนึ่งตัว
   </div></details>
 
@@ -314,7 +493,7 @@ section[id]{scroll-margin-top:60px}
   </div></details>
 
   <details class="faq"><summary>Business Model ทำเงินอย่างไร?</summary><div class="a">
-    3 ชั้น: <b>(1) ค่าแพลตฟอร์ม % ของเบี้ยรับ</b> (ตั้งต้น 3% — พอร์ต 5,000 กรมธรรม์ × เบี้ยเฉลี่ย 1,400 บ./เดือน ≈ รายได้ ~2.5 ล้านบาท/ปีจากบริษัทเดียว และโตตามพอร์ต) <b>(2) ค่าติดตั้งเชื่อมระบบ</b>ครั้งเดียวต่อบริษัท <b>(3) ระยะยาว:</b> ข้อมูลรวมระดับกลุ่ม (aggregate) จะกลายเป็น<b>ตารางอุบัติการณ์ LTC ชุดแรกของไทย</b> ซึ่งมีมูลค่าต่อทั้งอุตสาหกรรม
+    3 ชั้น: <b>(1) ค่าแพลตฟอร์ม % ของเบี้ยรับ</b> (ตั้งต้น 3% — พอร์ต 5,000 กรมธรรม์ × เบี้ยเฉลี่ย 1,400 บ./เดือน ≈ รายได้ ~2.5 ล้านบาท/ปีจากบริษัทเดียว และโตตามพอร์ต) <b>(2) ค่าติดตั้งเชื่อมระบบ</b>ครั้งเดียวต่อบริษัท <b>(3) ระยะยาว:</b> ข้อมูลรวมระดับกลุ่มจะกลายเป็น<b>ตารางอุบัติการณ์ LTC ชุดแรกของไทย</b> ซึ่งมีมูลค่าต่อทั้งอุตสาหกรรม
   </div></details>
 
   <details class="faq"><summary>จะทดลองจริงกับใคร และต้องใช้เงินเท่าไร?</summary><div class="a">
@@ -322,124 +501,110 @@ section[id]{scroll-margin-top:60px}
   </div></details>
 </div></section>
 
-<section style="padding-top:0" id="insurers"><div class="wrap">
-  <h2>สำหรับบริษัทประกันภัย — เปิดรับพันธมิตรนำร่อง</h2>
-  <p class="secsub">เราไม่มีโลโก้พันธมิตรมาแสดง เพราะยังไม่มีสัญญาจริง — สิ่งที่เรามีคือระบบที่ทำงานได้วันนี้ และเป้าหมายที่ประกาศชัด: หนังสือแสดงความสนใจ (LOI) ≥2 ฉบับ โดยมีบริษัทประกันอย่างน้อย 1 (ตัวชี้วัดที่ 7 ของแผนนำร่อง)</p>
+<!-- ============ สำหรับบริษัทประกัน ============ -->
+<section class="soft" id="partner"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">สำหรับบริษัทประกันภัย</div>
+    <h2>เปิดรับพันธมิตรนำร่อง</h2>
+    <p>เราไม่มีโลโก้พันธมิตรมาแสดง เพราะยังไม่มีสัญญาจริง — สิ่งที่เรามีคือระบบที่ทำงานได้วันนี้ และเป้าหมายที่ประกาศชัด: หนังสือแสดงความสนใจ ≥2 ฉบับ โดยมีบริษัทประกันอย่างน้อย 1</p>
+  </div>
   <div class="feats">
     <div class="feat"><div class="ic">🏗️</div><h3>ออกผลิตภัณฑ์ LTC ได้จริง</h3><p>ข้อมูลสมรรถภาพต่อเนื่องรายบุคคล = ฐานที่ฝ่ายคณิตศาสตร์ประกันภัยใช้ตั้งราคาและตั้งสำรองได้ พร้อมโมเดล 5 ปีให้สอบทานทุกสมมติฐาน</p></div>
     <div class="feat"><div class="ic">🤝</div><h3>จ่ายตามเบี้ย ไม่มีก้อนใหญ่ล่วงหน้า</h3><p>ค่าแพลตฟอร์มเป็น % ของเบี้ยรับ — เราได้เงินเมื่อพอร์ตของท่านโต ผลประโยชน์ตรงกันตั้งแต่วันแรก</p></div>
     <div class="feat"><div class="ic">🧩</div><h3>ฝังเข้าแอปของท่านได้</h3><p>สถาปัตยกรรมออกแบบเป็น adapter — ใช้เป็น white-label ในแอปของบริษัท หรือใช้แอปของเราก็ได้ ข้อมูลเป็นของพอร์ตท่านเสมอ</p></div>
   </div>
-  <div class="heroCtas" style="margin-top:18px">
-    <a class="btnP" href="./CareSignal-Insurer-Model.html" style="box-shadow:none">เปิดโมเดลผลประกอบการ 5 ปี</a>
-    <a class="btnG" href="./CareSignal-Web.html#ins" style="background:var(--surf2);border-color:var(--line);color:var(--brand2)">ดูแดชบอร์ดพอร์ตตัวอย่าง</a>
+  <div class="btns" style="margin-top:26px;justify-content:center">
+    <a class="btn btn-p" href="./CareSignal-Insurer-Model.html">เปิดโมเดลผลประกอบการ 5 ปี</a>
+    <a class="btn btn-o" href="./CareSignal-Web.html#ins">ดูแดชบอร์ดพอร์ตตัวอย่าง</a>
   </div>
 </div></section>
 
-<section style="padding-top:0" id="install"><div class="wrap">
-  <h2>ติดตั้งใช้งาน — ฟรี ไม่มีโฆษณา ไม่ต้องผ่าน Store</h2>
-  <p class="secsub">CareSignal เป็น Progressive Web App: ติดตั้งจากเบราว์เซอร์ได้เลย เปิดครั้งแรกครั้งเดียว หลังจากนั้น<b>ใช้ได้แม้ไม่มีอินเทอร์เน็ต</b></p>
+<!-- ============ ติดตั้ง ============ -->
+<section id="install"><div class="wrap">
+  <div class="head">
+    <div class="eyebrow">ดาวน์โหลด</div>
+    <h2>ติดตั้งใช้งานฟรี ไม่ต้องผ่าน App Store</h2>
+    <p>CareSignal เป็น Progressive Web App ติดตั้งจากเบราว์เซอร์ได้เลย เปิดครั้งแรกครั้งเดียว หลังจากนั้น<b>ใช้ได้แม้ไม่มีอินเทอร์เน็ต</b></p>
+  </div>
   <div class="dl">
     <div class="dlc"><h3>🤖 Android (Chrome)</h3><ol><li>เปิดเว็บนี้บนมือถือ</li><li>แตะปุ่ม "ติดตั้ง" ที่ระบบเสนอ หรือเมนู ⋮ → "ติดตั้งแอป"</li><li>ไอคอน CareSignal ขึ้นบนหน้าจอ ใช้เหมือนแอปทั่วไป</li></ol></div>
     <div class="dlc"><h3>🍎 iPhone / iPad (Safari)</h3><ol><li>แตะปุ่มแชร์ (สี่เหลี่ยมลูกศรขึ้น)</li><li>เลื่อนหา "เพิ่มลงหน้าจอโฮม"</li><li>แตะ "เพิ่ม" — เสร็จแล้ว</li></ol></div>
     <div class="dlc"><h3>💻 คอมพิวเตอร์ (Chrome/Edge)</h3><ol><li>เปิดเว็บนี้</li><li>กดไอคอนติดตั้ง ⊕ ในแถบที่อยู่</li><li>เปิดจาก Start Menu / Dock ได้เลย</li></ol></div>
   </div>
-  <div class="heroCtas" style="margin-top:18px">
-    <a class="btnP" href="./CareSignal-Vision.html">เริ่มใช้เลยตอนนี้ →</a>
+  <div class="btns" style="margin-top:26px;justify-content:center">
+    <a class="btn btn-p" href="./CareSignal-Vision.html">เริ่มประเมินเลยตอนนี้ →</a>
   </div>
 </div></section>
 
-<section style="padding-top:0" id="award"><div class="wrap">
-  <div class="note" style="border-left-color:var(--accent)">
-    <b>เวทีที่เรากำลังพิสูจน์ตัวเอง</b><br>
-    CareSignal เป็นผลงานส่งเข้าประกวด <b>OIC InsurTech Award 2026</b> จัดโดยศูนย์ส่งเสริมเทคโนโลยีด้านการประกันภัย (CIT) สำนักงาน คปภ. — โจทย์ "InsurTech Ready for the Future's Emerging Risks" สนามความเสี่ยงด้านสังคมสูงวัย · ซอร์สโค้ดทั้งหมดเปิดให้ตรวจสอบบน <a href="https://github.com/sarawut2206/CareSignal-V2" style="color:var(--brand);font-weight:600">GitHub</a>
-  </div>
-</div></section>
-
-<section style="padding-top:0"><div class="wrap">
-  <div class="note">
-    <b>สถานะของงานชิ้นนี้</b><br>
-    ระบบทั้งหมดทำงานได้จริงและทดสอบแล้ว แต่ <b>ยังไม่ผ่านการทดสอบกับผู้สูงอายุจริงในภาคสนาม</b> ตัวเลขทางการเงินในโมเดลเป็นสมมติฐานที่ประกาศไว้ชัดเจนและปรับได้ทุกตัวแปร ส่วนอัตราการลดอุบัติการณ์อ้างอิงจากวรรณกรรมต่างประเทศ ไม่ใช่ผลของระบบนี้เอง<br><br>
-    แผนวัดผลนำร่อง 30–100 ราย พร้อมนิยามการวัดและเกณฑ์ผ่านที่ประกาศล่วงหน้า อยู่ในหน้า “แผนวัดผลนำร่อง” ของเว็บแพลตฟอร์ม<br><br>
-    <b>ระบบนี้เป็นเครื่องมือสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์</b> และการเสนอขายประกันภัยจริงต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ.
-  </div>
-</div></section>
-
+<!-- ============ Footer ============ -->
 <footer><div class="wrap">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px;margin-bottom:22px">
+  <div class="fgrid">
     <div>
-      <b>CareSignal</b><br>
+      <div class="fbrand"><img src="./logo-mark.png" alt=""><b>CareSignal</b></div>
       แพลตฟอร์มข้อมูลต่อเนื่องสำหรับประกันดูแลระยะยาว<br>
-      รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม
+      รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม<br><br>
+      <a href="https://github.com/sarawut2206/CareSignal-V2">ซอร์สโค้ดเปิดให้ตรวจสอบบน GitHub ›</a>
     </div>
     <div>
-      <b>ระบบทั้งหมด</b><br>
-      <a href="./CareSignal-Vision.html" style="color:inherit">CareSignal Vision (กล้อง)</a><br>
-      <a href="./CareSignal-App.html" style="color:inherit">แอปสมาชิก</a><br>
-      <a href="./CareSignal-Web.html" style="color:inherit">เว็บแพลตฟอร์ม · Care Manager</a><br>
-      <a href="./CareSignal-Insurer-Model.html" style="color:inherit">โมเดลผลประกอบการ</a>
+      <h4>ผู้เอาประกัน</h4>
+      <a href="./CareSignal-Vision.html">เริ่มประเมินด้วยกล้อง</a>
+      <a href="./CareSignal-App.html">แอปสมาชิก</a>
+      <a href="#plans">แผนความคุ้มครอง</a>
+      <a href="#install">ติดตั้งแอป</a>
     </div>
     <div>
-      <b>ความโปร่งใส</b><br>
-      <a href="./CareSignal-Web.html#evi" style="color:inherit">ฐานหลักฐานวิชาการ</a><br>
-      <a href="./CareSignal-Web.html#pilot" style="color:inherit">แผนวัดผลนำร่อง</a><br>
-      <a href="./CareSignal-Web.html#ai" style="color:inherit">Model Card · Responsible AI</a><br>
-      <a href="https://github.com/sarawut2206/CareSignal-V2" style="color:inherit">ซอร์สโค้ดบน GitHub</a>
+      <h4>ผู้ดูแลระบบ</h4>
+      <a href="./CareSignal-Web.html#cm">Care Manager</a>
+      <a href="./CareSignal-Web.html#ins">แดชบอร์ดบริษัทประกัน</a>
+      <a href="./CareSignal-Insurer-Model.html">โมเดลผลประกอบการ</a>
+    </div>
+    <div>
+      <h4>ความโปร่งใส</h4>
+      <a href="./CareSignal-Web.html#evi">ฐานหลักฐานวิชาการ</a>
+      <a href="./CareSignal-Web.html#pilot">แผนวัดผลนำร่อง</a>
+      <a href="./CareSignal-Web.html#ai">Model Card · Responsible AI</a>
+      <a href="#faq">คำถามที่พบบ่อย</a>
     </div>
   </div>
-  <div style="border-top:1px solid rgba(255,255,255,.12);padding-top:16px">
-    <b>CareSignal</b> — ผลงานเพื่อการแข่งขัน OIC InsurTech Award 2026 (โจทย์: ความเสี่ยงด้านสังคมสูงวัย)<br>
-    ระบบเคารพสิทธิตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 · ผู้ใช้ถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อ · ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์
+  <div class="fbot">
+    <b>ข้อมูลสำคัญ</b> — CareSignal เป็นผลงานต้นแบบที่พัฒนาขึ้นเพื่อเข้าประกวด OIC InsurTech Award 2026 จัดโดยศูนย์ส่งเสริมเทคโนโลยีด้านการประกันภัย (CIT) สำนักงาน คปภ. <b>ยังไม่ใช่ผลิตภัณฑ์ประกันภัยที่ได้รับความเห็นชอบและยังไม่เปิดขายจริง</b> อัตราเบี้ยและผลประโยชน์ที่แสดงเป็นตัวเลขจำลองเพื่อการสาธิตเท่านั้น การเสนอขายประกันภัยจริงต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ.<br>
+    <b>ระบบนี้เป็นเครื่องมือสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์</b> · ระบบเคารพสิทธิตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ผู้ใช้ถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อ<br>
+    © 2569 ทีม CareSignal
   </div>
 </div></footer>
 
 <script>
-/* ---------- ติดตั้งเป็นแอปบนมือถือ (Add to Home Screen) ---------- */
+/* เมนูมือถือ + dropdown แบบแตะได้ */
 (function(){
-  var BOTTOM="20px";
-  if(matchMedia("(display-mode: standalone)").matches||navigator.standalone)return;
-  try{if(localStorage.getItem("csA2HS")==="no")return}catch(e){}
-  var defer=null, isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
-  function show(){
-    if(document.getElementById("csA2HS"))return;
-    var b=document.createElement("div");
-    b.id="csA2HS";
-    b.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc("+BOTTOM+" + env(safe-area-inset-bottom));z-index:998;display:flex;gap:10px;align-items:center;background:#0F1B33;color:#fff;border-radius:99px;padding:9px 10px 9px 18px;font-size:14px;font-family:inherit;box-shadow:0 12px 32px rgba(15,27,51,.4);max-width:92vw";
-    b.innerHTML='<span>📲 ติดตั้งเป็นแอป ใช้ได้แม้ไม่มีเน็ต</span>'+
-      '<button id="csA2HSgo" style="border:0;border-radius:99px;padding:9px 16px;font-size:14px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;cursor:pointer">ติดตั้ง</button>'+
-      '<button id="csA2HSx" aria-label="ปิด" style="border:0;background:transparent;color:#93A1B7;font-size:16px;cursor:pointer;padding:6px">✕</button>';
-    document.body.appendChild(b);
-    document.getElementById("csA2HSx").addEventListener("click",function(){b.remove();try{localStorage.setItem("csA2HS","no")}catch(e){}});
-    document.getElementById("csA2HSgo").addEventListener("click",function(){
-      if(defer){defer.prompt();defer.userChoice.then(function(){b.remove()});defer=null;return}
-      var o=document.createElement("div");
-      o.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.55);z-index:999;display:flex;align-items:flex-end;justify-content:center;padding:22px";
-      o.innerHTML='<div style="background:#fff;border-radius:22px;padding:24px;max-width:420px;width:100%;color:#16233B">'+
-        '<h3 style="margin:0 0 10px;font-size:19px">ติดตั้งบน iPhone / iPad</h3>'+
-        '<p style="margin:0 0 6px;font-size:15.5px;line-height:1.8;color:#5B6B84">1. แตะปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรขึ้น) ในแถบล่างของ Safari<br>2. เลื่อนหา <b>“เพิ่มลงหน้าจอโฮม”</b><br>3. แตะ <b>เพิ่ม</b> — ไอคอน CareSignal จะอยู่บนหน้าจอเหมือนแอปทั่วไป</p>'+
-        '<button style="display:block;width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;font-family:inherit;background:#2563EB;color:#fff;margin-top:12px;cursor:pointer">เข้าใจแล้ว</button></div>';
-      document.body.appendChild(o);
-      o.querySelector("button").addEventListener("click",function(){o.remove()});
-      o.addEventListener("click",function(e){if(e.target===o)o.remove()});
+  var b=document.getElementById("burger"), m=document.getElementById("menu");
+  b.addEventListener("click",function(){
+    var on=m.classList.toggle("on");
+    b.setAttribute("aria-expanded",on?"true":"false");
+    document.body.style.overflow=on?"hidden":"";
+  });
+  document.querySelectorAll(".mi>button").forEach(function(btn){
+    btn.addEventListener("click",function(e){
+      if(window.innerWidth>940)return;   /* เดสก์ท็อปใช้ hover */
+      e.preventDefault();
+      var mi=btn.parentNode, open=mi.classList.contains("open");
+      document.querySelectorAll(".mi").forEach(function(x){x.classList.remove("open")});
+      if(!open)mi.classList.add("open");
     });
-  }
-  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();defer=e;show()});
-  window.addEventListener("appinstalled",function(){var b=document.getElementById("csA2HS");if(b)b.remove()});
-  if(isIOS)setTimeout(show,2500);
+  });
+  /* ปิดเมนูเมื่อกดลิงก์ */
+  m.querySelectorAll("a").forEach(function(a){
+    a.addEventListener("click",function(){
+      m.classList.remove("on"); b.setAttribute("aria-expanded","false"); document.body.style.overflow="";
+    });
+  });
 })();
-/* ---------- แจ้งสถานะออฟไลน์/ออนไลน์ ---------- */
-window.addEventListener("offline",function(){if(typeof toast==="function")toast("ออฟไลน์ — ใช้งานต่อได้ตามปกติ ข้อมูลบันทึกในเครื่องนี้")});
-window.addEventListener("online",function(){if(typeof toast==="function")toast("กลับมาออนไลน์แล้ว")});
 /* PWA: ลงทะเบียน Service Worker — ใช้ออฟไลน์ได้หลังเปิดครั้งแรก + แจ้งเมื่อมีเวอร์ชันใหม่ */
 if("serviceWorker" in navigator&&location.protocol!=="file:"){
   navigator.serviceWorker.register("./sw.js").then(function(reg){
     reg.addEventListener("updatefound",function(){
       var nw=reg.installing; if(!nw)return;
       nw.addEventListener("statechange",function(){
-        if(nw.state==="installed"&&navigator.serviceWorker.controller){
-          nw.postMessage("SKIP_WAITING");
-          if(typeof toast==="function")toast("อัปเดตเป็นเวอร์ชันใหม่แล้ว — มีผลเมื่อเปิดครั้งถัดไป");
-        }
+        if(nw.state==="installed"&&navigator.serviceWorker.controller)nw.postMessage("SKIP_WAITING");
       });
     });
   }).catch(function(){});
