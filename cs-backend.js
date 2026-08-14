@@ -37,9 +37,21 @@ var CSBackend = (function () {
     if (!CS_CONFIG.url || !CS_CONFIG.anonKey) { mode = "local"; return false; }
     try {
       var mod = await import("https://esm.sh/@supabase/supabase-js@2.45.4");
+      /* แยกช่องเก็บ session ตามบริบทของหน้า:
+         "member" = แอปผู้เอาประกัน (Vision / App) · "staff" = แดชบอร์ดเจ้าหน้าที่ (Web)
+         ก่อนหน้านี้ทุกหน้าบน origin เดียวกันแชร์คีย์เดียว ทำให้เปิดแอปสมาชิก
+         ค้างไว้แล้วล็อกอินเจ้าหน้าที่อีกแท็บ token ทับกัน — หน้าเจ้าหน้าที่
+         จึงอ่านโปรไฟล์ได้เป็นคนละบัญชีกับที่เพิ่งล็อกอิน (บทบาทเพี้ยน) */
+      var scope = (typeof window !== "undefined" && window.CS_AUTH_SCOPE) || "member";
       sb = mod.createClient(CS_CONFIG.url, CS_CONFIG.anonKey, {
-        auth: { persistSession: true, autoRefreshToken: true }
+        auth: { persistSession: true, autoRefreshToken: true,
+                storageKey: "cs-auth-" + scope }
       });
+      /* เก็บกวาดคีย์รวมรุ่นเก่า กัน session ค้างข้ามบริบท */
+      try {
+        var ref = CS_CONFIG.url.split("//")[1].split(".")[0];
+        localStorage.removeItem("sb-" + ref + "-auth-token");
+      } catch (e) {}
       ready = true; mode = "cloud";
       return true;
     } catch (e) {

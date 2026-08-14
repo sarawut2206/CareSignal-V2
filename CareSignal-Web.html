@@ -356,7 +356,8 @@ table.dt tr:last-child td{border-bottom:0}
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="./cs-backend.js"></script>
+<script>window.CS_AUTH_SCOPE="staff";/* แดชบอร์ดเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิก */</script>
+<script src="./cs-backend.js?v=142"></script>
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
@@ -611,7 +612,10 @@ function gateHTML(target){
     (denied
       ? '<div style="background:#FEE9E9;border:1px solid #F3B5B5;color:#A81E1E;border-radius:12px;padding:14px 16px;font-size:14px;text-align:left">'+
         '<b>บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้</b><br>เข้าสู่ระบบด้วย '+esc(C.email||"—")+' ซึ่งมีบทบาท <b>'+esc(C.role||"ยังไม่กำหนด")+'</b> · ต้องเป็นบทบาท '+g.roles.join(" หรือ ")+
-        '<div style="margin-top:12px"><button id="gateOut-'+target+'" style="padding:9px 18px;border:1px solid #DFE7F2;border-radius:10px;background:#fff;font-family:inherit;font-size:13.5px;cursor:pointer">ออกจากระบบ แล้วเข้าด้วยบัญชีอื่น</button></div></div>'
+        '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button id="gateRe-'+target+'" style="padding:9px 18px;border:0;border-radius:10px;background:var(--brand);color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer">ตรวจสิทธิ์อีกครั้ง</button>'+
+        '<button id="gateOut-'+target+'" style="padding:9px 18px;border:1px solid #DFE7F2;border-radius:10px;background:#fff;font-family:inherit;font-size:13.5px;cursor:pointer">ออกจากระบบ แล้วเข้าด้วยบัญชีอื่น</button></div>'+
+        '<p style="font-size:12px;margin:10px 0 0;color:#7A2E2E">หมายเหตุ: เบราว์เซอร์หนึ่งเครื่องล็อกอินเจ้าหน้าที่ได้ทีละบัญชี — ถ้าเพิ่งล็อกอินอีกบทบาทในแท็บอื่น ให้ปิดแท็บนั้นแล้วกด "ตรวจสิทธิ์อีกครั้ง"</p></div>'
       : '<div style="text-align:left">'+
         '<div style="display:grid;gap:10px">'+
         '<input id="gEmail-'+target+'" type="email" placeholder="อีเมลเจ้าหน้าที่" autocomplete="username" style="padding:13px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:15px">'+
@@ -628,6 +632,20 @@ function renderGate(target){
   if(!gate||!body)return;
   if(gateOK(target)){ gate.innerHTML=""; gate.hidden=true; body.hidden=false; return true }
   gate.hidden=false; body.hidden=true; gate.innerHTML=gateHTML(target);
+  var rec=document.getElementById("gateRe-"+target);
+  if(rec)rec.addEventListener("click",async function(){
+    this.textContent="กำลังตรวจ…";this.disabled=true;
+    try{
+      var pr=await CSBackend.loadProfile();
+      var cu=await CSBackend.currentUser();
+      if(pr&&cu&&pr.id===cu.id){CLOUD.session=true;CLOUD.role=pr.role;CLOUD.email=cu.email}
+    }catch(e){}
+    renderGate(target);
+    if(gateOK(target)){
+      if(target==="cm"){renderCM();renderCloudCM()}else{renderINS();renderCloudINS()}
+      toast("ตรวจสิทธิ์แล้ว · บทบาท "+(CLOUD.role||"—"));
+    }
+  });
   var out=document.getElementById("gateOut-"+target);
   if(out)out.addEventListener("click",async function(){
     try{await CSBackend.signOut()}catch(e){}
@@ -641,6 +659,8 @@ function renderGate(target){
     if(!em||!pw){toast("กรอกอีเมลและรหัสผ่าน");return}
     this.textContent="กำลังตรวจสอบ…";this.disabled=true;
     try{
+      /* ล้าง session เดิมก่อนเสมอ — กันกรณี token ของบัญชีอื่นค้างอยู่ */
+      try{await CSBackend.signOut()}catch(e0){}
       await CSBackend.signInStaff(em,pw);
       /* บัญชีที่เปิด MFA ต้องผ่านรหัส 6 หลักก่อนได้สิทธิ์เต็ม (AAL2) */
       var f=await CSBackend.mfaFactors();
@@ -651,6 +671,15 @@ function renderGate(target){
         await CSBackend.mfaVerify(vf[0].id,code);
       }
       var pr=await CSBackend.loadProfile();
+      /* กันโปรไฟล์คนละบัญชี: เทียบ id ของโปรไฟล์กับ id ของ session จริง
+         (เกิดได้เมื่อเปิดหลายแท็บแล้ว token ทับกัน) */
+      var cu=await CSBackend.currentUser();
+      if(!pr||!cu||pr.id!==cu.id){
+        toast("ระบบพบ session ซ้อนกันจากแท็บอื่น — ปิดแท็บอื่นแล้วลองใหม่");
+        try{await CSBackend.signOut()}catch(e1){}
+        CLOUD.session=false;CLOUD.role=null;CLOUD.email=null;
+        renderGate(target);return;
+      }
       CLOUD.session=true;CLOUD.role=pr?pr.role:null;CLOUD.email=em;
       await refreshMfaState();
       if(gateOK(target)){
@@ -1001,7 +1030,9 @@ async function renderCloudINS(){
   try{
     var ok=await CSBackend.init(); if(!ok)return;
     var u=await CSBackend.currentUser();
-    if(u){var p=await CSBackend.loadProfile();CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=u.email;await refreshMfaState()}
+    if(u){var p=await CSBackend.loadProfile();
+      if(p&&p.id===u.id){CLOUD.session=true;CLOUD.role=p.role;CLOUD.email=u.email;await refreshMfaState()}
+      else{try{await CSBackend.signOut()}catch(e2){}}}
   }catch(e){}
   renderGate('cm');renderGate('ins');
   renderCloudCM();renderCloudINS();
