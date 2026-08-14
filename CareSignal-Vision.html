@@ -325,6 +325,11 @@ function RepDetector(opts){
   this.upFrac=opts.upFrac!==undefined?opts.upFrac:0.68;
   this.downFrac=opts.downFrac!==undefined?opts.downFrac:0.36;
   this.buf=[]; this.smoothN=opts.smoothN||5;
+  /* จุดเริ่มจับเวลาจริง — เมื่อร่างกายเริ่มขยับลุกครั้งแรก ไม่ใช่ตอนกดปุ่ม
+     มาตรฐาน FTSST จับเวลาตั้งแต่เริ่มเคลื่อนไหวจนลุกครบ 5 ครั้ง
+     ถ้านับตั้งแต่กดปุ่ม เวลาที่นั่งรอจะถูกบวกเข้าไปด้วย ทำให้ผลแย่กว่าจริง */
+  this.onsetFrac=opts.onsetFrac!==undefined?opts.onsetFrac:0.18;
+  this.moveStart=null;
 }
 RepDetector.prototype.smooth=function(v){
   this.buf.push(v); if(this.buf.length>this.smoothN)this.buf.shift();
@@ -332,7 +337,12 @@ RepDetector.prototype.smooth=function(v){
   return s/this.buf.length;
 };
 RepDetector.prototype.setRefs=function(sit,stand){this.sitRef=sit;this.standRef=stand};
-RepDetector.prototype.start=function(t){this.state="sit";this.reps=0;this.stamps=[];this.t0=t;this.done=false;this.buf=[]};
+RepDetector.prototype.start=function(t){this.state="sit";this.reps=0;this.stamps=[];this.t0=t;this.done=false;this.buf=[];this.moveStart=null};
+/* เวลาที่ใช้จริง นับจากจังหวะเริ่มขยับ ไม่ใช่จากตอนกดปุ่ม */
+RepDetector.prototype.elapsedAt=function(t){
+  var base=this.moveStart!=null?this.moveStart:this.t0;
+  return (t-base)/1000;
+};
 RepDetector.prototype.thresholds=function(){
   var range=this.standRef-this.sitRef;
   return {up:this.sitRef+range*this.upFrac, down:this.sitRef+range*this.downFrac, range:range};
@@ -340,9 +350,16 @@ RepDetector.prototype.thresholds=function(){
 RepDetector.prototype.push=function(raw,t){
   if(this.done||this.state==="idle"||this.sitRef==null||this.standRef==null)return null;
   var v=this.smooth(raw), th=this.thresholds();
+  /* จับจังหวะ "เริ่มขยับลุก" ครั้งแรก → นาฬิกาเริ่มเดินตรงนี้
+     ใช้เกณฑ์ต่ำ (18% ของช่วงนั่ง-ยืน) เพื่อจับตั้งแต่เริ่มโน้มตัวไปข้างหน้า */
+  if(this.moveStart===null&&this.state==="sit"&&v>=this.sitRef+th.range*this.onsetFrac){
+    this.moveStart=t;
+    return {event:"onset"};
+  }
   if(this.state==="sit"&&v>=th.up){
+    if(this.moveStart===null)this.moveStart=t;   /* กันกรณีลุกเร็วจนข้ามเกณฑ์เริ่มขยับ */
     this.state="stand"; this.reps++; this.stamps.push(t);
-    if(this.reps>=this.target){this.done=true;return{event:"finish",reps:this.reps,elapsed:(t-this.t0)/1000}}
+    if(this.reps>=this.target){this.done=true;return{event:"finish",reps:this.reps,elapsed:this.elapsedAt(t)}}
     return {event:"rep",reps:this.reps};
   }
   if(this.state==="stand"&&v<=th.down){this.state="sit";return{event:"down",reps:this.reps}}
@@ -712,12 +729,12 @@ function askTime(cb,onCancel){
 }
 function render(arg){
   setTimeout(bindFontBar,0);
-  T.hidden=!S.data.profile||["test","calib","q","result","plog","mrv","face"].indexOf(S.screen)>=0;
+  T.hidden=!S.data.profile||["test","calib","q","result","plog","mrv","face","balance"].indexOf(S.screen)>=0;
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
   var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
-          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,mydata:mydataV}[S.screen]||assessV;
+          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,mydata:mydataV,balance:balanceV}[S.screen]||assessV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -1367,7 +1384,7 @@ function setupTest(video,canvas,ctx){
     running=true;t0=performance.now();lastEvt=t0;DET.start(t0);
     startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
     stopBtn.hidden=false;
-    setStatus("green","เริ่ม! ลุก-นั่งให้ครบ 5 ครั้ง",false);speak("เริ่มได้เลย");
+    setStatus("green","เริ่มได้เลย — นาฬิกาจะเริ่มเดินเมื่อคุณเริ่มลุก",false);speak("เริ่มได้เลย");
     coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
   }
   startBtn.addEventListener("click",function(){
@@ -1408,10 +1425,10 @@ function finishTest(elapsed){
     ? ("ตรวจใบหน้า "+ck+" ครั้ง ไม่ตรง "+fl+" ครั้ง → "+(S.draft.identityVerified?"ยืนยันผ่าน":"ยืนยันไม่ผ่าน"))
     : "ผู้ใช้ไม่ได้ลงทะเบียนใบหน้า ผลนี้ไม่ได้ยืนยันตัวตน");
   audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
-  speak("ครบห้าครั้ง เสร็จเรียบร้อย ใช้เวลา "+S.draft.ftsst.toFixed(0)+" วินาที เก่งมากค่ะ");
+  speak("ครบห้าครั้ง เสร็จเรียบร้อย ใช้เวลา "+S.draft.ftsst.toFixed(0)+" วินาที เก่งมากค่ะ ขั้นตอนต่อไป ทดสอบการทรงตัว");
   toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
   if(PILOT){go("plog");return}
-  go("q",0);
+  setTimeout(function(){go("balance")},2400);
 }
 
 /* ---------- ฟอร์มบันทึกข้อมูลวิจัย (แสดงเฉพาะโหมดนำร่อง) ---------- */
@@ -1519,18 +1536,300 @@ function pilotV(){
   });
 }
 
+
+/* ============================================================
+   ทดสอบการทรงตัว — ยืนเท้าชิด หลับตา 10 วินาที
+   ------------------------------------------------------------
+   กล้องวัด "ความโคลงเคลง" (postural sway) จากการขยับของจุดกึ่งกลางลำตัว
+   หารด้วยความกว้างไหล่ เพื่อให้ค่าไม่ขึ้นกับระยะห่างจากกล้อง
+
+   ⚠️ ค่าที่วัดได้เป็น "ข้อสังเกตจากกล้อง" ไม่ใช่การตัดสิน
+   ผู้เอาประกันเป็นผู้ยืนยันความรู้สึกจริงอีกครั้งเสมอ
+   และกระบวนการนี้จะถูกตรวจสอบโดยเจ้าหน้าที่ประกันภัยในภายหลัง
+   ============================================================ */
+var BAL_SECONDS=10;
+
+/* จุดกึ่งกลางลำตัวและความกว้างไหล่ ใช้ทำให้ค่าไม่ขึ้นกับระยะกล้อง */
+function trunkCenter(lm){
+  var sh={x:(lm[LM.LSH].x+lm[LM.RSH].x)/2, y:(lm[LM.LSH].y+lm[LM.RSH].y)/2};
+  var hp={x:(lm[LM.LHIP].x+lm[LM.RHIP].x)/2, y:(lm[LM.LHIP].y+lm[LM.RHIP].y)/2};
+  return {x:(sh.x+hp.x)/2, y:(sh.y+hp.y)/2};
+}
+function shoulderWidth(lm){
+  return Math.hypot(lm[LM.LSH].x-lm[LM.RSH].x, lm[LM.LSH].y-lm[LM.RSH].y);
+}
+/* ค่าโคลงเคลง = ส่วนเบี่ยงเบนมาตรฐานของตำแหน่งลำตัว หารความกว้างไหล่ */
+function swayScore(samples){
+  if(samples.length<8)return null;
+  var n=samples.length, mx=0, my=0;
+  samples.forEach(function(s){mx+=s.x;my+=s.y});
+  mx/=n; my/=n;
+  var vx=0, vy=0;
+  samples.forEach(function(s){vx+=(s.x-mx)*(s.x-mx); vy+=(s.y-my)*(s.y-my)});
+  return Math.sqrt(vx/n+vy/n);
+}
+/* แปลงค่าเป็นข้อสังเกต 3 ระดับ */
+function swayLabel(v){
+  if(v==null)return {nm:"วัดไม่ได้", cls:"", hint:"กล้องเห็นตัวไม่ครบตลอด 10 วินาที"};
+  if(v<0.020)return {nm:"นิ่งมาก", cls:"t4", hint:"แทบไม่มีการโคลง"};
+  if(v<0.045)return {nm:"โคลงเล็กน้อย", cls:"t3", hint:"มีการแกว่งบ้างตามปกติ"};
+  if(v<0.080)return {nm:"โคลงปานกลาง", cls:"t2", hint:"แกว่งชัดเจน ควรมีที่จับใกล้มือ"};
+  return {nm:"โคลงมาก", cls:"t1", hint:"แกว่งมาก ควรมีคนอยู่ข้าง ๆ เสมอ"};
+}
+
+function balanceV(){
+  head("ทดสอบการทรงตัว","ยืนเท้าชิด หลับตา 10 วินาที","กล้องจะวัดความโคลงเคลงให้ · ยืนใกล้ผนังหรือโต๊ะที่คว้าจับได้ทันที","assess");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ความปลอดภัยมาก่อน</h3>'+
+  '<p class="sub" style="margin:0">ยืนใกล้ผนังหรือโต๊ะที่<b>คว้าจับได้ทันที</b> · ควรมีคนอยู่ข้าง ๆ · หากรู้สึกจะล้มให้<b>ลืมตาและจับทันที</b> ไม่ต้องฝืน ระบบจะบันทึกว่าทำได้เท่าที่ทำ</p></div>'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="qual">คุณภาพภาพ —</span></div>'+
+  '<div class="hudbot"><div class="counter"><span class="n" id="bsec">10</span><span class="of">วินาที</span>'+
+  '<span class="clock" id="bsway">—</span></div>'+
+  '<div class="track"><i id="btrk" style="width:0%"></i></div>'+
+  '<div class="coach" id="coach">ยืนเท้าชิดกัน มือแนบลำตัว แล้วหลับตา</div></div></div></div>'+
+  statusHTML()+
+  '<button class="cta" id="bStart">เริ่มทดสอบทรงตัว</button>'+
+  '<button class="ghostb" id="bSkip">ข้ามขั้นนี้ · ตอบด้วยตนเอง</button>'+
+  '<div class="disc">กล้องบันทึกเฉพาะ<b>ตัวเลขความโคลง</b> ไม่มีการเก็บภาพหรือวิดีโอ · ผลจากกล้องเป็นข้อสังเกตประกอบ ผู้เอาประกันเป็นผู้ยืนยันคำตอบสุดท้ายเสมอ</div></div>';
+  document.getElementById("bSkip").addEventListener("click",function(){
+    S.draft.swayValue=null; S.draft.swayHeld=null;
+    audit("ข้ามการวัดทรงตัวด้วยกล้อง","ผู้ใช้เลือกตอบด้วยตนเองโดยไม่ใช้กล้อง");
+    go("q",0);
+  });
+  startBalancePipeline();
+}
+
+async function startBalancePipeline(){
+  var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
+      secEl=document.getElementById("bsec"),swayEl=document.getElementById("bsway"),trk=document.getElementById("btrk"),
+      startBtn=document.getElementById("bStart");
+  var stream;
+  setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false})}
+  catch(e){tag.textContent="เปิดกล้องไม่ได้";setStatus("red","เปิดกล้องไม่ได้ — ตอบคำถามด้วยตนเองแทนได้");
+    coach.textContent="กดปุ่มข้ามด้านล่างเพื่อตอบเอง";return}
+  S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
+  setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง",false);
+  try{await loadModel(tag)}
+  catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ตอบคำถามด้วยตนเองแทนได้");return}
+  tag.textContent="ตรวจจับท่าทางแล้ว";
+
+  var running=false, t0=0, samples=[], lostFrames=0, AUTOB=null;
+  function finish(held){
+    running=false;
+    var sway=swayScore(samples);
+    var lab=swayLabel(sway);
+    S.draft.swayValue=sway;
+    S.draft.swayHeld=held;
+    S.draft.swayLabel=lab.nm;
+    stopCam();
+    audit("วัดการทรงตัวด้วยกล้อง",
+      "ยืนได้ "+held.toFixed(1)+" วินาที จาก "+BAL_SECONDS+" วินาที · ค่าความโคลง "+(sway!=null?sway.toFixed(4):"วัดไม่ได้")+" ("+lab.nm+")");
+    setStatus("green","วัดเสร็จแล้ว — ยืนได้ "+held.toFixed(0)+" วินาที · "+lab.nm,false);
+    speak("วัดเสร็จเรียบร้อย ยืนได้ "+held.toFixed(0)+" วินาที ระบบสังเกตว่า "+lab.nm+" ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
+    setTimeout(function(){go("q",0)},2600);
+  }
+  function loop(){
+    if(S.screen!=="balance")return;
+    var r=null;try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(lm){
+      var q=visOK(lm);
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>";
+      if(running){
+        lostFrames=0;
+        var w=shoulderWidth(lm);
+        if(w>0.02){
+          var c=trunkCenter(lm);
+          samples.push({x:c.x/w, y:c.y/w});
+        }
+        var el=(performance.now()-t0)/1000;
+        var left=Math.max(0,BAL_SECONDS-el);
+        secEl.textContent=left.toFixed(0);
+        trk.style.width=Math.min(100,el/BAL_SECONDS*100)+"%";
+        var live=swayScore(samples.slice(-90));
+        if(live!=null)swayEl.textContent=swayLabel(live).nm;
+        if(el>=BAL_SECONDS){finish(BAL_SECONDS);return}
+      }else{
+        if(AUTOB&&!AUTOB.counting)
+          setStatus(q>=0.85?"green":"yellow",
+            q>=0.85?"เห็นตัวชัดแล้ว — ยืนเท้าชิด ระบบกำลังจะเริ่มนับ":"ถอยให้เห็นทั้งตัวก่อน",false);
+        if(AUTOB)AUTOB.update(q>=0.85);
+      }
+    }else{
+      qual.innerHTML="คุณภาพภาพ <b>—</b>";
+      if(running){
+        lostFrames++;
+        /* หลุดกรอบนานเกิน ~2 วินาที = น่าจะก้าวออกหรือคว้าจับ → หยุดและบันทึกเท่าที่ทำได้ */
+        if(lostFrames>60){
+          var elp=(performance.now()-t0)/1000;
+          coach.textContent="ตรวจไม่พบตัวในกรอบ — บันทึกเท่าที่ทำได้";
+          finish(Math.min(elp,BAL_SECONDS));return;
+        }
+      }
+    }
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  AUTOB=new AutoCapture({screen:"balance",holdMs:2200,readyText:"ยืนพร้อมแล้ว",
+    abortOnLost:false,onFire:function(){begin()}});
+  speak("กรุณายืนเท้าชิดกัน มือแนบลำตัว ยืนใกล้ที่จับ ระบบจะเริ่มนับให้เองเมื่อพร้อม");
+  function begin(){
+    if(running)return;
+    running=true;t0=performance.now();samples=[];lostFrames=0;
+    startBtn.disabled=true;startBtn.textContent="กำลังวัด…";
+    setStatus("green","หลับตาได้เลย — ยืนนิ่ง ๆ 10 วินาที",false);
+    speak("หลับตาได้เลย ยืนนิ่ง ๆ สิบวินาที");
+    coach.innerHTML="หลับตา ยืนนิ่ง ๆ<span class='statebadge'>กำลังวัด</span>";
+  }
+  startBtn.addEventListener("click",function(){if(AUTOB)AUTOB.abort();begin()});
+}
+
 /* ---------- คำถามเสริม 4 ข้อ ---------- */
 var QS=[
-  {k:"balance",q:"ยืนเท้าชิดกันหลับตา 10 วินาทีได้ไหม",o:[["ได้สบาย ไม่โคลง",3],["ได้แต่โคลงเล็กน้อย",2],["ต้องมีที่จับ",1],["ทำไม่ได้",0]]},
-  {k:"falls",q:"ในรอบ 12 เดือน หกล้มกี่ครั้ง",o:[["ไม่เคยล้ม",2],["ล้ม 1 ครั้ง",1],["ล้มตั้งแต่ 2 ครั้ง",0]]},
-  {k:"meds",q:"ตอนนี้กินยาประจำกี่ชนิด",o:[["น้อยกว่า 4 ชนิด",1],["ตั้งแต่ 4 ชนิดขึ้นไป",0]]},
-  {k:"adl",q:"อาบน้ำ แต่งตัว เข้าห้องน้ำ ทำเองได้ไหม",o:[["ทำเองได้ทั้งหมด",2],["ต้องมีคนช่วยบางอย่าง",1],["ต้องมีคนช่วยเกือบทั้งหมด",0]]}
+  {k:"balance",q:"ยืนเท้าชิดกันหลับตา 10 วินาทีได้ไหม",fromCamera:true,
+   o:[["ได้สบาย ไม่โคลง",3],["ได้แต่โคลงเล็กน้อย",2],["ต้องมีที่จับ",1],["ทำไม่ได้",0]]},
+  {k:"falls",q:"ในรอบ 12 เดือน หกล้มกี่ครั้ง",verify:true,
+   o:[["ไม่เคยล้ม",2],["ล้ม 1 ครั้ง",1],["ล้มตั้งแต่ 2 ครั้ง",0]]},
+  {k:"meds",q:"ตอนนี้กินยาประจำกี่ชนิด",verify:true,
+   o:[["น้อยกว่า 4 ชนิด",1],["ตั้งแต่ 4 ชนิดขึ้นไป",0]]},
+  {k:"adl",q:"ความสามารถในการทำกิจวัตรประจำวัน",barthel:true,o:[]}
 ];
+
+/* ============================================================
+   ดัชนีบาร์เธล เอดีแอล (Barthel ADL Index) — 10 รายการ เต็ม 20 คะแนน
+   ------------------------------------------------------------
+   เป็นเกณฑ์เดียวกับที่ระบบสาธารณสุขไทยใช้ชี้ภาวะพึ่งพิง
+   12–20 = ติดสังคม · 5–11 = ติดบ้าน · 0–4 = ติดเตียง
+   ============================================================ */
+var BARTHEL=[
+  {k:"feed",  nm:"การรับประทานอาหาร",  max:2,
+   o:[["ตักอาหารเข้าปากได้เอง",2],["ต้องมีคนช่วยบ้าง เช่น หั่น ตัก",1],["ต้องป้อนทั้งหมด",0]]},
+  {k:"groom", nm:"การดูแลตนเอง (ล้างหน้า หวีผม แปรงฟัน โกนหนวด)", max:1,
+   o:[["ทำได้เองทั้งหมด",1],["ต้องมีคนช่วย",0]]},
+  {k:"transfer", nm:"การย้ายตัว (จากเตียงไปเก้าอี้)", max:3,
+   o:[["ทำได้เองทั้งหมด",3],["ต้องมีคนช่วยเล็กน้อยหรือคอยดูแล",2],["ต้องมีคนช่วยมาก แต่ยังนั่งได้เอง",1],["นั่งทรงตัวไม่ได้ ต้องใช้ 2 คนยก",0]]},
+  {k:"toilet", nm:"การใช้ห้องน้ำ", max:2,
+   o:[["เข้าออกและทำความสะอาดเองได้",2],["ต้องมีคนช่วยบ้าง",1],["ทำเองไม่ได้",0]]},
+  {k:"mobility", nm:"การเคลื่อนที่บนพื้นราบ", max:3,
+   o:[["เดินได้เอง อย่างน้อย 50 เมตร",3],["เดินได้โดยมีคนช่วยพยุงหรือใช้เครื่องช่วย",2],["ใช้รถเข็นเองได้อย่างน้อย 50 เมตร",1],["เคลื่อนที่เองไม่ได้",0]]},
+  {k:"dress", nm:"การแต่งตัว", max:2,
+   o:[["ใส่และถอดเสื้อผ้าเองได้ทั้งหมด",2],["ต้องมีคนช่วยประมาณครึ่งหนึ่ง",1],["ต้องมีคนช่วยทั้งหมด",0]]},
+  {k:"stairs", nm:"การขึ้นลงบันได 1 ชั้น", max:2,
+   o:[["ขึ้นลงได้เอง",2],["ต้องมีคนช่วยหรือใช้เครื่องช่วย",1],["ขึ้นลงไม่ได้",0]]},
+  {k:"bath", nm:"การอาบน้ำ", max:1,
+   o:[["อาบเองได้ทั้งหมด",1],["ต้องมีคนช่วย",0]]},
+  {k:"bowel", nm:"การควบคุมการขับถ่ายอุจจาระ", max:2,
+   o:[["กลั้นได้ปกติ",2],["กลั้นไม่ได้บางครั้ง (ไม่เกินสัปดาห์ละครั้ง)",1],["กลั้นไม่ได้",0]]},
+  {k:"bladder", nm:"การควบคุมการขับถ่ายปัสสาวะ", max:2,
+   o:[["กลั้นได้ปกติ",2],["กลั้นไม่ได้บางครั้ง (ไม่เกินวันละครั้ง)",1],["กลั้นไม่ได้ หรือต้องใส่สายสวน",0]]}
+];
+function barthelTotal(a){
+  var t=0; BARTHEL.forEach(function(it){ if(a[it.k]!=null)t+=a[it.k] });
+  return t;
+}
+function barthelBand(t){
+  if(t>=12)return {nm:"ติดสังคม — พึ่งตนเองได้", cls:"t4", adl:2};
+  if(t>=5) return {nm:"ติดบ้าน — พึ่งพิงปานกลาง", cls:"t2", adl:1};
+  return {nm:"ติดเตียง — พึ่งพิงระดับสูง", cls:"t1", adl:0};
+}
+
+/* กล่องเตือนให้ตอบตามจริง + อธิบายกระบวนการตรวจสอบกับเวชระเบียน
+   ใช้กับคำถามที่มีผลต่อการรับประกันหรือสินไหม (ประวัติหกล้ม · ยาประจำ) */
+function verifyNotice(){
+  return '<div class="card" style="border:1.5px solid var(--accent)">'+
+  '<h3 style="color:var(--accent2)">ข้อควรทราบก่อนตอบ</h3>'+
+  '<p class="sub" style="margin:0 0 10px">คำตอบข้อนี้ระบบบันทึกเป็น <b>"ผู้ใช้กรอกเอง"</b> และ<b>ยังไม่ถือเป็นข้อเท็จจริง</b> จนกว่าจะได้รับการยืนยัน · เมื่อสมัครประกันหรือเรียกสินไหม บริษัทจะ<b>ขอความยินยอมจากท่านเป็นรายครั้ง</b> เพื่อตรวจสอบกับประวัติการรักษาของสถานพยาบาลที่ท่านระบุ ในช่วงเวลาที่ท่านอนุญาตเท่านั้น</p>'+
+  '<p class="sub" style="margin:0 0 10px">หากพบว่าข้อมูลไม่ตรงกับความจริงในสาระสำคัญ บริษัทอาจใช้สิทธิ์ตามกฎหมายในการปฏิเสธการจ่ายสินไหมหรือบอกล้างสัญญาได้ ตามประมวลกฎหมายแพ่งและพาณิชย์ว่าด้วยการปกปิดข้อความจริงในสัญญาประกันภัย</p>'+
+  '<p class="sub" style="margin:0;color:var(--c4)"><b>ตอบตามจริงไม่ทำให้เบี้ยแพงขึ้น</b> — ระบบนี้ใช้ผลตรวจลดเบี้ยได้ทางเดียว การตอบว่ามีความเสี่ยงทำให้ท่านได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
+}
+
+/* การ์ดแสดงสิ่งที่กล้องสังเกตได้ ก่อนให้ผู้ใช้ยืนยันด้วยตนเอง */
+function cameraObs(){
+  if(S.draft.swayValue===undefined)return "";
+  if(S.draft.swayValue===null&&S.draft.swayHeld==null)return "";
+  var lab=swayLabel(S.draft.swayValue);
+  var held=S.draft.swayHeld;
+  return '<div class="card" style="background:var(--surf2)">'+
+  '<h3>สิ่งที่กล้องสังเกตได้</h3>'+
+  '<div class="rowline"><span class="k">ยืนได้นาน</span><span class="v">'+(held!=null?held.toFixed(0)+" / "+BAL_SECONDS+" วินาที":"—")+'</span></div>'+
+  '<div class="rowline"><span class="k">ความโคลงเคลง</span><span class="v"><span class="pill '+lab.cls+'">'+lab.nm+'</span></span></div>'+
+  (S.draft.swayValue!=null?'<div class="rowline"><span class="k">ค่าที่วัดได้</span><span class="v">'+S.draft.swayValue.toFixed(4)+'</span></div>':'')+
+  '<p class="sub" style="margin:10px 0 0">'+esc(lab.hint)+' — <b>นี่เป็นเพียงข้อสังเกตจากกล้อง ไม่ใช่คำตัดสิน</b> กรุณาเลือกคำตอบที่ตรงกับความรู้สึกจริงของท่านด้านล่าง ระบบจะบันทึกทั้งสองค่าไว้คู่กัน และเจ้าหน้าที่ประกันภัยจะตรวจสอบอีกครั้ง</p></div>';
+}
+
+/* ---------- หน้าคำถาม: รองรับทั้งแบบเลือกตอบ และรูบริกบาร์เธล ---------- */
 function qV(i){
   i=i||0; var q=QS[i];
+
+  /* ---- แบบรูบริก: ดัชนีบาร์เธล 10 รายการ ---- */
+  if(q.barthel){
+    head("ข้อ "+(i+1)+" จาก "+QS.length,"ความสามารถในการทำกิจวัตรประจำวัน","ติ๊กทีละรายการตามความเป็นจริง · ใช้เกณฑ์ดัชนีบาร์เธลเดียวกับระบบสาธารณสุขไทย");
+    if(!S.draft.barthel)S.draft.barthel={};
+    var b=S.draft.barthel;
+    V.innerHTML='<div class="anim">'+
+    '<div class="card" style="background:var(--surf2)"><h3>ทำไมต้องตอบทีละข้อ</h3>'+
+    '<p class="sub" style="margin:0">ดัชนีบาร์เธล (Barthel ADL Index) ประเมิน 10 ด้าน รวม 20 คะแนน เป็นเกณฑ์เดียวกับที่ระบบสาธารณสุขไทยใช้ชี้ว่าใครอยู่ในภาวะพึ่งพิง · การตอบทีละด้านให้ผลแม่นกว่าการถามรวมข้อเดียวมาก</p></div>'+
+    '<div id="bWrap"></div>'+
+    '<div class="card" id="bSum"></div>'+
+    '<button class="cta" id="bGo" disabled>บันทึกและดูผลการประเมิน</button>'+
+    '<div class="disc">แบบคัดกรองนี้เป็น<b>ฉบับย่อเพื่อเฝ้าระวัง</b> การตัดสินว่าเข้าเกณฑ์ภาวะพึ่งพิงเพื่อรับสินไหม ต้องประเมินโดยทีมสหวิชาชีพที่ไปถึงบ้าน · กล้องวัดข้อนี้แทนไม่ได้ เพราะเป็นเรื่องการอาบน้ำและเข้าห้องน้ำซึ่งไม่ควรถ่ายภาพ</div></div>';
+
+    function renderB(){
+      document.getElementById("bWrap").innerHTML=BARTHEL.map(function(it,idx){
+        return '<div class="card"><h3>'+(idx+1)+' · '+esc(it.nm)+'</h3>'+
+        it.o.map(function(o){
+          var on=b[it.k]===o[1];
+          return '<button class="pick" data-k="'+it.k+'" data-v="'+o[1]+'" '+
+            'style="'+(on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+
+            (on?"✓ ":"")+esc(o[0])+'<span style="float:right;font-family:var(--mono);color:var(--ink3)">'+o[1]+'</span></button>';
+        }).join("")+'</div>';
+      }).join("");
+      var n=Object.keys(b).length, tot=barthelTotal(b), band=barthelBand(tot);
+      var full=(n===BARTHEL.length);
+      document.getElementById("bSum").innerHTML=
+        '<h3>คะแนนรวม</h3>'+
+        '<div class="rowline"><span class="k">ตอบแล้ว</span><span class="v">'+n+' / '+BARTHEL.length+' ด้าน</span></div>'+
+        '<div class="rowline"><span class="k">คะแนนบาร์เธล</span><span class="v">'+tot+' / 20</span></div>'+
+        (full?'<div class="rowline"><span class="k">ระดับ</span><span class="v"><span class="pill '+band.cls+'">'+band.nm+'</span></span></div>':
+              '<p class="sub" style="margin:10px 0 0">กรุณาตอบให้ครบทุกด้านเพื่อสรุปผล</p>')+
+        '<p class="sub" style="margin:10px 0 0">เกณฑ์: 12–20 ติดสังคม · 5–11 ติดบ้าน · 0–4 ติดเตียง</p>';
+      document.getElementById("bGo").disabled=!full;
+      /* ปุ่มตัวเลือกถูกสร้างใหม่ทุกครั้งที่ re-render จึงผูก listener ตรงนี้ได้ */
+      V.querySelectorAll("[data-k]").forEach(function(btn){
+        btn.addEventListener("click",function(){
+          b[btn.dataset.k]=+btn.dataset.v;
+          renderB();
+        });
+      });
+    }
+    renderB();
+    /* ผูกปุ่มบันทึกเพียงครั้งเดียวนอก renderB — ไม่งั้น listener จะซ้อนทุกครั้งที่ติ๊ก
+       และกดบันทึกครั้งเดียวจะบันทึกผลซ้ำหลายรายการ */
+    document.getElementById("bGo").addEventListener("click",function(){
+      if(this.disabled)return;
+      this.disabled=true;
+      var tot=barthelTotal(b), band=barthelBand(tot);
+      S.draft.adl=band.adl;
+      S.draft.barthelTotal=tot;
+      S.draft.barthelBand=band.nm;
+      audit("ประเมินกิจวัตรประจำวัน (Barthel ADL)",
+        "คะแนน "+tot+"/20 · ระดับ "+band.nm+" · ตอบครบ "+BARTHEL.length+" ด้าน");
+      finishAssess();
+    });
+    return;
+  }
+
+  /* ---- แบบเลือกตอบปกติ ---- */
   head("ข้อ "+(i+1)+" จาก "+QS.length,q.q,"ตอบตามความเป็นจริง ผลที่ตรงช่วยให้ระบบดูแลคุณได้ถูกต้อง");
-  V.innerHTML='<div class="anim">'+q.o.map(function(o,k){
-    return '<button class="pick" data-v="'+o[1]+'">'+esc(o[0])+'</button>'}).join("")+
+  V.innerHTML='<div class="anim">'+
+    (q.fromCamera?cameraObs():"")+
+    q.o.map(function(o,k){
+      return '<button class="pick" data-v="'+o[1]+'">'+esc(o[0])+'</button>'}).join("")+
+    (q.verify?verifyNotice():"")+
     '<div class="disc">ข้อมูลชุดนี้รวมกับผลจากกล้อง เป็นคะแนนเต็ม 12</div></div>';
   V.querySelectorAll(".pick").forEach(function(b){
     b.addEventListener("click",function(){
@@ -1545,6 +1844,12 @@ async function finishAssess(){
            method:S.draft.method,reps:S.draft.reps,cv:S.draft.cv,gaps:S.draft.gaps||null,
            verified:!!S.draft.identityVerified,
            idChecks:S.draft.identityChecks||0, idFails:S.draft.identityFails||0,
+           sway:S.draft.swayValue!==undefined?S.draft.swayValue:null,
+           swayHeld:S.draft.swayHeld!=null?S.draft.swayHeld:null,
+           swayLabel:S.draft.swayLabel||null,
+           barthel:S.draft.barthel||null,
+           barthelTotal:S.draft.barthelTotal!=null?S.draft.barthelTotal:null,
+           barthelBand:S.draft.barthelBand||null,
            /* แหล่งที่มาของคำตอบเชิงประวัติ — เริ่มต้นเป็น "ผู้ใช้กรอกเอง" เสมอ */
            src:{balance:"self_reported",falls:"self_reported",meds:"self_reported",adl:"self_reported"}};
   S.data.assessments.push(rec);
@@ -1739,10 +2044,12 @@ function resultV(rec){
   (rec.cv!=null?'<div class="rowline"><span class="k">ความสม่ำเสมอของจังหวะ</span><span class="v">'+(100-rec.cv*100).toFixed(0)+'%</span></div>':"")+
   '<div class="rowline"><span class="k">คะแนนส่วนลุกนั่ง</span><span class="v">'+rec.parts.ftsst+' / 4</span></div></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
-  '<div class="rowline"><span class="k">การทรงตัว '+srcTag(rec.src&&rec.src.balance)+'</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
+  '<div class="rowline"><span class="k">การทรงตัว '+(rec.sway!=null?'<span class="pill t4" style="font-size:10.5px;padding:2px 8px;margin-left:5px">กล้องวัด</span>':srcTag(rec.src&&rec.src.balance))+'</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
+  (rec.sway!=null?'<div class="rowline"><span class="k" style="padding-left:14px;font-size:13.5px">↳ กล้องสังเกต: ยืนได้ '+(rec.swayHeld!=null?rec.swayHeld.toFixed(0):"—")+' วิ · '+esc(rec.swayLabel||"—")+'</span><span class="v" style="font-size:13px">'+rec.sway.toFixed(4)+'</span></div>':'')+
   '<div class="rowline"><span class="k">ประวัติหกล้ม '+srcTag(rec.src&&rec.src.falls)+'</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
   '<div class="rowline"><span class="k">การใช้ยา '+srcTag(rec.src&&rec.src.meds)+'</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
   '<div class="rowline"><span class="k">กิจวัตรประจำวัน '+srcTag(rec.src&&rec.src.adl)+'</span><span class="v">'+rec.parts.adl+' / 2</span></div>'+
+  (rec.barthelTotal!=null?'<div class="rowline"><span class="k" style="padding-left:14px;font-size:13.5px">↳ ดัชนีบาร์เธล (10 ด้าน)</span><span class="v"><span class="pill '+barthelBand(rec.barthelTotal).cls+'" style="font-size:10.5px;padding:2px 8px">'+rec.barthelTotal+'/20 · '+esc((rec.barthelBand||"").split(" — ")[0])+'</span></span></div>':'')+
   '<p class="sub" style="margin:10px 0 0"><b>สิ่งที่กล้องวัดเอง</b>เป็นข้อมูลที่ระบบสังเกตได้โดยตรง ส่วน<b>คำตอบ 4 ข้อ</b>ข้างบนเป็นข้อมูลที่ผู้ใช้กรอกเอง ระบบจึงไม่ถือเป็นข้อเท็จจริงจนกว่าจะตรวจสอบกับสถานพยาบาล</p>'+
   '<button class="ghostb" data-go="mrv" style="margin:12px 0 0">ขอตรวจสอบกับประวัติการรักษา</button></div>'+
   warnBlock()+
