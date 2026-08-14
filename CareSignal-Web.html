@@ -133,7 +133,7 @@ table.dt tr:last-child td{border-bottom:0}
     <a class="btn" href="#calc">เช็กเบี้ยของฉันตอนนี้</a>
     <button class="btn ghost" data-page="ins" style="margin-left:10px">ดูแดชบอร์ดสำหรับบริษัทประกัน</button>
     <div class="statrow">
-      <div class="stat"><div class="n">6 นาที</div><div class="l">ประเมินเองที่บ้าน ผ่านแอปมือถือ</div></div>
+      <div class="stat"><div class="n">8 นาที</div><div class="l">ประเมินเองที่บ้าน ผ่านแอปมือถือ</div></div>
       <div class="stat"><div class="n">−15%</div><div class="l">ส่วนลดเบี้ยสูงสุดจากผลประเมิน (ลดได้เท่านั้น ไม่มีบวก)</div></div>
       <div class="stat"><div class="n">72 ชม.</div><div class="l">ผลเสี่ยงสูง ส่งต่อพยาบาลถึงบ้าน</div></div>
       <div class="stat"><div class="n">4 แผน</div><div class="l">ผลประโยชน์ 10,000–40,000 บ./เดือน</div></div>
@@ -212,6 +212,7 @@ table.dt tr:last-child td{border-bottom:0}
 
 <!-- ==================== Care Manager ==================== -->
 <div id="pg-cm" hidden><div class="wrap portal">
+  <div id="gate-cm"></div><div id="body-cm" hidden>
   <div class="kick">CARE MANAGER CONSOLE</div>
   <h2 class="sec">คิวดูแลวันนี้</h2>
   <p class="secsub">ดึงจากฐานข้อมูลกลางแบบเรียลไทม์ — สมาชิกที่เปิดการแชร์ข้อมูลในแอปจะปรากฏที่นี่ เรียงตามความเร่งด่วน</p>
@@ -225,10 +226,11 @@ table.dt tr:last-child td{border-bottom:0}
   <div class="kpirow" id="cmKpi"></div>
   <div id="cmTable"></div>
   <div class="notice">ข้อมูลในตารางเป็นข้อมูล<b>แบบแฝงชื่อ (pseudonymised)</b> — รหัสสุ่มแทนชื่อจริง ช่วงอายุ เพศ ระดับสัญญาณ ตามหลัก data minimization · <b>ข้อมูลแฝงชื่อยังคงเป็นข้อมูลส่วนบุคคลตาม PDPA</b> ไม่ใช่ข้อมูลนิรนาม จึงได้รับความคุ้มครองตามกฎหมายเต็มที่ · <button class="btn lite" id="cmSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต 12 ราย</button> <button class="btn lite" id="cmClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="cmRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
-</div></div>
+</div></div></div>
 
 <!-- ==================== บริษัทประกัน ==================== -->
 <div id="pg-ins" hidden><div class="wrap portal">
+  <div id="gate-ins"></div><div id="body-ins" hidden>
   <div class="kick">INSURER PORTFOLIO CONSOLE</div>
   <h2 class="sec">ภาพรวมพอร์ตกรมธรรม์</h2>
   <p class="secsub">สถานะพอร์ตจริงจากฐานข้อมูลกลาง: จำนวนสมาชิก การกระจายความเสี่ยง เบี้ยรับ และสัดส่วนที่เข้าโปรแกรมป้องกัน</p>
@@ -240,7 +242,7 @@ table.dt tr:last-child td{border-bottom:0}
   </div>
   <div style="margin-top:16px" id="insTable"></div>
   <div class="notice">ต้องการโมเดลผลประกอบการเต็มรูปแบบ (รายได้ 5 ปี, Loss Ratio, ความเสี่ยง, ผลตอบแทน)? เปิดไฟล์ <b>CareSignal-Insurer-Model.html</b> ที่มาพร้อมแพลตฟอร์มนี้ · <button class="btn lite" id="insSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต</button> <button class="btn lite" id="insClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="insRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
-</div></div>
+</div></div></div>
 
 
 <!-- ==================== RESPONSIBLE AI ==================== -->
@@ -252,7 +254,7 @@ table.dt tr:last-child td{border-bottom:0}
 
   <div class="card" style="border-left:4px solid var(--accent)">
     <h3>ประกาศชนิดของระบบ</h3>
-    <p style="margin:8px 0 0;color:var(--ink2);font-size:14px;line-height:1.75">CareSignal ประกอบด้วยสองส่วนที่ต้องแยกให้ชัด: <b style="color:var(--ink)">(1) AI Computer Vision</b> — โมเดล pose estimation ที่ตรวจจับ 33 จุดบนร่างกายจากภาพกล้อง ส่วนนี้เป็น AI จริงและเป็น deep learning · <b style="color:var(--ink)">(2) Explainable Risk Engine</b> — เอนจินวิเคราะห์แนวโน้มที่ใช้กฎ 7 ข้อซึ่ง derive จากวรรณกรรมทางคลินิก <b style="color:var(--ink)">ส่วนนี้ไม่ใช่ machine learning และไม่เรียนรู้จากข้อมูลผู้ใช้</b> เราไม่เรียกระบบทั้งหมดว่า "AI ทำนายภาวะพึ่งพิง" เพราะจะเป็นการอ้างเกินกว่าที่ระบบทำจริง และไม่มีการเรียนรู้จากข้อมูลผู้ใช้ในเวอร์ชันนี้ เราประกาศเช่นนี้เพราะผู้ใช้หนึ่งรายมีจุดข้อมูลเพียงไม่กี่จุด การอ้างว่าเป็น ML ที่ผ่านการ validate จึงยังไม่มีหลักฐานรองรับ</p>
+    <p style="margin:8px 0 0;color:var(--ink2);font-size:14px;line-height:1.75">CareSignal ประกอบด้วยสองส่วนที่ต้องแยกให้ชัด: <b style="color:var(--ink)">(1) AI Computer Vision</b> — โมเดล pose estimation ที่ตรวจจับ 33 จุดบนร่างกายจากภาพกล้อง ส่วนนี้เป็น AI จริงและเป็น deep learning · <b style="color:var(--ink)">(2) Explainable Risk Engine</b> — เอนจินวิเคราะห์แนวโน้มที่ใช้กฎ 10 ข้อซึ่ง derive จากวรรณกรรมทางคลินิก <b style="color:var(--ink)">ส่วนนี้ไม่ใช่ machine learning และไม่เรียนรู้จากข้อมูลผู้ใช้</b> เราไม่เรียกระบบทั้งหมดว่า "AI ทำนายภาวะพึ่งพิง" เพราะจะเป็นการอ้างเกินกว่าที่ระบบทำจริง และไม่มีการเรียนรู้จากข้อมูลผู้ใช้ในเวอร์ชันนี้ เราประกาศเช่นนี้เพราะผู้ใช้หนึ่งรายมีจุดข้อมูลเพียงไม่กี่จุด การอ้างว่าเป็น ML ที่ผ่านการ validate จึงยังไม่มีหลักฐานรองรับ</p>
     <div class="notice" style="margin-top:14px">โรดแมปชั้น ML: จะเปิดใช้ก็ต่อเมื่อ (1) มีผู้ใช้ที่มีผลประเมิน ≥3 ครั้ง อย่างน้อย 500 ราย (2) ผ่านการ validate เทียบผลการประเมินโดยพยาบาล/นักกายภาพ (3) ผ่านการตรวจสอบอคติแยกกลุ่มตามเกณฑ์ด้านล่าง และ (4) ได้รับความเห็นชอบจากคณะกรรมการจริยธรรมการวิจัยในมนุษย์</div>
   </div>
 
@@ -434,14 +436,17 @@ var DB={
 /* ============================================================
    Responsible AI — Model Card, Bias Audit, Human-in-the-loop
    ============================================================ */
-var ENGINE={version:"1.2.0", rules:{
+var ENGINE={version:"1.4.0", rules:{
   R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ", logic:"ผลล่าสุดช้ากว่าค่าดีที่สุดของผู้ใช้เอง ≥2.3 วินาที หรือ ≥15%", src:"MCID ของ Five-Times Sit-to-Stand ≈2.3 วินาที (Meretta 2006; Goldberg 2012)"},
   R2:{nm:"ข้ามเกณฑ์เสี่ยงตามอายุ", logic:"ผลล่าสุดสูงกว่าค่าตัดของช่วงอายุ ขณะที่ครั้งก่อนยังไม่เกิน", src:"ค่าตัดประชากรไทย 10.0/11.5/12.1 วินาที (Poncumhak 2014; Intaruk 2021)"},
   R3:{nm:"มีเหตุหกล้มใหม่", logic:"คะแนนประวัติหกล้มลดลงจากการประเมินครั้งก่อน", src:"WHO Step Safely 2021 — ล้ม 1 ครั้งเพิ่มโอกาสล้มซ้ำใน 12 เดือน"},
   R4:{nm:"คะแนนรวมถดถอยจาก personal best", logic:"คะแนนล่าสุดต่ำกว่าค่าดีที่สุดของผู้ใช้เอง ≥2 คะแนน", src:"ออกแบบให้เทียบกับตนเอง เพื่อลดอคติระหว่างเพศและช่วงอายุ"},
   R5:{nm:"ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง", logic:"ใช้ยา ≥4 ชนิด และคะแนนทรงตัว ≤1", src:"STOPPFall 2021; Beers Criteria — ปฏิสัมพันธ์แบบทวีคูณ"},
-  R6:{nm:"สูญเสียความสามารถทำกิจวัตร", logic:"คะแนน ADL ลดลงจากครั้งก่อน → ยกระดับเป็นเร่งด่วนทันที", src:"Lawton IADL; Barthel Index — สัญญาณเริ่มต้นภาวะพึ่งพิง"},
-  R7:{nm:"เกินกำหนดประเมินซ้ำ", logic:"เวลาตั้งแต่ประเมินครั้งล่าสุดเกินรอบที่ระบบกำหนดตามระดับความเสี่ยง", src:"กติกาภายในระบบ 90/45/21/7 วัน ตามระดับ"}
+  R6:{nm:"สูญเสียความสามารถทำกิจวัตร", logic:"ระดับ ADL ลดลงจากครั้งก่อน (ข้ามระดับ) → ยกเป็นเร่งด่วนทันที", src:"Lawton IADL; Barthel Index — สัญญาณเริ่มต้นภาวะพึ่งพิง"},
+  R7:{nm:"ความสม่ำเสมอของจังหวะลดลง", logic:"ความแปรปรวนของเวลาลุกแต่ละครั้ง ≥25% (วัดได้เฉพาะเมื่อใช้กล้อง)", src:"ความล้าของกล้ามเนื้อขาที่มาเร็วผิดปกติ สะท้อนผ่านจังหวะที่ไม่คงที่"},
+  R8:{nm:"การทรงตัวถดถอยเป็นท่า", logic:"ท่าที่เคยยืนผ่านครบ 10 วินาที ทำไม่ได้แล้ว เทียบกับสถิติดีที่สุดของตนเอง", src:"CDC STEADI 4-Stage Balance Test — ท่าเรียงจากง่ายไปยาก การถอยหนึ่งท่าจึงวัดซ้ำได้"},
+  R9:{nm:"บาร์เธลลดลงก่อนข้ามระดับ", logic:"คะแนนบาร์เธล (สเกล 20) ต่ำกว่าค่าดีที่สุดของตนเอง ≥2 คะแนน ทั้งที่ยังอยู่ระดับเดิม", src:"Barthel ADL Index — เตือนล่วงหน้าก่อนตกไประดับพึ่งพิงที่สูงขึ้น (MCID ≈1.85 คะแนน, Hsieh 2007)"},
+  R10:{nm:"ลุกเดิน 3 เมตรช้ากว่าเกณฑ์", logic:"TUG ≥12 วินาที (≥15 วิ น้ำหนักเพิ่ม) นับเฉพาะรอบที่ระบบยืนยันว่าเดินครบระยะ", src:"CDC STEADI — 12 วินาทีคือจุดคัดกรองความเสี่ยงหกล้ม"}
 }};
 var MC_SCOPE=[
   ["กลุ่มเป้าหมาย","ผู้มีอายุ 50–70 ปี ที่ช่วยเหลือตนเองได้ อาศัยในชุมชน"],
@@ -449,7 +454,7 @@ var MC_SCOPE=[
   ["ผลลัพธ์","ระดับสัญญาณ 4 ระดับ, แนวโน้มความเสี่ยง, รอบประเมินซ้ำ, ระดับการส่งต่อ, แผนป้องกันเฉพาะบุคคล"],
   ["ไม่เหมาะกับ","ผู้ป่วยติดเตียง, ผู้ใช้รถเข็นถาวร, ผู้มีภาวะสมองเสื่อมระยะกลางขึ้นไป, ผู้ที่เพิ่งผ่าตัดข้อสะโพก/เข่า <3 เดือน"],
   ["สภาพแวดล้อมการวัด","ทำเองที่บ้านโดยไม่มีผู้เชี่ยวชาญกำกับ — ค่าที่ได้จึงมีความแปรปรวนสูงกว่าการวัดในคลินิก และนี่คือข้อจำกัดที่ต้องวัดในการนำร่อง"],
-  ["รุ่นเอนจิน","v1.2.0 · กฎ 7 ข้อ · ไม่มีการเรียนรู้จากข้อมูลผู้ใช้"]
+  ["รุ่นเอนจิน","v1.4.0 · กฎ 10 ข้อ · ไม่มีการเรียนรู้จากข้อมูลผู้ใช้"]
 ];
 var MC_NO=[
   ["ไม่วินิจฉัยโรค","ระบบไม่ระบุชื่อโรคและไม่แทนการตรวจโดยแพทย์"],
@@ -574,6 +579,103 @@ async function renderPilot(){
     LOI.map(function(r){return '<tr><td><b>'+r[0]+'</b></td><td style="font-size:12.5px;color:var(--ink2)">'+r[1]+'</td><td><span class="tag t2" style="margin:0">'+r[2]+'</span></td></tr>'}).join("")+'</tbody></table>';
 }
 
+
+/* ============================================================
+   ประตูตรวจสิทธิ์แดชบอร์ดเจ้าหน้าที่
+   ------------------------------------------------------------
+   คนที่ไม่มีบัญชีเจ้าหน้าที่จะไม่เห็นเนื้อหาในหน้า Care Manager
+   และหน้าบริษัทประกันเลย แม้แต่ข้อมูลสาธิต
+   หมายเหตุตามจริง: ประตูนี้เป็นด่านของหน้าจอ ไม่ใช่ด่านความปลอดภัย
+   ตัวจริงคือ Row Level Security บนฐานข้อมูล ซึ่งไม่ส่งข้อมูลของ
+   ผู้อื่นให้บัญชีที่ไม่มีสิทธิ์ ต่อให้แก้โค้ดหน้าเว็บก็ไม่ได้ข้อมูล
+   ============================================================ */
+var GATED={cm:{nm:"Care Manager",roles:["care_manager","admin"],
+                why:"หน้านี้แสดงคิวเคสของสมาชิกที่ต้องติดต่อดูแล จึงเปิดเฉพาะพยาบาลและ Care Manager ที่ได้รับมอบหมาย"},
+           ins:{nm:"บริษัทประกัน",roles:["insurer","admin"],
+                why:"หน้านี้แสดงพอร์ตความเสี่ยงแบบแฝงชื่อของสมาชิกทั้งพอร์ต จึงเปิดเฉพาะเจ้าหน้าที่บริษัทประกันที่ได้รับมอบหมาย"}};
+
+/* ประตูถูกเรียกตั้งแต่ต้นไฟล์ ซึ่งเร็วกว่าบรรทัด var CLOUD=... ที่อยู่ด้านล่าง
+   (var ยกเฉพาะการประกาศ ไม่ยกค่า) จึงต้องอ่านผ่านตัวช่วยที่ทนค่า undefined */
+function cloudNow(){ return (typeof CLOUD!=="undefined"&&CLOUD)?CLOUD:{session:false,role:null,email:null}; }
+function gateOK(target){
+  var g=GATED[target], C=cloudNow();
+  return !!(C.session && g.roles.indexOf(C.role)>=0);
+}
+function gateHTML(target){
+  var g=GATED[target], C=cloudNow();
+  var denied = C.session && !gateOK(target);
+  return '<div style="max-width:560px;margin:40px auto 60px;background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:32px 30px;box-shadow:var(--sh);text-align:center">'+
+    '<div style="font-size:38px;line-height:1;margin-bottom:14px">🔒</div>'+
+    '<h2 style="font-size:22px;margin:0 0 8px;letter-spacing:-.02em">พื้นที่เจ้าหน้าที่ · '+g.nm+'</h2>'+
+    '<p style="font-size:14.5px;color:var(--ink2);margin:0 0 22px">'+g.why+'</p>'+
+    (denied
+      ? '<div style="background:#FEE9E9;border:1px solid #F3B5B5;color:#A81E1E;border-radius:12px;padding:14px 16px;font-size:14px;text-align:left">'+
+        '<b>บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้</b><br>เข้าสู่ระบบด้วย '+esc(C.email||"—")+' ซึ่งมีบทบาท <b>'+esc(C.role||"ยังไม่กำหนด")+'</b> · ต้องเป็นบทบาท '+g.roles.join(" หรือ ")+
+        '<div style="margin-top:12px"><button id="gateOut-'+target+'" style="padding:9px 18px;border:1px solid #DFE7F2;border-radius:10px;background:#fff;font-family:inherit;font-size:13.5px;cursor:pointer">ออกจากระบบ แล้วเข้าด้วยบัญชีอื่น</button></div></div>'
+      : '<div style="text-align:left">'+
+        '<div style="display:grid;gap:10px">'+
+        '<input id="gEmail-'+target+'" type="email" placeholder="อีเมลเจ้าหน้าที่" autocomplete="username" style="padding:13px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:15px">'+
+        '<input id="gPass-'+target+'" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" style="padding:13px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:15px">'+
+        '<button id="gGo-'+target+'" style="padding:13px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer">เข้าสู่ระบบ</button>'+
+        '</div>'+
+        '<p style="font-size:12.5px;color:var(--ink3);margin:14px 0 0">ยังไม่มีบัญชี? <a href="#" id="gSign-'+target+'">สมัครบัญชีเจ้าหน้าที่</a> — บัญชีใหม่ต้องให้ผู้ดูแลระบบกำหนดบทบาทให้ก่อน (ผู้ใช้เลื่อนบทบาทตัวเองไม่ได้ ฐานข้อมูลบล็อกไว้)</p></div>')+
+    '<p style="font-size:12px;color:var(--ink3);margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line2);text-align:left">'+
+    '<b>ความปลอดภัยจริงอยู่ที่ฐานข้อมูล</b> ไม่ใช่หน้าจอนี้ — ทุกตารางบังคับสิทธิ์ด้วย Row Level Security '+
+    'บัญชีที่ไม่มีบทบาทที่ถูกต้องจะอ่านข้อมูลของผู้อื่นไม่ได้เลย แม้จะแก้โค้ดฝั่งหน้าเว็บ · ทุกการเปิดดูถูกบันทึกลง audit log ที่ลบไม่ได้</p></div>';
+}
+function renderGate(target){
+  var gate=document.getElementById("gate-"+target), body=document.getElementById("body-"+target);
+  if(!gate||!body)return;
+  if(gateOK(target)){ gate.innerHTML=""; gate.hidden=true; body.hidden=false; return true }
+  gate.hidden=false; body.hidden=true; gate.innerHTML=gateHTML(target);
+  var out=document.getElementById("gateOut-"+target);
+  if(out)out.addEventListener("click",async function(){
+    try{await CSBackend.signOut()}catch(e){}
+    CLOUD.session=false;CLOUD.role=null;CLOUD.email=null;CLOUD.mfaOn=false;
+    renderGate(target);
+  });
+  var go=document.getElementById("gGo-"+target);
+  if(go)go.addEventListener("click",async function(){
+    var em=(document.getElementById("gEmail-"+target).value||"").trim();
+    var pw=document.getElementById("gPass-"+target).value||"";
+    if(!em||!pw){toast("กรอกอีเมลและรหัสผ่าน");return}
+    this.textContent="กำลังตรวจสอบ…";this.disabled=true;
+    try{
+      await CSBackend.signInStaff(em,pw);
+      /* บัญชีที่เปิด MFA ต้องผ่านรหัส 6 หลักก่อนได้สิทธิ์เต็ม (AAL2) */
+      var f=await CSBackend.mfaFactors();
+      var vf=(f.totp||[]).filter(function(x){return x.status==="verified"});
+      if(vf.length){
+        var code=await mfaPrompt();
+        if(!code){await CSBackend.signOut();toast("ยกเลิกการเข้าสู่ระบบ");renderGate(target);return}
+        await CSBackend.mfaVerify(vf[0].id,code);
+      }
+      var pr=await CSBackend.loadProfile();
+      CLOUD.session=true;CLOUD.role=pr?pr.role:null;CLOUD.email=em;
+      await refreshMfaState();
+      if(gateOK(target)){
+        toast("เข้าสู่ระบบแล้ว · บทบาท "+(CLOUD.role||"—")+(vf.length?" · ผ่าน MFA":""));
+        renderGate(target);
+        if(target==="cm"){renderCM();renderCloudCM()}else{renderINS();renderCloudINS()}
+      }else{
+        toast("บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้");
+        renderGate(target);
+      }
+    }catch(e){toast("เข้าสู่ระบบไม่สำเร็จ: "+(e.message||""));renderGate(target)}
+  });
+  var sg=document.getElementById("gSign-"+target);
+  if(sg)sg.addEventListener("click",async function(e){
+    e.preventDefault();
+    var em=(document.getElementById("gEmail-"+target).value||"").trim();
+    var pw=document.getElementById("gPass-"+target).value||"";
+    if(!em||pw.length<8){toast("กรอกอีเมล และรหัสผ่านอย่างน้อย 8 ตัวอักษร");return}
+    try{ await CSBackend.signUpStaff(em,pw);
+      toast("สมัครแล้ว — แจ้งผู้ดูแลระบบกำหนดบทบาทให้ก่อน จึงจะเข้าหน้านี้ได้"); }
+    catch(e2){toast("สมัครไม่สำเร็จ: "+(e2.message||""))}
+  });
+  return false;
+}
+
 /* ===== นำทางหน้า ===== */
 var PAGES=["site","cm","ins","ai","pilot","evi"];
 document.addEventListener("click",function(e){
@@ -584,11 +686,14 @@ document.addEventListener("click",function(e){
   PAGES.forEach(function(x){document.getElementById("pg-"+x).hidden=(x!==p)});
   document.querySelectorAll(".navlinks button").forEach(function(x){x.setAttribute("aria-selected",x.dataset.page===p)});
   window.scrollTo(0,0);
-  if(p==="cm")renderCM();
-  if(p==="ins")renderINS();
+  if(p==="cm"){ if(renderGate("cm")){renderCM();renderCloudCM()} }
+  if(p==="ins"){ if(renderGate("ins")){renderINS();renderCloudINS()} }
   if(p==="ai")renderAI();
   if(p==="pilot")renderPilot();
 });
+
+/* ปิดประตูไว้ก่อนตั้งแต่โหลดหน้า — กันเนื้อหาแวบให้เห็นระหว่างรอตรวจสิทธิ์ */
+renderGate('cm');renderGate('ins');
 
 /* ===== เครื่องคำนวณเบี้ย ===== */
 var C={age:62,sex:"f",plan:"m",tier:0,pay:"m"};
@@ -898,6 +1003,7 @@ async function renderCloudINS(){
     var u=await CSBackend.currentUser();
     if(u){var p=await CSBackend.loadProfile();CLOUD.session=true;CLOUD.role=p?p.role:null;CLOUD.email=u.email;await refreshMfaState()}
   }catch(e){}
+  renderGate('cm');renderGate('ins');
   renderCloudCM();renderCloudINS();
 })();
 
@@ -907,8 +1013,8 @@ async function renderCloudINS(){
   if(PAGES.indexOf(h)>=0){
     PAGES.forEach(function(x){var el=document.getElementById("pg-"+x); if(el)el.hidden=(x!==h)});
     document.querySelectorAll(".navlinks button").forEach(function(x){x.setAttribute("aria-selected",x.dataset.page===h)});
-    if(h==="cm")renderCM();
-    if(h==="ins")renderINS();
+    if(h==="cm"){ if(renderGate("cm")){renderCM();renderCloudCM()} }
+    if(h==="ins"){ if(renderGate("ins")){renderINS();renderCloudINS()} }
     if(h==="ai")renderAI();
     if(h==="pilot")renderPilot();
   }
