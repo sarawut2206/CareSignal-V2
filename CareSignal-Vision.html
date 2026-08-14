@@ -567,7 +567,7 @@ async function cloudSync(rec,tr){
     var a=await CSBackend.saveAssessment({
       at:rec.at,method:rec.method,ftsst:rec.ftsst,reps:rec.reps,cv:rec.cv,gaps:rec.gaps,
       score:rec.score,max:rec.max,tier:rec.tier,parts:rec.parts,
-      verified:false,engine:ENGINE.version});
+      verified:!!rec.verified,engine:ENGINE.version});
     rec.cloudId=a.id;
     try{var L=S.data.assessments;for(var i=L.length-1;i>=0;i--){if(L[i].at===rec.at){L[i].cloudId=a.id;break}}await DB.set("visionData",S.data)}catch(e){}
     if(tr){
@@ -709,12 +709,12 @@ function askTime(cb,onCancel){
     }});
 }
 function render(arg){
-  T.hidden=!S.data.profile||["test","calib","q","result","plog","mrv"].indexOf(S.screen)>=0;
+  T.hidden=!S.data.profile||["test","calib","q","result","plog","mrv","face"].indexOf(S.screen)>=0;
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
   var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,q:qV,result:resultV,
-          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV}[S.screen]||assessV;
+          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,mydata:mydataV}[S.screen]||assessV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -802,7 +802,7 @@ function assessV(){
   '<p class="sub" style="color:rgba(255,255,255,.75);margin:0 0 4px">นั่งบนเก้าอี้ กอดอกไว้ แล้วลุกยืนสุดและนั่งลงให้ครบ 5 ครั้ง เร็วที่สุดเท่าที่ทำได้อย่างปลอดภัย</p>'+
   '<p class="sub" style="color:#FCD34D;margin:8px 0 0">กล้องจะนับครั้งและจับเวลาให้เอง ไม่ต้องกดปุ่มระหว่างทำ</p></div>'+
   lastCard+
-  '<button class="cta" data-go="calib">เปิดกล้องและเริ่มทดสอบ</button>'+
+  '<button class="cta" data-go="face">เปิดกล้องและเริ่มทดสอบ</button>'+
   '<button class="ghostb" id="manual">ทำแบบจับเวลาเอง (กรณีกล้องใช้ไม่ได้)</button>'+
   '<div class="disc">ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์ · หากรู้สึกเวียนศีรษะหรือเจ็บระหว่างทำ ให้หยุดทันที</div></div>';
   document.getElementById("manual").addEventListener("click",function(){
@@ -811,6 +811,146 @@ function assessV(){
       audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (ไม่ได้ใช้กล้อง)");
       go("q",0);
     });
+  });
+}
+
+/* ============================================================
+   ยืนยันตัวตนด้วยใบหน้า (Face Continuity)
+   ------------------------------------------------------------
+   วัตถุประสงค์: ยืนยันว่า "คนที่ทำการทดสอบคือเจ้าของบัญชีจริง"
+   ไม่ใช่ระบบพิสูจน์ตัวตนแบบธนาคาร แต่กันการให้คนอื่นทำแทน
+
+   วิธีทำงาน:
+   1) ลงทะเบียนครั้งเดียว — วัดสัดส่วนใบหน้าเป็นตัวเลข 6 ค่า
+   2) ระหว่างการทดสอบ ระบบตรวจซ้ำทุก ~2 วินาที ว่ายังเป็นคนเดิม
+   3) เก็บ "ลายเซ็นเชิงสัดส่วน" ในเครื่องเท่านั้น ไม่เก็บภาพ ไม่อัปโหลด
+   ⚠️ ข้อมูลชีวมิติเป็นข้อมูลอ่อนไหวตาม PDPA มาตรา 26 จึงขอความยินยอมแยก
+      และผู้ใช้ปฏิเสธได้โดยยังใช้ระบบได้ตามปกติ
+   ============================================================ */
+var FACE=null, FACE_STATE="idle";
+var FL={LEYE_OUT:33, REYE_OUT:263, LEYE_IN:133, REYE_IN:362, NOSE:1, NOSE_L:97, NOSE_R:326,
+        MOUTH_L:61, MOUTH_R:291, CHIN:152, FOREHEAD:10};
+var FACE_TOL=0.16;   /* ระยะที่ยอมรับว่าเป็นคนเดิม — ผ่อนปรนเพื่อลดการปฏิเสธผิดพลาด */
+
+async function loadFaceModel(statusEl){
+  if(FACE)return FACE;
+  FACE_STATE="loading";
+  if(statusEl)statusEl.textContent="กำลังโหลดตัวตรวจใบหน้า…";
+  var mod=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+  var fs=await mod.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  FACE=await mod.FaceLandmarker.createFromOptions(fs,{
+    baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:"GPU"},
+    runningMode:"VIDEO",numFaces:1});
+  FACE_STATE="ready";
+  return FACE;
+}
+function fdist(a,b){return Math.hypot(a.x-b.x,a.y-b.y,(a.z||0)-(b.z||0))}
+/* ลายเซ็นเชิงสัดส่วน — หารด้วยระยะระหว่างตา จึงไม่ขึ้นกับระยะห่างจากกล้อง */
+function faceSignature(lm){
+  var base=fdist(lm[FL.LEYE_OUT],lm[FL.REYE_OUT]);
+  if(!base||base<1e-6)return null;
+  return [fdist(lm[FL.LEYE_IN],lm[FL.REYE_IN])/base,
+          fdist(lm[FL.NOSE],lm[FL.CHIN])/base,
+          fdist(lm[FL.MOUTH_L],lm[FL.MOUTH_R])/base,
+          fdist(lm[FL.NOSE_L],lm[FL.NOSE_R])/base,
+          fdist(lm[FL.FOREHEAD],lm[FL.CHIN])/base,
+          fdist(lm[FL.LEYE_OUT],lm[FL.MOUTH_L])/base];
+}
+function sigDist(a,b){
+  if(!a||!b||a.length!==b.length)return 99;
+  var s=0;for(var i=0;i<a.length;i++)s+=(a[i]-b[i])*(a[i]-b[i]);
+  return Math.sqrt(s);
+}
+/* กุญแจผูกกับบัญชีคลาวด์ถ้าล็อกอินแล้ว — เครื่องเดียวหลายบัญชีไม่ปะปนกัน */
+function faceKeyId(){
+  try{if(CLOUD.session&&CSBackend.getProfile())return CSBackend.getProfile().id}catch(e){}
+  return S.data.profile?S.data.profile.uid:"local";
+}
+function saveFaceSig(sig){
+  try{localStorage.setItem("csv:faceSig:"+faceKeyId(),JSON.stringify(sig))}catch(e){}
+  S.data.faceEnrolled=true;
+  if(CLOUD.session)CSBackend.grantConsent("biometric_face","PDPA-1.0",
+    {stored:"on-device-only",values:6,uploaded:false}).catch(function(){});
+}
+function loadFaceSig(){try{var s=localStorage.getItem("csv:faceSig:"+faceKeyId());return s?JSON.parse(s):null}catch(e){return null}}
+function clearFaceSig(){
+  try{localStorage.removeItem("csv:faceSig:"+faceKeyId())}catch(e){}
+  S.data.faceEnrolled=false;
+  if(CLOUD.session)CSBackend.revokeConsent("biometric_face").catch(function(){});
+}
+function faceEnabled(){return !!loadFaceSig()}
+
+/* ---------- หน้าลงทะเบียนใบหน้า ---------- */
+function faceV(){
+  head("ยืนยันตัวตน","ให้กล้องจำใบหน้าคุณไว้","ทำครั้งเดียว เพื่อยืนยันว่าเป็นคุณเองที่ทำการทดสอบ","assess");
+  var already=faceEnabled();
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ก่อนตกลง โปรดอ่าน</h3>'+
+  '<div class="rowline"><span class="k">เก็บเป็นตัวเลข ไม่ใช่รูป</span><span class="v">6 ค่า</span></div>'+
+  '<div class="rowline"><span class="k">เก็บไว้ที่ไหน</span><span class="v">ในเครื่องนี้เท่านั้น</span></div>'+
+  '<div class="rowline"><span class="k">ส่งขึ้นระบบกลางไหม</span><span class="v" style="color:var(--c4)">ไม่ส่ง</span></div>'+
+  '<p class="sub" style="margin:12px 0 0">ข้อมูลชีวมิติได้รับความคุ้มครองตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล <b>มาตรา 26</b> จึงต้องขอความยินยอมแยกต่างหาก · <b>ไม่ยินยอมก็ใช้ระบบได้ตามปกติ</b> เพียงแต่ผลตรวจจะระบุว่า "ไม่ได้ยืนยันตัวตน"</p></div>'+
+  (already?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ลงทะเบียนใบหน้าไว้แล้ว</h3><p class="sub" style="margin:0">ระบบจะตรวจอัตโนมัติระหว่างการทดสอบทุกครั้ง</p></div>':'')+
+  '<div class="stage" style="aspect-ratio:1/1"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
+  '<div class="hudbot"><div class="coach" id="coach">มองตรงมาที่กล้อง ให้เห็นใบหน้าเต็ม</div></div></div></div>'+
+  '<label class="chk" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(already?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
+  '<button class="cta" id="fcSave" disabled>บันทึกใบหน้าและไปต่อ</button>'+
+  '<button class="ghostb" id="fcSkip">ข้าม · ทำต่อโดยไม่ยืนยันตัวตน</button>'+
+  (already?'<button class="ghostb danger" id="fcDel">ลบใบหน้าที่บันทึกไว้</button>':'')+
+  '<div class="disc">ขอบเขตที่ระบบทำได้จริง: ตรวจว่าเป็น<b>คนเดิมตลอดการทดสอบ</b>เท่านั้น ไม่ใช่การพิสูจน์ตัวตนแบบธนาคาร</div></div>';
+
+  document.getElementById("fcSkip").addEventListener("click",function(){
+    S.draft.identityVerified=false;
+    audit("ไม่ยืนยันใบหน้า","ผู้ใช้เลือกทำการทดสอบโดยไม่ยืนยันตัวตน ผลครั้งนี้ระบุว่าไม่ได้ยืนยัน");
+    go("calib");
+  });
+  var del=document.getElementById("fcDel");
+  if(del)del.addEventListener("click",function(){
+    dialog({title:"ลบใบหน้าที่บันทึกไว้",body:"ระบบจะไม่ยืนยันตัวตนอีกจนกว่าจะลงทะเบียนใหม่",ok:"ลบ",cancel:"ไม่ลบ",danger:true,
+      onOk:async function(){clearFaceSig();await saveAll();toast("ลบลายเซ็นใบหน้าแล้ว");render()}});
+  });
+  startFacePipeline();
+}
+async function startFacePipeline(){
+  var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"),coach=document.getElementById("coach"),
+      save=document.getElementById("fcSave"),chk=document.getElementById("fcConsent");
+  var stream,cur=null;
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480},height:{ideal:480}},audio:false})}
+  catch(e){tag.textContent="เปิดกล้องไม่ได้";coach.textContent="ข้ามขั้นนี้ได้ ผลจะระบุว่าไม่ได้ยืนยันตัวตน";return}
+  S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
+  try{await loadFaceModel(tag)}
+  catch(e){tag.textContent="โหลดตัวตรวจใบหน้าไม่สำเร็จ";coach.textContent="ข้ามขั้นนี้ได้ ต้องต่ออินเทอร์เน็ตครั้งแรก";return}
+  tag.textContent="พร้อมแล้ว";
+  function loop(){
+    if(S.screen!=="face")return;
+    var r=null;try{r=FACE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.faceLandmarks&&r.faceLandmarks[0]?r.faceLandmarks[0]:null;
+    if(canvas.width!==video.videoWidth){canvas.width=video.videoWidth;canvas.height=video.videoHeight}
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(lm){
+      ctx.fillStyle="rgba(96,165,250,.85)";
+      [FL.LEYE_OUT,FL.REYE_OUT,FL.NOSE,FL.MOUTH_L,FL.MOUTH_R,FL.CHIN].forEach(function(i){
+        var p=lm[i];if(!p)return;
+        ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(3,canvas.width/120),0,6.3);ctx.fill();
+      });
+      var sg=faceSignature(lm);
+      if(sg){cur=sg;tag.textContent="พบใบหน้าแล้ว";coach.textContent="เห็นชัดแล้ว — ติ๊กยินยอมด้านล่างแล้วกดบันทึก";
+        save.disabled=!chk.checked;}
+    }else{tag.textContent="ยังไม่พบใบหน้า";coach.textContent="ขยับให้เห็นใบหน้าเต็มในกรอบ";save.disabled=true}
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  chk.addEventListener("change",function(){save.disabled=!(this.checked&&cur)});
+  save.addEventListener("click",async function(){
+    if(!cur||!chk.checked)return;
+    saveFaceSig(cur);
+    S.draft.identityVerified=true;
+    audit("ลงทะเบียนใบหน้า","เก็บลายเซ็นเชิงสัดส่วน 6 ค่าไว้ในเครื่องผู้ใช้ ไม่เก็บภาพและไม่อัปโหลด","ผู้ใช้ให้ความยินยอมตามมาตรา 26");
+    await saveAll();
+    toast("บันทึกใบหน้าแล้ว");
+    go("calib");
   });
 }
 
@@ -961,6 +1101,10 @@ function setupCalib(video,canvas,ctx){
 }
 function setupTest(video,canvas,ctx){
   DET=new RepDetector({target:5});
+  /* ตรวจใบหน้าเป็นระยะระหว่างทดสอบ กันการสลับคนกลางคัน */
+  var faceRef=faceEnabled()?loadFaceSig():null;
+  var frameN=0, faceChecks=0, faceFails=0;
+  S.draft.identityChecks=0; S.draft.identityFails=0;
   DET.setRefs(S.draft.sitRef,S.draft.standRef);
   var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
       st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
@@ -972,9 +1116,23 @@ function setupTest(video,canvas,ctx){
     try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
     var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
     drawPose(ctx,canvas,video,lm);
+    frameN++;
+    /* ตรวจใบหน้าทุก ~60 เฟรม (≈2 วินาที) เฉพาะตอนกำลังจับเวลา */
+    if(faceRef&&running&&FACE&&frameN%60===0){
+      try{
+        var fr=FACE.detectForVideo(video,performance.now());
+        var flm=fr&&fr.faceLandmarks&&fr.faceLandmarks[0]?fr.faceLandmarks[0]:null;
+        if(flm){
+          var sg=faceSignature(flm);
+          faceChecks++; S.draft.identityChecks=faceChecks;
+          if(sigDist(sg,faceRef)>FACE_TOL){faceFails++; S.draft.identityFails=faceFails}
+        }
+      }catch(e){}
+    }
     if(lm){
       var q=visOK(lm),m=hipRatio(lm),ka=kneeAngle(lm);
-      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"");
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"")+
+        (faceRef?(faceFails>0?" · <b style='color:#FCA5A5'>ใบหน้าไม่ตรง</b>":(faceChecks?" · <b style='color:#6EE7B7'>ยืนยันตัวตนแล้ว</b>":" · รอตรวจใบหน้า")):"");
       if(m!=null&&running){
         var ev=DET.push(m,performance.now());
         st.textContent=DET.state==="stand"?"ยืน":"นั่ง";
@@ -1032,6 +1190,12 @@ function finishTest(elapsed){
   S.draft.reps=DET.reps;
   S.draft.cv=cv;
   S.draft.gaps=gaps.map(function(g){return Math.round(g*10)/10});
+  /* สรุปผลยืนยันตัวตน: ผ่านเมื่อตรวจอย่างน้อย 1 ครั้งและไม่ตรงไม่เกิน 1 ครั้ง */
+  var ck=S.draft.identityChecks||0, fl=S.draft.identityFails||0;
+  S.draft.identityVerified=(faceEnabled()&&ck>=1&&fl<=1);
+  audit("ผลการยืนยันตัวตนระหว่างทดสอบ", faceEnabled()
+    ? ("ตรวจใบหน้า "+ck+" ครั้ง ไม่ตรง "+fl+" ครั้ง → "+(S.draft.identityVerified?"ยืนยันผ่าน":"ยืนยันไม่ผ่าน"))
+    : "ผู้ใช้ไม่ได้ลงทะเบียนใบหน้า ผลนี้ไม่ได้ยืนยันตัวตน");
   audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
   toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
   if(PILOT){go("plog");return}
@@ -1167,6 +1331,8 @@ async function finishAssess(){
   var p=S.data.profile, r=scoreOf(S.draft,p.age);
   var rec={at:nowISO(),score:r.score,max:r.max,tier:r.tier,ftsst:S.draft.ftsst,parts:r.parts,
            method:S.draft.method,reps:S.draft.reps,cv:S.draft.cv,gaps:S.draft.gaps||null,
+           verified:!!S.draft.identityVerified,
+           idChecks:S.draft.identityChecks||0, idFails:S.draft.identityFails||0,
            /* แหล่งที่มาของคำตอบเชิงประวัติ — เริ่มต้นเป็น "ผู้ใช้กรอกเอง" เสมอ */
            src:{balance:"self_reported",falls:"self_reported",meds:"self_reported",adl:"self_reported"}};
   S.data.assessments.push(rec);
@@ -1275,12 +1441,80 @@ function warnBlock(){
   (tr.referral.need?'<p class="sub" style="margin:10px 0 0">'+esc(tr.referral.nm)+' — เคสถูกส่งเข้าคิว รอ<b>ผู้เชี่ยวชาญยืนยัน</b>ก่อนดำเนินการ</p>':'')+
   '<div class="disc">เอนจินกฎที่อธิบายได้ v'+ENGINE.version+' · ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์</div></div>';
 }
+/* ---------- การ์ดยืนยันว่าบันทึกอะไรไปแล้วบ้าง ----------
+   ตอบคำถาม "ระบบบันทึกอะไร ครบหรือยัง เก็บไว้ที่ไหน" ตรงหน้าจอ */
+function savedCard(rec){
+  var n=S.data.assessments.length;
+  var camOK=rec.method==="camera-pose";
+  function row(ok,label,val){
+    return '<div class="rowline"><span class="k">'+(ok?'<b style="color:var(--c4)">✓</b>':'<b style="color:var(--ink3)">—</b>')+' '+label+'</span><span class="v">'+val+'</span></div>';
+  }
+  return '<div class="card" style="border:1.5px solid var(--c4)">'+
+  '<h3 style="color:var(--c4)">บันทึกเรียบร้อย — นี่คือสิ่งที่ระบบเก็บไว้</h3>'+
+  row(true,"ครั้งที่บันทึก","ครั้งที่ "+n+" ของคุณ")+
+  row(camOK,"วิธีวัด",camOK?"กล้องตรวจจับท่าทาง":"จับเวลาเอง")+
+  row(rec.reps===5,"นับครบ 5 ครั้ง",(rec.reps!=null?rec.reps:"—")+" / 5 ครั้ง")+
+  row(rec.ftsst!=null,"เวลาที่ใช้",(rec.ftsst!=null?rec.ftsst.toFixed(1)+" วินาที":"—"))+
+  row(!!rec.verified,"ยืนยันตัวตนด้วยใบหน้า",
+      rec.verified?("ผ่าน ("+(rec.idChecks||0)+" ครั้ง)"):(faceEnabled()?"ไม่ผ่าน":"ไม่ได้ลงทะเบียนใบหน้า"))+
+  row(true,"คำตอบ 4 ข้อ","ครบ")+
+  row(true,"เก็บในเครื่องนี้","แล้ว")+
+  row(CLOUD.session,"ส่งขึ้นระบบกลาง",CLOUD.session?"แล้ว":"ยังไม่ได้เชื่อมบัญชี")+
+  '<p class="sub" style="margin:10px 0 0">'+
+  (rec.reps!==5&&camOK?'<b style="color:var(--c2)">นับได้ไม่ครบ 5 ครั้ง</b> — แนะนำให้วัดใหม่เพื่อความแม่นยำ · ':'')+
+  (!rec.verified&&camOK?'<b style="color:var(--c2)">ผลนี้ยังไม่ได้ยืนยันตัวตน</b> — ลงทะเบียนใบหน้าแล้ววัดใหม่ได้ · ':'')+
+  '<b>ไม่มีภาพหรือวิดีโอถูกบันทึก</b> ระบบเก็บเฉพาะตัวเลขข้างบนนี้</p>'+
+  '<button class="ghostb" data-go="mydata" style="margin:12px 0 0">ดูว่าข้อมูลของฉันเก็บอยู่ที่ไหนบ้าง</button>'+
+  ((rec.reps!==5&&camOK)||(!rec.verified&&camOK)?'<button class="cta" data-go="face" style="margin:8px 0 0">วัดใหม่อีกครั้ง</button>':'')+
+  '</div>';
+}
+
+/* ---------- หน้า "ข้อมูลของฉันอยู่ที่ไหน" ---------- */
+async function mydataV(){
+  head("ข้อมูลของฉัน","เก็บอะไร อยู่ที่ไหน ใครเห็นได้บ้าง","ความโปร่งใสเป็นสิทธิของคุณตาม PDPA","trend");
+  var A=S.data.assessments||[], cases=S.data.cases||[];
+  var cloudN="—", cloudC="—", cons=[];
+  if(CLOUD.session){
+    try{cloudN=(await CSBackend.listAssessments(200)).length}catch(e){cloudN="อ่านไม่ได้"}
+    try{cons=await CSBackend.listConsents()}catch(e){}
+    try{cloudC=CSBackend.getProfile()?CSBackend.getProfile().pseudonym:"—"}catch(e){}
+  }
+  var consRows=cons.length?cons.map(function(c){
+    var nm={assessment:"ประเมินความเสี่ยง",share_pool:"แชร์สรุปให้ทีมดูแล",biometric_face:"ลายเซ็นใบหน้า (ม.26)",medical_record_check:"ตรวจสอบกับเวชระเบียน"}[c.purpose]||c.purpose;
+    return '<div class="rowline"><span class="k">'+nm+'</span><span class="v" style="color:'+(c.revoked_at?"var(--ink3)":"var(--c4)")+'">'+(c.revoked_at?"ถอนแล้ว":"ยินยอม")+'</span></div>';
+  }).join(""):'<p class="sub" style="margin:0">ยังไม่ได้เชื่อมบัญชีระบบกลาง</p>';
+
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>1 · เก็บในเครื่องนี้</h3>'+
+  '<div class="rowline"><span class="k">ผลประเมิน</span><span class="v">'+A.length+' ครั้ง</span></div>'+
+  '<div class="rowline"><span class="k">เคสส่งต่อ</span><span class="v">'+cases.length+' เคส</span></div>'+
+  '<div class="rowline"><span class="k">บันทึกการทำงานระบบ</span><span class="v">'+(S.data.audit||[]).length+' รายการ</span></div>'+
+  '<div class="rowline"><span class="k">ลายเซ็นใบหน้า</span><span class="v">'+(faceEnabled()?"6 ค่า (ไม่ใช่รูป)":"ไม่มี")+'</span></div>'+
+  '<p class="sub" style="margin:10px 0 0">ลบทั้งหมดได้จากหน้า "แนวโน้ม" · ลายเซ็นใบหน้า<b>ไม่เคยออกจากเครื่องนี้</b></p></div>'+
+
+  '<div class="card"><h3>2 · ส่งขึ้นระบบกลาง</h3>'+
+  '<div class="rowline"><span class="k">สถานะ</span><span class="v" style="color:'+(CLOUD.session?"var(--c4)":"var(--ink3)")+'">'+(CLOUD.session?"เชื่อมแล้ว":"ยังไม่เชื่อม")+'</span></div>'+
+  '<div class="rowline"><span class="k">รหัสของคุณในระบบกลาง</span><span class="v">'+esc(String(cloudC))+'</span></div>'+
+  '<div class="rowline"><span class="k">ผลประเมินบนระบบกลาง</span><span class="v">'+cloudN+' ครั้ง</span></div>'+
+  '<p class="sub" style="margin:10px 0 0"><b>สิ่งที่ส่งขึ้นไป:</b> เวลาลุกนั่ง จำนวนครั้ง คะแนน ระดับสัญญาณ ช่วงอายุ เพศ · <b style="color:var(--c4)">ไม่ส่ง:</b> ภาพ วิดีโอ ลายเซ็นใบหน้า</p></div>'+
+
+  '<div class="card"><h3>3 · ความยินยอมของคุณ</h3>'+consRows+'</div>'+
+
+  '<div class="card"><h3>4 · ใครเห็นข้อมูลของคุณได้</h3>'+
+  '<div class="rowline"><span class="k">คุณเอง</span><span class="v">ทั้งหมด</span></div>'+
+  '<div class="rowline"><span class="k">พยาบาล / Care Manager</span><span class="v">ชื่อ + ผลตรวจ</span></div>'+
+  '<div class="rowline"><span class="k">บริษัทประกัน</span><span class="v" style="color:var(--c4)">รหัสแฝงชื่อเท่านั้น</span></div>'+
+  '<p class="sub" style="margin:10px 0 0">บริษัทประกัน<b>ไม่เห็นชื่อจริงของคุณ</b> — บังคับที่ฐานข้อมูล ไม่ใช่แค่ซ่อนในหน้าจอ</p></div>'+
+  '<button class="ghostb" data-go="trend">กลับหน้าแนวโน้ม</button></div>';
+}
+
 function resultV(rec){
   rec=rec||S.data.assessments[S.data.assessments.length-1];
   var t=CFG.tiers[rec.tier], d=CFG.discount[rec.tier], p=S.data.profile;
   head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at)+" · "+(rec.method==="camera-pose"?"วัดด้วยกล้อง":"จับเวลาเอง"));
   var gapsRow = rec.gaps&&rec.gaps.length? '<div class="rowline"><span class="k">เวลาต่อครั้ง</span><span class="v">'+rec.gaps.join(" · ")+' วิ</span></div>':"";
   V.innerHTML='<div class="anim">'+
+  savedCard(rec)+
   '<div class="card" style="background:'+t.c+';color:#fff">'+
   '<div style="font-size:12px;opacity:.85;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase">คะแนนรวม</div>'+
   '<div style="font-family:var(--mono);font-size:44px;font-weight:600;line-height:1.1">'+rec.score+'<span style="font-size:18px;opacity:.75"> / '+rec.max+'</span></div>'+
