@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CareSignal — ทดสอบระบบหลังบ้าน</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:0 auto;padding:24px;background:#0B1220;color:#E8EEF9;line-height:1.6}
+h1{font-size:20px}
+pre{background:#14203A;border:1px solid #25355C;border-radius:10px;padding:14px;overflow-x:auto;font-size:12.5px;white-space:pre-wrap}
+.ok{color:#2DD4A7}.bad{color:#FF6B6B}.warn{color:#F5B93E}
+button{background:#2563EB;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:15px;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+<h1>CareSignal — ทดสอบระบบหลังบ้าน (Supabase)</h1>
+<p>หน้านี้ใช้ตรวจว่า backend ทำงานครบวงจรจริง — ไม่ใช่ส่วนหนึ่งของระบบที่ผู้ใช้เห็น</p>
+<button id="run">เริ่มทดสอบ</button>
+<pre id="out">กดปุ่มเพื่อเริ่ม…</pre>
+
+<script src="./cs-backend.js"></script>
+<script>
+var out=document.getElementById("out"); var lines=[];
+function log(s,cls){lines.push(cls?'<span class="'+cls+'">'+s+'</span>':s);out.innerHTML=lines.join("\n")}
+function ok(s){log("✓ "+s,"ok")} function bad(s){log("✗ "+s,"bad")} function warn(s){log("! "+s,"warn")}
+
+document.getElementById("run").addEventListener("click",async function(){
+  lines=[];log("เริ่มทดสอบ "+new Date().toLocaleTimeString("th-TH"));
+  var phone="08"+Math.floor(10000000+Math.random()*89999999);
+  var pin="1234";
+  try{
+    /* 1) เชื่อมต่อ */
+    var connected=await CSBackend.init();
+    connected?ok("เชื่อมต่อ Supabase สำเร็จ (โหมด "+CSBackend.mode()+")")
+             :bad("เชื่อมต่อไม่ได้ — ระบบจะตกกลับไปใช้ localStorage");
+    if(!connected)return;
+
+    /* 2) สมัครสมาชิกด้วยเบอร์โทร + PIN */
+    var u=await CSBackend.signUpUser(phone,pin);
+    ok("สมัครสมาชิกสำเร็จ · เบอร์ "+phone);
+
+    /* 3) profile ถูกสร้างอัตโนมัติพร้อมรหัสแฝงชื่อ */
+    await new Promise(r=>setTimeout(r,900));
+    var p=await CSBackend.loadProfile();
+    if(p&&/^P-[0-9A-F]{7}$/.test(p.pseudonym))ok("สร้าง profile อัตโนมัติ · รหัสแฝงชื่อ "+p.pseudonym+" · บทบาท "+p.role);
+    else bad("ไม่พบ profile หรือรหัสแฝงชื่อผิดรูปแบบ: "+JSON.stringify(p));
+
+    /* 4) บันทึกข้อมูลพื้นฐาน */
+    await CSBackend.updateProfile({display_name:"ผู้ทดสอบ",birth_year_be:2505,birth_month:12,sex:"f"});
+    ok("บันทึกข้อมูลโปรไฟล์ (ปีเกิด 2505 · ธ.ค. · หญิง)");
+
+    /* 5) ความยินยอมแยกวัตถุประสงค์ */
+    await CSBackend.grantConsent("assessment","PDPA-1.0");
+    await CSBackend.grantConsent("share_pool","PDPA-1.0");
+    await CSBackend.grantConsent("medical_record_check","PDPA-1.0",
+      {hospital:"รพ.ตัวอย่าง",data:["ยาประจำ","ประวัติหกล้ม"],period:"2568-2569"});
+    var cs=await CSBackend.listConsents();
+    ok("บันทึกความยินยอม "+cs.length+" วัตถุประสงค์ (แยกกัน ถอนได้ทีละอัน)");
+
+    /* 6) บันทึกผลประเมิน — มีธง self-reported */
+    var a=await CSBackend.saveAssessment({
+      method:"camera-pose",ftsst:11.4,reps:5,cv:0.12,gaps:[2.1,2.3,2.2,2.4],
+      score:11,max:12,tier:4,parts:{ftsst:4,balance:3,falls:2,meds:1,adl:1},
+      verified:true,engine:"1.2.0-vision",durSec:210});
+    ok("บันทึกผลประเมินสำเร็จ · ลุกนั่ง 11.4 วิ · คะแนน 11/12");
+    if(a.falls_source==="self_reported"&&a.meds_source==="self_reported")
+      ok("ธงแหล่งข้อมูลถูกต้อง: falls/meds = self_reported (ยังไม่ยืนยันกับเวชระเบียน)");
+    else bad("ธงแหล่งข้อมูลผิด: "+a.falls_source+"/"+a.meds_source);
+
+    /* 7) สัญญาณความเสี่ยง + เคสส่งต่อ */
+    var rs=await CSBackend.saveRiskSignal(a.id,{level:"decline",nextDays:21,engine:"1.2.0-vision",
+      flags:[{id:"R1",text:"เวลาลุกนั่งช้าลง 18%",why:"ส่วนต่าง 2.4 วินาที ถึงเกณฑ์ MCID"}]});
+    ok("บันทึกสัญญาณความเสี่ยง ระดับ "+rs.level);
+    var ref=await CSBackend.createReferral(rs.id,{level:"decline",
+      referral:{nm:"Care Manager โทรติดตาม",sla:"ภายใน 7 วัน"},
+      flags:[{id:"R1",text:"เวลาลุกนั่งช้าลง 18%"}]});
+    ok("สร้างเคสส่งต่อ สถานะ "+ref.status+" (รอมนุษย์ยืนยัน)");
+
+    /* 8) ทดสอบว่า AI/ผู้ใช้ทั่วไปอนุมัติเคสเองไม่ได้ */
+    try{
+      await CSBackend.decideReferral(ref.id,true,"พยายามอนุมัติเองโดยไม่ใช่เจ้าหน้าที่");
+      bad("อันตราย! ผู้ใช้ทั่วไปอนุมัติเคสได้ — RLS ไม่ทำงาน");
+    }catch(e){ ok("ผู้ใช้ทั่วไปอนุมัติเคสเองไม่ได้ (ถูกต้อง)"); }
+
+    /* 9) ผู้ใช้ทั่วไปต้องมองไม่เห็นพอร์ตบริษัทประกัน */
+    var port=await CSBackend.insurerPortfolio();
+    if(port.length===0)ok("ผู้ใช้ทั่วไปมองไม่เห็นพอร์ตบริษัทประกัน (ถูกต้อง)");
+    else bad("อันตราย! ผู้ใช้ทั่วไปเห็นพอร์ต "+port.length+" ราย");
+
+    /* 10) audit log */
+    var al=await CSBackend.listAudit(20);
+    ok("Audit log บันทึก "+al.length+" รายการ: "+al.slice(0,4).map(x=>x.action).join(", "));
+
+    /* 11) audit log ต้องลบไม่ได้ */
+    var del=await CSBackend.client().from("audit_logs").delete().eq("id",al[0].id);
+    var after=await CSBackend.listAudit(20);
+    if(after.length===al.length)ok("Audit log ลบไม่ได้ แม้เจ้าของบัญชีเอง (ถูกต้อง)");
+    else bad("อันตราย! audit log ถูกลบได้");
+
+    /* 12) ถอนความยินยอม share_pool → ต้องหลุดจากแดชบอร์ดทันที */
+    await CSBackend.revokeConsent("share_pool");
+    var p2=await CSBackend.loadProfile();
+    p2.share_pool===false?ok("ถอนความยินยอมแล้ว share_pool = false (หลุดจากแดชบอร์ดทันที)")
+                         :bad("ถอนความยินยอมแล้วแต่ share_pool ยังเป็น true");
+
+    /* 13) ล็อกอินซ้ำด้วยเบอร์+PIN */
+    await CSBackend.signOut();
+    await CSBackend.signInUser(phone,pin);
+    var list=await CSBackend.listAssessments();
+    ok("ออกจากระบบแล้วล็อกอินใหม่ได้ · ดึงผลประเมินเดิมคืนมา "+list.length+" รายการ");
+
+    /* 14) สิทธิลบข้อมูลทั้งหมดตาม PDPA */
+    await CSBackend.deleteAllMyData();
+    ok("ใช้สิทธิลบข้อมูลทั้งหมดตาม PDPA สำเร็จ");
+
+    log("");
+    log("═══ ทดสอบครบทุกขั้นตอน ═══","ok");
+  }catch(e){
+    bad("ผิดพลาด: "+(e.message||JSON.stringify(e)));
+    console.error(e);
+  }
+});
+</script>
+</body>
+</html>

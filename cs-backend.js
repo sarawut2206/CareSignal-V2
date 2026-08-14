@@ -14,8 +14,16 @@
    ============================================================ */
 
 var CS_CONFIG = {
-  url:     "",   /* เช่น https://xxxxxxxx.supabase.co */
-  anonKey: ""    /* anon public key — ปลอดภัยที่จะอยู่ในโค้ดฝั่งหน้าเว็บ เพราะ RLS เป็นตัวคุมสิทธิ์จริง */
+  url:     "https://runhkdaizcxhaohajrsn.supabase.co",
+  /* Publishable key (ชื่อเดิม: anon key) — ปลอดภัยที่จะอยู่ในโค้ดฝั่งหน้าเว็บ
+     เพราะ Row Level Security เป็นตัวคุมสิทธิ์จริง ไม่ใช่ตัว key
+     ห้ามใส่ Secret key (sb_secret_...) ลงในไฟล์นี้เด็ดขาด */
+  anonKey: "sb_publishable_E0EBdKWexniC2JbwpGaUXQ_PIzDdYYh",
+  /* โดเมนสังเคราะห์สำหรับแปลงเบอร์โทรเป็นตัวระบุภายในระบบ auth
+     ไม่มีการส่งอีเมลจริงไปที่โดเมนนี้ เพราะต้องปิด "Confirm email" ใน Supabase
+     (Authentication → Sign In / Providers → Email → Confirm email = OFF)
+     เมื่อสลับไปใช้ OTP ทาง SMS จริงแล้ว ส่วนนี้จะถูกเลิกใช้ */
+  phoneDomain: "caresignal.app"
 };
 
 var CSBackend = (function () {
@@ -56,7 +64,7 @@ var CSBackend = (function () {
      ============================================================ */
   function phoneToEmail(phone) {
     var digits = String(phone).replace(/\D/g, "");
-    return "u" + digits + "@phone.caresignal.local";
+    return "u" + digits + "@" + (CS_CONFIG.phoneDomain || "caresignal.app");
   }
   function pinToPassword(phone, pin) {
     /* ผูก PIN กับเบอร์โทร เพื่อไม่ให้ PIN สั้น ๆ ซ้ำกันกลายเป็นรหัสผ่านเดียวกัน */
