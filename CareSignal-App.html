@@ -661,18 +661,19 @@ function scoreDraft(dr,age){
    ชั้น ML จะเปิดใช้เมื่อมีข้อมูลนำร่องครบเกณฑ์และผ่านการ validate เท่านั้น
    ============================================================ */
 var ENGINE={
-  version:"1.2.0",
+  version:"1.4.0",
   kind:"rule-based-explainable",
   rules:{
-    R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ", src:"MCID ของ Five-Times Sit-to-Stand ในผู้สูงอายุ ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
-    R2:{nm:"ข้ามเกณฑ์เสี่ยงตามอายุ", src:"ค่าตัดเกณฑ์ประชากรไทย 10.0/11.5/12.1 วินาที (Poncumhak 2014; Intaruk 2021)"},
-    R3:{nm:"มีเหตุหกล้มใหม่", src:"การหกล้ม 1 ครั้งเพิ่มโอกาสล้มซ้ำใน 12 เดือน (WHO Falls Prevention 2021)"},
-    R4:{nm:"คะแนนรวมถดถอยจากค่าดีที่สุดของตนเอง", src:"เปรียบเทียบกับ personal best แทนค่าเฉลี่ยประชากร เพื่อลดอคติระหว่างกลุ่ม"},
-    R5:{nm:"ใช้ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง", src:"Polypharmacy (≥4 ชนิด) ร่วมกับ balance impairment เพิ่มความเสี่ยงล้มแบบทวีคูณ (Beers Criteria; STOPPFall 2021)"},
-    R6:{nm:"สูญเสียความสามารถทำกิจวัตร", src:"การลดลงของ ADL/IADL เป็นสัญญาณเริ่มต้นภาวะพึ่งพิง (Lawton IADL; Barthel Index)"},
-    R9:{nm:"ลุกเดิน 3 เมตรช้ากว่าเกณฑ์", src:"เวลาที่ใช้ตั้งแต่ 12 วินาทีขึ้นไปในการทดสอบ Timed Up and Go สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น (Makizako 2017; Physiopedia)"},
-    R8:{nm:"จังหวะการลุกไม่สม่ำเสมอ", src:"กล้องวัดเวลาแยกรายครั้งได้ ความแปรปรวนสะท้อนความล้าของกล้ามเนื้อขา (npj Digital Medicine 2023 — ค่าทางจลนศาสตร์ไวกว่าการดูเวลารวมอย่างเดียว)"},
-    R7:{nm:"เกินกำหนดประเมินซ้ำ", src:"กติกาภายในระบบ ตามระดับความเสี่ยงที่คำนวณได้"}
+    R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ",src:"MCID ของ Five-Times Sit-to-Stand ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
+    R2:{nm:"ข้ามเกณฑ์เสี่ยงตามอายุ",src:"ค่าตัดประชากรไทย 10.0/11.5/12.1 วินาที (Poncumhak 2014; Intaruk 2021)"},
+    R3:{nm:"มีเหตุหกล้มใหม่",src:"WHO Step Safely 2021 — ล้ม 1 ครั้งเพิ่มโอกาสล้มซ้ำใน 12 เดือน"},
+    R4:{nm:"คะแนนรวมถดถอยจากค่าดีที่สุดของตนเอง",src:"เทียบกับตนเองแทนค่าเฉลี่ยประชากร เพื่อลดอคติระหว่างกลุ่ม"},
+    R5:{nm:"ใช้ยาหลายชนิดร่วมกับการทรงตัวบกพร่อง",src:"STOPPFall 2021; Beers Criteria — ปฏิสัมพันธ์แบบทวีคูณ"},
+    R6:{nm:"สูญเสียความสามารถทำกิจวัตร",src:"Lawton IADL; Barthel Index — สัญญาณเริ่มต้นภาวะพึ่งพิง"},
+    R7:{nm:"ความสม่ำเสมอของจังหวะลดลง",src:"ความแปรปรวนของเวลาต่อครั้งสะท้อนความล้าของกล้ามเนื้อขา"},
+    R8:{nm:"การทรงตัวถดถอยเป็นท่า",src:"CDC STEADI 4-Stage Balance Test — ท่าที่เคยยืนได้ครบ 10 วินาทีแล้วทำไม่ได้ คือการสูญเสียความสามารถที่วัดซ้ำได้"},
+    R9:{nm:"คะแนนบาร์เธลลดลงก่อนข้ามระดับ",src:"Barthel ADL Index 20 คะแนน — ตรวจจับการถดถอยภายในระดับเดียวกัน ก่อนจะตกไปอีกระดับ"},
+    R10:{nm:"ลุกเดิน 3 เมตรช้ากว่าเกณฑ์",src:"CDC STEADI — Timed Up and Go ตั้งแต่ 12 วินาทีขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มสูงขึ้น"}
   },
   cadence:{stable:90, watch:45, decline:21, urgent:7},
   levelNm:{stable:"คงที่", watch:"เฝ้าสังเกต", decline:"ถดถอย", urgent:"ต้องดูแลเร่งด่วน"},
@@ -682,99 +683,99 @@ var ENGINE={
 function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
 
 /* ---- วิเคราะห์เส้นทางความเสี่ยงเฉพาะบุคคล ---- */
+function hasADLFlag(out){return out.flags.some(function(f){return f.id==="R6"})}
 function trajectory(){
   var A=S.data.assessments, p=S.data.profile;
-  if(!A.length) return null;
+  if(!A.length||!p)return null;
   var last=A[A.length-1], first=A[0];
-  var out={n:A.length, last:last, flags:[], level:"stable", ftsstPct:null, ftsstDelta:null,
-           span:daysBetween(first.at,last.at), sinceLast:daysBetween(last.at,todayISO())};
+  var out={n:A.length,last:last,flags:[],level:"stable",span:daysBetween(first.at,last.at),
+           sinceLast:daysBetween(last.at,todayISO())};
+  var fts=A.filter(function(x){return x.ftsst!=null});
+  var bestFt=fts.length?Math.min.apply(null,fts.map(function(x){return x.ftsst})):null;
+  var bestScore=Math.max.apply(null,A.map(function(x){return x.score}));
 
-  /* baseline = ค่าที่ดีที่สุดของผู้ใช้เอง (ไม่ใช่ค่าเฉลี่ยประชากร → ลดอคติระหว่างกลุ่ม) */
-  var ftsstVals=A.filter(function(x){return x.ftsst!=null});
-  var bestFt = ftsstVals.length? Math.min.apply(null,ftsstVals.map(function(x){return x.ftsst})) : null;
-  var bestScore = Math.max.apply(null,A.map(function(x){return x.score}));
-
-  /* R1 — ความเร็วการเสื่อมถอยของ FTSST */
-  if(last.ftsst!=null && bestFt!=null && ftsstVals.length>1 && last.ftsst>bestFt){
+  if(last.ftsst!=null&&bestFt!=null&&fts.length>1&&last.ftsst>bestFt){
     var d=last.ftsst-bestFt, pct=d/bestFt*100;
-    out.ftsstDelta=d; out.ftsstPct=pct;
-    if(d>=2.3 || pct>=15){
-      out.flags.push({id:"R1", sev:pct>=30||d>=4?2:1,
+    if(d>=2.3||pct>=15){
+      out.flags.push({id:"R1",sev:(pct>=30||d>=4)?2:1,
         text:"เวลาลุกนั่ง 5 ครั้งช้าลง "+pct.toFixed(0)+"% ("+bestFt.toFixed(1)+" → "+last.ftsst.toFixed(1)+" วินาที) เทียบกับผลที่ดีที่สุดของคุณเอง",
         why:"ส่วนต่าง "+d.toFixed(1)+" วินาที ถึงเกณฑ์การเปลี่ยนแปลงที่มีความหมายทางคลินิก (≥2.3 วินาที)"});
     }
   }
-  /* R2 — ข้ามเกณฑ์ตามอายุ */
   if(last.ftsst!=null){
-    var cut=CFG.ftsstCut(p.age);
-    var prevFt=null;
+    var cut=CFG.ftsstCut(p.age), prevFt=null;
     for(var i=A.length-2;i>=0;i--){if(A[i].ftsst!=null){prevFt=A[i].ftsst;break}}
-    if(last.ftsst>cut && (prevFt==null || prevFt<=cut)){
-      out.flags.push({id:"R2", sev:2,
+    if(last.ftsst>cut&&(prevFt==null||prevFt<=cut)){
+      out.flags.push({id:"R2",sev:2,
         text:"เวลาลุกนั่งขึ้นเป็น "+last.ftsst.toFixed(1)+" วินาที สูงกว่าเกณฑ์ของช่วงอายุ "+CFG.ageBand(p.age)+" ปี ("+cut.toFixed(1)+" วินาที)",
-        why:"เป็นการข้ามค่าตัดเกณฑ์ครั้งแรก จึงถือเป็นสัญญาณเปลี่ยนสถานะ ไม่ใช่ความผันผวนปกติ"});
+        why:"เป็นการข้ามค่าตัดเกณฑ์ครั้งแรก จึงถือเป็นการเปลี่ยนสถานะ ไม่ใช่ความผันผวนปกติ"});
     }
   }
-  /* R3 — เหตุหกล้มใหม่ */
   if(A.length>1){
     var prev=A[A.length-2];
-    if(last.parts.falls<prev.parts.falls){
-      out.flags.push({id:"R3", sev:2,
-        text:"มีการหกล้มเกิดขึ้นใหม่ในช่วง "+daysBetween(prev.at,last.at)+" วันที่ผ่านมา",
+    if(last.parts.falls<prev.parts.falls)
+      out.flags.push({id:"R3",sev:2,text:"มีการหกล้มเกิดขึ้นใหม่ในช่วง "+daysBetween(prev.at,last.at)+" วันที่ผ่านมา",
         why:"ผู้ที่ล้มแล้ว 1 ครั้งมีโอกาสล้มซ้ำสูงขึ้นชัดเจนใน 12 เดือนถัดไป"});
-    }
-    if(last.parts.adl<prev.parts.adl){
-      out.flags.push({id:"R6", sev:3,
-        text:"ความสามารถทำกิจวัตรประจำวันลดลงจากการประเมินครั้งก่อน",
+    if(last.parts.adl<prev.parts.adl)
+      out.flags.push({id:"R6",sev:3,text:"ความสามารถทำกิจวัตรประจำวันลดลงจากการประเมินครั้งก่อน",
         why:"การลดลงของ ADL เป็นสัญญาณเริ่มต้นของภาวะพึ่งพิง ซึ่งเป็นเหตุการณ์ที่กรมธรรม์คุ้มครอง"});
-    }
   }
-  /* R4 — คะแนนรวมถดถอย */
-  if(last.score<=bestScore-2){
-    out.flags.push({id:"R4", sev:last.score<=bestScore-3?2:1,
+  if(last.score<=bestScore-2)
+    out.flags.push({id:"R4",sev:last.score<=bestScore-3?2:1,
       text:"คะแนนรวมลดลง "+(bestScore-last.score)+" คะแนน จากค่าดีที่สุดของคุณ ("+bestScore+" → "+last.score+")",
       why:"เปรียบเทียบกับตัวคุณเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น"});
-  }
-  /* R5 — ยาหลายชนิด + ทรงตัวบกพร่อง */
-  if(last.parts.meds===0 && last.parts.balance<=1){
-    out.flags.push({id:"R5", sev:2,
-      text:"ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป ร่วมกับผลทรงตัวที่ยังไม่ผ่านเกณฑ์",
+  if(last.parts.meds===0&&last.parts.balance<=1)
+    out.flags.push({id:"R5",sev:2,text:"ใช้ยาตั้งแต่ 4 ชนิดขึ้นไป ร่วมกับผลทรงตัวที่ยังไม่ผ่านเกณฑ์",
       why:"สองปัจจัยนี้เมื่อเกิดร่วมกันเพิ่มความเสี่ยงหกล้มมากกว่าผลรวมของแต่ละปัจจัย"});
+  /* กฎเฉพาะของการวัดด้วยกล้อง: ความสม่ำเสมอของจังหวะแต่ละครั้ง */
+  if(last.cv!=null&&last.cv>=0.25)
+    out.flags.push({id:"R7",sev:1,
+      text:"จังหวะการลุกแต่ละครั้งไม่สม่ำเสมอ (ครั้งท้าย ๆ ช้ากว่าครั้งแรกอย่างชัดเจน)",
+      why:"กล้องวัดเวลาแยกรายครั้งได้ ความแปรปรวน "+(last.cv*100).toFixed(0)+"% บ่งชี้ความล้าของกล้ามเนื้อขาเร็วกว่าปกติ"});
+
+  /* R8 — การทรงตัวถดถอยเป็นรายท่า (CDC 4-Stage Balance Test)
+     เหตุผลที่ต้องแยกจาก R4: คะแนนรวมอาจไม่ขยับเลยเพราะช่วงคะแนนทรงตัวหยาบ
+     แต่การที่เคยยืนต่อเท้าได้ครบ 10 วินาทีแล้ววันนี้ทำไม่ได้ คือการสูญเสียที่ชัดเจน */
+  var bals=A.filter(function(x){return x.balPassed!=null});
+  if(last.balPassed!=null&&bals.length>1){
+    var bestBal=Math.max.apply(null,bals.map(function(x){return x.balPassed}));
+    if(last.balPassed<bestBal){
+      var lostN=bestBal-last.balPassed;
+      out.flags.push({id:"R8",sev:(last.balPassed<=1||lostN>=2)?2:1,
+        text:"การทรงตัวถดถอย "+lostN+" ท่า — เคยยืนผ่าน "+bestBal+" จาก 4 ท่า ครั้งนี้ผ่าน "+last.balPassed+" ท่า"+
+             (BAL_STAGES[last.balPassed]?" (ท่าที่ทำไม่ได้: "+BAL_STAGES[last.balPassed].nm+")":""),
+        why:"ท่ายืนของ 4-Stage Balance Test เรียงจากง่ายไปยาก การทำท่าที่เคยผ่านไม่ได้ จึงเป็นการสูญเสียความสามารถ ไม่ใช่ความผันผวนของการวัด"});
+    }
   }
-  /* R9 — ลุกเดิน 3 เมตรช้ากว่าเกณฑ์ */
-  if(last.tug!=null&&last.tug>=12){
-    out.flags.push({id:"R9", sev:last.tug>=15?2:1,
-      text:"ลุกเดิน 3 เมตรแล้วกลับมานั่ง ใช้เวลา "+last.tug.toFixed(1)+" วินาที",
-      why:"เวลาตั้งแต่ 12 วินาทีขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้นในผู้สูงอายุ"});
-  }
-  /* R8 — จังหวะไม่สม่ำเสมอ (เฉพาะเมื่อวัดด้วยกล้อง) */
-  if(last.cv!=null&&last.cv>=0.25){
-    out.flags.push({id:"R8", sev:1,
-      text:"จังหวะการลุกแต่ละครั้งไม่สม่ำเสมอ ครั้งท้าย ๆ ช้ากว่าครั้งแรกอย่างชัดเจน",
-      why:"กล้องจับเวลาแยกรายครั้งได้ ความแปรปรวน "+(last.cv*100).toFixed(0)+"% บ่งชี้ว่ากล้ามเนื้อขาล้าเร็วกว่าปกติ"});
-  }
-  /* R7 — เกินกำหนด */
-  var due=nextDueDays(out.flags,last.tier);
-  if(out.sinceLast>due){
-    out.flags.push({id:"R7", sev:1,
-      text:"เลยกำหนดประเมินซ้ำมาแล้ว "+(out.sinceLast-due)+" วัน",
-      why:"ข้อมูลที่เก่ากว่ากำหนดทำให้ระบบประเมินความเสี่ยงปัจจุบันได้แม่นยำน้อยลง"});
+  /* R9 — คะแนนบาร์เธลลดลงแม้ยังอยู่ระดับเดิม
+     เหตุผล: R6 จับเฉพาะตอนข้ามระดับ (ติดสังคม → ติดบ้าน) ซึ่งช้าเกินไป
+     คนที่ตกจาก 20 เหลือ 14 คะแนน ยังเป็น "ติดสังคม" อยู่ แต่เสียความสามารถไป 6 คะแนนแล้ว */
+  var bars=A.filter(function(x){return x.barthelTotal!=null});
+  if(last.barthelTotal!=null&&bars.length>1){
+    var bestBar=Math.max.apply(null,bars.map(function(x){return x.barthelTotal}));
+    var dBar=bestBar-last.barthelTotal;
+    if(dBar>=2&&!hasADLFlag(out))
+      out.flags.push({id:"R9",sev:dBar>=4?2:1,
+        text:"คะแนนดัชนีบาร์เธลลดลง "+dBar+" คะแนน ("+bestBar+" → "+last.barthelTotal+" จาก 20) โดยยังไม่ข้ามระดับ",
+        why:"เป็นการเตือนล่วงหน้าก่อนจะตกไปสู่ระดับพึ่งพิงที่สูงขึ้น ซึ่งเป็นจุดที่กรมธรรม์เริ่มจ่ายสินไหม"});
   }
 
-  /* ระดับรวม */
+  /* R10 — TUG ช้ากว่าเกณฑ์คัดกรอง CDC (12 วินาที นับตั้งแต่เริ่มลุกจนนั่งลง)
+     ใช้เฉพาะรอบที่ระบบยืนยันว่าเดินครบระยะ 3 เมตร มิฉะนั้นเวลาจะสั้น/ยาวเกินจริง */
+  if(last.tug!=null&&last.tug>=12&&last.tugDistanceOk!==false)
+    out.flags.push({id:"R10",sev:last.tug>=15?2:1,
+      text:"ลุกเดิน 3 เมตรแล้วกลับมานั่ง ใช้เวลา "+last.tug.toFixed(1)+" วินาที (เกณฑ์คัดกรอง 12 วินาที)",
+      why:"CDC STEADI ใช้ 12 วินาทีเป็นจุดคัดกรองความเสี่ยงหกล้ม — เป็นจุดเริ่มเฝ้าระวัง ไม่ใช่คำวินิจฉัย"});
+
   var sev=out.flags.reduce(function(a,b){return a+b.sev},0);
   var hasADL=out.flags.some(function(f){return f.id==="R6"});
-  if(last.tier===1 || hasADL || sev>=5) out.level="urgent";
-  else if(last.tier===2 || sev>=3) out.level="decline";
-  else if(sev>=1) out.level="watch";
-  else out.level="stable";
-
+  out.level = (last.tier===1||hasADL||sev>=5)?"urgent" : (last.tier===2||sev>=3)?"decline" : sev>=1?"watch":"stable";
   out.nextDays=ENGINE.cadence[out.level];
   out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
-  out.referral = out.level==="urgent" ? {nm:"ส่งต่อพยาบาลประเมินที่บ้าน", sla:"ภายใน 72 ชั่วโมง", need:true}
-               : out.level==="decline" ? {nm:"Care Manager โทรติดตาม", sla:"ภายใน 7 วัน", need:true}
-               : out.level==="watch"   ? {nm:"แผนป้องกันด้วยตนเอง + เตือนประเมินซ้ำ", sla:"ไม่ต้องส่งต่อ", need:false}
-                                       : {nm:"ดูแลตนเองตามแผนปกติ", sla:"ไม่ต้องส่งต่อ", need:false};
+  out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
+               : out.level==="decline"?{nm:"Care Manager โทรติดตาม",sla:"ภายใน 7 วัน",need:true}
+               : out.level==="watch"?{nm:"แผนป้องกันด้วยตนเอง + เตือนประเมินซ้ำ",sla:"ไม่ต้องส่งต่อ",need:false}
+                                     :{nm:"ดูแลตนเองตามแผนปกติ",sla:"ไม่ต้องส่งต่อ",need:false};
   return out;
 }
 function nextDueDays(flags,tier){
@@ -875,7 +876,7 @@ function render(arg){
   T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,register:registerV,login:loginV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={loading:loadingV,welcome:welcomeV,register:registerV,login:loginV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -1102,13 +1103,14 @@ function trendCard(){
 /* ---------- ประเมิน ---------- */
 function assessIntroV(){
   S.draft.t0=Date.now();
-  head("ตรวจร่างกาย","วัดสัญญาณวันนี้","ใช้เวลาราว 6 นาที ผลบันทึกอัตโนมัติ","home");
+  head("ตรวจร่างกาย","วัดสัญญาณวันนี้","ใช้เวลาราว 8 นาที ผลบันทึกอัตโนมัติ","home");
   V.innerHTML='<div class="anim senior">'+
   '<div class="card"><h2 style="font-size:19px">เตรียมตัวก่อนเริ่ม</h2>'+
   '<div class="rowline"><span class="k">① เก้าอี้มีพนักพิง ไม่มีล้อ</span><span class="v">1 ตัว</span></div>'+
   '<div class="rowline"><span class="k">② พื้นที่ว่างด้านหน้าเก้าอี้</span><span class="v">4–5 เมตร</span></div>'+
   '<div class="rowline"><span class="k">③ ผนังหรือโต๊ะให้จับกันล้ม</span><span class="v">ใกล้มือ</span></div>'+
   '<div class="rowline"><span class="k">④ รองเท้าหุ้มส้น หรือเท้าเปล่า</span><span class="v">ห้ามถุงเท้า</span></div>'+
+  '<div class="rowline"><span class="k">⑤ ป้าย/สิ่งของ 2 ชิ้น ทำจุดเริ่มและจุดกลับ</span><span class="v">ห่างกัน 3 เมตร</span></div>'+
   '<p class="qhelp" style="margin:14px 0 0"><b>ทำไมต้อง 4–5 เมตร:</b> การทดสอบลุกเดินเป็นมาตรฐาน Timed Up and Go ที่ต้องเดินออกไป <b>3 เมตรพอดี</b> แล้วหมุนกลับมานั่ง จึงต้องเผื่อพื้นที่หมุนตัวและระยะวางมือถือ · ถ้าพื้นที่ไม่พอ ข้ามการทดสอบนี้ได้ คะแนนส่วนอื่นยังใช้ได้ครบ</p>'+
   '<p class="qhelp" style="margin:10px 0 0">หากวันนี้เวียนหัว หน้ามืด หรือเพิ่งกินยาใหม่ ให้เลื่อนไปวันอื่น ความปลอดภัยสำคัญกว่า</p></div>'+
   '<div class="card"><h2 style="font-size:19px">เลือกวิธีวัด</h2>'+
@@ -1150,8 +1152,14 @@ var QS=[
 ];
 function assessQV(i){
   i=i||0;var q=QS[i];
-  head("ขั้นที่ "+(i+2)+" / 5",q.q,"","assessIntro");
+  head("คำถามที่ "+(i+1)+" จาก "+QS.length,q.q,"","assessIntro");
   var extra="";
+  if(q.k==="balance"&&S.draft.balPassed!=null){
+    extra='<div class="card" style="margin-top:14px;background:var(--surf2)"><h3>ผลจากกล้องเมื่อสักครู่</h3>'+
+      '<p class="sub" style="margin:0">ยืนผ่าน <b>'+S.draft.balPassed+' จาก 4 ท่า</b>'+
+      (S.draft.balLabel?' — '+S.draft.balLabel:'')+
+      ' · คำตอบของท่านคือการยืนยันสุดท้าย เลือกตามที่รู้สึกจริง</p></div>';
+  }
   if(q.verify){
     extra='<div class="card" style="border:1.5px solid var(--accent);margin-top:14px">'+
       '<h3 style="color:var(--accent2)">ข้อควรทราบก่อนตอบ</h3>'+
@@ -1161,12 +1169,46 @@ function assessQV(i){
       '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ตอบตามจริงไม่ทำให้เบี้ยแพงขึ้น</b> — ระบบนี้ใช้ผลตรวจลดเบี้ยได้ทางเดียว การตอบว่ามีความเสี่ยงจะทำให้คุณได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
   }
   if(q.adl){
-    extra='<div class="card" style="margin-top:14px"><h3>คำถามนี้วัดอะไร</h3>'+
-      '<p class="sub" style="margin:0 0 10px">วัดความสามารถในการทำกิจวัตรประจำวัน (ADL) ซึ่งเป็นเกณฑ์เดียวกับที่ระบบสาธารณสุขไทยใช้ชี้ว่าใครอยู่ในภาวะพึ่งพิง โดยใช้ดัชนีบาร์เธล (Barthel ADL Index) ที่ประเมิน 10 ด้าน เช่น กินอาหาร อาบน้ำ แต่งตัว เข้าห้องน้ำ ลุกจากเตียงไปเก้าอี้ เดิน ขึ้นบันได และการกลั้นขับถ่าย</p>'+
-      '<div class="rowline"><span class="k">คะแนน 12 ขึ้นไป</span><span class="v" style="color:var(--c4)">พึ่งตนเองได้</span></div>'+
-      '<div class="rowline"><span class="k">คะแนน 5–11</span><span class="v" style="color:var(--c2)">พึ่งพิงปานกลางถึงรุนแรง</span></div>'+
-      '<div class="rowline"><span class="k">คะแนน 0–4</span><span class="v" style="color:var(--c1)">พึ่งพิงระดับสูง</span></div>'+
-      '<p class="sub" style="margin:10px 0 0">คำถามในแอปเป็นเพียง<b>การคัดกรองอย่างย่อ</b> ไม่ใช่การประเมินบาร์เธลฉบับเต็ม การตัดสินว่าเข้าเกณฑ์ภาวะพึ่งพิงเพื่อรับสินไหม ต้องประเมินโดยทีมสหวิชาชีพที่ไปถึงบ้าน · กล้องวัดข้อนี้แทนไม่ได้ เพราะเป็นเรื่องการอาบน้ำและเข้าห้องน้ำซึ่งไม่ควรถ่ายภาพ กล้องจึงวัดเฉพาะความสามารถทางกายที่เป็นสัญญาณนำมาก่อน เช่น การลุกจากเก้าอี้และการเดิน</p></div>';
+    /* ดัชนีบาร์เธลฉบับย่อ 5 ด้าน — กระชับ ตอบง่าย และมีงานวิจัยรองรับ
+       (Hobart & Thompson 2001: 5 ด้านให้ข้อมูลเทียบเท่าฉบับเต็ม 10 ด้าน) */
+    head("คำถามสุดท้าย","กิจวัตรประจำวัน 5 ด้าน","ตอบสั้น ๆ ด้านละหนึ่งคำตอบ ระบบเทียบเป็นดัชนีเต็ม 20 ให้เอง","assessIntro");
+    if(!S.draft.barthel)S.draft.barthel={};
+    var b=S.draft.barthel;
+    V.innerHTML='<div class="anim senior">'+
+      '<div id="bWrap"></div><div class="card" id="bSum"></div>'+
+      '<button class="cta loop" id="bGo" disabled>บันทึกและดูผลการประเมิน</button>'+
+      '<p class="qhelp" style="margin-top:12px">ฉบับย่อ 5 ด้าน (Short-Form Barthel Index — Hobart &amp; Thompson 2001) ให้ผลใกล้เคียงฉบับเต็ม 10 ด้านมาก จึงตอบเร็วโดยไม่เสียความแม่น · การตัดสินภาวะพึ่งพิงเพื่อรับสินไหม ยังต้องประเมินฉบับเต็มโดยทีมสหวิชาชีพถึงบ้าน</p></div>';
+    var renderB=function(){
+      document.getElementById("bWrap").innerHTML=BARTHEL.map(function(it,idx){
+        return '<div class="card"><h3 style="font-size:16.5px;margin:0 0 8px">'+(idx+1)+' · '+it.nm+'</h3>'+
+        it.o.map(function(o){
+          var on=b[it.k]===o[1];
+          return '<button class="pick" data-k="'+it.k+'" data-v="'+o[1]+'" style="'+(on?"border-color:var(--brand);font-weight:700":"")+'">'+(on?"✓ ":"")+o[0]+'</button>';
+        }).join("")+'</div>';
+      }).join("");
+      var n=Object.keys(b).length, sf=barthelTotal(b), est=barthelEst20(sf), band=barthelBand(est);
+      var full=(n===BARTHEL.length);
+      document.getElementById("bSum").innerHTML='<h3>สรุป</h3>'+
+        '<div class="rowline"><span class="k">ตอบแล้ว</span><span class="v">'+n+' / '+BARTHEL.length+' ด้าน</span></div>'+
+        (full?'<div class="rowline"><span class="k">เทียบดัชนีเต็ม 20</span><span class="v">~'+est+' / 20 · '+band.nm.split(" — ")[0]+'</span></div>':
+              '<p class="sub" style="margin:8px 0 0">ตอบให้ครบทุกด้านเพื่อสรุปผล</p>');
+      document.getElementById("bGo").disabled=!full;
+      document.querySelectorAll("#bWrap .pick").forEach(function(btn){
+        btn.addEventListener("click",function(){ b[btn.dataset.k]=+btn.dataset.v; renderB(); });
+      });
+    };
+    renderB();
+    document.getElementById("bGo").addEventListener("click",function(){
+      if(this.disabled)return; this.disabled=true;
+      var sf=barthelTotal(b), est=barthelEst20(sf), band=barthelBand(est);
+      S.draft.adl=band.adl;
+      S.draft.barthelTotal=est;   /* สเกล 20 — กฎ R9 เฝ้าระวังแนวโน้มใช้ค่านี้ */
+      S.draft.barthelSF=sf;
+      S.draft.barthelBand=band.nm;
+      audit("ประเมินกิจวัตรประจำวัน (Barthel ฉบับย่อ 5 ด้าน)","คะแนนย่อ "+sf+"/11 ≈ "+est+"/20 · "+band.nm);
+      finishAssess();
+    });
+    return;
   }
   V.innerHTML='<div class="anim senior"><p class="qhelp">'+q.h+'</p>'+
   q.o.map(function(o,j){return '<button class="pick" data-i="'+j+'">'+o[0]+'</button>'}).join("")+extra+'</div>';
@@ -1180,7 +1222,17 @@ function assessQV(i){
 async function finishAssess(){
   var p=S.data.profile;
   var r=scoreDraft(S.draft,p.age);
-  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null, method:S.draft.method||"manual", reps:S.draft.reps||null, cv:(S.draft.cv==null?null:S.draft.cv), gaps:S.draft.gaps||null, tug:(S.draft.tug==null?null:S.draft.tug), verified:!!S.draft.identityVerified};
+  var rec={at:todayISO(), score:r.score, max:r.max, tier:r.tier, ftsst:S.draft.ftsst, parts:r.parts, durSec:S.draft.t0?Math.round((Date.now()-S.draft.t0)/1000):null, method:S.draft.method||"manual", reps:S.draft.reps||null, cv:(S.draft.cv==null?null:S.draft.cv), gaps:S.draft.gaps||null, tug:(S.draft.tug==null?null:S.draft.tug), verified:!!S.draft.identityVerified,
+    tugOut:S.draft.tugOut!=null?S.draft.tugOut:null,
+    tugBack:S.draft.tugBack!=null?S.draft.tugBack:null,
+    tugDistanceOk:S.draft.tugDistanceOk!=null?S.draft.tugDistanceOk:null,
+    tugDrift:S.draft.tugDrift!=null?S.draft.tugDrift:null,
+    balPassed:S.draft.balPassed!=null?S.draft.balPassed:null,
+    balStages:S.draft.balStages||null,
+    balLabel:S.draft.balLabel||null,
+    barthelTotal:S.draft.barthelTotal!=null?S.draft.barthelTotal:null,
+    barthelSF:S.draft.barthelSF!=null?S.draft.barthelSF:null,
+    barthelBand:S.draft.barthelBand||null};
   S.data.assessments.push(rec);
   audit("ประเมินและให้คะแนน","คะแนน "+r.score+"/"+r.max+" ระดับ "+CFG.tiers[r.tier].nm+(S.draft.ftsst?" · ลุกนั่ง "+S.draft.ftsst.toFixed(1)+" วินาที":" · ข้ามการจับเวลา"));
   var tr=trajectory();
@@ -1616,6 +1668,207 @@ function finishTest(elapsed){
    ระหว่างเดินออกนอกเฟรม ระบบรอโดยไม่นับผิด
    เกณฑ์อ้างอิง: ใช้เวลา ≥12 วินาที สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น
    ============================================================ */
+
+/* ============================================================
+   ตัวช่วยที่ใช้ร่วมกับ CareSignal-Vision — คัดมาบรรทัดต่อบรรทัด
+   เพื่อให้ผลวัดจากสองแอปเทียบกันได้ตรง ๆ
+   ============================================================ */
+function trunkCenter(lm){
+  var sh={x:(lm[LM.LSH].x+lm[LM.RSH].x)/2, y:(lm[LM.LSH].y+lm[LM.RSH].y)/2};
+  var hp={x:(lm[LM.LHIP].x+lm[LM.RHIP].x)/2, y:(lm[LM.LHIP].y+lm[LM.RHIP].y)/2};
+  return {x:(sh.x+hp.x)/2, y:(sh.y+hp.y)/2};
+}
+function shoulderWidth(lm){
+  return Math.hypot(lm[LM.LSH].x-lm[LM.RSH].x, lm[LM.LSH].y-lm[LM.RSH].y);
+}
+/* ค่าโคลงเคลง = ส่วนเบี่ยงเบนมาตรฐานของตำแหน่งลำตัว หารความกว้างไหล่ */
+function swayScore(samples){
+  if(samples.length<8)return null;
+  var n=samples.length, mx=0, my=0;
+  samples.forEach(function(s){mx+=s.x;my+=s.y});
+  mx/=n; my/=n;
+  var vx=0, vy=0;
+  samples.forEach(function(s){vx+=(s.x-mx)*(s.x-mx); vy+=(s.y-my)*(s.y-my)});
+  return Math.sqrt(vx/n+vy/n);
+}
+/* แปลงค่าเป็นข้อสังเกต 3 ระดับ */
+function swayLabel(v){
+  if(v==null)return {nm:"วัดไม่ได้", cls:"", hint:"กล้องเห็นตัวไม่ครบตลอด 10 วินาที"};
+  if(v<0.020)return {nm:"นิ่งมาก", cls:"t4", hint:"แทบไม่มีการโคลง"};
+  if(v<0.045)return {nm:"โคลงเล็กน้อย", cls:"t3", hint:"มีการแกว่งบ้างตามปกติ"};
+  if(v<0.080)return {nm:"โคลงปานกลาง", cls:"t2", hint:"แกว่งชัดเจน ควรมีที่จับใกล้มือ"};
+  return {nm:"โคลงมาก", cls:"t1", hint:"แกว่งมาก ควรมีคนอยู่ข้าง ๆ เสมอ"};
+}
+
+
+/* ============================================================
+   ตรวจท่ายืน 4 ท่า (CDC 4-Stage Balance Test) จากตำแหน่งเท้า
+   ------------------------------------------------------------
+   หลักการเมื่อกล้องหน้ามองผู้ใช้ตรง ๆ:
+   - ระยะห่างเท้าซ้าย-ขวา อ่านจากแกนนอนของข้อเท้า (gx)
+   - การเหลื่อมหน้า-หลังของเท้า อ่านจากแกนตั้ง (gy) เพราะเท้าที่อยู่
+     ข้างหน้าใกล้กล้องกว่า จึงปรากฏต่ำกว่าในภาพ
+   - การยกเท้า (ยืนขาเดียว) เห็นเป็นข้อเท้าข้างหนึ่งสูงกว่าอีกข้างชัดเจน
+   ทุกค่าหารด้วยความกว้างไหล่ เพื่อไม่ขึ้นกับระยะกล้องและส่วนสูง
+   ============================================================ */
+function footGeom(lm){
+  var sw=shoulderWidth(lm);
+  if(!isFinite(sw)||sw<0.02)return null;
+  return {gx:Math.abs(lm[LM.LANK].x-lm[LM.RANK].x)/sw,
+          gy:Math.abs(lm[LM.LANK].y-lm[LM.RANK].y)/sw};
+}
+/* เกณฑ์เข้าท่าของแต่ละท่า พร้อมคำแนะนำแก้ท่าเมื่อยังไม่เข้า
+   สเกลอ้างอิง: ความกว้างไหล่ = 1 หน่วย · ยืนเท้าชิด gx ~0.3 · ยืนปกติ gx ~0.6-0.9 */
+var STANCE_DEF=[
+  {chk:function(g){return g.gx<=0.50&&g.gy<=0.16},
+   fix:function(g){return g.gx>0.50?"ขยับเท้าสองข้างให้ชิดกัน":"วางเท้าราบทั้งสองข้าง"}},
+  {chk:function(g){return g.gx<=0.42&&g.gy>=0.03&&g.gy<=0.32},
+   fix:function(g){return g.gy<0.03?"เลื่อนเท้าข้างหนึ่งไปข้างหน้าครึ่งก้าว":"ขยับเท้าเข้าใกล้แนวเดียวกัน"}},
+  {chk:function(g){return g.gx<=0.26&&g.gy>=0.04&&g.gy<=0.40},
+   fix:function(g){return g.gx>0.26?"วางส้นเท้าหน้าชิดปลายเท้าหลัง ให้เป็นเส้นตรงเดียวกัน":"เลื่อนเท้าให้ต่อกันหน้า-หลัง"}},
+  {chk:function(g){return g.gy>=0.35},
+   fix:function(){return "ยกเท้าข้างหนึ่งขึ้นจากพื้นให้ชัดเจน"}}
+];
+/* กันค่าสั่นไหวของกล้อง: ต้องเข้าท่าต่อเนื่อง ~0.5 วิ จึงนับว่า "เข้าท่า"
+   และหลุดต่อเนื่อง ~0.8 วิ จึงนับว่า "หลุดท่า" — ผู้สูงอายุโคลงเล็กน้อยได้ */
+function StanceGate(stage,fps){
+  fps=fps||25;
+  this.stage=stage;
+  this.needIn=Math.round(fps*0.5); this.needOut=Math.round(fps*0.8);
+  this.inN=0; this.outN=0; this.inPose=false;
+}
+StanceGate.prototype.push=function(g){
+  var def=STANCE_DEF[this.stage], ok=!!(g&&def.chk(g));
+  if(ok){this.inN++;this.outN=0}else{this.outN++;this.inN=0}
+  if(!this.inPose&&this.inN>=this.needIn)this.inPose=true;
+  else if(this.inPose&&this.outN>=this.needOut)this.inPose=false;
+  return {inPose:this.inPose,okNow:ok,fix:ok?null:def.fix(g||{gx:9,gy:0})};
+};
+
+/* ============================================================
+   TugTracker — ตรวจการเดินไป-กลับ 3 เมตรของ TUG ด้วยกล้องตัวเดียว
+   ------------------------------------------------------------
+   ผู้ใช้วางป้ายจุดเริ่ม (ข้างเก้าอี้) และป้ายจุดกลับที่ 3 เมตร
+   กล้องไม่จำเป็นต้องเห็นป้าย — ใช้ขนาดตัวในภาพเป็นมาตรวัดแทน:
+   เดินออกห่าง → ตัวเล็กลง · ถึงจุดกลับ → เล็กสุด · เดินกลับ → ใหญ่ขึ้น
+   - "เดินครบรอบ" ยืนยันเมื่อขนาดเล็กสุด ≤ 82% ของขนาดตอนยืนที่เก้าอี้
+   - การเดินตรง วัดจากการเบี่ยงซ้าย-ขวาของกึ่งกลางไหล่ หน่วยเป็น
+     ความกว้างไหล่ ณ ระยะนั้น จึงเทียบได้ทุกระยะห่างจากกล้อง
+   ============================================================ */
+function TugTracker(refs){
+  this.sitRef=refs.sitRef; this.standRef=refs.standRef;
+  this.state="waiting"; this.t0=null; this.tTurn=null; this.t1=null;
+  this.buf=[]; this.onsetFrac=0.18;
+  this.s0=null; this.s0buf=[]; this.sMin=null; this.sw=null;
+  this.cx0=null; this.maxDrift=0; this.driftSum=0; this.driftN=0;
+}
+TugTracker.prototype.pushFrame=function(raw,sw,cx,t){
+  /* แกนลุก-นั่ง: ตรรกะเดียวกับตัวจับ TUG เดิม (เริ่มนับตั้งแต่เริ่มโน้มตัวลุก) */
+  this.buf.push(raw); if(this.buf.length>5)this.buf.shift();
+  var v=this.buf.reduce(function(a,b){return a+b},0)/this.buf.length;
+  var range=this.standRef-this.sitRef;
+  var onset=this.sitRef+range*this.onsetFrac;
+  var up=this.sitRef+range*0.68, down=this.sitRef+range*0.36;
+  /* ขนาดตัวในภาพ ปรับเรียบด้วย EMA กันกระตุกรายเฟรม */
+  if(sw&&sw>0.01)this.sw=this.sw==null?sw:this.sw*0.8+sw*0.2;
+
+  if(this.state==="waiting"&&v>=onset){this.state="rising";this.t0=t;return{event:"onset"}}
+  if(this.state==="rising"&&v>=up){this.state="standing";this.s0buf=[];return{event:"stand"}}
+  if(this.state==="standing"){
+    /* เก็บขนาดตอนยืนตรงหน้าเก้าอี้ ~15 เฟรม ใช้มัธยฐานเป็นฐานเทียบ */
+    if(this.sw!=null)this.s0buf.push(this.sw);
+    if(this.s0buf.length>=15){
+      this.s0buf.sort(function(a,b){return a-b});
+      this.s0=this.s0buf[Math.floor(this.s0buf.length/2)];
+      this.sMin=this.s0; this.cx0=cx;
+      this.state="walkOut"; return {event:"walk"};
+    }
+    return null;
+  }
+  if((this.state==="walkOut"||this.state==="walkBack")&&this.sw!=null&&this.s0){
+    if(this.sw<this.sMin)this.sMin=this.sw;
+    if(cx!=null&&this.cx0!=null){
+      var d=Math.abs(cx-this.cx0)/this.sw;
+      if(d>this.maxDrift)this.maxDrift=d;
+      this.driftSum+=d; this.driftN++;
+    }
+    /* จุดกลับ: ตัวเล็กลงพอสมควรแล้ว และเริ่มกลับมาใหญ่ขึ้นต่อเนื่อง */
+    if(this.state==="walkOut"&&this.sMin<=this.s0*0.90&&this.sw>=this.sMin*1.07){
+      this.state="walkBack"; this.tTurn=t; return {event:"turn"};
+    }
+  }
+  if((this.state==="walkOut"||this.state==="walkBack")&&v<=down&&this.t0&&(t-this.t0)>4000){
+    this.state="done"; this.t1=t;
+    return {event:"finish",
+      elapsed:(t-this.t0)/1000,
+      out:this.tTurn?(this.tTurn-this.t0)/1000:null,
+      back:this.tTurn?(this.t1-this.tTurn)/1000:null,
+      distanceOk:this.s0!=null&&this.sMin<=this.s0*0.82,
+      turnSeen:this.tTurn!=null,
+      drift:this.driftN?{max:this.maxDrift,avg:this.driftSum/this.driftN}:null};
+  }
+  return null;
+};
+/* แปลผลการเดินตรงเป็นข้อสังเกต (หน่วย: เท่าของความกว้างไหล่) */
+function gaitLabel(d){
+  if(!d)return {nm:"วัดไม่ได้",cls:""};
+  if(d.max<0.8)return {nm:"เดินตรงดี",cls:"t4"};
+  if(d.max<1.6)return {nm:"เบี่ยงเล็กน้อย",cls:"t3"};
+  return {nm:"เบี่ยงมาก ควรเฝ้าระวัง",cls:"t1"};
+}
+
+
+
+/* ============================================================
+   4-Stage Balance Test (CDC STEADI)
+   ------------------------------------------------------------
+   ยืน 4 ท่าเรียงจากง่ายไปยาก ท่าละไม่เกิน 10 วินาที
+   ⚠️ ลืมตาตลอด และไม่ใช้อุปกรณ์ช่วยหรือที่จับ
+   ทำท่าถัดไปเฉพาะเมื่อท่าปัจจุบันยืนครบ 10 วินาที
+   ผู้ที่ยืนท่าต่อเท้า (tandem) ไม่ครบ 10 วินาที สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น
+   ที่มา: CDC STEADI · Vincenzo & Patton, Health Promot Pract 2021;22(2):236-247
+   ============================================================ */
+var BAL_STAGES=[
+  {nm:"เท้าชิดกัน",   how:"ยืนเท้าชิดกัน ปลายเท้าและส้นเท้าเสมอกัน"},
+  {nm:"กึ่งต่อเท้า",  how:"เลื่อนเท้าข้างหนึ่งไปข้างหน้าครึ่งก้าว ให้อุ้งเท้าแตะนิ้วหัวแม่เท้าอีกข้าง"},
+  {nm:"ต่อเท้าเป็นเส้นตรง", how:"วางส้นเท้าหน้าชิดปลายนิ้วเท้าหลัง เป็นเส้นตรงเดียวกัน"},
+  {nm:"ยืนขาเดียว",   how:"ยกเท้าข้างหนึ่งขึ้นจากพื้น ยืนด้วยขาเดียว"}
+];
+/* คะแนนทรงตัว 0-3 ตามท่าสูงสุดที่ยืนครบ 10 วินาที */
+function balanceScore(passed){
+  if(passed>=4)return {score:3, nm:"ทรงตัวดีมาก — ยืนขาเดียวได้ครบ"};
+  if(passed>=3)return {score:2, nm:"ทรงตัวดี — ยืนต่อเท้าได้ครบ"};
+  if(passed>=2)return {score:1, nm:"ทรงตัวพอใช้ — ยืนต่อเท้าไม่ครบ 10 วินาที"};
+  return {score:0, nm:"ทรงตัวควรเฝ้าระวัง — ยืนกึ่งต่อเท้าไม่ครบ"};
+}
+
+
+
+var BAL_SECONDS=10;
+
+/* จุดกึ่งกลางลำตัวและความกว้างไหล่ ใช้ทำให้ค่าไม่ขึ้นกับระยะกล้อง */
+
+var BARTHEL=[
+  {k:"transfer",nm:"การย้ายตัว (จากเตียงไปเก้าอี้ และกลับ)",max:3,
+   o:[["ทำได้เองทั้งหมด",3],["ต้องช่วยเล็กน้อย หรือมีคนคอยดู",2],["ต้องช่วยมาก แต่ยังนั่งได้เอง",1],["ต้องใช้คนยกทั้งหมด",0]]},
+  {k:"bath",nm:"การอาบน้ำ",max:1,
+   o:[["อาบเองได้ทั้งหมด",1],["ต้องมีคนช่วย",0]]},
+  {k:"toilet",nm:"การใช้ห้องส้วม",max:2,
+   o:[["ทำได้เองทั้งหมด",2],["ต้องมีคนช่วยบ้าง",1],["ทำเองไม่ได้",0]]},
+  {k:"stairs",nm:"การขึ้นลงบันได 1 ชั้น",max:2,
+   o:[["ขึ้นลงได้เอง",2],["ต้องมีคนช่วยหรือคอยดู",1],["ขึ้นลงไม่ได้",0]]},
+  {k:"mobility",nm:"การเดินในบ้าน",max:3,
+   o:[["เดินได้เอง (ใช้ไม้เท้าได้)",3],["เดินได้แต่ต้องมีคนพยุง",2],["ใช้รถเข็นได้เอง",1],["เดินหรือเคลื่อนที่เองไม่ได้",0]]}
+];
+var BARTHEL_MAX=11;
+function barthelTotal(a){var t=0;BARTHEL.forEach(function(it){if(a[it.k]!=null)t+=a[it.k]});return t}
+/* ประมาณค่าดัชนีเต็ม 20 จากฉบับย่อ เพื่อคงเกณฑ์ไทยและเทียบผลเก่าได้ */
+function barthelEst20(sf){return Math.round(sf*20/BARTHEL_MAX)}
+function barthelBand(t){
+  if(t>=12)return {nm:"ติดสังคม — พึ่งตนเองได้", cls:"t4", adl:2};
+  if(t>=5) return {nm:"ติดบ้าน — พึ่งพิงปานกลาง", cls:"t2", adl:1};
+  return {nm:"ติดเตียง — พึ่งพิงระดับสูง", cls:"t1", adl:0};
+}
 function TugDetector(refs){
   this.sitRef=refs.sitRef; this.standRef=refs.standRef;
   this.state="waiting"; this.t0=null; this.t1=null; this.buf=[];
@@ -1641,7 +1894,7 @@ function tugV(){
   head("ขั้นที่ 3","ลุกเดิน 3 เมตร แล้วกลับมานั่ง","ทำได้ก็ดี ข้ามได้ถ้าไม่สะดวก กล้องจับเวลาให้เอง","assessIntro");
   V.innerHTML='<div class="anim">'+
   '<div class="card"><h3>วิธีทำ</h3>'+
-  '<div class="bigrow"><div class="ic">1</div><div class="tx"><b>วัดระยะ 3 เมตรจากเก้าอี้พอดี</b><span>ประมาณ 4–5 ก้าวของผู้ใหญ่ · วางของเป็นจุดหมายไว้ตรงนั้น · ต้องมีพื้นที่ว่างรวม 4–5 เมตร เพื่อเผื่อการหมุนตัวกลับ</span></div></div>'+
+  '<div class="bigrow"><div class="ic">1</div><div class="tx"><b>วางป้าย 2 จุด: จุดเริ่มข้างเก้าอี้ และจุดกลับที่ 3 เมตร</b><span>3 เมตร ≈ 4–5 ก้าวของผู้ใหญ่ · ระบบตรวจจากขนาดตัวในภาพว่าเดินถึงจุดกลับและกลับมาครบรอบจริง · ต้องมีพื้นที่รวม 4–5 เมตรเผื่อหมุนตัว</span></div></div>'+
   '<div class="bigrow"><div class="ic">2</div><div class="tx"><b>นั่งพิงพนักเก้าอี้ที่มีที่วางแขน</b><span>ตามมาตรฐาน CDC ต้องเป็นเก้าอี้มีที่วางแขนและไม่มีล้อ · วางมือถือให้เห็นทั้งเก้าอี้และทางเดิน</span></div></div>'+
   '<div class="bigrow"><div class="ic">3</div><div class="tx"><b>ลุก เดินไปถึงเส้น หมุนกลับ เดินกลับ แล้วนั่งลง</b><span>เดินด้วย<b>ความเร็วปกติ</b>ของคุณ · สวมรองเท้าที่ใส่ประจำ · ใช้ไม้เท้าหรือเครื่องช่วยเดินที่ใช้อยู่ประจำได้</span></div></div>'+
   '<div class="bigrow"><div class="ic">⏱</div><div class="tx"><b>จับเวลาตั้งแต่เริ่มลุกจนนั่งลงเรียบร้อย</b><span>เกณฑ์คัดกรอง: ใช้เวลา <b>ตั้งแต่ 12 วินาทีขึ้นไป</b> สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น — เป็นเพียงจุดคัดกรอง ไม่ใช่คำวินิจฉัย</span></div></div></div>'+
@@ -1666,7 +1919,7 @@ async function startTugPipeline(){
   try{ await loadModel(tag); }catch(e){ tag.textContent="โหลดโมเดลไม่สำเร็จ"; coach.textContent="ข้ามขั้นนี้ได้เลย"; return; }
   tag.textContent="พร้อมแล้ว";
   setStatus("green","พร้อมทดสอบลุกเดินสามเมตร — นั่งพร้อมแล้วกดปุ่มเริ่ม");
-  var TUG=new TugDetector({sitRef:S.draft.sitRef,standRef:S.draft.standRef});
+  var TUG=new TugTracker({sitRef:S.draft.sitRef,standRef:S.draft.standRef});
   var running=false, t0=0;
   function loop(){
     if(S.screen!=="tug")return;
@@ -1678,11 +1931,14 @@ async function startTugPipeline(){
       if(lm){
         var m=hipRatio(lm);
         if(m!=null){
-          var ev=TUG.push(m,performance.now());
+          var sw=shoulderWidth(lm), cx=(lm[LM.LSH].x+lm[LM.RSH].x)/2;
+          var ev=TUG.pushFrame(m,sw,cx,performance.now());
           if(ev&&ev.event==="onset"){setStatus("green","เริ่มจับเวลาแล้ว",false);speak("เริ่มจับเวลาแล้ว")}
-          if(ev&&ev.event==="start"){coach.textContent="เริ่มแล้ว — เดินไปให้ถึงเส้น หมุนกลับ แล้วนั่งลง";
-            setStatus("green","กำลังจับเวลา — เดินไปแล้วกลับมานั่ง",false);speak("เดินได้เลย")}
-          if(ev&&ev.event==="finish"){finishTug(ev.elapsed);return}
+          if(ev&&ev.event==="walk"){coach.textContent="เดินไปให้ถึงป้ายจุดกลับ 3 เมตร";
+            setStatus("green","กำลังจับเวลา — เดินไปที่ป้ายแล้วกลับมานั่ง",false);speak("เดินไปที่ป้ายได้เลย")}
+          if(ev&&ev.event==="turn"){coach.textContent="ถึงจุดกลับแล้ว — เดินกลับมานั่งลง";
+            speak("ถึงจุดกลับแล้ว เดินกลับมานั่งลงได้เลย")}
+          if(ev&&ev.event==="finish"){finishTug(ev);return}
         }
       }else{ coach.textContent="กำลังรอคุณเดินกลับมา…" }
       /* นาฬิกาเริ่มเดินเมื่อเริ่มลุกจริง ไม่ใช่ตอนกดปุ่ม */
@@ -1701,14 +1957,200 @@ async function startTugPipeline(){
     coach.textContent="ลุกขึ้นได้เลย";
   });
 }
-function finishTug(sec){
-  speak("เสร็จเรียบร้อย ใช้เวลา "+Math.round(sec)+" วินาที");
+function finishTug(ev){
   stopCam();
-  S.draft.tug=Math.round(sec*10)/10;
-  audit("วัดลุกเดิน 3 เมตรด้วยกล้อง","ใช้เวลา "+S.draft.tug.toFixed(1)+" วินาที");
-  toast("วัดเสร็จแล้ว "+S.draft.tug.toFixed(1)+" วินาที");
-  go("assessQ",0);
+  S.draft.tug=Math.round(ev.elapsed*10)/10;
+  S.draft.tugOut=ev.out!=null?Math.round(ev.out*10)/10:null;
+  S.draft.tugBack=ev.back!=null?Math.round(ev.back*10)/10:null;
+  S.draft.tugDistanceOk=!!ev.distanceOk;
+  S.draft.tugDrift=ev.drift?Math.round(ev.drift.max*100)/100:null;
+  var g=gaitLabel(ev.drift);
+  speak("เสร็จเรียบร้อย ใช้เวลา "+Math.round(ev.elapsed)+" วินาที "+(ev.distanceOk?"เดินครบระยะ":"ระยะเดินอาจไม่ครบสามเมตร"));
+  audit("วัดลุกเดิน 3 เมตรด้วยกล้อง (TUG ไป-กลับ)",
+    "รวม "+S.draft.tug.toFixed(1)+" วิ"+
+    (S.draft.tugOut!=null?" · ขาไป "+S.draft.tugOut.toFixed(1)+" วิ · ขากลับ "+S.draft.tugBack.toFixed(1)+" วิ":"")+
+    " · "+(ev.distanceOk?"เดินครบระยะ":"ระยะอาจไม่ครบ 3 เมตร")+" · การเดิน: "+g.nm);
+  toast("ลุกเดิน "+S.draft.tug.toFixed(1)+" วิ · "+g.nm);
+  go("balance");
 }
+
+
+/* ============================================================
+   ทดสอบการทรงตัว 4 ท่า — พอร์ตจาก Vision ให้ตรรกะตรงกันทุกบรรทัด
+   ============================================================ */
+function balanceV(){
+  head("ขั้นที่ 4","ทดสอบการทรงตัว 4 ท่า","ท่าละ 10 วินาที ลืมตาตลอด ไม่จับสิ่งใด · กล้องตรวจท่าเท้า จับเวลา และวัดความโคลงให้เอง","assessIntro");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ความปลอดภัยมาก่อน</h3>'+
+  '<p class="sub" style="margin:0">ยืนใกล้ผนังหรือโต๊ะที่<b>คว้าจับได้ทันที</b> · ควรมีคนอยู่ข้าง ๆ · หากรู้สึกจะล้มให้<b>จับทันที</b> ไม่ต้องฝืน ระบบจะบันทึกว่าทำได้เท่าที่ทำ และหยุดการทดสอบให้เอง</p></div>'+
+  '<div class="card"><h3>ทำ 4 ท่าเรียงลำดับ ท่าละ 10 วินาที</h3>'+
+  BAL_STAGES.map(function(st,i){
+    return '<div class="rowline"><span class="k">'+(i+1)+' · '+esc(st.nm)+'<br><span style="font-size:13px;color:var(--ink3)">'+esc(st.how)+'</span></span>'+
+           '<span class="v" id="stg'+i+'">รอ</span></div>';
+  }).join("")+
+  '<p class="sub" style="margin:10px 0 0"><b>ลืมตาตลอดการทดสอบ</b> · ไม่ใช้ไม้เท้าหรือที่จับ · ทำท่าถัดไปเฉพาะเมื่อท่าปัจจุบันยืนครบ 10 วินาที</p></div>'+
+  '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="qual">คุณภาพภาพ —</span></div>'+
+  '<div class="hudbot"><div class="counter"><span class="n" id="bsec">10</span><span class="of">วินาที</span>'+
+  '<span class="clock" id="bsway">—</span></div>'+
+  '<div class="track"><i id="btrk" style="width:0%"></i></div>'+
+  '<div class="coach" id="coach">เตรียมยืนท่าที่ 1 — เท้าชิดกัน</div></div></div></div>'+
+  statusHTML()+
+  '<button class="cta" id="bStart">เริ่มทดสอบท่าที่ 1</button>'+
+  '<button class="ghostb" id="bStop">หยุดการทดสอบ · ตอบด้วยตนเอง</button>'+
+  '<div class="disc">กล้องบันทึกเฉพาะ<b>เวลาที่ยืนได้และค่าความโคลง</b> ไม่มีการเก็บภาพหรือวิดีโอ · ผลจากกล้องเป็นข้อสังเกตประกอบ ผู้เอาประกันเป็นผู้ยืนยันคำตอบสุดท้ายเสมอ</div></div>';
+  document.getElementById("bStop").addEventListener("click",function(){
+    stopCam();
+    audit("หยุดการทดสอบทรงตัวกลางคัน","ผู้ใช้เลือกตอบด้วยตนเอง");
+    go("assessQ",0);
+  });
+  startBalancePipeline();
+}
+
+async function startBalancePipeline(){
+  var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
+  var tag=document.getElementById("tag"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
+      secEl=document.getElementById("bsec"),swayEl=document.getElementById("bsway"),trk=document.getElementById("btrk"),
+      startBtn=document.getElementById("bStart");
+  var stream;
+  setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false})}
+  catch(e){tag.textContent="เปิดกล้องไม่ได้";setStatus("red","เปิดกล้องไม่ได้ — ตอบคำถามด้วยตนเองแทนได้");
+    coach.textContent="กดปุ่มหยุดด้านล่างเพื่อตอบเอง";return}
+  S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
+  setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง",false);
+  try{await loadModel(tag)}
+  catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ตอบคำถามด้วยตนเองแทนได้");return}
+  tag.textContent="ตรวจจับท่าทางแล้ว";
+
+  var stage=0, running=false, t0=0, samples=[], lostFrames=0, AUTOB=null;
+  var GATE=new StanceGate(stage);   /* ตัวตรวจว่าเท้าอยู่ในท่าของด่านปัจจุบันจริง */
+  var results=[];      /* [{held, sway}] ต่อท่า */
+
+  function markStage(i,txt,cls){
+    var el=document.getElementById("stg"+i);
+    if(el)el.innerHTML=cls?'<span class="pill '+cls+'">'+txt+'</span>':txt;
+  }
+
+  /* จบทั้งชุด — ให้คะแนนตามท่าสูงสุดที่ยืนครบ 10 วินาที */
+  function finishAll(reason){
+    running=false;
+    var passed=0;
+    results.forEach(function(r){ if(r.held>=BAL_SECONDS-0.3)passed++ });
+    var sc=balanceScore(passed);
+    S.draft.balStages=results;
+    S.draft.balPassed=passed;
+    S.draft.balScoreHint=sc.score;
+    S.draft.balLabel=sc.nm;
+    /* ค่าความโคลงของท่าที่ยากที่สุดที่ทำได้ ใช้เป็นตัวแทน */
+    var lastOk=results.filter(function(r){return r.sway!=null}).pop();
+    S.draft.swayValue=lastOk?lastOk.sway:null;
+    S.draft.swayHeld=results.length?results[results.length-1].held:null;
+    S.draft.swayLabel=lastOk?swayLabel(lastOk.sway).nm:null;
+    stopCam();
+    audit("ทดสอบการทรงตัว 4 ท่า (CDC 4-Stage Balance Test)",
+      results.map(function(r,i){return (i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ"}).join(" · ")+
+      " · ผ่าน "+passed+"/4 ท่า · "+sc.nm+(reason?" · "+reason:""));
+    setStatus(passed>=3?"green":(passed>=2?"yellow":"red"),
+      "ทดสอบเสร็จ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
+    speak("ทดสอบการทรงตัวเสร็จเรียบร้อย ยืนผ่าน "+passed+" จาก 4 ท่า ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
+    setTimeout(function(){go("assessQ",0)},2800);
+  }
+
+  function endStage(held){
+    running=false;
+    var sway=swayScore(samples);
+    results.push({held:held,sway:sway,stage:BAL_STAGES[stage].nm});
+    var ok=held>=BAL_SECONDS-0.3;
+    markStage(stage,ok?"ผ่าน "+held.toFixed(0)+" วิ":"ได้ "+held.toFixed(1)+" วิ",ok?"t4":"t2");
+    if(!ok){
+      /* ยืนไม่ครบ 10 วินาที → หยุดตามโปรโตคอล ไม่ต้องทำท่าที่ยากกว่า */
+      for(var i=stage+1;i<BAL_STAGES.length;i++)markStage(i,"ไม่ได้ทำ","");
+      speak("ยืนได้ "+held.toFixed(0)+" วินาที ยังไม่ครบสิบวินาที จึงหยุดการทดสอบตามเกณฑ์");
+      finishAll("หยุดที่ท่าที่ "+(stage+1)+" เพราะยืนไม่ครบ 10 วินาที");
+      return;
+    }
+    stage++;
+    if(stage>=BAL_STAGES.length){finishAll("ทำครบทุกท่า");return}
+    /* ท่าถัดไป */
+    startBtn.disabled=false;
+    startBtn.textContent="เริ่มทดสอบท่าที่ "+(stage+1);
+    GATE=new StanceGate(stage);
+    coach.textContent="ท่าที่ "+(stage+1)+" — "+BAL_STAGES[stage].how;
+    secEl.textContent=BAL_SECONDS;trk.style.width="0%";swayEl.textContent="—";
+    setStatus("green","ผ่านท่าที่ "+stage+" — ขั้นต่อไป "+BAL_STAGES[stage].nm,false);
+    speak("ยืนครบสิบวินาที เก่งมากค่ะ ท่าต่อไป "+BAL_STAGES[stage].nm+" "+BAL_STAGES[stage].how);
+    if(AUTOB)AUTOB.reset();
+  }
+
+  function loop(){
+    if(S.screen!=="balance")return;
+    var r=null;try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
+    var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
+    drawPose(ctx,canvas,video,lm);
+    if(lm){
+      var q=visOK(lm);
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b> · ท่าที่ "+(stage+1)+"/4";
+      if(running){
+        lostFrames=0;
+        var w=shoulderWidth(lm);
+        if(w>0.02){var c=trunkCenter(lm);samples.push({x:c.x/w,y:c.y/w})}
+        var el=(performance.now()-t0)/1000;
+        /* ตรวจว่ายังอยู่ในท่าเดิม — เท้าขยับออก/เท้าที่ยกแตะพื้น ต่อเนื่อง
+           เกิน ~0.8 วิ ถือว่าหลุดท่า จบด่านด้วยเวลาที่ทำได้จริงตามโปรโตคอล */
+        var sg=GATE.push(footGeom(lm));
+        if(!sg.inPose&&el>1.0){
+          coach.textContent="หลุดจากท่า — บันทึกเวลาที่ยืนได้จริง";
+          speak("หลุดจากท่าแล้ว");
+          endStage(Math.min(el,BAL_SECONDS));return;
+        }
+        secEl.textContent=Math.max(0,BAL_SECONDS-el).toFixed(0);
+        trk.style.width=Math.min(100,el/BAL_SECONDS*100)+"%";
+        var live=swayScore(samples.slice(-90));
+        if(live!=null)swayEl.textContent=swayLabel(live).nm;
+        if(el>=BAL_SECONDS){endStage(BAL_SECONDS);return}
+      }else{
+        /* ยังไม่เริ่มนับ: ต้องเห็นตัวชัด "และเท้าอยู่ในท่า" จึงจะเริ่มนับอัตโนมัติ */
+        var g0=footGeom(lm), st0=GATE.push(g0);
+        if(AUTOB&&!AUTOB.counting){
+          if(q<0.85)setStatus("yellow","ถอยให้เห็นทั้งตัว รวมถึงปลายเท้า",false);
+          else if(!st0.inPose)setStatus("yellow",(st0.fix||"จัดท่าให้ตรง")+" — "+BAL_STAGES[stage].nm,false);
+          else setStatus("green","ท่าถูกต้อง — ยืนนิ่ง ๆ ระบบกำลังจะเริ่มนับ",false);
+          if(!st0.inPose&&st0.fix)coach.textContent=st0.fix;
+        }
+        if(AUTOB)AUTOB.update(q>=0.85&&st0.inPose);
+      }
+    }else{
+      qual.innerHTML="คุณภาพภาพ <b>—</b>";
+      if(running){
+        lostFrames++;
+        if(lostFrames>60){
+          var elp=(performance.now()-t0)/1000;
+          coach.textContent="ตรวจไม่พบตัวในกรอบ — บันทึกเท่าที่ทำได้";
+          endStage(Math.min(elp,BAL_SECONDS));return;
+        }
+      }
+    }
+    RAF=requestAnimationFrame(loop);
+  }
+  loop();
+  AUTOB=new AutoCapture({screen:"balance",holdMs:2200,readyText:"ยืนพร้อมแล้ว",
+    abortOnLost:false,onFire:function(){begin()}});
+  speak("ทดสอบการทรงตัวสี่ท่า ลืมตาตลอด ไม่ต้องจับสิ่งใด ท่าแรก "+BAL_STAGES[0].how+" ระบบจะเริ่มนับให้เองเมื่อพร้อม");
+  function begin(){
+    if(running)return;
+    running=true;t0=performance.now();samples=[];lostFrames=0;
+    /* เริ่มนับโดยถือว่าเข้าท่าแล้ว (ปุ่ม "เริ่มเอง" คือการยืนยันของผู้ใช้) */
+    GATE=new StanceGate(stage);GATE.inPose=true;
+    startBtn.disabled=true;startBtn.textContent="กำลังวัดท่าที่ "+(stage+1)+"…";
+    markStage(stage,"กำลังวัด","t3");
+    setStatus("green","ยืนนิ่ง ๆ 10 วินาที — ลืมตาไว้",false);
+    speak("เริ่มจับเวลา ยืนนิ่ง ๆ สิบวินาที");
+    coach.innerHTML=BAL_STAGES[stage].how+"<span class='statebadge'>กำลังวัด</span>";
+  }
+  startBtn.addEventListener("click",function(){if(AUTOB)AUTOB.abort();begin()});
+}
+
 
 /* ---------- ประวัติ ---------- */
 function historyV(){
