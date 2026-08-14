@@ -967,6 +967,7 @@ AutoCapture.prototype.begin=function(){
     else{
       clearInterval(self.timer);self.timer=null;
       self.counting=false;self.done=true;
+      setStatus("green","เริ่ม",false);speak("เริ่ม");
       self.onFire();
     }
   },1000);
@@ -1124,7 +1125,9 @@ async function startFacePipeline(){
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480},height:{ideal:480}},audio:false})}
   catch(e){tag.textContent="เปิดกล้องไม่ได้";coach.textContent="ข้ามขั้นนี้ได้ ผลจะระบุว่าไม่ได้ยืนยันตัวตน";
     setStatus("red","เปิดกล้องไม่ได้ — ข้ามขั้นนี้ได้ กดปุ่มข้ามด้านล่าง");return}
-  S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
+  S.cam=stream;video.srcObject=stream;/* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
+     ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
+  await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
   try{await loadFaceModel(tag)}
   catch(e){tag.textContent="โหลดตัวตรวจใบหน้าไม่สำเร็จ";coach.textContent="ข้ามขั้นนี้ได้ ต้องต่ออินเทอร์เน็ตครั้งแรก";return}
   tag.textContent="พร้อมแล้ว";
@@ -1255,7 +1258,9 @@ async function startPipeline(mode){
     return;
   }
   S.cam=stream; video.srcObject=stream;
-  await video.play().catch(function(){});
+  /* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
+     ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
+  await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
   setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง รอสักครู่",false);
   try{ await loadModel(tag); }
   catch(e){
@@ -1616,47 +1621,155 @@ function swayLabel(v){
 }
 
 /* ============================================================
-   ตรวจท่ายืน 4 ท่า (CDC 4-Stage Balance Test) จากตำแหน่งเท้า
+   เรขาคณิตของเท้า สำหรับ 4-Stage Balance Test
    ------------------------------------------------------------
-   หลักการเมื่อกล้องหน้ามองผู้ใช้ตรง ๆ:
-   - ระยะห่างเท้าซ้าย-ขวา อ่านจากแกนนอนของข้อเท้า (gx)
-   - การเหลื่อมหน้า-หลังของเท้า อ่านจากแกนตั้ง (gy) เพราะเท้าที่อยู่
-     ข้างหน้าใกล้กล้องกว่า จึงปรากฏต่ำกว่าในภาพ
-   - การยกเท้า (ยืนขาเดียว) เห็นเป็นข้อเท้าข้างหนึ่งสูงกว่าอีกข้างชัดเจน
-   ทุกค่าหารด้วยความกว้างไหล่ เพื่อไม่ขึ้นกับระยะกล้องและส่วนสูง
+   บทเรียนจากเวอร์ชันก่อน: ใช้ความกว้างไหล่เป็นหน่วยวัดไม่ได้
+   เพราะเมื่อผู้ใช้หันข้างให้กล้อง ไหล่จะถูกบีบสั้นลงมาก ค่าที่ได้
+   จึงเพี้ยนจนตรวจท่าไม่เจอเลย
+
+   หน่วยวัดใหม่: ระยะ "ไหล่ถึงข้อเท้า" ในภาพ (bodySpan) ซึ่งแทบ
+   ไม่เปลี่ยนเมื่อหมุนตัวรอบแกนตั้ง จึงใช้เทียบได้ทุกมุมกล้อง
+
+   ท่าที่ 2 และ 3 (กึ่งต่อเท้า / ต่อเท้า) ต่างกันที่ระยะเหลื่อม
+   หน้า-หลังของเท้า ซึ่งมองจากด้านหน้าแทบแยกไม่ออกเพราะถูกบีบ
+   ตามแนวลึก ระบบจึงแนะให้ "หันข้างให้กล้อง" ตอนทดสอบทรงตัว
+   เพราะระยะเหลื่อมจะกลายเป็นแนวนอนในภาพ ซึ่งวัดได้ตรง ๆ
    ============================================================ */
-function footGeom(lm){
-  var sw=shoulderWidth(lm);
-  if(!isFinite(sw)||sw<0.02)return null;
-  return {gx:Math.abs(lm[LM.LANK].x-lm[LM.RANK].x)/sw,
-          gy:Math.abs(lm[LM.LANK].y-lm[LM.RANK].y)/sw};
+var LMF={LHEEL:29,RHEEL:30,LTOE:31,RTOE:32};
+
+/* ระยะไหล่→ข้อเท้าในภาพ ใช้เป็นหน่วยวัดที่ไม่ขึ้นกับการหมุนตัว */
+function bodySpan(lm){
+  var shY=(lm[LM.LSH].y+lm[LM.RSH].y)/2;
+  var akY=(lm[LM.LANK].y+lm[LM.RANK].y)/2;
+  var d=akY-shY;
+  return (isFinite(d)&&d>0.05)?d:null;
 }
-/* เกณฑ์เข้าท่าของแต่ละท่า พร้อมคำแนะนำแก้ท่าเมื่อยังไม่เข้า
-   สเกลอ้างอิง: ความกว้างไหล่ = 1 หน่วย · ยืนเท้าชิด gx ~0.3 · ยืนปกติ gx ~0.6-0.9 */
+/* สัดส่วนความกว้างไหล่ต่อความสูงลำตัว บอกว่าหันหน้าหรือหันข้างให้กล้อง
+   หันหน้าเต็ม ~0.26-0.36 · หันข้าง ~0.08-0.20 */
+function facingRatio(lm){
+  var sp=bodySpan(lm); if(!sp)return null;
+  return shoulderWidth(lm)/sp;
+}
+/* ตำแหน่งเท้าทั้งสองข้าง ปรับเป็นหน่วย bodySpan */
+function footSep(lm){
+  var sp=bodySpan(lm); if(!sp)return null;
+  var a=lm[LM.LANK], b=lm[LM.RANK];
+  if(!a||!b)return null;
+  if((a.visibility!==undefined&&a.visibility<0.35)||(b.visibility!==undefined&&b.visibility<0.35))return null;
+  return {dx:Math.abs(a.x-b.x)/sp, dy:Math.abs(a.y-b.y)/sp, sp:sp,
+          lx:a.x/sp, ly:a.y/sp, rx:b.x/sp, ry:b.y/sp,
+          side:facingRatio(lm)!==null&&facingRatio(lm)<0.22};
+}
+
+/* ---------- นิยาม 4 ท่า ตาม CDC STEADI ----------
+   chk คืนคะแนนความมั่นใจ 0-1 ไม่ใช่ true/false เพื่อให้เลือก
+   ท่าที่ "ใกล้เคียงที่สุด" มาแสดงบนจอได้ และไม่ตัดสินแบบขาว-ดำ */
 var STANCE_DEF=[
-  {chk:function(g){return g.gx<=0.50&&g.gy<=0.16},
-   fix:function(g){return g.gx>0.50?"ขยับเท้าสองข้างให้ชิดกัน":"วางเท้าราบทั้งสองข้าง"}},
-  {chk:function(g){return g.gx<=0.42&&g.gy>=0.03&&g.gy<=0.32},
-   fix:function(g){return g.gy<0.03?"เลื่อนเท้าข้างหนึ่งไปข้างหน้าครึ่งก้าว":"ขยับเท้าเข้าใกล้แนวเดียวกัน"}},
-  {chk:function(g){return g.gx<=0.26&&g.gy>=0.04&&g.gy<=0.40},
-   fix:function(g){return g.gx>0.26?"วางส้นเท้าหน้าชิดปลายเท้าหลัง ให้เป็นเส้นตรงเดียวกัน":"เลื่อนเท้าให้ต่อกันหน้า-หลัง"}},
-  {chk:function(g){return g.gy>=0.35},
-   fix:function(){return "ยกเท้าข้างหนึ่งขึ้นจากพื้นให้ชัดเจน"}}
+  {key:"side", band:[0,0.055], useDy:false,
+   fix:"ขยับเท้าสองข้างให้ชิดกัน ปลายเท้าและส้นเท้าเสมอกัน"},
+  {key:"semi", band:[0.045,0.125], useDy:false,
+   fix:"เลื่อนเท้าข้างหนึ่งไปข้างหน้าครึ่งก้าว ให้อุ้งเท้าแตะนิ้วหัวแม่เท้าอีกข้าง"},
+  {key:"tandem", band:[0.105,0.30], useDy:false,
+   fix:"วางส้นเท้าหน้าชิดปลายนิ้วเท้าหลัง ให้เป็นเส้นตรงเดียวกัน"},
+  {key:"one", band:[0.10,1.0], useDy:true,
+   fix:"ยกเท้าข้างหนึ่งขึ้นจากพื้นให้ชัดเจน"}
 ];
-/* กันค่าสั่นไหวของกล้อง: ต้องเข้าท่าต่อเนื่อง ~0.5 วิ จึงนับว่า "เข้าท่า"
-   และหลุดต่อเนื่อง ~0.8 วิ จึงนับว่า "หลุดท่า" — ผู้สูงอายุโคลงเล็กน้อยได้ */
-function StanceGate(stage,fps){
-  fps=fps||25;
-  this.stage=stage;
-  this.needIn=Math.round(fps*0.5); this.needOut=Math.round(fps*0.8);
-  this.inN=0; this.outN=0; this.inPose=false;
+/* ค่าที่อ่านได้จากเฟรมนี้ ตรงกับท่าเป้าหมายแค่ไหน (0-1) */
+function stanceScore(stage,f){
+  if(!f)return 0;
+  var d=STANCE_DEF[stage], v=d.useDy?f.dy:f.dx;
+  /* ท่ายืนขาเดียวต้องไม่ใช่แค่เท้าห่าง แต่ต้องยกสูงจริง */
+  if(d.useDy&&f.dy<0.09)return 0;
+  /* ท่า 1-3 ต้องไม่มีเท้าลอย */
+  if(!d.useDy&&f.dy>0.11)return 0;
+  var lo=d.band[0], hi=d.band[1];
+  if(v>=lo&&v<=hi)return 1;
+  var m=v<lo?(lo-v):(v-hi);
+  return Math.max(0,1-m/0.05);   /* ห่างเกิน 0.05 หน่วย ถือว่าไม่ใช่ท่านี้ */
 }
-StanceGate.prototype.push=function(g){
-  var def=STANCE_DEF[this.stage], ok=!!(g&&def.chk(g));
-  if(ok){this.inN++;this.outN=0}else{this.outN++;this.inN=0}
-  if(!this.inPose&&this.inN>=this.needIn)this.inPose=true;
-  else if(this.inPose&&this.outN>=this.needOut)this.inPose=false;
-  return {inPose:this.inPose,okNow:ok,fix:ok?null:def.fix(g||{gx:9,gy:0})};
+/* เดาว่ากล้องเห็นเป็นท่าอะไรอยู่ ใช้แสดงผลสดบนจอ */
+function readStance(f){
+  if(!f)return null;
+  var best=-1, bs=0;
+  for(var i=0;i<STANCE_DEF.length;i++){
+    var sc=stanceScore(i,f);
+    if(sc>bs){bs=sc;best=i}
+  }
+  return bs>0.5?{stage:best,conf:bs}:null;
+}
+
+/* ============================================================
+   StanceGate — ประตูเริ่มนับ
+   ------------------------------------------------------------
+   หน้าที่เดียว: ตัดสินว่า "พร้อมเริ่มจับเวลาหรือยัง"
+   ไม่ทำหน้าที่ตัดสินระหว่างจับเวลา (นั่นเป็นงานของ HoldMonitor)
+   มีทางออกเสมอ: ถ้ากล้องอ่านท่าไม่ออกภายในเวลาที่กำหนด จะยอมให้
+   เริ่มได้เมื่อผู้ใช้ยืนนิ่งพอ เพื่อไม่ให้การทดสอบค้าง
+   ============================================================ */
+function StanceGate(stage,opts){
+  opts=opts||{};
+  this.stage=stage;
+  this.needFrames=opts.needFrames||12;     /* ~0.5 วินาที */
+  this.patienceMs=opts.patienceMs||9000;   /* อ่านท่าไม่ออกนานเท่านี้ → ยอมให้เริ่มถ้ายืนนิ่ง */
+  this.okN=0; this.stillN=0; this.since=performance.now();
+  this.last=null; this.ready=false; this.relaxed=false;
+}
+StanceGate.prototype.push=function(f){
+  var sc=stanceScore(this.stage,f);
+  var matched=sc>=0.75;
+  if(matched)this.okN++; else this.okN=0;
+
+  /* ยืนนิ่ง = เท้าแทบไม่ขยับจากเฟรมก่อน */
+  if(f&&this.last){
+    var mv=Math.max(Math.hypot(f.lx-this.last.lx,f.ly-this.last.ly),
+                    Math.hypot(f.rx-this.last.rx,f.ry-this.last.ry));
+    if(mv<0.012)this.stillN++; else this.stillN=0;
+  }else this.stillN=0;
+  this.last=f;
+
+  var waited=performance.now()-this.since;
+  this.relaxed = waited>this.patienceMs;
+  this.ready = (this.okN>=this.needFrames) ||
+               (this.relaxed && this.stillN>=this.needFrames*2 && !!f);
+  return {ready:this.ready, matched:matched, conf:sc, relaxed:this.relaxed,
+          fix:STANCE_DEF[this.stage].fix};
+};
+
+/* ============================================================
+   HoldMonitor — เฝ้าดูระหว่างจับเวลา 10 วินาที
+   ------------------------------------------------------------
+   ใช้เกณฑ์หยุดจับเวลาตามที่ CDC ระบุไว้จริง คือ "เมื่อผู้รับการ
+   ประเมินขยับเท้า" ไม่ใช่การไล่เทียบว่ายังเข้าท่าตามแม่แบบอยู่ไหม
+   ซึ่งเวอร์ชันก่อนทำแล้วหลุดง่ายเกินไปจนวัดไม่ได้เลย
+
+   เทียบกับ "ตำแหน่งเท้าตอนเริ่มนับ" ของคนคนนั้นเอง จึงไม่ต้องพึ่ง
+   ค่าคงที่ใด ๆ และทนต่อมุมกล้องทุกแบบ
+   ============================================================ */
+function HoldMonitor(stage,opts){
+  opts=opts||{};
+  this.stage=stage;
+  this.moveTol=opts.moveTol||0.13;   /* ขยับเกินนี้ (หน่วยไหล่→ข้อเท้า) = ก้าวเท้า */
+  this.needFrames=opts.needFrames||10;
+  this.ref=null; this.badN=0; this.lostN=0;
+}
+HoldMonitor.prototype.push=function(f){
+  if(!f){ this.lostN++; return {fail:false,lost:this.lostN} }
+  this.lostN=0;
+  if(!this.ref){ this.ref={lx:f.lx,ly:f.ly,rx:f.rx,ry:f.ry,dy:f.dy}; return {fail:false} }
+  var dL=Math.hypot(f.lx-this.ref.lx,f.ly-this.ref.ly);
+  var dR=Math.hypot(f.rx-this.ref.rx,f.ry-this.ref.ry);
+  var bad;
+  if(this.stage===3){
+    /* ยืนขาเดียว: เท้าที่ยกอยู่ย่อมแกว่งได้ ไม่ถือว่าก้าว
+       ล้มเหลวเมื่อ "เท้าที่ยกลงแตะพื้น" คือระยะเหลื่อมแนวตั้งยุบลง */
+    bad = f.dy < this.ref.dy*0.55 || f.dy < 0.07;
+  }else{
+    bad = Math.max(dL,dR) > this.moveTol;
+  }
+  if(bad)this.badN++; else this.badN=0;
+  return {fail:this.badN>=this.needFrames,
+          why:this.stage===3?"เท้าที่ยกลงแตะพื้น":"ขยับเท้าออกจากตำแหน่งเดิม",
+          drift:Math.max(dL,dR)};
 };
 
 /* ============================================================
@@ -1671,6 +1784,10 @@ StanceGate.prototype.push=function(g){
    ============================================================ */
 function TugTracker(refs){
   this.sitRef=refs.sitRef; this.standRef=refs.standRef;
+  /* CDC ให้เริ่มจับเวลาเมื่อผู้ประเมินพูดว่า "เริ่ม" ไม่ใช่ตอนที่ผู้รับการ
+     ประเมินขยับ ระบบจึงบันทึกเวลาสัญญาณเริ่มไว้ที่ goAt แล้วเก็บเวลา
+     ที่เริ่มขยับจริงไว้ต่างหาก เพื่อรายงานเวลาตอบสนองแยกได้ */
+  this.goAt=null;
   this.state="waiting"; this.t0=null; this.tTurn=null; this.t1=null;
   this.buf=[]; this.onsetFrac=0.18;
   this.s0=null; this.s0buf=[]; this.sMin=null; this.sw=null;
@@ -1713,9 +1830,11 @@ TugTracker.prototype.pushFrame=function(raw,sw,cx,t){
   }
   if((this.state==="walkOut"||this.state==="walkBack")&&v<=down&&this.t0&&(t-this.t0)>4000){
     this.state="done"; this.t1=t;
+    var base=this.goAt!=null?this.goAt:this.t0;
     return {event:"finish",
-      elapsed:(t-this.t0)/1000,
-      out:this.tTurn?(this.tTurn-this.t0)/1000:null,
+      elapsed:(t-base)/1000,
+      reaction:this.goAt!=null?(this.t0-this.goAt)/1000:null,
+      out:this.tTurn?(this.tTurn-base)/1000:null,
       back:this.tTurn?(this.t1-this.tTurn)/1000:null,
       distanceOk:this.s0!=null&&this.sMin<=this.s0*0.82,
       turnSeen:this.tTurn!=null,
@@ -1761,19 +1880,24 @@ function balanceScore(passed){
    ลุกเดิน 3 เมตร (Timed Up & Go) — ตรวจการเดินไป-กลับด้วยกล้อง
    ============================================================ */
 function tugV(){
-  head("ลุกเดิน 3 เมตร","Timed Up & Go","วางป้ายจุดเริ่มและจุดกลับ 3 เมตร · กล้องตรวจว่าเดินครบรอบ จับเวลา และดูการเดินตรงให้","assess");
+  head("ลุกเดิน 3 เมตร","Timed Up & Go",
+       "วางป้าย 2 จุด แล้วกลับมานั่งเก้าอี้ · ระบบจะรู้เองว่าท่านนั่งแล้ว แล้วนับ 3-2-1 ให้","assess");
   V.innerHTML='<div class="anim">'+
-  '<div class="card"><h3>วิธีทำ</h3>'+
-  '<div class="rowline"><span class="k">① วางป้าย/สิ่งของ 2 จุด</span><span class="v">จุดเริ่ม ข้างเก้าอี้ · จุดกลับ 3 เมตร</span></div>'+
-  '<div class="rowline"><span class="k">② นั่งพิงพนักเก้าอี้มีที่วางแขน</span><span class="v">ไม่มีล้อ</span></div>'+
-  '<div class="rowline"><span class="k">③ ลุก เดินถึงป้าย หมุนกลับ นั่งลง</span><span class="v">ความเร็วปกติ</span></div>'+
-  '<p class="sub" style="margin:10px 0 0">วางมือถือพิงผนังให้เห็น<b>เก้าอี้และทางเดินทั้งเส้น</b> · ใช้ไม้เท้าที่ใช้ประจำได้ · เกณฑ์คัดกรอง CDC: ตั้งแต่ <b>12 วินาที</b>ขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มสูงขึ้น</p></div>'+
+  '<div class="card"><h3>เตรียม 3 อย่างก่อนเริ่ม</h3>'+
+  '<div class="rowline"><span class="k">① วางป้ายจุดเริ่ม</span><span class="v">ที่เก้าอี้</span></div>'+
+  '<div class="rowline"><span class="k">② วางป้ายจุดกลับ</span><span class="v">ห่าง 3 เมตร</span></div>'+
+  '<div class="rowline"><span class="k">③ กลับมานั่งเก้าอี้</span><span class="v">พิงพนัก</span></div>'+
+  '<p class="sub" style="margin:10px 0 0"><b>ไม่ต้องกดปุ่มใด ๆ</b> — เมื่อวางป้ายเสร็จแล้วเดินกลับมานั่งที่เก้าอี้ ระบบจะเห็นเองว่าท่านนั่งแล้ว แล้วพูดว่า “พร้อมทดสอบ” ตามด้วยนับ 3-2-1</p></div>'+
+  '<div class="card" style="background:var(--surf2)"><h3>เมื่อได้ยินคำว่า “เริ่ม”</h3>'+
+  '<p class="sub" style="margin:0">ลุกขึ้น → เดินด้วย<b>ความเร็วปกติ</b>ไปที่ป้ายจุดกลับ → หมุนกลับ → เดินกลับมา → นั่งลงพิงพนัก · ระบบจะพูดว่า “เสร็จสิ้น” เองเมื่อท่านนั่งลงเรียบร้อย</p>'+
+  '<p class="sub" style="margin:8px 0 0">ใช้ไม้เท้าหรือเครื่องช่วยเดินที่ใช้ประจำได้ · สวมรองเท้าที่ใส่ประจำ · วางมือถือพิงผนังให้เห็นทั้งเก้าอี้และทางเดิน</p>'+
+  '<p class="sub" style="margin:8px 0 0">เกณฑ์คัดกรอง CDC STEADI: ใช้เวลาตั้งแต่ <b>12 วินาที</b> ขึ้นไป สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น</p></div>'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
-  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="tphase">เตรียม</span></div>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="tphase">รอท่านนั่ง</span></div>'+
   '<div class="hudbot"><div class="counter"><span class="n" id="tugclk">0.0</span><span class="of">วินาที</span></div>'+
-  '<div class="coach" id="coach">นั่งพร้อมที่เก้าอี้ แล้วกดปุ่มเริ่ม</div></div></div></div>'+
+  '<div class="coach" id="coach">วางป้ายให้เรียบร้อย แล้วกลับมานั่งที่เก้าอี้</div></div></div></div>'+
   statusHTML()+
-  '<button class="cta" id="tugStart">พร้อมแล้ว · เริ่มทดสอบ</button>'+
+  '<button class="cta" id="tugStart">เริ่มเอง (ถ้าระบบไม่เห็นว่านั่งแล้ว)</button>'+
   '<button class="ghostb" id="tugSkip">ข้ามขั้นนี้ · ไปทดสอบการทรงตัว</button>'+
   '<div class="disc">กล้องบันทึกเฉพาะ<b>ตัวเลขเวลา ระยะสัมพัทธ์ และการเบี่ยงแนวเดิน</b> ไม่เก็บภาพหรือวิดีโอ</div></div>';
   document.getElementById("tugSkip").addEventListener("click",function(){
@@ -1781,52 +1905,107 @@ function tugV(){
   });
   startTugPipeline();
 }
+
 async function startTugPipeline(){
   var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
   var tag=document.getElementById("tag"),coach=document.getElementById("coach"),
-      clk=document.getElementById("tugclk"),phase=document.getElementById("tphase");
+      clk=document.getElementById("tugclk"),phaseEl=document.getElementById("tphase"),
+      startBtn=document.getElementById("tugStart");
   var stream;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false})}
   catch(e){tag.textContent="เปิดกล้องไม่ได้";setStatus("red","เปิดกล้องไม่ได้ — ข้ามขั้นนี้ได้");return}
-  S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
+  S.cam=stream;video.srcObject=stream;/* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
+     ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
+  await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
   try{await loadModel(tag)}catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ข้ามขั้นนี้ได้");return}
   tag.textContent="พร้อมแล้ว";
-  setStatus("green","นั่งพร้อมที่เก้าอี้ แล้วกดปุ่มเริ่ม",false);
-  var TUG=new TugTracker({sitRef:S.draft.sitRef,standRef:S.draft.standRef});
-  var running=false,t0=0;
-  var PH={waiting:"เตรียม",rising:"กำลังลุก",standing:"ยืนแล้ว",walkOut:"ขาไป",walkBack:"ขากลับ",done:"เสร็จ"};
+
+  /* phase: waitSit → arming → active → done */
+  var phase="waitSit", TUG=null, seatedN=0, cdTimer=null, introDone=false;
+  var sitRef=S.draft.sitRef, standRef=S.draft.standRef, range=standRef-sitRef;
+  var PH={waitSit:"รอท่านนั่ง",arming:"นับถอยหลัง",waiting:"พร้อม",rising:"กำลังลุก",
+          standing:"ยืนแล้ว",walkOut:"ขาไป",walkBack:"ขากลับ",done:"เสร็จ"};
+
+  function clearCd(){ if(cdTimer){clearInterval(cdTimer);cdTimer=null} }
+
+  /* ---------- นับ 3-2-1 แล้วปล่อยสัญญาณเริ่ม ---------- */
+  function countdown(){
+    if(phase!=="waitSit")return;
+    phase="arming"; startBtn.disabled=true; startBtn.textContent="กำลังนับถอยหลัง…";
+    phaseEl.textContent=PH.arming;
+    var n=3, w={3:"สาม",2:"สอง",1:"หนึ่ง"};
+    setStatus("green","พร้อมทดสอบ — เตรียมตัว "+n,false);
+    coach.textContent="พร้อมทดสอบ — เตรียมตัว "+n;
+    speak("พร้อมทดสอบแล้ว เตรียมตัว สาม");
+    clearCd();
+    cdTimer=setInterval(function(){
+      if(S.screen!=="tug"){clearCd();return}
+      n--;
+      if(n>=1){ setStatus("green","เตรียมตัว "+n,false); coach.textContent="เตรียมตัว "+n; speak(w[n]); }
+      else { clearCd(); begin(); }
+    },1000);
+  }
+  function begin(){
+    phase="active";
+    TUG=new TugTracker({sitRef:sitRef,standRef:standRef});
+    /* CDC ให้เริ่มจับเวลาที่สัญญาณ "เริ่ม" ไม่ใช่ตอนผู้รับการประเมินขยับ */
+    TUG.goAt=performance.now();
+    setStatus("green","เริ่ม — ลุกขึ้นแล้วเดินไปที่ป้าย",false);
+    coach.textContent="เริ่ม — ลุกขึ้น เดินไปที่ป้าย หมุนกลับ แล้วมานั่งลง";
+    speak("เริ่ม ลุกขึ้น เดินไปที่ป้าย หมุนกลับ แล้วกลับมานั่งลง");
+  }
+
   function loop(){
     if(S.screen!=="tug")return;
     var r=null;try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
     var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
     drawPose(ctx,canvas,video,lm);
-    if(running&&lm){
-      var m=hipRatio(lm);
-      if(m!=null){
-        var sw=shoulderWidth(lm), cx=(lm[LM.LSH].x+lm[LM.RSH].x)/2;
-        var ev=TUG.pushFrame(m,sw,cx,performance.now());
-        phase.textContent=PH[TUG.state]||"—";
-        if(ev&&ev.event==="onset"){setStatus("green","เริ่มจับเวลาแล้ว",false);speak("เริ่มจับเวลาแล้ว")}
-        if(ev&&ev.event==="walk"){coach.textContent="เดินไปให้ถึงป้าย 3 เมตร";speak("เดินไปที่ป้ายได้เลย")}
-        if(ev&&ev.event==="turn"){coach.textContent="ถึงจุดกลับแล้ว — เดินกลับมานั่งลง";speak("ถึงจุดกลับแล้ว เดินกลับมานั่งลงได้เลย")}
-        if(ev&&ev.event==="finish"){finishVisionTug(ev);return}
+    var m=lm?hipRatio(lm):null;
+
+    if(phase==="waitSit"){
+      /* รอให้กลับมานั่งเก้าอี้จริง ๆ ก่อน จึงจะประกาศพร้อมทดสอบ */
+      var seated = m!=null && m<=sitRef+range*0.22;
+      if(seated)seatedN++; else seatedN=0;
+      phaseEl.textContent=PH.waitSit;
+      if(!lm){
+        setStatus("yellow","ขยับให้กล้องเห็นทั้งตัวและเก้าอี้",false);
+      }else if(seated){
+        setStatus("green","เห็นแล้วว่าท่านนั่งอยู่ — เตรียมเริ่ม",false);
+        coach.textContent="เห็นแล้วว่าท่านนั่งอยู่ — กำลังจะเริ่ม";
+      }else{
+        setStatus("yellow","วางป้ายให้ครบ แล้วกลับมานั่งที่เก้าอี้",false);
+        coach.textContent="วางป้ายให้ครบ แล้วกลับมานั่งพิงพนักเก้าอี้";
       }
+      if(seatedN>=45){ countdown(); }   /* นั่งนิ่งราว 1.8 วินาที */
     }
-    if(running)clk.textContent=(TUG.t0!=null?((performance.now()-TUG.t0)/1000):0).toFixed(1);
-    if(running&&performance.now()-t0>60000)
+    else if(phase==="active"&&lm&&m!=null){
+      var sw=shoulderWidth(lm), cx=(lm[LM.LSH].x+lm[LM.RSH].x)/2;
+      var ev=TUG.pushFrame(m,sw,cx,performance.now());
+      phaseEl.textContent=PH[TUG.state]||"—";
+      if(ev&&ev.event==="walk"){coach.textContent="เดินไปให้ถึงป้ายจุดกลับ 3 เมตร";speak("เดินไปที่ป้ายได้เลย")}
+      if(ev&&ev.event==="turn"){coach.textContent="ถึงจุดกลับแล้ว — เดินกลับมานั่งลง";speak("ถึงจุดกลับแล้ว เดินกลับมานั่งลงได้เลย")}
+      if(ev&&ev.event==="finish"){ finishVisionTug(ev); return }
+    }
+
+    if(phase==="active"&&TUG&&TUG.goAt!=null)
+      clk.textContent=((performance.now()-TUG.goAt)/1000).toFixed(1);
+    if(phase==="active"&&TUG&&TUG.goAt!=null&&performance.now()-TUG.goAt>75000)
       coach.textContent="หากนั่งลงแล้วระบบไม่หยุด กดข้ามขั้นนี้ได้ — คะแนนส่วนอื่นยังครบ";
     RAF=requestAnimationFrame(loop);
   }
   loop();
-  document.getElementById("tugStart").addEventListener("click",function(){
-    if(running)return;
-    running=true;t0=performance.now();
-    this.disabled=true;this.textContent="กำลังวัด…";
-    setStatus("green","ลุกขึ้นได้เลย — นาฬิกาเริ่มเมื่อคุณเริ่มขยับ",false);
-    speak("ลุกขึ้น เดินไปที่ป้าย หมุนกลับ แล้วมานั่งลงได้เลย");
-  });
+
+  startBtn.addEventListener("click",function(){ if(phase==="waitSit")countdown(); });
+
+  if(!introDone){
+    introDone=true;
+    setStatus("yellow","วางป้าย 2 จุด แล้วกลับมานั่งเก้าอี้",false);
+    speak("การทดสอบลุกเดินสามเมตร กรุณาวางป้ายจุดเริ่มไว้ที่เก้าอี้ และป้ายจุดกลับให้ห่างสามเมตร "+
+          "เมื่อวางเสร็จแล้ว กลับมานั่งพิงพนักเก้าอี้ ระบบจะบอกเองเมื่อพร้อมทดสอบ");
+  }
 }
+
 function finishVisionTug(ev){
   stopCam();
   S.draft.tug=Math.round(ev.elapsed*10)/10;
@@ -1834,36 +2013,47 @@ function finishVisionTug(ev){
   S.draft.tugBack=ev.back!=null?Math.round(ev.back*10)/10:null;
   S.draft.tugDistanceOk=!!ev.distanceOk;
   S.draft.tugDrift=ev.drift?Math.round(ev.drift.max*100)/100:null;
+  S.draft.tugReaction=ev.reaction!=null?Math.round(ev.reaction*10)/10:null;
   var g=gaitLabel(ev.drift);
-  audit("วัดลุกเดิน 3 เมตร (TUG ไป-กลับ)",
-    "รวม "+S.draft.tug.toFixed(1)+" วิ"+
+  audit("วัดลุกเดิน 3 เมตร (TUG ไป-กลับ ตามโปรโตคอล CDC)",
+    "รวม "+S.draft.tug.toFixed(1)+" วิ (จับเวลาตั้งแต่สัญญาณเริ่ม)"+
+    (S.draft.tugReaction!=null?" · เวลาตอบสนอง "+S.draft.tugReaction.toFixed(1)+" วิ":"")+
     (S.draft.tugOut!=null?" · ขาไป "+S.draft.tugOut.toFixed(1)+" วิ · ขากลับ "+S.draft.tugBack.toFixed(1)+" วิ":"")+
     " · "+(ev.distanceOk?"เดินครบระยะ":"ระยะอาจไม่ครบ 3 เมตร — ไม่นำมาคัดกรอง")+
     " · การเดิน: "+g.nm);
-  speak("เสร็จเรียบร้อย ใช้เวลา "+Math.round(ev.elapsed)+" วินาที "+(ev.distanceOk?"เดินครบระยะ":"ระยะเดินอาจไม่ครบสามเมตร"));
+  setStatus(S.draft.tug>=12?"yellow":"green",
+    "เสร็จสิ้น — ใช้เวลา "+S.draft.tug.toFixed(1)+" วินาที · "+g.nm,false);
+  speak("เสร็จสิ้น บันทึกเรียบร้อยแล้ว ใช้เวลา "+Math.round(ev.elapsed)+" วินาที "+
+        (ev.distanceOk?"เดินครบระยะ":"ระยะเดินอาจไม่ครบสามเมตร")+
+        " ขั้นตอนต่อไป ทดสอบการทรงตัวสี่ท่า");
   toast("ลุกเดิน "+S.draft.tug.toFixed(1)+" วิ · "+g.nm);
-  setTimeout(function(){go("balance")},2200);
+  setTimeout(function(){ if(S.screen==="tug")go("balance") },3200);
 }
 
 function balanceV(){
-  head("ทดสอบการทรงตัว","4-Stage Balance Test","ท่าละ 10 วินาที ลืมตาตลอด ไม่จับสิ่งใด · กล้องตรวจท่าเท้า จับเวลา และวัดความโคลงให้เอง","assess");
+  head("ทดสอบการทรงตัว","4-Stage Balance Test",
+       "4 ท่า ท่าละ 10 วินาที · ระบบพูดบอกทุกขั้นตอน และนับ 3-2-1 ให้ก่อนเริ่มทุกท่า","assess");
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ความปลอดภัยมาก่อน</h3>'+
-  '<p class="sub" style="margin:0">ยืนใกล้ผนังหรือโต๊ะที่<b>คว้าจับได้ทันที</b> · ควรมีคนอยู่ข้าง ๆ · หากรู้สึกจะล้มให้<b>จับทันที</b> ไม่ต้องฝืน ระบบจะบันทึกว่าทำได้เท่าที่ทำ และหยุดการทดสอบให้เอง</p></div>'+
-  '<div class="card"><h3>ทำ 4 ท่าเรียงลำดับ ท่าละ 10 วินาที</h3>'+
+  '<p class="sub" style="margin:0">ยืนใกล้ผนังหรือโต๊ะที่<b>คว้าจับได้ทันที</b> · ควรมีคนอยู่ข้าง ๆ · หากรู้สึกจะล้มให้<b>จับทันที</b> ไม่ต้องฝืน ระบบจะบันทึกเท่าที่ทำได้และหยุดให้เอง</p></div>'+
+  '<div class="card" style="background:var(--surf2)"><h3>วางกล้องอย่างไรให้ระบบมองเห็นเท้า</h3>'+
+  '<p class="sub" style="margin:0 0 8px">ให้<b>หันข้างให้กล้อง</b> แล้วยืนห่างประมาณ 2–3 เมตร ให้เห็นตั้งแต่ศีรษะถึงปลายเท้า</p>'+
+  '<p class="sub" style="margin:0">เหตุผล: ท่ากึ่งต่อเท้าและท่าต่อเท้าต่างกันที่<b>ระยะเหลื่อมหน้า-หลังของเท้า</b> ถ้าหันหน้าเข้ากล้อง ระยะนี้จะซ้อนกันในภาพจนแยกไม่ออก แต่ถ้าหันข้าง ระยะจะกลายเป็นแนวนอนซึ่งกล้องวัดได้ตรง ๆ</p></div>'+
+  '<div class="card"><h3>4 ท่า ท่าละ 10 วินาที</h3>'+
   BAL_STAGES.map(function(st,i){
     return '<div class="rowline"><span class="k">'+(i+1)+' · '+esc(st.nm)+'<br><span style="font-size:13px;color:var(--ink3)">'+esc(st.how)+'</span></span>'+
            '<span class="v" id="stg'+i+'">รอ</span></div>';
   }).join("")+
-  '<p class="sub" style="margin:10px 0 0"><b>ลืมตาตลอดการทดสอบ</b> · ไม่ใช้ไม้เท้าหรือที่จับ · ทำท่าถัดไปเฉพาะเมื่อท่าปัจจุบันยืนครบ 10 วินาที</p></div>'+
+  '<p class="sub" style="margin:10px 0 0"><b>ลืมตาตลอด</b> · ไม่ใช้ไม้เท้าหรือที่จับ · กางแขนช่วยทรงตัวได้ แต่ห้ามขยับเท้า · ทำท่าถัดไปเฉพาะเมื่อท่าปัจจุบันยืนครบ 10 วินาที</p></div>'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
-  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="qual">คุณภาพภาพ —</span></div>'+
+  '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="qual">ท่าที่ 1/4</span></div>'+
   '<div class="hudbot"><div class="counter"><span class="n" id="bsec">10</span><span class="of">วินาที</span>'+
   '<span class="clock" id="bsway">—</span></div>'+
   '<div class="track"><i id="btrk" style="width:0%"></i></div>'+
   '<div class="coach" id="coach">เตรียมยืนท่าที่ 1 — เท้าชิดกัน</div></div></div></div>'+
   statusHTML()+
-  '<button class="cta" id="bStart">เริ่มทดสอบท่าที่ 1</button>'+
+  '<button class="cta" id="bStart">เริ่มท่านี้เอง (ไม่ต้องรอกล้อง)</button>'+
+  '<button class="ghostb" id="bRetry" hidden>ทำท่านี้ใหม่อีกครั้ง</button>'+
   '<button class="ghostb" id="bStop">หยุดการทดสอบ · ตอบด้วยตนเอง</button>'+
   '<div class="disc">กล้องบันทึกเฉพาะ<b>เวลาที่ยืนได้และค่าความโคลง</b> ไม่มีการเก็บภาพหรือวิดีโอ · ผลจากกล้องเป็นข้อสังเกตประกอบ ผู้เอาประกันเป็นผู้ยืนยันคำตอบสุดท้ายเสมอ</div></div>';
   document.getElementById("bStop").addEventListener("click",function(){
@@ -1878,144 +2068,200 @@ async function startBalancePipeline(){
   var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
   var tag=document.getElementById("tag"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
       secEl=document.getElementById("bsec"),swayEl=document.getElementById("bsway"),trk=document.getElementById("btrk"),
-      startBtn=document.getElementById("bStart");
+      startBtn=document.getElementById("bStart"),retryBtn=document.getElementById("bRetry");
   var stream;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false})}
   catch(e){tag.textContent="เปิดกล้องไม่ได้";setStatus("red","เปิดกล้องไม่ได้ — ตอบคำถามด้วยตนเองแทนได้");
     coach.textContent="กดปุ่มหยุดด้านล่างเพื่อตอบเอง";return}
-  S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
+  S.cam=stream;video.srcObject=stream;/* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
+     ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
+  await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
   setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง",false);
   try{await loadModel(tag)}
   catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ตอบคำถามด้วยตนเองแทนได้");return}
   tag.textContent="ตรวจจับท่าทางแล้ว";
 
-  var stage=0, running=false, t0=0, samples=[], lostFrames=0, AUTOB=null;
-  var GATE=new StanceGate(stage);   /* ตัวตรวจว่าเท้าอยู่ในท่าของด่านปัจจุบันจริง */
-  var results=[];      /* [{held, sway}] ต่อท่า */
+  /* phase: intro → setup → arming → holding → between → done */
+  var stage=0, phase="intro", results=[], attempts=[0,0,0,0];
+  var GATE=null, HOLD=null, t0=0, samples=[], lostFrames=0, cdTimer=null, sideWarned=false;
 
   function markStage(i,txt,cls){
     var el=document.getElementById("stg"+i);
     if(el)el.innerHTML=cls?'<span class="pill '+cls+'">'+txt+'</span>':txt;
   }
+  function clearCd(){ if(cdTimer){clearInterval(cdTimer);cdTimer=null} }
 
-  /* จบทั้งชุด — ให้คะแนนตามท่าสูงสุดที่ยืนครบ 10 วินาที */
+  /* ---------- ประกาศท่าใหม่ ---------- */
+  function announce(retry){
+    var st=BAL_STAGES[stage];
+    phase="setup"; GATE=new StanceGate(stage); HOLD=null;
+    samples=[]; lostFrames=0; sideWarned=false;
+    secEl.textContent=BAL_SECONDS; trk.style.width="0%"; swayEl.textContent="—";
+    qual.textContent="ท่าที่ "+(stage+1)+"/4";
+    startBtn.hidden=false; startBtn.disabled=false;
+    startBtn.textContent="เริ่มท่าที่ "+(stage+1)+" เอง (ไม่ต้องรอกล้อง)";
+    retryBtn.hidden=true;
+    markStage(stage,"กำลังจัดท่า","t3");
+    coach.innerHTML='<b>ท่าที่ '+(stage+1)+' · '+esc(st.nm)+'</b><br>'+esc(st.how);
+    setStatus("yellow","ท่าที่ "+(stage+1)+" จาก 4 — "+st.nm,false);
+    speak((retry?"ลองท่านี้ใหม่อีกครั้ง ":"ต่อไป ")+"ท่าที่ "+(stage+1)+" จาก 4 ท่า "+st.nm+" "+st.how+
+          " เมื่อจัดท่าเรียบร้อยแล้ว ยืนนิ่ง ๆ ระบบจะนับถอยหลังให้เอง");
+  }
+
+  /* ---------- นับ 3-2-1 แล้วเริ่มจับเวลา ---------- */
+  function countdown(){
+    if(phase!=="setup")return;
+    phase="arming"; startBtn.disabled=true; startBtn.textContent="กำลังนับถอยหลัง…";
+    var n=3, w={3:"สาม",2:"สอง",1:"หนึ่ง"};
+    setStatus("green","เตรียมตัว "+n,false);
+    speak("จัดท่าถูกต้องแล้ว เตรียมตัว สาม");
+    clearCd();
+    cdTimer=setInterval(function(){
+      if(S.screen!=="balance"){clearCd();return}
+      n--;
+      if(n>=1){ setStatus("green","เตรียมตัว "+n,false); speak(w[n]); }
+      else { clearCd(); beginHold(); }
+    },1000);
+  }
+  function beginHold(){
+    phase="holding"; t0=performance.now(); samples=[]; lostFrames=0;
+    HOLD=new HoldMonitor(stage);
+    attempts[stage]++;
+    markStage(stage,"กำลังวัด","t3");
+    coach.innerHTML='<b>'+esc(BAL_STAGES[stage].nm)+'</b> — ยืนนิ่ง ๆ อย่าขยับเท้า<span class="statebadge">กำลังวัด</span>';
+    setStatus("green","เริ่ม — ยืนนิ่ง 10 วินาที ลืมตาไว้",false);
+    speak("เริ่ม ยืนนิ่ง ๆ สิบวินาที");
+  }
+
+  /* ---------- จบท่าหนึ่ง ---------- */
+  function endStage(held,reason){
+    if(phase!=="holding")return;
+    phase="between"; clearCd();
+    var ok=held>=BAL_SECONDS-0.3;
+    var sway=swayScore(samples);
+    results[stage]={held:Math.round(held*10)/10, sway:sway, stage:BAL_STAGES[stage].nm,
+                    attempts:attempts[stage], reason:reason||null};
+    markStage(stage, ok?("ผ่าน "+held.toFixed(0)+" วิ"):("ได้ "+held.toFixed(1)+" วิ"), ok?"t4":"t2");
+    startBtn.hidden=true;
+
+    if(ok){
+      setStatus("green","ท่าที่ "+(stage+1)+" ผ่าน — บันทึกเรียบร้อยแล้ว",false);
+      coach.innerHTML='<b>ท่าที่ '+(stage+1)+' ผ่าน</b> — บันทึกเรียบร้อยแล้ว';
+      speak("ครบสิบวินาที ท่าที่ "+(stage+1)+" ผ่าน บันทึกเรียบร้อยแล้ว");
+      stage++;
+      if(stage>=BAL_STAGES.length){ setTimeout(function(){finishAll("ทำครบทุกท่า")},2600); return }
+      setTimeout(function(){ if(S.screen==="balance")announce(false) },2600);
+      return;
+    }
+
+    /* ยืนไม่ครบ 10 วินาที — ตามโปรโตคอล CDC ให้หยุด ไม่ต้องทำท่าที่ยากกว่า
+       แต่เปิดให้ลองใหม่ได้ 1 ครั้ง เผื่อกล้องอ่านพลาดหรือเสียหลักชั่วขณะ */
+    setStatus("yellow","ท่าที่ "+(stage+1)+" ยืนได้ "+held.toFixed(1)+" วินาที",false);
+    coach.innerHTML='<b>ยืนได้ '+held.toFixed(1)+' วินาที</b> — '+esc(reason||"ยังไม่ครบ 10 วินาที");
+    speak("ยืนได้ "+held.toFixed(0)+" วินาที ยังไม่ครบสิบวินาที ถ้าคิดว่าทำได้ กดปุ่มทำท่านี้ใหม่ หรือรอสักครู่ระบบจะสรุปผลให้");
+    if(attempts[stage]<2){
+      retryBtn.hidden=false;
+      var wait=setTimeout(function(){ if(phase==="between")doFinishFail() },12000);
+      retryBtn.onclick=function(){ clearTimeout(wait); retryBtn.hidden=true; announce(true) };
+    }else{
+      setTimeout(doFinishFail,2600);
+    }
+    function doFinishFail(){
+      for(var i=stage+1;i<BAL_STAGES.length;i++)markStage(i,"ไม่ได้ทำ","");
+      finishAll("หยุดที่ท่าที่ "+(stage+1)+" เพราะยืนไม่ครบ 10 วินาที");
+    }
+  }
+
+  /* ---------- สรุปทั้งชุด ---------- */
   function finishAll(reason){
-    running=false;
+    phase="done"; clearCd();
     var passed=0;
-    results.forEach(function(r){ if(r.held>=BAL_SECONDS-0.3)passed++ });
+    results.forEach(function(r){ if(r&&r.held>=BAL_SECONDS-0.3)passed++ });
     var sc=balanceScore(passed);
     S.draft.balStages=results;
     S.draft.balPassed=passed;
     S.draft.balScoreHint=sc.score;
     S.draft.balLabel=sc.nm;
-    /* ค่าความโคลงของท่าที่ยากที่สุดที่ทำได้ ใช้เป็นตัวแทน */
-    var lastOk=results.filter(function(r){return r.sway!=null}).pop();
+    var lastOk=results.filter(function(r){return r&&r.sway!=null}).pop();
     S.draft.swayValue=lastOk?lastOk.sway:null;
-    S.draft.swayHeld=results.length?results[results.length-1].held:null;
+    S.draft.swayHeld=results.length?(results[results.length-1]||{}).held:null;
     S.draft.swayLabel=lastOk?swayLabel(lastOk.sway).nm:null;
     stopCam();
     audit("ทดสอบการทรงตัว 4 ท่า (CDC 4-Stage Balance Test)",
-      results.map(function(r,i){return (i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ"}).join(" · ")+
+      results.map(function(r,i){return r?((i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ"+(r.attempts>1?" (ลอง "+r.attempts+" ครั้ง)":"")):null})
+             .filter(Boolean).join(" · ")+
       " · ผ่าน "+passed+"/4 ท่า · "+sc.nm+(reason?" · "+reason:""));
     setStatus(passed>=3?"green":(passed>=2?"yellow":"red"),
-      "ทดสอบเสร็จ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
-    speak("ทดสอบการทรงตัวเสร็จเรียบร้อย ยืนผ่าน "+passed+" จาก 4 ท่า ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
-    setTimeout(function(){go("q",0)},2800);
+      "ทดสอบเสร็จสมบูรณ์ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
+    coach.innerHTML='<b>ทดสอบเสร็จสมบูรณ์</b> — ยืนผ่าน '+passed+' จาก 4 ท่า';
+    speak("การทดสอบการทรงตัวเสร็จสมบูรณ์ ยืนผ่าน "+passed+" จาก 4 ท่า บันทึกเรียบร้อยแล้ว ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
+    setTimeout(function(){ if(S.screen==="balance")go("q",0) },3400);
   }
 
-  function endStage(held){
-    running=false;
-    var sway=swayScore(samples);
-    results.push({held:held,sway:sway,stage:BAL_STAGES[stage].nm});
-    var ok=held>=BAL_SECONDS-0.3;
-    markStage(stage,ok?"ผ่าน "+held.toFixed(0)+" วิ":"ได้ "+held.toFixed(1)+" วิ",ok?"t4":"t2");
-    if(!ok){
-      /* ยืนไม่ครบ 10 วินาที → หยุดตามโปรโตคอล ไม่ต้องทำท่าที่ยากกว่า */
-      for(var i=stage+1;i<BAL_STAGES.length;i++)markStage(i,"ไม่ได้ทำ","");
-      speak("ยืนได้ "+held.toFixed(0)+" วินาที ยังไม่ครบสิบวินาที จึงหยุดการทดสอบตามเกณฑ์");
-      finishAll("หยุดที่ท่าที่ "+(stage+1)+" เพราะยืนไม่ครบ 10 วินาที");
-      return;
-    }
-    stage++;
-    if(stage>=BAL_STAGES.length){finishAll("ทำครบทุกท่า");return}
-    /* ท่าถัดไป */
-    startBtn.disabled=false;
-    startBtn.textContent="เริ่มทดสอบท่าที่ "+(stage+1);
-    GATE=new StanceGate(stage);
-    coach.textContent="ท่าที่ "+(stage+1)+" — "+BAL_STAGES[stage].how;
-    secEl.textContent=BAL_SECONDS;trk.style.width="0%";swayEl.textContent="—";
-    setStatus("green","ผ่านท่าที่ "+stage+" — ขั้นต่อไป "+BAL_STAGES[stage].nm,false);
-    speak("ยืนครบสิบวินาที เก่งมากค่ะ ท่าต่อไป "+BAL_STAGES[stage].nm+" "+BAL_STAGES[stage].how);
-    if(AUTOB)AUTOB.reset();
-  }
-
+  /* ---------- ลูปหลัก ---------- */
   function loop(){
     if(S.screen!=="balance")return;
     var r=null;try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
     var lm=r&&r.landmarks&&r.landmarks[0]?r.landmarks[0]:null;
     drawPose(ctx,canvas,video,lm);
-    if(lm){
-      var q=visOK(lm);
-      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b> · ท่าที่ "+(stage+1)+"/4";
-      if(running){
+    var f=lm?footSep(lm):null;
+
+    if(phase==="holding"){
+      if(lm){
         lostFrames=0;
         var w=shoulderWidth(lm);
         if(w>0.02){var c=trunkCenter(lm);samples.push({x:c.x/w,y:c.y/w})}
+        var hr=HOLD.push(f);
         var el=(performance.now()-t0)/1000;
-        /* ตรวจว่ายังอยู่ในท่าเดิม — เท้าขยับออก/เท้าที่ยกแตะพื้น ต่อเนื่อง
-           เกิน ~0.8 วิ ถือว่าหลุดท่า จบด่านด้วยเวลาที่ทำได้จริงตามโปรโตคอล */
-        var sg=GATE.push(footGeom(lm));
-        if(!sg.inPose&&el>1.0){
-          coach.textContent="หลุดจากท่า — บันทึกเวลาที่ยืนได้จริง";
-          speak("หลุดจากท่าแล้ว");
-          endStage(Math.min(el,BAL_SECONDS));return;
-        }
         secEl.textContent=Math.max(0,BAL_SECONDS-el).toFixed(0);
         trk.style.width=Math.min(100,el/BAL_SECONDS*100)+"%";
         var live=swayScore(samples.slice(-90));
         if(live!=null)swayEl.textContent=swayLabel(live).nm;
-        if(el>=BAL_SECONDS){endStage(BAL_SECONDS);return}
+        if(hr.fail){ endStage(Math.min(el,BAL_SECONDS), hr.why); return }
+        if(el>=BAL_SECONDS){ endStage(BAL_SECONDS,null); return }
       }else{
-        /* ยังไม่เริ่มนับ: ต้องเห็นตัวชัด "และเท้าอยู่ในท่า" จึงจะเริ่มนับอัตโนมัติ */
-        var g0=footGeom(lm), st0=GATE.push(g0);
-        if(AUTOB&&!AUTOB.counting){
-          if(q<0.85)setStatus("yellow","ถอยให้เห็นทั้งตัว รวมถึงปลายเท้า",false);
-          else if(!st0.inPose)setStatus("yellow",(st0.fix||"จัดท่าให้ตรง")+" — "+BAL_STAGES[stage].nm,false);
-          else setStatus("green","ท่าถูกต้อง — ยืนนิ่ง ๆ ระบบกำลังจะเริ่มนับ",false);
-          if(!st0.inPose&&st0.fix)coach.textContent=st0.fix;
-        }
-        if(AUTOB)AUTOB.update(q>=0.85&&st0.inPose);
-      }
-    }else{
-      qual.innerHTML="คุณภาพภาพ <b>—</b>";
-      if(running){
         lostFrames++;
-        if(lostFrames>60){
+        if(lostFrames>75){
           var elp=(performance.now()-t0)/1000;
-          coach.textContent="ตรวจไม่พบตัวในกรอบ — บันทึกเท่าที่ทำได้";
-          endStage(Math.min(elp,BAL_SECONDS));return;
+          endStage(Math.min(elp,BAL_SECONDS),"กล้องมองไม่เห็นตัวระหว่างวัด"); return;
         }
+        coach.textContent="ขยับให้กล้องเห็นทั้งตัว…";
+      }
+    }
+    else if(phase==="setup"){
+      var g=GATE.push(f);
+      var seen=readStance(f);
+      qual.textContent="ท่าที่ "+(stage+1)+"/4"+(seen?" · เห็นเป็น "+BAL_STAGES[seen.stage].nm:"");
+      if(!f){
+        setStatus("yellow","ถอยให้เห็นทั้งตัว รวมถึงปลายเท้า",false);
+      }else if(f.side===false&&!sideWarned&&stage>0&&stage<3){
+        sideWarned=true;
+        setStatus("yellow","กรุณาหันข้างให้กล้อง เพื่อให้เห็นระยะเหลื่อมของเท้า",false);
+        speak("กรุณาหันข้างให้กล้อง เพื่อให้ระบบเห็นระยะเหลื่อมของเท้าได้ชัดขึ้น");
+      }else if(g.ready){
+        countdown(); RAF=requestAnimationFrame(loop); return;
+      }else if(g.relaxed){
+        setStatus("yellow","ระบบยังไม่แน่ใจว่าเข้าท่าหรือยัง — ยืนนิ่ง ๆ อีกครู่ หรือกดปุ่มเริ่มเอง",false);
+        coach.innerHTML='<b>'+esc(BAL_STAGES[stage].nm)+'</b><br>'+esc(g.fix)+' · หรือกดปุ่ม “เริ่มท่านี้เอง” ด้านล่าง';
+      }else{
+        setStatus(g.matched?"green":"yellow", g.matched?"ท่าถูกต้อง — ยืนนิ่ง ๆ":(g.fix||"จัดท่าให้ตรง"),false);
+        if(!g.matched)coach.innerHTML='<b>'+esc(BAL_STAGES[stage].nm)+'</b><br>'+esc(g.fix);
       }
     }
     RAF=requestAnimationFrame(loop);
   }
   loop();
-  AUTOB=new AutoCapture({screen:"balance",holdMs:2200,readyText:"ยืนพร้อมแล้ว",
-    abortOnLost:false,onFire:function(){begin()}});
-  speak("ทดสอบการทรงตัวสี่ท่า ลืมตาตลอด ไม่ต้องจับสิ่งใด ท่าแรก "+BAL_STAGES[0].how+" ระบบจะเริ่มนับให้เองเมื่อพร้อม");
-  function begin(){
-    if(running)return;
-    running=true;t0=performance.now();samples=[];lostFrames=0;
-    /* เริ่มนับโดยถือว่าเข้าท่าแล้ว (ปุ่ม "เริ่มเอง" คือการยืนยันของผู้ใช้) */
-    GATE=new StanceGate(stage);GATE.inPose=true;
-    startBtn.disabled=true;startBtn.textContent="กำลังวัดท่าที่ "+(stage+1)+"…";
-    markStage(stage,"กำลังวัด","t3");
-    setStatus("green","ยืนนิ่ง ๆ 10 วินาที — ลืมตาไว้",false);
-    speak("เริ่มจับเวลา ยืนนิ่ง ๆ สิบวินาที");
-    coach.innerHTML=BAL_STAGES[stage].how+"<span class='statebadge'>กำลังวัด</span>";
-  }
-  startBtn.addEventListener("click",function(){if(AUTOB)AUTOB.abort();begin()});
+
+  startBtn.addEventListener("click",function(){
+    if(phase==="setup")countdown();
+  });
+
+  /* เกริ่นนำครั้งเดียว แล้วเข้าท่าที่ 1 */
+  setStatus("yellow","กรุณาหันข้างให้กล้อง แล้วยืนให้เห็นทั้งตัว",false);
+  speak("การทดสอบการทรงตัวมีสี่ท่า ท่าละสิบวินาที ลืมตาตลอด ไม่ต้องจับสิ่งใด "+
+        "กรุณาหันข้างให้กล้อง แล้วยืนห่างประมาณสองถึงสามเมตร ให้เห็นตั้งแต่ศีรษะถึงปลายเท้า");
+  setTimeout(function(){ if(S.screen==="balance")announce(false) },7000);
 }
 
 /* ---------- คำถามเสริม 4 ข้อ ---------- */
