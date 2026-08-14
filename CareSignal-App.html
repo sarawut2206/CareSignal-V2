@@ -1556,13 +1556,19 @@ function finishTest(elapsed){
 function TugDetector(refs){
   this.sitRef=refs.sitRef; this.standRef=refs.standRef;
   this.state="waiting"; this.t0=null; this.t1=null; this.buf=[];
+  this.onsetFrac=0.18;   /* เกณฑ์ "เริ่มขยับลุก" — จุดที่นาฬิกาเริ่มเดินจริง */
 }
 TugDetector.prototype.push=function(raw,t){
   this.buf.push(raw); if(this.buf.length>5)this.buf.shift();
   var v=this.buf.reduce(function(a,b){return a+b},0)/this.buf.length;
   var range=this.standRef-this.sitRef;
+  var onset=this.sitRef+range*this.onsetFrac;
   var up=this.sitRef+range*0.68, down=this.sitRef+range*0.36;
-  if(this.state==="waiting"&&v>=up){this.state="walking";this.t0=t;return{event:"start"}}
+  /* เริ่มจับเวลาตั้งแต่เริ่มโน้มตัวลุก ไม่ใช่ตอนยืนสุด
+     ถ้ารอจนยืนสุด เวลาช่วงลุกจากเก้าอี้จะหายไป ทำให้ค่าต่ำกว่าจริง */
+  if(this.state==="waiting"&&v>=onset){this.state="rising";this.t0=t;return{event:"onset"}}
+  if(this.state==="rising"&&v>=up){this.state="walking";return{event:"start"}}
+  /* จบเมื่อกลับมานั่งสุด — ตามมาตรฐาน CDC จับจนนั่งลงเรียบร้อย */
   if(this.state==="walking"&&v<=down&&this.t0&&(t-this.t0)>3000){
     this.state="done";this.t1=t;return{event:"finish",elapsed:(t-this.t0)/1000};
   }
@@ -1573,8 +1579,9 @@ function tugV(){
   V.innerHTML='<div class="anim">'+
   '<div class="card"><h3>วิธีทำ</h3>'+
   '<div class="bigrow"><div class="ic">1</div><div class="tx"><b>วัดระยะ 3 เมตรจากเก้าอี้พอดี</b><span>ประมาณ 4–5 ก้าวของผู้ใหญ่ · วางของเป็นจุดหมายไว้ตรงนั้น · ต้องมีพื้นที่ว่างรวม 4–5 เมตร เพื่อเผื่อการหมุนตัวกลับ</span></div></div>'+
-  '<div class="bigrow"><div class="ic">2</div><div class="tx"><b>นั่งบนเก้าอี้ให้กล้องเห็นเต็มตัว</b><span>วางมือถือให้เห็นทั้งเก้าอี้และทางเดิน</span></div></div>'+
-  '<div class="bigrow"><div class="ic">3</div><div class="tx"><b>ลุก เดินไปถึงจุดหมาย หมุนกลับ แล้วนั่งลง</b><span>เดินด้วยความเร็วปกติของคุณ ใช้ไม้เท้าได้ตามปกติ</span></div></div></div>'+
+  '<div class="bigrow"><div class="ic">2</div><div class="tx"><b>นั่งพิงพนักเก้าอี้ที่มีที่วางแขน</b><span>ตามมาตรฐาน CDC ต้องเป็นเก้าอี้มีที่วางแขนและไม่มีล้อ · วางมือถือให้เห็นทั้งเก้าอี้และทางเดิน</span></div></div>'+
+  '<div class="bigrow"><div class="ic">3</div><div class="tx"><b>ลุก เดินไปถึงเส้น หมุนกลับ เดินกลับ แล้วนั่งลง</b><span>เดินด้วย<b>ความเร็วปกติ</b>ของคุณ · สวมรองเท้าที่ใส่ประจำ · ใช้ไม้เท้าหรือเครื่องช่วยเดินที่ใช้อยู่ประจำได้</span></div></div>'+
+  '<div class="bigrow"><div class="ic">⏱</div><div class="tx"><b>จับเวลาตั้งแต่เริ่มลุกจนนั่งลงเรียบร้อย</b><span>เกณฑ์คัดกรอง: ใช้เวลา <b>ตั้งแต่ 12 วินาทีขึ้นไป</b> สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น — เป็นเพียงจุดคัดกรอง ไม่ใช่คำวินิจฉัย</span></div></div></div>'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
   '<div class="hudbot"><div class="counter"><span class="n" id="tugclk">0.0</span><span class="of">วินาที</span></div>'+
@@ -1582,7 +1589,7 @@ function tugV(){
   statusHTML()+
   '<button class="cta" id="tugStart">เริ่มจับเวลา</button>'+
   '<button class="ghostb" id="tugSkip">ข้ามขั้นนี้</button>'+
-  '<div class="disc">หากรู้สึกเวียนศีรษะหรือทรงตัวไม่มั่นคง ให้หยุดทันทีและข้ามขั้นนี้ · ควรมีคนอยู่ใกล้ ๆ</div></div>';
+  '<div class="disc">หากรู้สึกเวียนศีรษะหรือทรงตัวไม่มั่นคง ให้หยุดทันทีและข้ามขั้นนี้ · <b>ควรมีคนยืนใกล้ตลอดการทดสอบเพื่อความปลอดภัย</b> ตามคำแนะนำของ CDC</div></div>';
   document.getElementById("tugSkip").addEventListener("click",function(){stopCam();go("assessQ",0)});
   startTugPipeline();
 }
@@ -1609,12 +1616,14 @@ async function startTugPipeline(){
         var m=hipRatio(lm);
         if(m!=null){
           var ev=TUG.push(m,performance.now());
-          if(ev&&ev.event==="start"){coach.textContent="เริ่มแล้ว — เดินไปให้ถึงจุดหมายแล้วกลับมานั่ง";
-            setStatus("green","จับเวลาแล้ว — เดินไปแล้วกลับมานั่ง",false);speak("เริ่มจับเวลา เดินได้เลย")}
+          if(ev&&ev.event==="onset"){setStatus("green","เริ่มจับเวลาแล้ว",false);speak("เริ่มจับเวลาแล้ว")}
+          if(ev&&ev.event==="start"){coach.textContent="เริ่มแล้ว — เดินไปให้ถึงเส้น หมุนกลับ แล้วนั่งลง";
+            setStatus("green","กำลังจับเวลา — เดินไปแล้วกลับมานั่ง",false);speak("เดินได้เลย")}
           if(ev&&ev.event==="finish"){finishTug(ev.elapsed);return}
         }
       }else{ coach.textContent="กำลังรอคุณเดินกลับมา…" }
-      clk.textContent=((performance.now()-t0)/1000).toFixed(1);
+      /* นาฬิกาเริ่มเดินเมื่อเริ่มลุกจริง ไม่ใช่ตอนกดปุ่ม */
+      clk.textContent=(TUG.t0!=null?((performance.now()-TUG.t0)/1000):0).toFixed(1);
       /* ตาข่ายนิรภัย: จับจังหวะนั่งลงไม่ได้เกิน 45 วินาที → บอกทางออก */
       if(performance.now()-t0>45000)
         coach.textContent="หากนั่งลงแล้วระบบไม่หยุดจับเวลา กดข้ามขั้นนี้ได้เลย — คะแนนส่วนอื่นยังใช้ได้ครบ";

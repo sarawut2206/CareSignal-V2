@@ -1577,24 +1577,54 @@ function swayLabel(v){
   return {nm:"โคลงมาก", cls:"t1", hint:"แกว่งมาก ควรมีคนอยู่ข้าง ๆ เสมอ"};
 }
 
+
+/* ============================================================
+   4-Stage Balance Test (CDC STEADI)
+   ------------------------------------------------------------
+   ยืน 4 ท่าเรียงจากง่ายไปยาก ท่าละไม่เกิน 10 วินาที
+   ⚠️ ลืมตาตลอด และไม่ใช้อุปกรณ์ช่วยหรือที่จับ
+   ทำท่าถัดไปเฉพาะเมื่อท่าปัจจุบันยืนครบ 10 วินาที
+   ผู้ที่ยืนท่าต่อเท้า (tandem) ไม่ครบ 10 วินาที สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น
+   ที่มา: CDC STEADI · Vincenzo & Patton, Health Promot Pract 2021;22(2):236-247
+   ============================================================ */
+var BAL_STAGES=[
+  {nm:"เท้าชิดกัน",   how:"ยืนเท้าชิดกัน ปลายเท้าและส้นเท้าเสมอกัน"},
+  {nm:"กึ่งต่อเท้า",  how:"เลื่อนเท้าข้างหนึ่งไปข้างหน้าครึ่งก้าว ให้อุ้งเท้าแตะนิ้วหัวแม่เท้าอีกข้าง"},
+  {nm:"ต่อเท้าเป็นเส้นตรง", how:"วางส้นเท้าหน้าชิดปลายนิ้วเท้าหลัง เป็นเส้นตรงเดียวกัน"},
+  {nm:"ยืนขาเดียว",   how:"ยกเท้าข้างหนึ่งขึ้นจากพื้น ยืนด้วยขาเดียว"}
+];
+/* คะแนนทรงตัว 0-3 ตามท่าสูงสุดที่ยืนครบ 10 วินาที */
+function balanceScore(passed){
+  if(passed>=4)return {score:3, nm:"ทรงตัวดีมาก — ยืนขาเดียวได้ครบ"};
+  if(passed>=3)return {score:2, nm:"ทรงตัวดี — ยืนต่อเท้าได้ครบ"};
+  if(passed>=2)return {score:1, nm:"ทรงตัวพอใช้ — ยืนต่อเท้าไม่ครบ 10 วินาที"};
+  return {score:0, nm:"ทรงตัวควรเฝ้าระวัง — ยืนกึ่งต่อเท้าไม่ครบ"};
+}
+
 function balanceV(){
-  head("ทดสอบการทรงตัว","ยืนเท้าชิด หลับตา 10 วินาที","กล้องจะวัดความโคลงเคลงให้ · ยืนใกล้ผนังหรือโต๊ะที่คว้าจับได้ทันที","assess");
+  head("ทดสอบการทรงตัว","4-Stage Balance Test","ท่าละ 10 วินาที ลืมตาตลอด ไม่จับสิ่งใด · กล้องจับเวลาและวัดความโคลงให้เอง","assess");
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ความปลอดภัยมาก่อน</h3>'+
-  '<p class="sub" style="margin:0">ยืนใกล้ผนังหรือโต๊ะที่<b>คว้าจับได้ทันที</b> · ควรมีคนอยู่ข้าง ๆ · หากรู้สึกจะล้มให้<b>ลืมตาและจับทันที</b> ไม่ต้องฝืน ระบบจะบันทึกว่าทำได้เท่าที่ทำ</p></div>'+
+  '<p class="sub" style="margin:0">ยืนใกล้ผนังหรือโต๊ะที่<b>คว้าจับได้ทันที</b> · ควรมีคนอยู่ข้าง ๆ · หากรู้สึกจะล้มให้<b>จับทันที</b> ไม่ต้องฝืน ระบบจะบันทึกว่าทำได้เท่าที่ทำ และหยุดการทดสอบให้เอง</p></div>'+
+  '<div class="card"><h3>ทำ 4 ท่าเรียงลำดับ ท่าละ 10 วินาที</h3>'+
+  BAL_STAGES.map(function(st,i){
+    return '<div class="rowline"><span class="k">'+(i+1)+' · '+esc(st.nm)+'<br><span style="font-size:13px;color:var(--ink3)">'+esc(st.how)+'</span></span>'+
+           '<span class="v" id="stg'+i+'">รอ</span></div>';
+  }).join("")+
+  '<p class="sub" style="margin:10px 0 0"><b>ลืมตาตลอดการทดสอบ</b> · ไม่ใช้ไม้เท้าหรือที่จับ · ทำท่าถัดไปเฉพาะเมื่อท่าปัจจุบันยืนครบ 10 วินาที</p></div>'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="qual">คุณภาพภาพ —</span></div>'+
   '<div class="hudbot"><div class="counter"><span class="n" id="bsec">10</span><span class="of">วินาที</span>'+
   '<span class="clock" id="bsway">—</span></div>'+
   '<div class="track"><i id="btrk" style="width:0%"></i></div>'+
-  '<div class="coach" id="coach">ยืนเท้าชิดกัน มือแนบลำตัว แล้วหลับตา</div></div></div></div>'+
+  '<div class="coach" id="coach">เตรียมยืนท่าที่ 1 — เท้าชิดกัน</div></div></div></div>'+
   statusHTML()+
-  '<button class="cta" id="bStart">เริ่มทดสอบทรงตัว</button>'+
-  '<button class="ghostb" id="bSkip">ข้ามขั้นนี้ · ตอบด้วยตนเอง</button>'+
-  '<div class="disc">กล้องบันทึกเฉพาะ<b>ตัวเลขความโคลง</b> ไม่มีการเก็บภาพหรือวิดีโอ · ผลจากกล้องเป็นข้อสังเกตประกอบ ผู้เอาประกันเป็นผู้ยืนยันคำตอบสุดท้ายเสมอ</div></div>';
-  document.getElementById("bSkip").addEventListener("click",function(){
-    S.draft.swayValue=null; S.draft.swayHeld=null;
-    audit("ข้ามการวัดทรงตัวด้วยกล้อง","ผู้ใช้เลือกตอบด้วยตนเองโดยไม่ใช้กล้อง");
+  '<button class="cta" id="bStart">เริ่มทดสอบท่าที่ 1</button>'+
+  '<button class="ghostb" id="bStop">หยุดการทดสอบ · ตอบด้วยตนเอง</button>'+
+  '<div class="disc">กล้องบันทึกเฉพาะ<b>เวลาที่ยืนได้และค่าความโคลง</b> ไม่มีการเก็บภาพหรือวิดีโอ · ผลจากกล้องเป็นข้อสังเกตประกอบ ผู้เอาประกันเป็นผู้ยืนยันคำตอบสุดท้ายเสมอ</div></div>';
+  document.getElementById("bStop").addEventListener("click",function(){
+    stopCam();
+    audit("หยุดการทดสอบทรงตัวกลางคัน","ผู้ใช้เลือกตอบด้วยตนเอง");
     go("q",0);
   });
   startBalancePipeline();
@@ -1609,28 +1639,71 @@ async function startBalancePipeline(){
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:854}},audio:false})}
   catch(e){tag.textContent="เปิดกล้องไม่ได้";setStatus("red","เปิดกล้องไม่ได้ — ตอบคำถามด้วยตนเองแทนได้");
-    coach.textContent="กดปุ่มข้ามด้านล่างเพื่อตอบเอง";return}
+    coach.textContent="กดปุ่มหยุดด้านล่างเพื่อตอบเอง";return}
   S.cam=stream;video.srcObject=stream;await video.play().catch(function(){});
   setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง",false);
   try{await loadModel(tag)}
   catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ตอบคำถามด้วยตนเองแทนได้");return}
   tag.textContent="ตรวจจับท่าทางแล้ว";
 
-  var running=false, t0=0, samples=[], lostFrames=0, AUTOB=null;
-  function finish(held){
+  var stage=0, running=false, t0=0, samples=[], lostFrames=0, AUTOB=null;
+  var results=[];      /* [{held, sway}] ต่อท่า */
+
+  function markStage(i,txt,cls){
+    var el=document.getElementById("stg"+i);
+    if(el)el.innerHTML=cls?'<span class="pill '+cls+'">'+txt+'</span>':txt;
+  }
+
+  /* จบทั้งชุด — ให้คะแนนตามท่าสูงสุดที่ยืนครบ 10 วินาที */
+  function finishAll(reason){
+    running=false;
+    var passed=0;
+    results.forEach(function(r){ if(r.held>=BAL_SECONDS-0.3)passed++ });
+    var sc=balanceScore(passed);
+    S.draft.balStages=results;
+    S.draft.balPassed=passed;
+    S.draft.balScoreHint=sc.score;
+    S.draft.balLabel=sc.nm;
+    /* ค่าความโคลงของท่าที่ยากที่สุดที่ทำได้ ใช้เป็นตัวแทน */
+    var lastOk=results.filter(function(r){return r.sway!=null}).pop();
+    S.draft.swayValue=lastOk?lastOk.sway:null;
+    S.draft.swayHeld=results.length?results[results.length-1].held:null;
+    S.draft.swayLabel=lastOk?swayLabel(lastOk.sway).nm:null;
+    stopCam();
+    audit("ทดสอบการทรงตัว 4 ท่า (CDC 4-Stage Balance Test)",
+      results.map(function(r,i){return (i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ"}).join(" · ")+
+      " · ผ่าน "+passed+"/4 ท่า · "+sc.nm+(reason?" · "+reason:""));
+    setStatus(passed>=3?"green":(passed>=2?"yellow":"red"),
+      "ทดสอบเสร็จ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
+    speak("ทดสอบการทรงตัวเสร็จเรียบร้อย ยืนผ่าน "+passed+" จาก 4 ท่า ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
+    setTimeout(function(){go("q",0)},2800);
+  }
+
+  function endStage(held){
     running=false;
     var sway=swayScore(samples);
-    var lab=swayLabel(sway);
-    S.draft.swayValue=sway;
-    S.draft.swayHeld=held;
-    S.draft.swayLabel=lab.nm;
-    stopCam();
-    audit("วัดการทรงตัวด้วยกล้อง",
-      "ยืนได้ "+held.toFixed(1)+" วินาที จาก "+BAL_SECONDS+" วินาที · ค่าความโคลง "+(sway!=null?sway.toFixed(4):"วัดไม่ได้")+" ("+lab.nm+")");
-    setStatus("green","วัดเสร็จแล้ว — ยืนได้ "+held.toFixed(0)+" วินาที · "+lab.nm,false);
-    speak("วัดเสร็จเรียบร้อย ยืนได้ "+held.toFixed(0)+" วินาที ระบบสังเกตว่า "+lab.nm+" ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
-    setTimeout(function(){go("q",0)},2600);
+    results.push({held:held,sway:sway,stage:BAL_STAGES[stage].nm});
+    var ok=held>=BAL_SECONDS-0.3;
+    markStage(stage,ok?"ผ่าน "+held.toFixed(0)+" วิ":"ได้ "+held.toFixed(1)+" วิ",ok?"t4":"t2");
+    if(!ok){
+      /* ยืนไม่ครบ 10 วินาที → หยุดตามโปรโตคอล ไม่ต้องทำท่าที่ยากกว่า */
+      for(var i=stage+1;i<BAL_STAGES.length;i++)markStage(i,"ไม่ได้ทำ","");
+      speak("ยืนได้ "+held.toFixed(0)+" วินาที ยังไม่ครบสิบวินาที จึงหยุดการทดสอบตามเกณฑ์");
+      finishAll("หยุดที่ท่าที่ "+(stage+1)+" เพราะยืนไม่ครบ 10 วินาที");
+      return;
+    }
+    stage++;
+    if(stage>=BAL_STAGES.length){finishAll("ทำครบทุกท่า");return}
+    /* ท่าถัดไป */
+    startBtn.disabled=false;
+    startBtn.textContent="เริ่มทดสอบท่าที่ "+(stage+1);
+    coach.textContent="ท่าที่ "+(stage+1)+" — "+BAL_STAGES[stage].how;
+    secEl.textContent=BAL_SECONDS;trk.style.width="0%";swayEl.textContent="—";
+    setStatus("green","ผ่านท่าที่ "+stage+" — ขั้นต่อไป "+BAL_STAGES[stage].nm,false);
+    speak("ยืนครบสิบวินาที เก่งมากค่ะ ท่าต่อไป "+BAL_STAGES[stage].nm+" "+BAL_STAGES[stage].how);
+    if(AUTOB)AUTOB.reset();
   }
+
   function loop(){
     if(S.screen!=="balance")return;
     var r=null;try{r=POSE.detectForVideo(video,performance.now())}catch(e){}
@@ -1638,36 +1711,31 @@ async function startBalancePipeline(){
     drawPose(ctx,canvas,video,lm);
     if(lm){
       var q=visOK(lm);
-      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>";
+      qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b> · ท่าที่ "+(stage+1)+"/4";
       if(running){
         lostFrames=0;
         var w=shoulderWidth(lm);
-        if(w>0.02){
-          var c=trunkCenter(lm);
-          samples.push({x:c.x/w, y:c.y/w});
-        }
+        if(w>0.02){var c=trunkCenter(lm);samples.push({x:c.x/w,y:c.y/w})}
         var el=(performance.now()-t0)/1000;
-        var left=Math.max(0,BAL_SECONDS-el);
-        secEl.textContent=left.toFixed(0);
+        secEl.textContent=Math.max(0,BAL_SECONDS-el).toFixed(0);
         trk.style.width=Math.min(100,el/BAL_SECONDS*100)+"%";
         var live=swayScore(samples.slice(-90));
         if(live!=null)swayEl.textContent=swayLabel(live).nm;
-        if(el>=BAL_SECONDS){finish(BAL_SECONDS);return}
+        if(el>=BAL_SECONDS){endStage(BAL_SECONDS);return}
       }else{
         if(AUTOB&&!AUTOB.counting)
           setStatus(q>=0.85?"green":"yellow",
-            q>=0.85?"เห็นตัวชัดแล้ว — ยืนเท้าชิด ระบบกำลังจะเริ่มนับ":"ถอยให้เห็นทั้งตัวก่อน",false);
+            q>=0.85?("เห็นตัวชัดแล้ว — ยืน"+BAL_STAGES[stage].nm+" ระบบกำลังจะเริ่มนับ"):"ถอยให้เห็นทั้งตัวก่อน",false);
         if(AUTOB)AUTOB.update(q>=0.85);
       }
     }else{
       qual.innerHTML="คุณภาพภาพ <b>—</b>";
       if(running){
         lostFrames++;
-        /* หลุดกรอบนานเกิน ~2 วินาที = น่าจะก้าวออกหรือคว้าจับ → หยุดและบันทึกเท่าที่ทำได้ */
         if(lostFrames>60){
           var elp=(performance.now()-t0)/1000;
           coach.textContent="ตรวจไม่พบตัวในกรอบ — บันทึกเท่าที่ทำได้";
-          finish(Math.min(elp,BAL_SECONDS));return;
+          endStage(Math.min(elp,BAL_SECONDS));return;
         }
       }
     }
@@ -1676,22 +1744,23 @@ async function startBalancePipeline(){
   loop();
   AUTOB=new AutoCapture({screen:"balance",holdMs:2200,readyText:"ยืนพร้อมแล้ว",
     abortOnLost:false,onFire:function(){begin()}});
-  speak("กรุณายืนเท้าชิดกัน มือแนบลำตัว ยืนใกล้ที่จับ ระบบจะเริ่มนับให้เองเมื่อพร้อม");
+  speak("ทดสอบการทรงตัวสี่ท่า ลืมตาตลอด ไม่ต้องจับสิ่งใด ท่าแรก "+BAL_STAGES[0].how+" ระบบจะเริ่มนับให้เองเมื่อพร้อม");
   function begin(){
     if(running)return;
     running=true;t0=performance.now();samples=[];lostFrames=0;
-    startBtn.disabled=true;startBtn.textContent="กำลังวัด…";
-    setStatus("green","หลับตาได้เลย — ยืนนิ่ง ๆ 10 วินาที",false);
-    speak("หลับตาได้เลย ยืนนิ่ง ๆ สิบวินาที");
-    coach.innerHTML="หลับตา ยืนนิ่ง ๆ<span class='statebadge'>กำลังวัด</span>";
+    startBtn.disabled=true;startBtn.textContent="กำลังวัดท่าที่ "+(stage+1)+"…";
+    markStage(stage,"กำลังวัด","t3");
+    setStatus("green","ยืนนิ่ง ๆ 10 วินาที — ลืมตาไว้",false);
+    speak("เริ่มจับเวลา ยืนนิ่ง ๆ สิบวินาที");
+    coach.innerHTML=BAL_STAGES[stage].how+"<span class='statebadge'>กำลังวัด</span>";
   }
   startBtn.addEventListener("click",function(){if(AUTOB)AUTOB.abort();begin()});
 }
 
 /* ---------- คำถามเสริม 4 ข้อ ---------- */
 var QS=[
-  {k:"balance",q:"ยืนเท้าชิดกันหลับตา 10 วินาทีได้ไหม",fromCamera:true,
-   o:[["ได้สบาย ไม่โคลง",3],["ได้แต่โคลงเล็กน้อย",2],["ต้องมีที่จับ",1],["ทำไม่ได้",0]]},
+  {k:"balance",q:"ความรู้สึกของท่านเองต่อการทรงตัว",fromCamera:true,
+   o:[["มั่นคงดี ยืนขาเดียวได้สบาย",3],["มั่นคงพอควร ต่อเท้าได้แต่ขาเดียวยาก",2],["รู้สึกโคลง ต้องมีที่จับใกล้มือ",1],["ทรงตัวลำบาก ต้องมีคนช่วย",0]]},
   {k:"falls",q:"ในรอบ 12 เดือน หกล้มกี่ครั้ง",verify:true,
    o:[["ไม่เคยล้ม",2],["ล้ม 1 ครั้ง",1],["ล้มตั้งแต่ 2 ครั้ง",0]]},
   {k:"meds",q:"ตอนนี้กินยาประจำกี่ชนิด",verify:true,
@@ -1749,16 +1818,22 @@ function verifyNotice(){
 
 /* การ์ดแสดงสิ่งที่กล้องสังเกตได้ ก่อนให้ผู้ใช้ยืนยันด้วยตนเอง */
 function cameraObs(){
-  if(S.draft.swayValue===undefined)return "";
-  if(S.draft.swayValue===null&&S.draft.swayHeld==null)return "";
-  var lab=swayLabel(S.draft.swayValue);
-  var held=S.draft.swayHeld;
+  var st=S.draft.balStages;
+  if(!st||!st.length)return "";
+  var passed=S.draft.balPassed||0;
+  var sc=balanceScore(passed);
   return '<div class="card" style="background:var(--surf2)">'+
-  '<h3>สิ่งที่กล้องสังเกตได้</h3>'+
-  '<div class="rowline"><span class="k">ยืนได้นาน</span><span class="v">'+(held!=null?held.toFixed(0)+" / "+BAL_SECONDS+" วินาที":"—")+'</span></div>'+
-  '<div class="rowline"><span class="k">ความโคลงเคลง</span><span class="v"><span class="pill '+lab.cls+'">'+lab.nm+'</span></span></div>'+
-  (S.draft.swayValue!=null?'<div class="rowline"><span class="k">ค่าที่วัดได้</span><span class="v">'+S.draft.swayValue.toFixed(4)+'</span></div>':'')+
-  '<p class="sub" style="margin:10px 0 0">'+esc(lab.hint)+' — <b>นี่เป็นเพียงข้อสังเกตจากกล้อง ไม่ใช่คำตัดสิน</b> กรุณาเลือกคำตอบที่ตรงกับความรู้สึกจริงของท่านด้านล่าง ระบบจะบันทึกทั้งสองค่าไว้คู่กัน และเจ้าหน้าที่ประกันภัยจะตรวจสอบอีกครั้ง</p></div>';
+  '<h3>สิ่งที่กล้องสังเกตได้ — 4-Stage Balance Test</h3>'+
+  st.map(function(r,i){
+    var ok=r.held>=BAL_SECONDS-0.3;
+    return '<div class="rowline"><span class="k">'+(i+1)+' · '+esc(BAL_STAGES[i].nm)+'</span>'+
+    '<span class="v"><span class="pill '+(ok?"t4":"t2")+'">'+r.held.toFixed(1)+' วิ'+(ok?" ผ่าน":"")+'</span></span></div>';
+  }).join("")+
+  '<div class="rowline"><span class="k">ยืนผ่าน</span><span class="v">'+passed+' จาก 4 ท่า</span></div>'+
+  '<div class="rowline"><span class="k">ระดับตามกล้อง</span><span class="v"><span class="pill '+(sc.score>=3?"t4":sc.score>=2?"t3":sc.score>=1?"t2":"t1")+'">'+esc(sc.nm.split(" — ")[0])+'</span></span></div>'+
+  (S.draft.swayValue!=null?'<div class="rowline"><span class="k">ความโคลงในท่าสุดท้าย</span><span class="v">'+esc(S.draft.swayLabel||"—")+' ('+S.draft.swayValue.toFixed(4)+')</span></div>':'')+
+  '<p class="sub" style="margin:10px 0 0"><b>นี่เป็นเพียงข้อสังเกตจากกล้อง ไม่ใช่คำตัดสิน</b> กรุณาเลือกคำตอบที่ตรงกับความรู้สึกจริงของท่านด้านล่าง ระบบบันทึกทั้งสองค่าไว้คู่กัน และเจ้าหน้าที่ประกันภัยจะตรวจสอบอีกครั้ง</p>'+
+  '<p class="sub" style="margin:8px 0 0;font-size:13px;color:var(--ink3)">เกณฑ์อ้างอิง: ผู้ที่ยืนท่าต่อเท้าไม่ครบ 10 วินาที สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น (CDC STEADI)</p></div>';
 }
 
 /* ---------- หน้าคำถาม: รองรับทั้งแบบเลือกตอบ และรูบริกบาร์เธล ---------- */
@@ -1844,6 +1919,9 @@ async function finishAssess(){
            method:S.draft.method,reps:S.draft.reps,cv:S.draft.cv,gaps:S.draft.gaps||null,
            verified:!!S.draft.identityVerified,
            idChecks:S.draft.identityChecks||0, idFails:S.draft.identityFails||0,
+           balStages:S.draft.balStages||null,
+           balPassed:S.draft.balPassed!=null?S.draft.balPassed:null,
+           balLabel:S.draft.balLabel||null,
            sway:S.draft.swayValue!==undefined?S.draft.swayValue:null,
            swayHeld:S.draft.swayHeld!=null?S.draft.swayHeld:null,
            swayLabel:S.draft.swayLabel||null,
@@ -2045,7 +2123,7 @@ function resultV(rec){
   '<div class="rowline"><span class="k">คะแนนส่วนลุกนั่ง</span><span class="v">'+rec.parts.ftsst+' / 4</span></div></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
   '<div class="rowline"><span class="k">การทรงตัว '+(rec.sway!=null?'<span class="pill t4" style="font-size:10.5px;padding:2px 8px;margin-left:5px">กล้องวัด</span>':srcTag(rec.src&&rec.src.balance))+'</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
-  (rec.sway!=null?'<div class="rowline"><span class="k" style="padding-left:14px;font-size:13.5px">↳ กล้องสังเกต: ยืนได้ '+(rec.swayHeld!=null?rec.swayHeld.toFixed(0):"—")+' วิ · '+esc(rec.swayLabel||"—")+'</span><span class="v" style="font-size:13px">'+rec.sway.toFixed(4)+'</span></div>':'')+
+  (rec.balPassed!=null?'<div class="rowline"><span class="k" style="padding-left:14px;font-size:13.5px">↳ 4-Stage Balance: ผ่าน '+rec.balPassed+'/4 ท่า</span><span class="v" style="font-size:13px">'+esc((rec.balLabel||"").split(" — ")[0])+'</span></div>':'')+
   '<div class="rowline"><span class="k">ประวัติหกล้ม '+srcTag(rec.src&&rec.src.falls)+'</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
   '<div class="rowline"><span class="k">การใช้ยา '+srcTag(rec.src&&rec.src.meds)+'</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
   '<div class="rowline"><span class="k">กิจวัตรประจำวัน '+srcTag(rec.src&&rec.src.adl)+'</span><span class="v">'+rec.parts.adl+' / 2</span></div>'+
