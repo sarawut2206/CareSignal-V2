@@ -870,6 +870,57 @@ function voiceToggle(){
   if(VOICE.on)speak("เปิดเสียงแนะนำแล้ว");
   return VOICE.on;
 }
+
+/* ============================================================
+   จับอัตโนมัติ (AutoCapture) — ไม่ต้องกดปุ่มเอง
+   ------------------------------------------------------------
+   ปัญหาที่แก้: ผู้สูงอายุที่อยู่คนเดียวต้องเดินมากดปุ่มบันทึก
+   แต่พอเดินมาถึงมือถือ กล้องก็มองไม่เห็นตัวอีก กลายเป็นวงจรตัน
+
+   วิธีทำงาน: เมื่อเงื่อนไข "พร้อม" ต่อเนื่องครบ holdMs
+   ระบบจะพูดนับถอยหลัง 3-2-1 แล้วบันทึกให้เอง
+   ถ้าระหว่างนับผู้ใช้หลุดออกจากกรอบ จะยกเลิกและเริ่มนับใหม่
+   ปุ่มกดเองยังใช้ได้ตามปกติสำหรับคนที่มีผู้ช่วย
+   ============================================================ */
+function AutoCapture(opts){
+  opts=opts||{};
+  this.holdMs=opts.holdMs!==undefined?opts.holdMs:1600;  /* ต้องพร้อมต่อเนื่องเท่าไรก่อนเริ่มนับ */
+  this.onFire=opts.onFire||function(){};
+  this.readyText=opts.readyText||"พร้อมแล้ว";
+  this.abortOnLost=opts.abortOnLost!==false;
+  this.screen=opts.screen||null;      /* ยกเลิกอัตโนมัติถ้าเปลี่ยนหน้าจอ */
+  this.readySince=null; this.counting=false; this.done=false; this.timer=null;
+  this.enabled=opts.enabled!==false;
+}
+AutoCapture.prototype.update=function(ready){
+  if(this.done||!this.enabled)return;
+  if(this.counting){ if(this.abortOnLost&&!ready)this.abort(); return }
+  if(!ready){this.readySince=null;return}
+  if(this.readySince===null){this.readySince=performance.now();return}
+  if(performance.now()-this.readySince>=this.holdMs)this.begin();
+};
+AutoCapture.prototype.begin=function(){
+  var self=this; this.counting=true;
+  var n=3, nm={3:"สาม",2:"สอง",1:"หนึ่ง"};
+  setStatus("green",this.readyText+" — เตรียมตัว "+n,false);
+  speak(this.readyText+" เตรียมตัว "+nm[n]);
+  this.timer=setInterval(function(){
+    if(self.screen&&S.screen!==self.screen){self.abort();return}
+    n--;
+    if(n>=1){setStatus("green","เตรียมตัว… "+n,false);speak(nm[n])}
+    else{
+      clearInterval(self.timer);self.timer=null;
+      self.counting=false;self.done=true;
+      self.onFire();
+    }
+  },1000);
+};
+AutoCapture.prototype.abort=function(){
+  if(this.timer){clearInterval(this.timer);this.timer=null}
+  this.counting=false;this.readySince=null;
+};
+AutoCapture.prototype.reset=function(){this.abort();this.done=false};
+
 /* iOS/Android ต้องมี user gesture ก่อนถึงจะพูดได้ — ปลดล็อกตอนแตะครั้งแรก */
 document.addEventListener("click",function unlock(){
   try{if("speechSynthesis" in window){var u=new SpeechSynthesisUtterance("");speechSynthesis.speak(u)}}catch(e){}
@@ -1034,24 +1085,37 @@ async function startFacePipeline(){
         ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,Math.max(3,canvas.width/120),0,6.3);ctx.fill();
       });
       var sg=faceSignature(lm);
-      if(sg){cur=sg;tag.textContent="พบใบหน้าแล้ว";coach.textContent="เห็นชัดแล้ว — ติ๊กยินยอมด้านล่างแล้วกดบันทึก";
-        setStatus("green","พร้อมบันทึก — ติ๊กยินยอมแล้วกดปุ่มบันทึก");
-        save.disabled=!chk.checked;}
+      if(sg){cur=sg;tag.textContent="พบใบหน้าแล้ว";
+        save.disabled=!chk.checked;
+        if(chk.checked){
+          coach.textContent="เห็นชัดแล้ว — ระบบจะบันทึกให้เองอัตโนมัติ";
+          if(!AUTO.counting)setStatus("green","พบใบหน้าแล้ว — เตรียมบันทึกอัตโนมัติ",false);
+        }else{
+          coach.textContent="เห็นใบหน้าแล้ว — ติ๊กยินยอมด้านล่าง ระบบจะบันทึกให้เอง";
+          setStatus("yellow","เห็นใบหน้าแล้ว — ติ๊กยินยอมด้านล่างก่อน");
+        }
+      }
     }else{tag.textContent="ยังไม่พบใบหน้า";coach.textContent="ขยับให้เห็นใบหน้าเต็มในกรอบ";save.disabled=true;
       setStatus("yellow","ยังไม่พบใบหน้า — ขยับให้เห็นใบหน้าเต็มในกรอบ")}
+    AUTO.update(!!(cur&&lm&&chk.checked));
     RAF=requestAnimationFrame(loop);
   }
+  var AUTO=new AutoCapture({screen:"face",holdMs:1800,readyText:"พบใบหน้าแล้ว",
+    onFire:function(){doSaveFace()}});
   loop();
-  chk.addEventListener("change",function(){save.disabled=!(this.checked&&cur)});
-  save.addEventListener("click",async function(){
+  chk.addEventListener("change",function(){save.disabled=!(this.checked&&cur);if(!this.checked)AUTO.abort()});
+  save.addEventListener("click",function(){AUTO.abort();doSaveFace()});
+  async function doSaveFace(){
     if(!cur||!chk.checked)return;
     saveFaceSig(cur);
     S.draft.identityVerified=true;
     audit("ลงทะเบียนใบหน้า","เก็บลายเซ็นเชิงสัดส่วน 6 ค่าไว้ในเครื่องผู้ใช้ ไม่เก็บภาพและไม่อัปโหลด","ผู้ใช้ให้ความยินยอมตามมาตรา 26");
     await saveAll();
     toast("บันทึกใบหน้าแล้ว");
-    go("calib");
-  });
+    setStatus("green","บันทึกใบหน้าเรียบร้อย — ขั้นต่อไป สอบเทียบท่านั่งและท่ายืน",false);
+    speak("บันทึกใบหน้าเรียบร้อย ขั้นตอนต่อไป สอบเทียบท่านั่งและท่ายืน");
+    setTimeout(function(){go("calib")},2200);
+  }
 }
 
 /* ---------- ตั้งค่ากล้อง + สอบเทียบ ---------- */
@@ -1167,8 +1231,11 @@ function drawPose(ctx,canvas,video,lm){
   });
 }
 function setupCalib(video,canvas,ctx){
-  var step=0, sitVal=null, standVal=null, cur=null;
+  var step=0, sitVal=null, standVal=null, cur=null, armAt=0;
   var cap=document.getElementById("cap"), cstep=document.getElementById("cstep"), coach=document.getElementById("coach");
+  var AUTO=new AutoCapture({screen:"calib",holdMs:2000,readyText:"พร้อมแล้ว",
+    onFire:function(){doCapture()}});
+  speak("ขั้นตอนสอบเทียบ กรุณานั่งบนเก้าอี้ ให้เห็นตัวเต็มในกล้อง ระบบจะบันทึกให้เองอัตโนมัติ");
   function loop(){
     if(S.screen!=="calib"){return}
     var r=null;
@@ -1182,32 +1249,45 @@ function setupCalib(video,canvas,ctx){
       else if(m==null){coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";cap.disabled=true;
         setStatus("yellow","ถอยห่างอีกนิด ให้เห็นทั้งตัว")}
       else{cur=m;cap.disabled=false;
-        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งให้สบายแล้วกดบันทึกท่านั่ง":"เห็นชัดแล้ว — ยืนตรงแล้วกดบันทึกท่ายืน";
-        setStatus("green",step===0?"พร้อมแล้ว — นั่งให้สบาย แล้วกดปุ่มบันทึกท่านั่ง":"พร้อมแล้ว — ยืนตรง แล้วกดปุ่มบันทึกท่ายืน");}
+        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งนิ่ง ๆ ระบบจะบันทึกให้เอง":"เห็นชัดแล้ว — ยืนตรงนิ่ง ๆ ระบบจะบันทึกให้เอง";
+        if(!AUTO.counting)setStatus("green",step===0?"เห็นตัวชัดแล้ว — นั่งนิ่ง ๆ ระบบกำลังจะบันทึก":"เห็นตัวชัดแล้ว — ยืนนิ่ง ๆ ระบบกำลังจะบันทึก",false);}
     }else{coach.textContent="ยังไม่พบคนในภาพ";cap.disabled=true;
       setStatus("yellow","ยังไม่พบคนในภาพ — เข้ามาในกรอบกล้อง")}
+    /* หน่วงหลังบันทึกท่านั่ง เพื่อให้มีเวลาลุกขึ้นยืนก่อนเริ่มนับใหม่ */
+    AUTO.update(cur!=null && !cap.disabled && performance.now()>=armAt);
     RAF=requestAnimationFrame(loop);
   }
   loop();
-  cap.addEventListener("click",function(){
+  cap.addEventListener("click",function(){AUTO.abort();doCapture()});
+  function doCapture(){
     if(cur==null)return;
     if(step===0){
       sitVal=cur;step=1;
       cstep.textContent="ขั้นที่ 2 · ยืนขึ้นตรง ๆ หนึ่งครั้ง";
       cap.textContent="บันทึกท่ายืน";
       toast("บันทึกท่านั่งแล้ว");
+      setStatus("green","บันทึกท่านั่งเรียบร้อย — ขั้นต่อไป ยืนขึ้นตรง ๆ",false);
+      speak("บันทึกท่านั่งเรียบร้อย ขั้นตอนต่อไป กรุณายืนขึ้นตรง ๆ แล้วยืนนิ่ง ๆ");
+      armAt=performance.now()+4000;   /* ให้เวลา 4 วินาทีลุกขึ้นยืน */
+      AUTO.reset();
+      return;
     }else{
       standVal=cur;
       if(standVal-sitVal<0.045){
         toast("ความต่างระหว่างท่านั่งกับท่ายืนน้อยเกินไป ลองใหม่โดยยืนให้ตรงสุด");
-        step=0;cstep.textContent="ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว";cap.textContent="บันทึกท่านั่ง";return;
+        setStatus("red","ท่านั่งกับท่ายืนต่างกันน้อยเกินไป — เริ่มใหม่ กรุณานั่งลงก่อน");
+        speak("ท่านั่งกับท่ายืนต่างกันน้อยเกินไป เริ่มใหม่ กรุณานั่งลงก่อน");
+        step=0;cstep.textContent="ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว";cap.textContent="บันทึกท่านั่ง";
+        armAt=performance.now()+4000;AUTO.reset();return;
       }
       S.draft.sitRef=sitVal;S.draft.standRef=standVal;
       audit("สอบเทียบกล้อง","ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
       toast("สอบเทียบเรียบร้อย");
-      go("test");
+      setStatus("green","สอบเทียบเรียบร้อย — ขั้นต่อไป ทดสอบลุกนั่ง 5 ครั้ง",false);
+      speak("สอบเทียบเรียบร้อย ขั้นตอนต่อไป ทดสอบลุกนั่ง ห้าครั้ง กรุณานั่งลงบนเก้าอี้");
+      setTimeout(function(){go("test")},2400);
     }
-  });
+  }
 }
 function setupTest(video,canvas,ctx){
   DET=new RepDetector({target:5});
@@ -1219,7 +1299,7 @@ function setupTest(video,canvas,ctx){
   var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
       st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
       startBtn=document.getElementById("startBtn"),stopBtn=document.getElementById("stopBtn");
-  var running=false, t0=0, lastEvt=0;
+  var running=false, t0=0, lastEvt=0, AUTOSTART=null;
   function loop(){
     if(S.screen!=="test")return;
     var r=null;
@@ -1255,7 +1335,12 @@ function setupTest(video,canvas,ctx){
         if(ev&&ev.event==="down")lastEvt=performance.now();
         if(ev&&ev.event==="finish"){finishTest(ev.elapsed);return}
       }else if(m!=null&&!running){
-        st.textContent=(m>=(S.draft.sitRef+S.draft.standRef)/2)?"ยืน":"นั่ง";
+        var sitting=m<(S.draft.sitRef+S.draft.standRef)/2;
+        st.textContent=sitting?"นั่ง":"ยืน";
+        if(AUTOSTART&&!AUTOSTART.counting)
+          setStatus(sitting?"green":"yellow",
+            sitting?"เห็นท่านั่งแล้ว — นั่งนิ่ง ๆ ระบบกำลังจะเริ่มจับเวลา":"กรุณานั่งลงบนเก้าอี้ก่อน",false);
+        if(AUTOSTART)AUTOSTART.update(sitting&&q>=0.8);
       }
       if(q<0.8)coach.textContent="เห็นตัวไม่ครบ — ขยับมือถือให้เห็นทั้งตัว";
     }else{qual.innerHTML="คุณภาพภาพ <b>—</b>"}
@@ -1271,27 +1356,23 @@ function setupTest(video,canvas,ctx){
     RAF=requestAnimationFrame(loop);
   }
   loop();
-  var counting=false;
+  /* เริ่มจับเวลาเองอัตโนมัติเมื่อผู้ใช้นั่งนิ่งพร้อม — ไม่ต้องเดินมากดปุ่ม */
+  AUTOSTART=new AutoCapture({screen:"test",holdMs:2500,readyText:"นั่งพร้อมแล้ว",
+    abortOnLost:false,onFire:function(){beginTimer()}});
+  speak("กรุณานั่งบนเก้าอี้ กอดอกไว้ ระบบจะเริ่มจับเวลาให้เองเมื่อพร้อม");
+  function beginTimer(){
+    if(running)return;
+    AUTOSTART.abort();AUTOSTART.done=true;
+    running=true;t0=performance.now();lastEvt=t0;DET.start(t0);
+    startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
+    stopBtn.hidden=false;
+    setStatus("green","เริ่ม! ลุก-นั่งให้ครบ 5 ครั้ง",false);speak("เริ่มได้เลย");
+    coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
+  }
   startBtn.addEventListener("click",function(){
-    if(running||counting)return;
-    counting=true;startBtn.disabled=true;
-    var n=3;
-    var nm={3:"สาม",2:"สอง",1:"หนึ่ง"};
-    setStatus("yellow","เตรียมตัว… "+n,false);speak("เตรียมตัว "+nm[n]);
-    startBtn.textContent="เตรียมตัว… "+n;
-    var iv=setInterval(function(){
-      if(S.screen!=="test"){clearInterval(iv);counting=false;return}
-      n--;
-      if(n>=1){setStatus("yellow","เตรียมตัว… "+n,false);speak(nm[n]);startBtn.textContent="เตรียมตัว… "+n;}
-      else{
-        clearInterval(iv);counting=false;
-        running=true;t0=performance.now();lastEvt=t0;DET.start(t0);
-        startBtn.textContent="กำลังจับเวลา…";
-        stopBtn.hidden=false;
-        setStatus("green","เริ่ม! ลุก-นั่งให้ครบ 5 ครั้ง",false);speak("เริ่มได้เลย");
-        coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
-      }
-    },1000);
+    if(running)return;
+    AUTOSTART.abort();
+    beginTimer();
   });
   stopBtn.addEventListener("click",function(){
     var reps=DET?DET.reps:0;
