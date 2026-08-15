@@ -450,6 +450,111 @@ var CSBackend = (function () {
     return true;
   }
 
+
+  /* ============================================================
+     ระบบครอบครัว — เชิญ → ขอเชื่อม → อนุมัติ → กำหนดสิทธิ์
+     ------------------------------------------------------------
+     สิทธิ์ทั้งหมดบังคับที่ Row Level Security ฝั่งเซิร์ฟเวอร์:
+     ครอบครัวที่ยังไม่ถูกอนุมัติ SELECT อะไรไม่ได้เลย ต่อให้แก้โค้ดนี้
+     ============================================================ */
+  /* ฝั่งผู้เอาประกัน */
+  async function createInvite() {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("cs_create_invite");
+    if (r.error) throw r.error;
+    return r.data;                       /* {code, expires_at} */
+  }
+  async function listMyCarers() {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("caregiver_links")
+      .select("*, carer:profiles!caregiver_links_carer_id_fkey(display_name, pseudonym)")
+      .eq("member_id", u.id).order("requested_at", { ascending: false });
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function decideCarer(linkId, approved, permissions) {
+    if (!isCloud()) throw new Error("offline");
+    var patch = { status: approved ? "approved" : "declined", decided_at: new Date().toISOString() };
+    if (approved && permissions) patch.permissions = permissions;
+    var r = await sb.from("caregiver_links").update(patch).eq("id", linkId).select().single();
+    if (r.error) throw r.error;
+    await audit(approved ? "family.approve" : "family.decline", null,
+      (approved ? "อนุมัติ" : "ปฏิเสธ") + "คำขอเชื่อมต่อของครอบครัว");
+    return r.data;
+  }
+  async function updateCarerPermissions(linkId, permissions) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("caregiver_links").update({ permissions: permissions })
+      .eq("id", linkId).select().single();
+    if (r.error) throw r.error;
+    await audit("family.permissions", null, "แก้สิทธิ์การเข้าถึงของครอบครัว");
+    return r.data;
+  }
+  async function revokeCarer(linkId) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("caregiver_links")
+      .update({ status: "revoked", decided_at: new Date().toISOString() })
+      .eq("id", linkId).select().single();
+    if (r.error) throw r.error;
+    await audit("family.revoke", null, "ยกเลิกการเชื่อมต่อของครอบครัว");
+    return r.data;
+  }
+
+  /* ฝั่งครอบครัว */
+  async function redeemInvite(code, relationship) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("cs_redeem_invite", { p_code: code, p_relationship: relationship || null });
+    if (r.error) throw r.error;
+    return r.data;                       /* {member_id, member_name} */
+  }
+  async function famMembers() {
+    if (!isCloud()) return [];
+    var r = await sb.from("family_members").select("*");
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function famAssessments(memberId, limit) {
+    if (!isCloud()) return [];
+    var r = await sb.from("assessments").select("*")
+      .eq("user_id", memberId).order("assessed_at", { ascending: false }).limit(limit || 60);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function famRisk(memberId, limit) {
+    if (!isCloud()) return [];
+    var r = await sb.from("risk_signals").select("*")
+      .eq("user_id", memberId).order("created_at", { ascending: false }).limit(limit || 10);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function famReferrals(memberId, limit) {
+    if (!isCloud()) return [];
+    var r = await sb.from("referrals").select("*")
+      .eq("user_id", memberId).order("created_at", { ascending: false }).limit(limit || 5);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function famNotifications(limit) {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("family_notifications").select("*")
+      .eq("carer_id", u.id).order("created_at", { ascending: false }).limit(limit || 40);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function notifRead(id) {
+    if (!isCloud()) return;
+    await sb.from("family_notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+  }
+  async function famCancelRequest(linkId) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("caregiver_links")
+      .update({ status: "revoked" }).eq("id", linkId).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+
   return {
     init: init, isCloud: isCloud, mode: getMode, client: client,
     signUpUser: signUpUser, signInUser: signInUser,
@@ -462,6 +567,11 @@ var CSBackend = (function () {
     saveRiskSignal: saveRiskSignal, createReferral: createReferral,
     listReferralQueue: listReferralQueue, decideReferral: decideReferral,
     insurerPortfolio: insurerPortfolio,
+    createInvite: createInvite, listMyCarers: listMyCarers, decideCarer: decideCarer,
+    updateCarerPermissions: updateCarerPermissions, revokeCarer: revokeCarer,
+    redeemInvite: redeemInvite, famMembers: famMembers, famAssessments: famAssessments,
+    famRisk: famRisk, famReferrals: famReferrals, famNotifications: famNotifications,
+    notifRead: notifRead, famCancelRequest: famCancelRequest,
     saveTrial: saveTrial, listTrials: listTrials,
     requestMedicalCheck: requestMedicalCheck, listMedicalChecks: listMedicalChecks,
     completeMedicalCheck: completeMedicalCheck,

@@ -243,11 +243,12 @@ body.camfs .hudtop{display:none}
     <button class="tab" data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg><b>หน้าแรก</b></button>
     <button class="tab" data-go="assessIntro"><svg viewBox="0 0 24 24"><path d="M12 21c-1 0-8-4.5-8-10a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 11c0 5.5-7 10-8 10z"/></svg><b>ตรวจร่างกาย</b></button>
     <button class="tab" data-go="history"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M7 15l3.5-4.5 3 3L18 7"/></svg><b>แนวโน้ม</b></button>
+    <button class="tab" data-go="family"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c1-3.2 3.4-5 6-5s5 1.8 6 5"/><path d="M16 20c.5-2 1.6-3.2 3-3.6"/></svg><b>ครอบครัว</b></button>
   </nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=142"></script>
+<script src="./cs-backend.js?v=143"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
 
@@ -966,10 +967,11 @@ function askTime(cb,onCancel){
 
 function render(arg){
   setTimeout(bindFontBar,0);
-  T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
-  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
+  T.hidden = getPortal()==="carer" || !S.data.profile ||
+    ["portal","carerAuth","famLink","famHome","famView","assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
+  var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"home",ai:"home",family:"family"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={loading:loadingV,portal:portalV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -986,7 +988,7 @@ function welcomeV(){
   '<div class="notice">ข้อสัญญาที่เราให้ไว้กับคุณ: ผลตรวจใช้<b>ลดค่าเบี้ยได้อย่างเดียว</b> ไม่มีการขึ้นค่าเบี้ยหรือไม่รับประกันเพราะผลตรวจแย่ลง และการอนุมัติเงินทุกครั้งตัดสินโดยคนจริง ไม่ใช่คอมพิวเตอร์</div>'+
   '<button class="cta loop" data-go="register">เริ่มใช้งาน · สร้างบัญชี</button>'+
   '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button>'+
-  '<button class="ghostb" data-go="family" style="border-color:#C7DBFB;color:var(--brand)">👨‍👩‍👧 สำหรับครอบครัว/ผู้ดูแล · ดูผลของคนที่คุณดูแล</button></div>';
+  '<button class="ghostb" data-go="portal">‹ กลับไปเลือกบทบาท</button></div>';
 }
 function registerV(){
   head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้คำนวณเกณฑ์อายุและเบี้ยประกันของคุณ เก็บในฐานข้อมูลของคุณเอง","welcome");
@@ -1090,106 +1092,444 @@ function loginV(){
 }
 
 
+
 /* ============================================================
-   โหมดครอบครัว / ผู้ดูแล — ดูอย่างเดียว
+   ระบบบัญชีครอบครัว — Account ≠ Permission
    ------------------------------------------------------------
-   ครอบครัวเข้าดูผลของผู้เอาประกันด้วยเบอร์และรหัส 4 หลักที่
-   ผู้เอาประกัน "มอบให้เอง" (นี่คือกลไกความยินยอมของโหมดนี้ —
-   ระบบย้ำบนหน้าจอว่าต้องได้รับจากเจ้าของข้อมูลโดยตรง)
-   ข้อมูลถูกอ่านมาแสดงเท่านั้น ไม่แตะ S.data ของบัญชีในเครื่องนี้
-   และไม่มีปุ่มแก้ไข/ประเมิน/ชำระเงินใด ๆ ในโหมดนี้
+   หลักการ: การรู้รหัสสมาชิกไม่เท่ากับมีสิทธิ์อ่านข้อมูลสุขภาพ
+   ครอบครัวมีบัญชีของตัวเอง แล้วต้องผ่านลำดับนี้เท่านั้น
+     ผู้เอาประกันสร้างรหัสเชิญ 6 หลัก (หมดอายุ 24 ชม.)
+       → ครอบครัวกรอกรหัส เกิด "คำขอ" (ยังอ่านอะไรไม่ได้)
+       → ผู้เอาประกันอนุมัติ พร้อมติ๊กว่าให้ดูอะไรได้บ้าง
+       → จึงอ่านได้เฉพาะรายการที่ติ๊ก
+   สิทธิ์บังคับที่ Row Level Security บนฐานข้อมูล ไม่ใช่ที่หน้าจอนี้
    ============================================================ */
-function familyV(){
-  head("โหมดครอบครัว","ดูผลของคนที่คุณดูแล","ต้องได้รับเบอร์โทรและรหัส 4 หลักจากผู้เอาประกันโดยตรง","welcome");
+var PERM_LIST=[
+  {k:"status", nm:"สถานะล่าสุด (สีและคะแนนรวม)"},
+  {k:"trend",  nm:"แนวโน้มสมรรถภาพย้อนหลัง"},
+  {k:"results",nm:"ผลการทดสอบ (ลุกนั่ง · ลุกเดิน · ทรงตัว)"},
+  {k:"adl",    nm:"ความสามารถทำกิจวัตรประจำวัน (ADL)"},
+  {k:"alerts", nm:"รับการแจ้งเตือนเมื่อความเสี่ยงเปลี่ยน"},
+  {k:"meds",   nm:"ข้อมูลยาที่ใช้ประจำ"}
+];
+var REL_LIST=["บุตรสาว","บุตรชาย","คู่สมรส","หลาน","พี่/น้อง","ผู้ดูแล","อื่น ๆ"];
+function defaultPerms(){return {status:true,trend:true,results:true,adl:true,alerts:true,meds:false}}
+function permSummary(p){
+  p=p||{};
+  var on=PERM_LIST.filter(function(x){return p[x.k]}).length;
+  return on+" จาก "+PERM_LIST.length+" รายการ";
+}
+
+/* ---------- ฝั่งผู้เอาประกัน: จัดการว่าใครดูข้อมูลของฉันได้ ---------- */
+async function familyV(){
+  head("ครอบครัว","ใครดูข้อมูลของฉันได้บ้าง","คุณเป็นผู้ตัดสินใจทั้งหมด และถอนสิทธิ์เมื่อไรก็ได้","home");
+  if(!CLOUD.session){
+    V.innerHTML='<div class="anim senior"><div class="notice">ต้องเชื่อมบัญชีกับระบบกลางก่อนจึงจะเชิญครอบครัวได้ — บัญชีออฟไลน์ยังใช้ฟีเจอร์นี้ไม่ได้</div>'+
+      '<button class="ghostb" data-go="home">กลับหน้าแรก</button></div>';
+    return;
+  }
+  V.innerHTML='<div class="anim senior"><div class="card"><p class="sub" style="margin:0">กำลังโหลด…</p></div></div>';
+  var links=[];
+  try{links=await CSBackend.listMyCarers()}catch(e){}
+  var pending=links.filter(function(l){return l.status==="pending"});
+  var active =links.filter(function(l){return l.status==="approved"});
+  var others =links.filter(function(l){return l.status==="declined"||l.status==="revoked"});
+
+  var html='<div class="anim senior">';
+
+  /* คำขอใหม่ต้องเด่นที่สุด */
+  pending.forEach(function(l){
+    var nm=(l.carer&&l.carer.display_name)||"ผู้ขอเชื่อมต่อ";
+    html+='<div class="card" style="border:2px solid var(--accent)">'+
+      '<h3 style="color:var(--accent2);font-size:19px;margin:0 0 6px">คำขอใหม่</h3>'+
+      '<p class="sub" style="font-size:16px;margin:0 0 4px"><b>'+esc(nm)+'</b> ขอเชื่อมต่อในฐานะ “'+esc(l.relationship||"ผู้ดูแล")+'”</p>'+
+      '<p class="sub" style="margin:0 0 12px">ท่านต้องการอนุญาตให้ดูอะไรบ้าง? (ติ๊กเฉพาะที่ต้องการ)</p>'+
+      PERM_LIST.map(function(x){
+        return '<label class="chk" style="font-size:16px"><input type="checkbox" data-perm="'+l.id+'" data-k="'+x.k+'"'+
+               (defaultPerms()[x.k]?" checked":"")+'><span>'+x.nm+'</span></label>';
+      }).join("")+
+      '<button class="cta loop" data-approve="'+l.id+'" style="margin-top:12px">อนุญาตตามที่เลือก</button>'+
+      '<button class="ghostb" data-decline="'+l.id+'">ปฏิเสธคำขอนี้</button></div>';
+  });
+
+  html+='<div class="card"><h3 style="font-size:18px">ครอบครัวและผู้ดูแลของฉัน</h3>';
+  if(!active.length)html+='<p class="sub" style="margin:0">ยังไม่มีใครเชื่อมต่อ — กดปุ่มด้านล่างเพื่อเชิญ</p>';
+  active.forEach(function(l){
+    var nm=(l.carer&&l.carer.display_name)||"ผู้ดูแล";
+    html+='<div style="border-top:1px solid var(--line2);padding:14px 0">'+
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+      '<b style="font-size:17px">'+esc(nm)+'</b>'+
+      '<span class="sub" style="margin:0">'+esc(l.relationship||"ผู้ดูแล")+'</span>'+
+      '<span style="margin-left:auto;color:var(--c4);font-weight:600;font-size:14px">🟢 เชื่อมต่อแล้ว</span></div>'+
+      '<p class="sub" style="margin:6px 0 8px">อนุญาตแล้ว '+permSummary(l.permissions)+'</p>'+
+      PERM_LIST.map(function(x){
+        return '<div class="rowline" style="padding:5px 0"><span class="k">'+x.nm+'</span>'+
+               '<span class="v" style="color:'+((l.permissions||{})[x.k]?"var(--c4)":"var(--ink3)")+'">'+
+               ((l.permissions||{})[x.k]?"✓ ดูได้":"✕ ไม่ได้")+'</span></div>';
+      }).join("")+
+      '<button class="ghostb" data-manage="'+l.id+'" style="margin-top:8px">จัดการสิทธิ์</button>'+
+      '<button class="ghostb danger" data-revoke="'+l.id+'">ยกเลิกการเชื่อมต่อ</button></div>';
+  });
+  html+='</div>';
+
+  if(others.length){
+    html+='<div class="card"><h3>ประวัติ</h3>'+others.map(function(l){
+      var nm=(l.carer&&l.carer.display_name)||"ผู้ดูแล";
+      return '<div class="rowline"><span class="k">'+esc(nm)+'</span><span class="v" style="color:var(--ink3)">'+
+             (l.status==="declined"?"ปฏิเสธแล้ว":"ยกเลิกแล้ว")+'</span></div>';
+    }).join("")+'</div>';
+  }
+
+  html+='<button class="cta loop" id="inviteBtn">+ เชิญสมาชิกครอบครัว</button>'+
+    '<div class="notice">ครอบครัวจะเห็นได้<b>เฉพาะรายการที่ท่านติ๊กเท่านั้น</b> · ถอนสิทธิ์ได้ทุกเมื่อ และเมื่อถอนแล้วระบบจะปิดการเข้าถึงทันที · ทุกการเปลี่ยนสิทธิ์ถูกบันทึกไว้ตรวจสอบได้</div></div>';
+  V.innerHTML=html;
+
+  document.getElementById("inviteBtn").addEventListener("click",showInvite);
+  V.querySelectorAll("[data-approve]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      var id=b.dataset.approve, perms={};
+      V.querySelectorAll('[data-perm="'+id+'"]').forEach(function(c){perms[c.dataset.k]=c.checked});
+      b.disabled=true;b.textContent="กำลังบันทึก…";
+      try{await CSBackend.decideCarer(id,true,perms);toast("อนุญาตแล้ว");familyV()}
+      catch(e){b.disabled=false;b.textContent="อนุญาตตามที่เลือก";toast("บันทึกไม่สำเร็จ")}
+    });
+  });
+  V.querySelectorAll("[data-decline]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      try{await CSBackend.decideCarer(b.dataset.decline,false);toast("ปฏิเสธคำขอแล้ว");familyV()}catch(e){toast("ไม่สำเร็จ")}
+    });
+  });
+  V.querySelectorAll("[data-revoke]").forEach(function(b){
+    b.addEventListener("click",function(){
+      dialog({title:"ยกเลิกการเชื่อมต่อ",body:"ผู้ดูแลรายนี้จะไม่เห็นข้อมูลของท่านอีกต่อไปทันที",
+        ok:"ยกเลิกการเชื่อมต่อ",cancel:"ไม่ยกเลิก",danger:true,
+        onOk:async function(){try{await CSBackend.revokeCarer(b.dataset.revoke);toast("ยกเลิกแล้ว");familyV()}catch(e){toast("ไม่สำเร็จ")}}});
+    });
+  });
+  V.querySelectorAll("[data-manage]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var l=active.filter(function(x){return x.id===b.dataset.manage})[0]; if(!l)return;
+      managePerms(l);
+    });
+  });
+}
+
+function managePerms(l){
+  var nm=(l.carer&&l.carer.display_name)||"ผู้ดูแล";
+  head("จัดการสิทธิ์",esc(nm),"ติ๊กเฉพาะสิ่งที่ต้องการให้ดูได้","family");
+  V.innerHTML='<div class="anim senior"><div class="card">'+
+    PERM_LIST.map(function(x){
+      return '<label class="chk" style="font-size:16px"><input type="checkbox" data-mk="'+x.k+'"'+
+             ((l.permissions||{})[x.k]?" checked":"")+'><span>'+x.nm+'</span></label>';
+    }).join("")+'</div>'+
+    '<button class="cta loop" id="saveP">บันทึกสิทธิ์</button>'+
+    '<button class="ghostb" data-go="family">ยกเลิก</button></div>';
+  document.getElementById("saveP").addEventListener("click",async function(){
+    var perms={};
+    V.querySelectorAll("[data-mk]").forEach(function(c){perms[c.dataset.mk]=c.checked});
+    this.disabled=true;this.textContent="กำลังบันทึก…";
+    try{await CSBackend.updateCarerPermissions(l.id,perms);toast("บันทึกสิทธิ์แล้ว");go("family")}
+    catch(e){this.disabled=false;this.textContent="บันทึกสิทธิ์";toast("บันทึกไม่สำเร็จ")}
+  });
+}
+
+async function showInvite(){
+  head("เชิญสมาชิกครอบครัว","รหัสเชิญของท่าน","ส่งรหัสนี้ให้คนที่ท่านต้องการให้ดูแล","family");
+  V.innerHTML='<div class="anim senior"><div class="card"><p class="sub" style="margin:0">กำลังสร้างรหัส…</p></div></div>';
+  var inv;
+  try{inv=await CSBackend.createInvite()}
+  catch(e){V.innerHTML='<div class="anim senior"><div class="notice">สร้างรหัสไม่สำเร็จ ลองใหม่อีกครั้ง</div><button class="ghostb" data-go="family">กลับ</button></div>';return}
+  var exp=new Date(inv.expires_at);
   V.innerHTML='<div class="anim senior">'+
-  '<div class="card"><h3>โหมดนี้ทำอะไรได้</h3>'+
-  '<div class="rowline"><span class="k">ดูสถานะสีและคะแนนล่าสุด</span><span class="v">ได้</span></div>'+
-  '<div class="rowline"><span class="k">ดูแนวโน้มย้อนหลัง</span><span class="v">ได้</span></div>'+
-  '<div class="rowline"><span class="k">ดูคำแนะนำการดูแล</span><span class="v">ได้</span></div>'+
-  '<div class="rowline"><span class="k">แก้ไขข้อมูล / ทำแบบประเมินแทน</span><span class="v" style="color:var(--c1)">ไม่ได้</span></div></div>'+
-  '<div class="notice">การเข้าดูครั้งนี้ถือเป็นความยินยอมของผู้เอาประกันผ่านการมอบรหัสให้โดยตรง · ทุกการเข้าดูถูกบันทึกใน audit log ของบัญชี · หากผู้เอาประกันต้องการยกเลิก ให้เปลี่ยนรหัส 4 หลักหรือแจ้งทีมดูแล</div>'+
-  '<div class="card">'+
-  '<div class="field"><label>เบอร์โทรของผู้เอาประกัน</label><input id="faPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
-  '<div class="field"><label>รหัส 4 หลัก (ที่ผู้เอาประกันมอบให้)</label><input id="faPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
-  '<button class="cta loop" id="faGo">เข้าดูข้อมูล</button></div>';
-  document.getElementById("faGo").addEventListener("click",async function(){
-    var ph=document.getElementById("faPhone").value.trim(), pin=document.getElementById("faPin").value.trim();
+    '<div class="card" style="text-align:center;border:2px solid var(--brand)">'+
+    '<p class="sub" style="margin:0 0 8px">รหัสเชิญ 6 หลัก</p>'+
+    '<div style="font-family:var(--mono);font-size:44px;font-weight:700;letter-spacing:.12em;color:var(--brand);line-height:1.2">'+esc(inv.code)+'</div>'+
+    '<p class="sub" style="margin:10px 0 0">ใช้ได้ถึง '+exp.toLocaleString("th-TH",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+' น. (24 ชั่วโมง)</p></div>'+
+    '<div class="card"><h3 style="font-size:18px">บอกคนในครอบครัวว่า</h3>'+
+    '<div class="rowline"><span class="k">1. เปิดแอป CareSignal</span><span class="v">—</span></div>'+
+    '<div class="rowline"><span class="k">2. เลือก “ครอบครัว / ผู้ดูแล”</span><span class="v">—</span></div>'+
+    '<div class="rowline"><span class="k">3. สมัครบัญชีของตัวเอง</span><span class="v">—</span></div>'+
+    '<div class="rowline"><span class="k">4. กรอกรหัสนี้</span><span class="v">'+esc(inv.code)+'</span></div>'+
+    '<p class="sub" style="margin:10px 0 0">จากนั้นคำขอจะเด้งกลับมาที่เครื่องของท่าน ให้ท่านเป็นคนอนุมัติและเลือกว่าให้ดูอะไรได้บ้าง</p></div>'+
+    '<div class="notice"><b>รหัสนี้เป็นเพียงคำขอ</b> — ผู้ที่กรอกรหัสยังดูข้อมูลไม่ได้จนกว่าท่านจะกดอนุมัติด้วยตนเอง</div>'+
+    '<button class="ghostb" data-go="family">เสร็จแล้ว · กลับหน้าครอบครัว</button></div>';
+}
+
+/* ---------- ฝั่งครอบครัว ---------- */
+function carerAuthV(){
+  head("ครอบครัว / ผู้ดูแล","เข้าสู่ระบบบัญชีของท่าน","บัญชีนี้เป็นของท่านเอง แยกจากบัญชีผู้เอาประกัน","portal");
+  V.innerHTML='<div class="anim senior">'+
+    '<div class="card"><h3 style="font-size:18px">มีบัญชีแล้ว</h3>'+
+    '<div class="field"><label>เบอร์โทรของท่าน</label><input id="cPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
+    '<div class="field"><label>รหัส 4 หลัก</label><input id="cPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div>'+
+    '<button class="cta loop" id="cIn">เข้าสู่ระบบ</button></div>'+
+    '<div class="card"><h3 style="font-size:18px">ยังไม่มีบัญชี</h3>'+
+    '<div class="field"><label>ชื่อของท่าน</label><input id="cName" placeholder="เช่น พิมพ์ใจ"></div>'+
+    '<div class="field"><label>เบอร์โทรของท่าน</label><input id="cPhone2" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
+    '<div class="field"><label>ตั้งรหัส 4 หลัก</label><input id="cPin2" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div>'+
+    '<button class="cta loop" id="cUp">สร้างบัญชีครอบครัว</button></div>'+
+    '<div class="notice">การมีบัญชียัง<b>ไม่ทำให้เห็นข้อมูลของใคร</b> — ต้องมีรหัสเชิญจากผู้เอาประกัน และผู้เอาประกันต้องกดอนุมัติก่อนเสมอ</div></div>';
+  document.getElementById("cIn").addEventListener("click",async function(){
+    var ph=document.getElementById("cPhone").value.trim(), pin=document.getElementById("cPin").value.trim();
     if(!/^0\d{8,9}$/.test(ph)){toast("กรุณากรอกเบอร์โทรให้ถูกต้อง");return}
     if(!/^\d{4}$/.test(pin)){toast("รหัสต้องเป็นตัวเลข 4 หลัก");return}
-    this.disabled=true;this.textContent="กำลังเข้าดู…";
+    this.disabled=true;this.textContent="กำลังเข้าสู่ระบบ…";
     try{
       await CSBackend.signInUser(ph,pin);
-      var prof=CSBackend.getProfile();
-      var rows=await CSBackend.listAssessments(60);
-      try{await CSBackend.audit("family.view","ครอบครัว/ผู้ดูแลเข้าดูข้อมูลผ่านโหมดครอบครัว ("+rows.length+" รายการ)")}catch(eA){}
-      renderFamilyView(prof,rows);
+      CLOUD.session=true; setPortal("carer");
+      go("famHome");
+    }catch(e){this.disabled=false;this.textContent="เข้าสู่ระบบ";toast("เข้าสู่ระบบไม่สำเร็จ")}
+  });
+  document.getElementById("cUp").addEventListener("click",async function(){
+    var nm=document.getElementById("cName").value.trim();
+    var ph=document.getElementById("cPhone2").value.trim(), pin=document.getElementById("cPin2").value.trim();
+    if(!nm){toast("กรุณากรอกชื่อ");return}
+    if(!/^0\d{8,9}$/.test(ph)){toast("กรุณากรอกเบอร์โทรให้ถูกต้อง");return}
+    if(!/^\d{4}$/.test(pin)){toast("รหัสต้องเป็นตัวเลข 4 หลัก");return}
+    this.disabled=true;this.textContent="กำลังสร้างบัญชี…";
+    try{
+      await CSBackend.signUpUser(ph,pin);
+      await new Promise(function(r){setTimeout(r,800)});
+      await CSBackend.updateProfile({display_name:nm,phone:ph});
+      CLOUD.session=true; setPortal("carer");
+      toast("สร้างบัญชีแล้ว");
+      go("famLink");
+    }catch(e){this.disabled=false;this.textContent="สร้างบัญชีครอบครัว";toast("สร้างบัญชีไม่สำเร็จ — เบอร์นี้อาจถูกใช้แล้ว")}
+  });
+}
+
+function famLinkV(){
+  head("เชื่อมต่อผู้ที่ท่านดูแล","กรอกรหัสเชิญ 6 หลัก","ขอรหัสจากผู้เอาประกันโดยตรง (รหัสมีอายุ 24 ชั่วโมง)","famHome");
+  V.innerHTML='<div class="anim senior"><div class="card">'+
+    '<div class="field"><label>รหัสเชิญ</label>'+
+    '<input id="ivCode" inputmode="numeric" maxlength="6" placeholder="______" '+
+    'style="font-family:var(--mono);font-size:32px;letter-spacing:.3em;text-align:center"></div>'+
+    '<div class="field"><label>ท่านเป็นอะไรกับผู้เอาประกัน</label>'+
+    '<div class="seg" id="relSeg" style="flex-wrap:wrap">'+
+    REL_LIST.map(function(r,i){return '<button data-v="'+r+'" aria-pressed="'+(i===0)+'">'+r+'</button>'}).join("")+
+    '</div></div>'+
+    '<button class="cta loop" id="ivGo">ส่งคำขอเชื่อมต่อ</button></div>'+
+    '<div class="notice">เมื่อส่งคำขอแล้ว <b>ท่านจะยังดูข้อมูลไม่ได้</b> จนกว่าผู้เอาประกันจะกดอนุมัติ และเลือกว่าให้ท่านดูอะไรได้บ้าง</div></div>';
+  var rel=REL_LIST[0];
+  document.getElementById("relSeg").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b)return;
+    rel=b.dataset.v;
+    this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});
+  });
+  document.getElementById("ivGo").addEventListener("click",async function(){
+    var c=document.getElementById("ivCode").value.trim();
+    if(!/^\d{6}$/.test(c)){toast("รหัสต้องเป็นตัวเลข 6 หลัก");return}
+    this.disabled=true;this.textContent="กำลังส่งคำขอ…";
+    try{
+      var r=await CSBackend.redeemInvite(c,rel);
+      toast("ส่งคำขอถึง "+(r.member_name||"ผู้เอาประกัน")+" แล้ว");
+      go("famHome");
     }catch(e){
-      this.disabled=false;this.textContent="เข้าดูข้อมูล";
-      toast("เข้าดูไม่สำเร็จ — ตรวจสอบเบอร์และรหัสอีกครั้ง");
+      this.disabled=false;this.textContent="ส่งคำขอเชื่อมต่อ";
+      toast(/self/.test(e.message||"")?"ใช้รหัสของตัวเองไม่ได้":"รหัสไม่ถูกต้องหรือหมดอายุแล้ว");
     }
   });
 }
-function renderFamilyView(prof,rows){
-  /* แปลงแถวจากฐานข้อมูลเป็นรูปแบบเดียวกับในแอป แล้วยืมเอนจินแนวโน้มจริงมาคิด
-     โดยไม่แตะข้อมูลของบัญชีในเครื่อง (สลับชี้ชั่วคราวแล้วคืนเสมอ) */
+
+/* คนที่ฉันดูแล — รองรับหลายคน */
+async function famHomeV(){
+  head("คนที่ฉันดูแล","","แตะที่ชื่อเพื่อดูรายละเอียด");
+  V.innerHTML='<div class="anim senior"><div class="card"><p class="sub" style="margin:0">กำลังโหลด…</p></div></div>';
+  var ms=[];
+  try{ms=await CSBackend.famMembers()}catch(e){}
+  var appr=ms.filter(function(m){return m.status==="approved"});
+  var pend=ms.filter(function(m){return m.status==="pending"});
+  var html='<div class="anim senior">';
+  pend.forEach(function(m){
+    html+='<div class="card" style="border:1.5px solid var(--accent)">'+
+      '<h3 style="font-size:17px;margin:0 0 4px">'+esc(m.display_name||"ผู้เอาประกัน")+'</h3>'+
+      '<p class="sub" style="margin:0">⏳ รอ'+esc(m.display_name||"ผู้เอาประกัน")+'อนุมัติคำขอของท่าน — ยังดูข้อมูลไม่ได้</p></div>';
+  });
+  if(!appr.length&&!pend.length)
+    html+='<div class="card"><p class="sub" style="margin:0">ยังไม่ได้เชื่อมต่อกับใคร — ขอรหัสเชิญ 6 หลักจากผู้เอาประกัน แล้วกดปุ่มด้านล่าง</p></div>';
+  for(var i=0;i<appr.length;i++){
+    var m=appr[i];
+    html+='<button class="card" data-member="'+m.member_id+'" style="width:100%;text-align:left;border:0;font-family:inherit;cursor:pointer;display:block">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+      '<span style="font-size:32px">'+(i%2?"👵":"👴")+'</span>'+
+      '<span><b style="font-size:19px;display:block">'+esc(m.display_name||"ผู้เอาประกัน")+'</b>'+
+      '<span class="sub" style="margin:0">'+esc(m.relationship||"ผู้ดูแล")+(m.age?" · อายุ "+m.age+" ปี":"")+'</span></span>'+
+      '<span style="margin-left:auto;font-size:26px" id="dot-'+m.member_id+'">·</span></div></button>';
+  }
+  html+='<button class="cta loop" data-go="famLink">+ เชื่อมต่อคนใหม่</button>'+
+    '<button class="ghostb" id="famOut">ออกจากระบบ</button></div>';
+  V.innerHTML=html;
+  V.querySelectorAll("[data-member]").forEach(function(b){
+    b.addEventListener("click",function(){go("famView",b.dataset.member)});
+  });
+  document.getElementById("famOut").addEventListener("click",async function(){
+    try{await CSBackend.signOut()}catch(e){}
+    CLOUD.session=false; clearPortal(); toast("ออกจากระบบแล้ว"); go("portal");
+  });
+  /* เติมสีสถานะทีละคน (ไม่บล็อกการแสดงรายชื่อ) */
+  appr.forEach(async function(m){
+    try{
+      var rows=await CSBackend.famAssessments(m.member_id,1);
+      var el=document.getElementById("dot-"+m.member_id);
+      if(el&&rows.length){
+        var t=rows[0].tier, c=t>=4?"var(--c4)":t>=3?"var(--c3)":t>=2?"var(--c2)":"var(--c1)";
+        el.innerHTML='<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:'+c+'"></span>';
+      }else if(el)el.textContent="";
+    }catch(e){}
+  });
+}
+
+/* แดชบอร์ดของคนที่ดูแล — 4 แท็บ */
+var FAMTAB="overview", FAMID=null, FAMCACHE=null;
+async function famViewV(memberId){
+  if(memberId)FAMID=memberId;
+  if(!FAMID){go("famHome");return}
+  var ms=[]; try{ms=await CSBackend.famMembers()}catch(e){}
+  var me=ms.filter(function(x){return x.member_id===FAMID})[0]||{};
+  var perms=me.permissions||{};
+  head(esc(me.display_name||"ผู้เอาประกัน"),"","","famHome");
+  V.innerHTML='<div class="anim senior"><div class="card"><p class="sub" style="margin:0">กำลังโหลด…</p></div></div>';
+
+  var rows=[],risk=[],refs=[];
+  if(perms.results||perms.status||perms.trend){try{rows=await CSBackend.famAssessments(FAMID,60)}catch(e){}}
+  if(perms.trend){try{risk=await CSBackend.famRisk(FAMID,5)}catch(e){}}
+  if(perms.alerts){try{refs=await CSBackend.famReferrals(FAMID,3)}catch(e){}}
   var A=rows.map(function(r){return {at:r.assessed_at,score:r.score,max:r.score_max,tier:r.tier,
     ftsst:r.ftsst_seconds!=null?+r.ftsst_seconds:null,tug:r.tug_seconds!=null?+r.tug_seconds:null,
-    parts:r.parts||{},cv:r.cadence_cv!=null?+r.cadence_cv:null}}).reverse();
-  var nm=prof&&prof.display_name?prof.display_name:"ผู้เอาประกัน";
-  var age=prof&&prof.birth_year_be?ageFrom(prof.birth_year_be,prof.birth_month):null;
-  var tr=null;
-  if(A.length){
-    var keep=S.data;
-    try{ S.data={assessments:A,profile:{age:age||70,name:nm},audit:[]}; tr=trajectory(); }
-    catch(e){ tr=null }
-    S.data=keep;
-  }
-  var last=A[A.length-1];
+    parts:r.parts||{},balPassed:r.parts&&r.parts.balance!=null?r.parts.balance:null}}).reverse();
+  FAMCACHE={me:me,perms:perms,A:A,risk:risk,refs:refs};
+
+  var tabs='<div class="seg" id="famSeg" style="margin-bottom:14px">'+
+    [["overview","ภาพรวม"],["trend","แนวโน้ม"],["alerts","แจ้งเตือน"],["care","การดูแล"]]
+    .map(function(t){return '<button data-t="'+t[0]+'" aria-pressed="'+(FAMTAB===t[0])+'">'+t[1]+'</button>'}).join("")+'</div>';
+  V.innerHTML='<div class="anim senior">'+tabs+'<div id="famBody"></div></div>';
+  document.getElementById("famSeg").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b)return;
+    FAMTAB=b.dataset.t;
+    this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});
+    renderFamBody();
+  });
+  renderFamBody();
+}
+function renderFamBody(){
+  var C=FAMCACHE; if(!C)return;
+  var el=document.getElementById("famBody"); if(!el)return;
+  var A=C.A, perms=C.perms, last=A[A.length-1], prev=A.length>1?A[A.length-2]:null;
   var lvNm={stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"ต้องดูแลเร่งด่วน"};
   var lvC={stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"};
-  var lv=tr?tr.level:"stable";
-  head("โหมดครอบครัว","คุณ"+esc(nm),(age?"อายุ "+age+" ปี · ":"")+"ผลตรวจ "+A.length+" ครั้ง","welcome");
-  var html='<div class="anim senior">';
-  if(!A.length){
-    html+='<div class="card"><p class="sub" style="margin:0">ยังไม่มีผลตรวจในระบบ — ชวนให้ท่านทำแบบประเมินครั้งแรกผ่านแอปนี้ได้เลย</p></div>';
-  }else{
-    html+='<div class="card" style="text-align:center;border:2px solid '+lvC[lv]+'">'+
-      '<p class="sub" style="margin:0 0 6px">สถานะล่าสุด · '+thDate(last.at)+'</p>'+
-      '<div style="width:64px;height:64px;border-radius:50%;background:'+lvC[lv]+';margin:6px auto 10px;box-shadow:inset 0 -4px 10px rgba(0,0,0,.15)"></div>'+
-      '<div style="font-size:21px;font-weight:700">'+lvNm[lv]+'</div>'+
-      '<p class="sub" style="margin:8px 0 0">คะแนน '+last.score+' / '+last.max+(last.ftsst?' · ลุกนั่ง '+last.ftsst.toFixed(1)+' วิ':'')+(last.tug?' · ลุกเดิน '+last.tug.toFixed(1)+' วิ':'')+'</p></div>';
-    if(tr&&tr.flags&&tr.flags.length){
-      html+='<div class="card"><h3>สิ่งที่ระบบสังเกตเห็น</h3>'+tr.flags.map(function(f){
-        return '<p class="sub" style="border-left:3px solid '+lvC[lv]+';padding-left:10px;margin:8px 0">'+esc(f.text)+'</p>'}).join("")+'</div>';
+  var lv=C.risk.length?C.risk[0].level:(last?(last.tier>=4?"stable":last.tier>=3?"watch":last.tier>=2?"decline":"urgent"):"stable");
+  var h="";
+
+  function noPerm(t){return '<div class="card"><p class="sub" style="margin:0">🔒 '+t+'<br>ผู้เอาประกันยังไม่ได้อนุญาตให้ท่านดูส่วนนี้</p></div>'}
+  function delta(nm,a,b,unit,lowerBetter){
+    if(a==null||b==null)return '<div class="rowline"><span class="k">'+nm+'</span><span class="v">—</span></div>';
+    var d=b-a, worse=lowerBetter?d>0:d<0, same=Math.abs(d)<0.05;
+    return '<div class="rowline"><span class="k">'+nm+'</span><span class="v" style="color:'+(same?"inherit":(worse?"var(--c2)":"var(--c4)"))+'">'+
+      a.toFixed(1)+' → '+b.toFixed(1)+' '+unit+(same?"":(worse?" ↓แย่ลง":" ↑ดีขึ้น"))+'</span></div>';
+  }
+
+  if(FAMTAB==="overview"){
+    if(!perms.status&&!perms.results)return el.innerHTML=noPerm("สถานะล่าสุด");
+    if(!last)return el.innerHTML='<div class="card"><p class="sub" style="margin:0">ยังไม่มีผลประเมิน</p></div>';
+    h+='<div class="card" style="text-align:center;border:2px solid '+lvC[lv]+'">'+
+      '<div style="width:70px;height:70px;border-radius:50%;background:'+lvC[lv]+';margin:4px auto 10px"></div>'+
+      '<div style="font-size:24px;font-weight:700">'+lvNm[lv]+'</div>'+
+      '<p class="sub" style="font-size:16px;margin:8px 0 0">ผลล่าสุด '+last.score+'/'+last.max+' · ประเมินเมื่อ '+thDate(last.at)+'</p></div>';
+    if(prev&&perms.results){
+      h+='<div class="card"><h3 style="font-size:18px">สิ่งที่เปลี่ยนแปลง</h3>'+
+        delta("ลุกนั่ง 5 ครั้ง",prev.ftsst,last.ftsst,"วิ",true)+
+        delta("ลุกเดิน 3 เมตร",prev.tug,last.tug,"วิ",true)+
+        '<div class="rowline"><span class="k">คะแนนรวม</span><span class="v" style="color:'+
+          (last.score<prev.score?"var(--c2)":last.score>prev.score?"var(--c4)":"inherit")+'">'+
+          prev.score+' → '+last.score+'</span></div>'+
+        (perms.adl?'<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+
+          ((last.parts.adl||0)<(prev.parts.adl||0)?"ลดลง":"คงที่")+'</span></div>':'')+'</div>';
     }
-    if(tr){
-      html+='<div class="card"><h3>สิ่งที่ครอบครัวช่วยได้ตอนนี้</h3>'+
-        (lv==="urgent"?'<p class="sub" style="margin:0">โปรดติดต่อหรือไปเยี่ยมโดยเร็ว · ทีมพยาบาลกำลังถูกส่งต่อให้ประเมินถึงบ้าน'+(tr.referral?' ('+esc(tr.referral.sla||"")+')':'')+' · เก็บของกีดขวางทางเดิน เปิดไฟให้สว่าง และอยู่ใกล้เมื่อท่านลุกเดิน</p>'
-        :lv==="decline"?'<p class="sub" style="margin:0">ควรโทรหาหรือแวะเยี่ยมในสัปดาห์นี้ · Care Manager จะติดต่อภายใน 7 วัน · ชวนท่านทำกายภาพเบา ๆ และตรวจดูยาที่กินร่วมกันหลายชนิด</p>'
-        :lv==="watch"?'<p class="sub" style="margin:0">มีสัญญาณเล็กน้อยที่ควรเฝ้าดู · ชวนท่านประเมินซ้ำใน '+tr.nextDays+' วัน และชวนออกกำลังขาอย่างสม่ำเสมอ</p>'
-        :'<p class="sub" style="margin:0">สมรรถภาพคงที่ดี · นัดประเมินซ้ำใน '+tr.nextDays+' วัน · การโทรหาสม่ำเสมอคือการป้องกันที่ดีที่สุด</p>')+'</div>';
-    }
-    if(A.length>1){
-      var rc=A.slice(-8), xlF=rc.map(function(x){return thDate(x.at).replace(/ \d{2}$/,"")});
-      html+=trendSummaryHTML(A,age)+
-        '<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12)</h3>'+
-        lineChart({values:rc.map(function(x){return x.score}),labels:xlF,min:0,max:12,band:[8,12],
-                   color:"#2563EB",aria:"กราฟเส้นคะแนนรวม"})+'</div>';
-      html+='<div class="card"><h3>ย้อนหลัง '+Math.min(A.length,8)+' ครั้งล่าสุด</h3>'+
-        A.slice(-8).reverse().map(function(x){
-          return '<div class="rowline"><span class="k">'+thDate(x.at)+'</span><span class="v">'+x.score+'/'+x.max+(x.ftsst?' · '+x.ftsst.toFixed(1)+' วิ':'')+'</span></div>';
-        }).join("")+'</div>';
+    h+='<div class="card"><h3 style="font-size:18px">คำแนะนำสำหรับครอบครัว</h3>'+
+      (lv==="urgent"?'<p class="sub" style="font-size:16px;margin:0">โปรดติดต่อหรือไปเยี่ยมโดยเร็ว · เก็บของกีดขวางทางเดิน เปิดไฟให้สว่าง และอยู่ใกล้เมื่อท่านลุกเดิน</p>'
+      :lv==="decline"?'<p class="sub" style="font-size:16px;margin:0">ควรโทรหาหรือแวะเยี่ยมสัปดาห์นี้ · ช่วยสังเกตการเดิน ลดสิ่งกีดขวางในบ้าน และตรวจดูยาที่กินร่วมกันหลายชนิด</p>'
+      :lv==="watch"?'<p class="sub" style="font-size:16px;margin:0">ช่วยสังเกตการเดิน · ลดสิ่งกีดขวางในบ้าน · เตือนให้ประเมินซ้ำตามกำหนด</p>'
+      :'<p class="sub" style="font-size:16px;margin:0">สมรรถภาพคงที่ดี · การโทรหาสม่ำเสมอคือการป้องกันที่ดีที่สุด</p>')+'</div>';
+  }
+  else if(FAMTAB==="trend"){
+    if(!perms.trend)return el.innerHTML=noPerm("แนวโน้มสมรรถภาพ");
+    if(A.length<2)return el.innerHTML='<div class="card"><p class="sub" style="margin:0">ต้องมีผลอย่างน้อย 2 ครั้งจึงจะดูแนวโน้มได้</p></div>';
+    var rc=A.slice(-8), xl=rc.map(function(x){return thDate(x.at).replace(/ \d{2}$/,"")});
+    h+=trendSummaryHTML(A,C.me.age||70);
+    h+='<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12)</h3>'+
+      lineChart({values:rc.map(function(x){return x.score}),labels:xl,min:0,max:12,band:[8,12],color:"#2563EB",aria:"กราฟคะแนนรวม"})+'</div>';
+    if(perms.results){
+      h+='<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที)</h3>'+
+        lineChart({values:rc.map(function(x){return x.ftsst}),labels:xl,color:"#B45309",fmt:function(v){return v.toFixed(1)},aria:"กราฟลุกนั่ง"})+'</div>';
+      if(rc.some(function(x){return x.tug!=null}))
+        h+='<div class="card"><h3 style="font-size:18px">ลุกเดิน 3 เมตร (วินาที)</h3>'+
+          lineChart({values:rc.map(function(x){return x.tug}),labels:xl,cut:12,color:"#7C3AED",fmt:function(v){return v.toFixed(1)},aria:"กราฟลุกเดิน"})+'</div>';
     }
   }
-  html+='<div class="notice">โหมดครอบครัวเป็นการดูอย่างเดียว · หากพบเหตุฉุกเฉิน โทร <b>1669</b> ทันที</div>'+
-    '<button class="ghostb" id="faOut">ออกจากโหมดครอบครัว</button></div>';
-  V.innerHTML=html;
-  document.getElementById("faOut").addEventListener("click",async function(){
-    try{await CSBackend.signOut()}catch(e){}
-    CLOUD.session=false;
-    toast("ออกจากโหมดครอบครัวแล้ว");
-    go("welcome");
+  else if(FAMTAB==="alerts"){
+    if(!perms.alerts)return el.innerHTML=noPerm("การแจ้งเตือน");
+    el.innerHTML='<div class="card"><p class="sub" style="margin:0">กำลังโหลด…</p></div>';
+    CSBackend.famNotifications(40).then(function(ns){
+      var mine=ns.filter(function(n){return n.member_id===FAMID});
+      var s2='<div class="card"><h3 style="font-size:18px">การแจ้งเตือน</h3>';
+      if(!mine.length)s2+='<p class="sub" style="margin:0">ยังไม่มีการแจ้งเตือน</p>';
+      mine.forEach(function(n){
+        s2+='<div style="border-top:1px solid var(--line2);padding:11px 0">'+
+          '<b style="font-size:15.5px">'+thDate(n.created_at)+'</b><br>'+
+          '<span class="sub" style="font-size:15px">'+esc(n.body||"")+'</span></div>';
+      });
+      s2+='</div>';
+      if(C.refs.length){
+        s2+='<div class="card"><h3 style="font-size:18px">สถานะทีมดูแล</h3>'+C.refs.map(function(r){
+          return '<div class="rowline"><span class="k">'+thDate(r.created_at)+'</span><span class="v">'+
+            (r.status==="approved"?"Care Manager รับเคสแล้ว":r.status==="pending"?"รอทีมดูแลตรวจสอบ":"ไม่ได้ส่งต่อ")+'</span></div>';
+        }).join("")+'</div>';
+      }
+      el.innerHTML=s2;
+    });
+    return;
+  }
+  else if(FAMTAB==="care"){
+    var tr=C.risk.length?C.risk[0]:null;
+    h+='<div class="card"><h3 style="font-size:18px">สิ่งที่ควรทำ</h3>'+
+      '<div class="rowline"><span class="k">ประเมินครั้งถัดไป</span><span class="v">'+
+      (tr&&tr.next_days?"ภายใน "+tr.next_days+" วัน":"ตามกำหนดปกติ")+'</span></div>'+
+      '<div class="rowline"><span class="k">สถานะทีมดูแล</span><span class="v">'+
+      (C.refs.length?(C.refs[0].status==="approved"?"รับเคสแล้ว":"รอตรวจสอบ"):"ยังไม่มีการส่งต่อ")+'</span></div></div>';
+    h+='<div class="card"><h3 style="font-size:18px">บันทึกการเยี่ยม</h3>'+
+      '<p class="sub">บันทึกสิ่งที่ท่านสังเกตเห็น เพื่อให้ทีมดูแลมีข้อมูลประกอบ</p>'+
+      '<div class="field"><input id="ckNote" placeholder="เช่น วันนี้เดินช้ากว่าปกติ"></div>'+
+      '<button class="ghostb" id="ckGo">บันทึก</button></div>';
+    h+='<div class="notice">หากพบเหตุฉุกเฉิน โทร <b>1669</b> ทันที · ระบบนี้ไม่ใช่บริการฉุกเฉิน</div>';
+  }
+  el.innerHTML=h;
+  var ck=document.getElementById("ckGo");
+  if(ck)ck.addEventListener("click",function(){
+    var n=document.getElementById("ckNote").value.trim();
+    if(!n){toast("กรุณาพิมพ์สิ่งที่สังเกตเห็น");return}
+    toast("บันทึกแล้ว — ขอบคุณที่ช่วยดูแล");
+    document.getElementById("ckNote").value="";
   });
+}
+
+/* ---------- หน้าเลือกบทบาท ---------- */
+function setPortal(p){try{localStorage.setItem("csPortal",p)}catch(e){}}
+function getPortal(){try{return localStorage.getItem("csPortal")}catch(e){return null}}
+function clearPortal(){try{localStorage.removeItem("csPortal")}catch(e){}}
+function portalV(){
+  head("CARESIGNAL","รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม","ท่านคือใคร");
+  V.innerHTML='<div class="anim senior">'+
+    '<button class="card" id="pMember" style="width:100%;text-align:left;border:2px solid var(--brand);font-family:inherit;cursor:pointer;display:block">'+
+    '<div style="font-size:44px;line-height:1">👤</div>'+
+    '<b style="font-size:21px;display:block;margin:6px 0 4px">ผู้เอาประกัน / สมาชิก</b>'+
+    '<span class="sub" style="font-size:16px">ประเมินสมรรถภาพและติดตามสุขภาพของฉัน</span></button>'+
+    '<button class="card" id="pCarer" style="width:100%;text-align:left;border:2px solid var(--line);font-family:inherit;cursor:pointer;display:block">'+
+    '<div style="font-size:44px;line-height:1">👥</div>'+
+    '<b style="font-size:21px;display:block;margin:6px 0 4px">ครอบครัว / ผู้ดูแล</b>'+
+    '<span class="sub" style="font-size:16px">ติดตามสมาชิกที่อนุญาตให้ฉันดูแล</span></button>'+
+    '<div class="notice">เจ้าหน้าที่ประกัน พยาบาล และ Care Manager ใช้<b>แอปเจ้าหน้าที่แยกต่างหาก</b> ไม่ได้อยู่ในแอปนี้</div></div>';
+  document.getElementById("pMember").addEventListener("click",function(){setPortal("member");go("welcome")});
+  document.getElementById("pCarer").addEventListener("click",function(){setPortal("carer");go("carerAuth")});
 }
 
 /* ---------- หน้าหลัก ---------- */
@@ -2852,7 +3192,11 @@ document.addEventListener("click",function(e){
 (async function(){
   applyFontScale();
   await loadAll();
-  go(S.data.profile?"home":"welcome");
+  /* จำบทบาทที่เลือกไว้ เปิดแอปครั้งถัดไปเข้าแดชบอร์ดของบทบาทนั้นทันที */
+  var portal=getPortal();
+  if(portal==="carer")go(CLOUD.session?"famHome":"carerAuth");
+  else if(portal==="member")go(S.data.profile?"home":"welcome");
+  else go(S.data.profile?"home":"portal");
   (async function(){
     try{
       var ok=await CSBackend.init(); if(!ok)return;
