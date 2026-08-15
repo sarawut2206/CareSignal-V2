@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://esm.sh https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="CareSignal Staff — แอปเจ้าหน้าที่: คิวเคสของ Care Manager และพอร์ตความเสี่ยงของบริษัทประกัน เข้าได้เฉพาะบัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์">
-<meta name="theme-color" content="#101B31">
+<meta name="theme-color" content="#16337A">
 <link rel="manifest" href="./manifest-staff.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon-64.png">
@@ -14,62 +14,75 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   ธีมเจ้าหน้าที่ — น้ำเงินเข้มทั้งแอป (ตามที่ผู้ใช้กำหนดสี)
+   เหตุผล: ให้เจ้าหน้าที่รู้ทันทีว่ากำลังถืออยู่ "แอปงาน" ไม่ใช่
+   แอปสมาชิกซึ่งพื้นสว่าง — ลดโอกาสสาธิตผิดแอปต่อหน้าลูกค้า
+   ============================================================ */
 :root{
-  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE; --navy:#101B31;
-  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7;
-  --line:#DFE7F2; --line2:#EDF2FA; --brand:#2563EB;
-  --c4:#0E9F6E; --c3:#C79200; --c2:#D97706; --c1:#DC2626;
-  --c4b:#E3F6EF; --c3b:#FEF6DE; --c2b:#FDECD8; --c1b:#FEE9E9;
+  --blue1:#24509F; --blue2:#1A3A85; --blue3:#12295F;
+  --surf:rgba(255,255,255,.07); --surf2:rgba(255,255,255,.11);
+  --ink:#F2F6FF; --ink2:#B9C7E8; --ink3:#8FA3CF;
+  --line:rgba(255,255,255,.17); --line2:rgba(255,255,255,.10);
+  --gold:#F5B93E; --goldink:#231a02;
+  --c4:#22B57F; --c3:#E3B341; --c2:#F08A3C; --c1:#F0524C;
   --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,monospace;
-  --sh:0 1px 2px rgba(22,35,59,.05),0 8px 24px rgba(22,35,59,.07);
+  --sh:0 2px 6px rgba(0,10,40,.25),0 12px 30px rgba(0,10,40,.28);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
-.phone{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg)}
-.bar{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;gap:10px}
+body{margin:0;font-family:var(--sans);color:var(--ink);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background:#16337A;
+  background:radial-gradient(130% 90% at 50% 28%, var(--blue1) 0%, var(--blue2) 55%, var(--blue3) 100%) fixed}
+.phone{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+.bar{background:rgba(0,12,45,.35);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px)}
 .bar b{font-size:16px;letter-spacing:-.01em}
-.bar b i{color:#FCD34D;font-style:normal}
-.chip{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:99px;letter-spacing:.06em}
+.bar b i{color:var(--gold);font-style:normal}
+.chip{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:rgba(255,255,255,.16);padding:4px 10px;border-radius:99px;letter-spacing:.06em}
 .view{flex:1;padding:18px 16px calc(86px + env(safe-area-inset-bottom))}
-.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh);margin-bottom:14px}
-h1{font-size:21px;letter-spacing:-.02em;margin:2px 0 4px}
-h3{font-size:15.5px;margin:0 0 10px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh);margin-bottom:14px;backdrop-filter:blur(6px)}
+h1{font-size:21px;letter-spacing:-.02em;margin:2px 0 4px;color:#fff}
+h3{font-size:15.5px;margin:0 0 10px;color:#fff}
 .sub{font-size:13.5px;color:var(--ink2);margin:0 0 4px}
-.kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8BB0F8;font-weight:600}
-.hd{background:var(--navy);color:#fff;padding:6px 18px 18px}
-.hd p{color:rgba(255,255,255,.72);font-size:13px;margin:4px 0 0}
+.kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.hd{padding:6px 18px 18px}
+.hd p{color:var(--ink2);font-size:13px;margin:4px 0 0}
 .field{margin-bottom:12px}
 .field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
-.field input{width:100%;font-family:inherit;font-size:16px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:#fff;color:var(--ink)}
-.cta{display:block;width:100%;border:0;border-radius:15px;background:var(--brand);color:#fff;font-family:inherit;font-size:16.5px;font-weight:600;padding:15px;cursor:pointer;margin:6px 0}
-.ghostb{display:block;width:100%;border:1.5px solid var(--line);border-radius:15px;background:#fff;color:var(--ink2);font-family:inherit;font-size:14.5px;padding:12px;cursor:pointer;margin:8px 0}
-.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;max-width:520px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
+.field input{width:100%;font-family:inherit;font-size:16px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:rgba(0,14,50,.35);color:#fff}
+.field input::placeholder{color:var(--ink3)}
+.cta{display:block;width:100%;border:0;border-radius:15px;background:var(--gold);color:var(--goldink);font-family:inherit;font-size:16.5px;font-weight:700;padding:15px;cursor:pointer;margin:6px 0;box-shadow:0 6px 18px rgba(0,10,40,.35)}
+.cta:disabled{opacity:.6}
+.ghostb{display:block;width:100%;border:1.5px solid var(--line);border-radius:15px;background:rgba(255,255,255,.06);color:var(--ink);font-family:inherit;font-size:14.5px;padding:12px;cursor:pointer;margin:8px 0}
+.tabs[hidden]{display:none}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(9,25,66,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line2);display:flex;max-width:520px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
 .tabs button{flex:1;border:0;background:none;font-family:inherit;font-size:11.5px;color:var(--ink3);padding:9px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
-.tabs button[aria-selected="true"]{color:var(--brand);font-weight:600}
+.tabs button[aria-selected="true"]{color:var(--gold);font-weight:600}
 .tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;color:#fff}
 .rowline{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line2);font-size:13.5px}
 .rowline:last-child{border-bottom:0}
 .rowline .k{color:var(--ink2)}
-.rowline .v{font-family:var(--mono);font-weight:600;text-align:right}
-.case{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:#fff}
+.rowline .v{font-family:var(--mono);font-weight:600;text-align:right;color:#fff}
+.case{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--surf2)}
 .case .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .case .who{font-family:var(--mono);font-size:12.5px;color:var(--ink2)}
 .flag{font-size:12.5px;color:var(--ink2);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:6px 0}
 .btnrow{display:flex;gap:8px;margin-top:10px}
 .btnrow button{flex:1;border-radius:11px;font-family:inherit;font-size:13.5px;font-weight:600;padding:10px;cursor:pointer}
 .ok{border:0;background:var(--c4);color:#fff}
-.no{border:1.5px solid var(--line);background:#fff;color:var(--ink2)}
+.no{border:1.5px solid var(--line);background:transparent;color:var(--ink2)}
 .empty{text-align:center;color:var(--ink3);font-size:14px;padding:28px 10px}
-.notice{background:var(--surf2);border:1px solid #CFE0FD;border-radius:13px;padding:13px 15px;font-size:13px;color:#1E3A6E;margin-bottom:14px}
-.warnbox{background:#FEE9E9;border:1px solid #F3B5B5;border-radius:13px;padding:13px 15px;font-size:13.5px;color:#A81E1E;margin-bottom:14px}
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:var(--navy);color:#fff;font-size:13.5px;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center}
+.notice{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:13px;padding:13px 15px;font-size:13px;color:var(--ink2);margin-bottom:14px}
+.notice b{color:#fff}
+.warnbox{background:rgba(240,82,76,.16);border:1px solid rgba(240,82,76,.5);border-radius:13px;padding:13px 15px;font-size:13.5px;color:#FFD9D7;margin-bottom:14px}
+.warnbox b{color:#fff}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:#fff;color:#12295F;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center;box-shadow:0 10px 30px rgba(0,10,40,.4)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-.mixbar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.mixbar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:8px 0 4px;background:rgba(255,255,255,.1)}
 .mixbar i{display:block;height:100%}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;color:var(--ink)}
 th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line2)}
 th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
 td.num{font-family:var(--mono);white-space:nowrap}
@@ -139,7 +152,7 @@ function loginV(){
     '<div class="field"><label>รหัสผ่าน</label><input id="lPw" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
     '<button class="cta" id="lGo">เข้าสู่ระบบ</button></div>'+
     '<div class="notice"><b>สำหรับเจ้าหน้าที่เท่านั้น</b> — ผู้เอาประกันและครอบครัวใช้แอป CareSignal (แอปสมาชิก) ไม่ใช่แอปนี้ · บัญชีใหม่ต้องให้ผู้ดูแลระบบกำหนดบทบาทก่อนจึงเข้าได้ (ฐานข้อมูลบล็อกการเลื่อนบทบาทด้วยตนเอง)</div>'+
-    '<div class="card" style="background:var(--surf2);border-color:#CFE0FD"><h3>ความปลอดภัย</h3>'+
+    '<div class="card"><h3>ความปลอดภัย</h3>'+
     '<p class="sub" style="margin:0">สิทธิ์ข้อมูลบังคับด้วย Row Level Security บนฐานข้อมูล · ทุกการเปิดดูและการตัดสินเคสถูกบันทึกลง audit log ที่แก้ไขไม่ได้ · รองรับ MFA (ตั้งค่าจากแดชบอร์ดบนเว็บ)</p></div>';
   document.getElementById("lGo").addEventListener("click",doLogin);
   document.getElementById("lPw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin()});
@@ -195,7 +208,7 @@ async function queueV(){
   try{q=await CSBackend.listReferralQueue()}catch(e){}
   var order={urgent:0,decline:1,watch:2,stable:3};
   var pending=q.filter(function(x){return x.status==="pending"})
-               .sort(function(a,b){return (order[a.level]||9)-(order[b.level]||9)});
+               .sort(function(a,b){return (a.level in order?order[a.level]:9)-(b.level in order?order[b.level]:9)});
   var done=q.filter(function(x){return x.status!=="pending"}).slice(0,6);
   var html='';
   if(!pending.length)html+='<div class="card"><div class="empty">ไม่มีเคสรอตัดสิน 🎉<br><span style="font-size:12.5px">เมื่อสมาชิกวัดผ่านแอปและเข้าเกณฑ์ส่งต่อ เคสจะขึ้นที่นี่ทันที</span></div></div>';
@@ -203,7 +216,7 @@ async function queueV(){
     var pr=c.profiles||{};
     var flags=(c.flags||[]).map(function(f){return '<div class="flag"><b>'+esc(f.id||"")+'</b> '+esc(f.text||"")+'</div>'}).join("");
     html+='<div class="case"><div class="top">'+
-      '<span class="pill" style="background:'+(LV_C[c.level]||"#93A1B7")+'">'+(LV_NM[c.level]||esc(c.level))+'</span>'+
+      '<span class="pill" style="background:'+(LV_C[c.level]||"#5B77B4")+'">'+(LV_NM[c.level]||esc(c.level))+'</span>'+
       '<span class="who">'+esc(pr.pseudonym||"—")+' · '+esc(pr.display_name||"")+'</span>'+
       '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(c.created_at)+'</span></div>'+
       '<div style="font-size:13.5px">'+esc(c.action||c.recommendation||"ตรวจสอบและตัดสินการส่งต่อ")+(c.sla?' · <b>'+esc(c.sla)+'</b>':'')+'</div>'+
@@ -245,7 +258,7 @@ async function portV(){
   var n=rows.length;
   function seg(k,c){var w=(mix[k]||0)/n*100;return w?'<i style="width:'+w+'%;background:'+c+'"></i>':''}
   var html='<div class="card"><h3>ภาพรวม '+n+' ราย</h3>'+
-    '<div class="mixbar">'+seg("urgent","var(--c1)")+seg("decline","var(--c2)")+seg("watch","var(--c3)")+seg("stable","var(--c4)")+seg("none","#C6D2E4")+'</div>'+
+    '<div class="mixbar">'+seg("urgent","var(--c1)")+seg("decline","var(--c2)")+seg("watch","var(--c3)")+seg("stable","var(--c4)")+seg("none","rgba(255,255,255,.28)")+'</div>'+
     '<div class="rowline"><span class="k">🔴 เร่งด่วน</span><span class="v">'+(mix.urgent||0)+'</span></div>'+
     '<div class="rowline"><span class="k">🟠 ถดถอย</span><span class="v">'+(mix.decline||0)+'</span></div>'+
     '<div class="rowline"><span class="k">🟡 เฝ้าสังเกต</span><span class="v">'+(mix.watch||0)+'</span></div>'+
@@ -255,7 +268,7 @@ async function portV(){
       return '<tr><td class="num">'+esc(r.pseudonym||"—")+'</td><td>'+esc(r.age_band||"—")+'</td>'+
         '<td class="num">'+(r.score!=null?r.score+"/12":"—")+'</td>'+
         '<td class="num">'+(r.ftsst_seconds!=null?(+r.ftsst_seconds).toFixed(1)+" วิ":"—")+'</td>'+
-        '<td><span class="pill" style="background:'+(LV_C[r.risk_level]||"#93A1B7")+'">'+(LV_NM[r.risk_level]||"—")+'</span></td></tr>';
+        '<td><span class="pill" style="background:'+(LV_C[r.risk_level]||"#5B77B4")+'">'+(LV_NM[r.risk_level]||"—")+'</span></td></tr>';
     }).join("")+'</tbody></table></div></div>'+
     '<div class="notice">ข้อมูลแฝงชื่อยังเป็นข้อมูลส่วนบุคคลตาม PDPA · ทุกการเปิดดูพอร์ตถูกบันทึกใน audit log</div>';
   V.innerHTML=html;
@@ -271,7 +284,7 @@ function meV(){
     '<div class="card"><h3>เครื่องมือเพิ่มเติม (บนเว็บ)</h3>'+
     '<p class="sub">แดชบอร์ดจอใหญ่ การเปิดใช้ MFA และการตรวจสอบกับเวชระเบียน อยู่ที่แดชบอร์ดบนเว็บ</p>'+
     '<button class="ghostb" id="openWeb">เปิดแดชบอร์ดบนเว็บ</button></div>'+
-    '<button class="cta" id="out" style="background:#fff;color:var(--c1);border:1.5px solid #F3B5B5">ออกจากระบบ</button>'+
+    '<button class="cta" id="out" style="background:rgba(240,82,76,.9);color:#fff">ออกจากระบบ</button>'+
     '<p class="sub" style="text-align:center">CareSignal Staff · เอนจิน 1.4.1 · ต้นแบบเพื่อการประกวด OIC InsurTech Award 2026</p>';
   document.getElementById("openWeb").addEventListener("click",function(){location.href="./CareSignal-Web.html#"+(ST.role==="insurer"?"ins":"cm")});
   document.getElementById("out").addEventListener("click",async function(){
