@@ -144,6 +144,9 @@ create or replace view public.family_members as
   where l.carer_id = auth.uid();
 
 -- ---------- ฟังก์ชันสร้าง/ใช้รหัสเชิญ ----------
+-- หมายเหตุ: วิว my_carers (ให้ผู้เอาประกันเห็นชื่อผู้ขอเชื่อมต่อ) อยู่ใน 06_family_notify.sql
+--          เพราะเพิ่มภายหลังพร้อมระบบแจ้งเตือน 2 ชั้น
+
 create or replace function public.cs_create_invite()
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare v_code text; v_exp timestamptz; n int := 0;

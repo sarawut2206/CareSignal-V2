@@ -466,12 +466,14 @@ var CSBackend = (function () {
   }
   async function listMyCarers() {
     if (!isCloud()) return [];
-    var u = await currentUser(); if (!u) return [];
-    var r = await sb.from("caregiver_links")
-      .select("*, carer:profiles!caregiver_links_carer_id_fkey(display_name, pseudonym)")
-      .eq("member_id", u.id).order("requested_at", { ascending: false });
+    /* ใช้วิว my_carers เพราะ RLS ของ profiles ห้ามอ่านโปรไฟล์ผู้อื่น
+       ถ้า join ตรง ๆ ชื่อผู้ขอเชื่อมต่อจะเป็น null ผู้เอาประกันจะตัดสินใจไม่ได้ */
+    var r = await sb.from("my_carers").select("*").order("requested_at", { ascending: false });
     if (r.error) { console.warn(r.error); return []; }
-    return r.data || [];
+    return (r.data || []).map(function (x) {
+      x.carer = { display_name: x.carer_name };
+      return x;
+    });
   }
   async function decideCarer(linkId, approved, permissions) {
     if (!isCloud()) throw new Error("offline");
@@ -555,6 +557,52 @@ var CSBackend = (function () {
     return r.data;
   }
 
+
+  /* ---------- แจ้งเตือน 2 ชั้น + บันทึกการเยี่ยม ----------
+     ชั้นที่ 1 (สิทธิ์): ผู้เอาประกันเลือกว่าจะให้แจ้งเรื่องอะไร — อยู่บน link
+     ชั้นที่ 2 (ช่องทาง): ครอบครัวเลือกว่าจะรับทางไหน — อยู่ที่บัญชีครอบครัว
+     สองอย่างนี้แยกกันโดยตั้งใจ เพราะสิทธิ์ในการเปิดเผยข้อมูลกับความ
+     ต้องการรับแจ้งเตือน เป็นคนละเรื่องกัน */
+  async function updateNotifyTypes(linkId, types) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("caregiver_links").update({ notify_types: types })
+      .eq("id", linkId).select().single();
+    if (r.error) throw r.error;
+    await audit("family.notify_types", null, "แก้ว่าจะให้แจ้งเตือนครอบครัวเรื่องอะไรบ้าง");
+    return r.data;
+  }
+  async function getNotifyPrefs() {
+    if (!isCloud()) return null;
+    var u = await currentUser(); if (!u) return null;
+    var r = await sb.from("family_notify_prefs").select("*").eq("carer_id", u.id).maybeSingle();
+    if (r.error) { console.warn(r.error); return null; }
+    return r.data || { carer_id: u.id, channels: { inapp: true, push: false, sms: false } };
+  }
+  async function saveNotifyPrefs(channels) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("family_notify_prefs")
+      .upsert({ carer_id: u.id, channels: channels, updated_at: new Date().toISOString() })
+      .select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function addCheckin(memberId, note) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("family_checkins")
+      .insert({ member_id: memberId, carer_id: u.id, note: note }).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function listCheckins(memberId, limit) {
+    if (!isCloud()) return [];
+    var r = await sb.from("family_checkins").select("*")
+      .eq("member_id", memberId).order("created_at", { ascending: false }).limit(limit || 20);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+
   return {
     init: init, isCloud: isCloud, mode: getMode, client: client,
     signUpUser: signUpUser, signInUser: signInUser,
@@ -572,6 +620,8 @@ var CSBackend = (function () {
     redeemInvite: redeemInvite, famMembers: famMembers, famAssessments: famAssessments,
     famRisk: famRisk, famReferrals: famReferrals, famNotifications: famNotifications,
     notifRead: notifRead, famCancelRequest: famCancelRequest,
+    updateNotifyTypes: updateNotifyTypes, getNotifyPrefs: getNotifyPrefs,
+    saveNotifyPrefs: saveNotifyPrefs, addCheckin: addCheckin, listCheckins: listCheckins,
     saveTrial: saveTrial, listTrials: listTrials,
     requestMedicalCheck: requestMedicalCheck, listMedicalChecks: listMedicalChecks,
     completeMedicalCheck: completeMedicalCheck,

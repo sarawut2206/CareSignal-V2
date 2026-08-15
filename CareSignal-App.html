@@ -248,7 +248,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=143"></script>
+<script src="./cs-backend.js?v=145"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
 
@@ -1113,6 +1113,61 @@ var PERM_LIST=[
   {k:"meds",   nm:"ข้อมูลยาที่ใช้ประจำ"}
 ];
 var REL_LIST=["บุตรสาว","บุตรชาย","คู่สมรส","หลาน","พี่/น้อง","ผู้ดูแล","อื่น ๆ"];
+/* ชั้นที่ 1 — ผู้เอาประกันเลือกว่า "ให้แจ้งเรื่องอะไรได้บ้าง" */
+var NOTIFY_TYPES=[
+  {k:"status_change",nm:"เมื่อสถานะเปลี่ยน (เช่น เขียว → เหลือง)"},
+  {k:"orange_red",   nm:"เมื่อเข้าเขตส้มหรือแดง"},
+  {k:"new_fall",     nm:"เมื่อมีการหกล้มครั้งใหม่"},
+  {k:"adl_drop",     nm:"เมื่อทำกิจวัตรประจำวันได้น้อยลง"},
+  {k:"due_reminder", nm:"เมื่อถึงกำหนดประเมินครั้งถัดไป"}
+];
+function defaultNotifyTypes(){return {status_change:true,orange_red:true,new_fall:true,adl_drop:true,due_reminder:true}}
+/* ชั้นที่ 2 — ครอบครัวเลือกช่องทางรับ
+   inapp ใช้ได้เสมอ · push ใช้ Notification API ของเบราว์เซอร์
+   (แจ้งได้เมื่อแอปเปิดอยู่หรือเปิดค้างเป็น PWA — การแจ้งขณะปิดแอปสนิท
+   ต้องมีเซิร์ฟเวอร์ push แยก ซึ่งยังไม่มีในระบบนี้ จึงระบุไว้ตามจริง)
+   sms ยังไม่เปิดใช้ เพราะต้องต่อผู้ให้บริการส่ง SMS */
+var NOTIFY_CHANNELS=[
+  {k:"inapp",nm:"แจ้งในแอป",      hint:"เห็นในแท็บแจ้งเตือนทุกครั้งที่เปิดแอป",   always:true},
+  {k:"push", nm:"แจ้งเตือนบนเครื่อง",hint:"เด้งขึ้นบนหน้าจอขณะเปิดแอปหรือเปิดค้างไว้"},
+  {k:"sms",  nm:"ส่ง SMS",         hint:"ยังไม่เปิดให้บริการ — ต้องต่อผู้ให้บริการส่งข้อความก่อน", off:true}
+];
+
+/* แจ้งเตือนบนเครื่องผ่าน Notification API */
+function pushSupported(){return typeof Notification!=="undefined"}
+async function pushAsk(){
+  if(!pushSupported())return false;
+  if(Notification.permission==="granted")return true;
+  if(Notification.permission==="denied")return false;
+  try{return (await Notification.requestPermission())==="granted"}catch(e){return false}
+}
+function pushShow(title,body){
+  if(!pushSupported()||Notification.permission!=="granted")return;
+  try{
+    if(navigator.serviceWorker&&navigator.serviceWorker.ready){
+      navigator.serviceWorker.ready.then(function(reg){
+        reg.showNotification(title,{body:body,icon:"./icon-192.png",badge:"./favicon-64.png",tag:"cs-family"});
+      }).catch(function(){new Notification(title,{body:body})});
+    }else new Notification(title,{body:body});
+  }catch(e){}
+}
+/* เฝ้าดูแจ้งเตือนใหม่แล้วเด้งบนเครื่อง — จำ id ล่าสุดที่เด้งไปแล้ว กันแจ้งซ้ำ */
+var PUSH_SEEN=null;
+function pushSeenLoad(){try{PUSH_SEEN=JSON.parse(localStorage.getItem("csPushSeen")||"[]")}catch(e){PUSH_SEEN=[]}}
+function pushSeenSave(){try{localStorage.setItem("csPushSeen",JSON.stringify(PUSH_SEEN.slice(-80)))}catch(e){}}
+async function pushCheck(){
+  if(!CLOUD.session||getPortal()!=="carer")return;
+  var prefs=null; try{prefs=await CSBackend.getNotifyPrefs()}catch(e){}
+  if(!prefs||!(prefs.channels||{}).push)return;
+  if(!pushSupported()||Notification.permission!=="granted")return;
+  if(PUSH_SEEN===null)pushSeenLoad();
+  var ns=[]; try{ns=await CSBackend.famNotifications(20)}catch(e){}
+  var fresh=ns.filter(function(n){return PUSH_SEEN.indexOf(n.id)<0});
+  if(!fresh.length)return;
+  fresh.slice(0,3).forEach(function(n){pushShow("CareSignal",n.body||"มีการแจ้งเตือนใหม่")});
+  ns.forEach(function(n){if(PUSH_SEEN.indexOf(n.id)<0)PUSH_SEEN.push(n.id)});
+  pushSeenSave();
+}
 function defaultPerms(){return {status:true,trend:true,results:true,adl:true,alerts:true,meds:false}}
 function permSummary(p){
   p=p||{};
@@ -1167,7 +1222,10 @@ async function familyV(){
                '<span class="v" style="color:'+((l.permissions||{})[x.k]?"var(--c4)":"var(--ink3)")+'">'+
                ((l.permissions||{})[x.k]?"✓ ดูได้":"✕ ไม่ได้")+'</span></div>';
       }).join("")+
-      '<button class="ghostb" data-manage="'+l.id+'" style="margin-top:8px">จัดการสิทธิ์</button>'+
+      '<p class="sub" style="margin:8px 0 0">แจ้งเตือนที่อนุญาต: '+
+        NOTIFY_TYPES.filter(function(t){return (l.notify_types||defaultNotifyTypes())[t.k]}).length+
+        ' จาก '+NOTIFY_TYPES.length+' หัวข้อ</p>'+
+      '<button class="ghostb" data-manage="'+l.id+'" style="margin-top:8px">จัดการสิทธิ์และการแจ้งเตือน</button>'+
       '<button class="ghostb danger" data-revoke="'+l.id+'">ยกเลิกการเชื่อมต่อ</button></div>';
   });
   html+='</div>';
@@ -1190,7 +1248,11 @@ async function familyV(){
       var id=b.dataset.approve, perms={};
       V.querySelectorAll('[data-perm="'+id+'"]').forEach(function(c){perms[c.dataset.k]=c.checked});
       b.disabled=true;b.textContent="กำลังบันทึก…";
-      try{await CSBackend.decideCarer(id,true,perms);toast("อนุญาตแล้ว");familyV()}
+      try{
+        var link=await CSBackend.decideCarer(id,true,perms);
+        try{await CSBackend.updateNotifyTypes(id,defaultNotifyTypes())}catch(e2){}
+        toast("อนุญาตแล้ว");familyV();
+      }
       catch(e){b.disabled=false;b.textContent="อนุญาตตามที่เลือก";toast("บันทึกไม่สำเร็จ")}
     });
   });
@@ -1216,20 +1278,33 @@ async function familyV(){
 
 function managePerms(l){
   var nm=(l.carer&&l.carer.display_name)||"ผู้ดูแล";
-  head("จัดการสิทธิ์",esc(nm),"ติ๊กเฉพาะสิ่งที่ต้องการให้ดูได้","family");
-  V.innerHTML='<div class="anim senior"><div class="card">'+
+  var nt=l.notify_types||defaultNotifyTypes();
+  head("จัดการสิทธิ์",esc(nm),"ท่านเป็นผู้กำหนดทั้งหมด และแก้ได้ทุกเมื่อ","family");
+  V.innerHTML='<div class="anim senior">'+
+    '<div class="card"><h3 style="font-size:18px">ให้ดูอะไรได้บ้าง</h3>'+
     PERM_LIST.map(function(x){
       return '<label class="chk" style="font-size:16px"><input type="checkbox" data-mk="'+x.k+'"'+
              ((l.permissions||{})[x.k]?" checked":"")+'><span>'+x.nm+'</span></label>';
     }).join("")+'</div>'+
-    '<button class="cta loop" id="saveP">บันทึกสิทธิ์</button>'+
+    '<div class="card"><h3 style="font-size:18px">ให้แจ้งเตือนเรื่องอะไรได้บ้าง</h3>'+
+    '<p class="sub" style="margin:-4px 0 10px">ท่านอนุญาต<b>หัวข้อ</b> ส่วนผู้ดูแลเลือกเองว่าจะรับทางไหน</p>'+
+    NOTIFY_TYPES.map(function(x){
+      return '<label class="chk" style="font-size:16px"><input type="checkbox" data-nt="'+x.k+'"'+
+             (nt[x.k]?" checked":"")+'><span>'+x.nm+'</span></label>';
+    }).join("")+
+    '<p class="sub" style="margin:10px 0 0">หากปิดสิทธิ์ “รับการแจ้งเตือน” ในกล่องด้านบน ระบบจะไม่ส่งอะไรเลย ไม่ว่าติ๊กหัวข้อไว้อย่างไร</p></div>'+
+    '<button class="cta loop" id="saveP">บันทึก</button>'+
     '<button class="ghostb" data-go="family">ยกเลิก</button></div>';
   document.getElementById("saveP").addEventListener("click",async function(){
-    var perms={};
+    var perms={},types={};
     V.querySelectorAll("[data-mk]").forEach(function(c){perms[c.dataset.mk]=c.checked});
+    V.querySelectorAll("[data-nt]").forEach(function(c){types[c.dataset.nt]=c.checked});
     this.disabled=true;this.textContent="กำลังบันทึก…";
-    try{await CSBackend.updateCarerPermissions(l.id,perms);toast("บันทึกสิทธิ์แล้ว");go("family")}
-    catch(e){this.disabled=false;this.textContent="บันทึกสิทธิ์";toast("บันทึกไม่สำเร็จ")}
+    try{
+      await CSBackend.updateCarerPermissions(l.id,perms);
+      await CSBackend.updateNotifyTypes(l.id,types);
+      toast("บันทึกแล้ว");go("family");
+    }catch(e){this.disabled=false;this.textContent="บันทึก";toast("บันทึกไม่สำเร็จ")}
   });
 }
 
@@ -1362,6 +1437,7 @@ async function famHomeV(){
   V.querySelectorAll("[data-member]").forEach(function(b){
     b.addEventListener("click",function(){go("famView",b.dataset.member)});
   });
+  pushCheck();   /* เด้งแจ้งเตือนใหม่บนเครื่อง ถ้าครอบครัวเปิดไว้ */
   document.getElementById("famOut").addEventListener("click",async function(){
     try{await CSBackend.signOut()}catch(e){}
     CLOUD.session=false; clearPortal(); toast("ออกจากระบบแล้ว"); go("portal");
@@ -1474,8 +1550,9 @@ function renderFamBody(){
       var s2='<div class="card"><h3 style="font-size:18px">การแจ้งเตือน</h3>';
       if(!mine.length)s2+='<p class="sub" style="margin:0">ยังไม่มีการแจ้งเตือน</p>';
       mine.forEach(function(n){
+        var ic={status_change:"🔔",orange_red:"⚠️",new_fall:"🩹",adl_drop:"📉",due_reminder:"📅"}[n.topic]||"🔔";
         s2+='<div style="border-top:1px solid var(--line2);padding:11px 0">'+
-          '<b style="font-size:15.5px">'+thDate(n.created_at)+'</b><br>'+
+          '<b style="font-size:15.5px">'+ic+' '+thDate(n.created_at)+'</b><br>'+
           '<span class="sub" style="font-size:15px">'+esc(n.body||"")+'</span></div>';
       });
       s2+='</div>';
@@ -1499,16 +1576,68 @@ function renderFamBody(){
     h+='<div class="card"><h3 style="font-size:18px">บันทึกการเยี่ยม</h3>'+
       '<p class="sub">บันทึกสิ่งที่ท่านสังเกตเห็น เพื่อให้ทีมดูแลมีข้อมูลประกอบ</p>'+
       '<div class="field"><input id="ckNote" placeholder="เช่น วันนี้เดินช้ากว่าปกติ"></div>'+
-      '<button class="ghostb" id="ckGo">บันทึก</button></div>';
+      '<button class="ghostb" id="ckGo">บันทึก</button>'+
+      '<div id="ckList"><p class="sub" style="margin:10px 0 0">กำลังโหลดประวัติ…</p></div></div>';
+    h+='<div class="card"><h3 style="font-size:18px">ฉันอยากรับแจ้งเตือนอย่างไร</h3>'+
+      '<p class="sub" style="margin:-4px 0 10px">เป็นการตั้งค่าของท่านเอง แยกจากหัวข้อที่ผู้เอาประกันอนุญาต</p>'+
+      '<div id="chList"><p class="sub" style="margin:0">กำลังโหลด…</p></div></div>';
     h+='<div class="notice">หากพบเหตุฉุกเฉิน โทร <b>1669</b> ทันที · ระบบนี้ไม่ใช่บริการฉุกเฉิน</div>';
   }
   el.innerHTML=h;
-  var ck=document.getElementById("ckGo");
-  if(ck)ck.addEventListener("click",function(){
-    var n=document.getElementById("ckNote").value.trim();
-    if(!n){toast("กรุณาพิมพ์สิ่งที่สังเกตเห็น");return}
-    toast("บันทึกแล้ว — ขอบคุณที่ช่วยดูแล");
-    document.getElementById("ckNote").value="";
+  if(FAMTAB==="care"){
+    renderCheckins();
+    renderChannels();
+    var ck=document.getElementById("ckGo");
+    if(ck)ck.addEventListener("click",async function(){
+      var box=document.getElementById("ckNote"), n=box.value.trim();
+      if(!n){toast("กรุณาพิมพ์สิ่งที่สังเกตเห็น");return}
+      this.disabled=true;this.textContent="กำลังบันทึก…";
+      try{
+        await CSBackend.addCheckin(FAMID,n);
+        box.value="";toast("บันทึกแล้ว — ขอบคุณที่ช่วยดูแล");
+        renderCheckins();
+      }catch(e){toast("บันทึกไม่สำเร็จ")}
+      this.disabled=false;this.textContent="บันทึก";
+    });
+  }
+}
+
+async function renderCheckins(){
+  var el=document.getElementById("ckList"); if(!el)return;
+  var rows=[]; try{rows=await CSBackend.listCheckins(FAMID,10)}catch(e){}
+  if(!rows.length){el.innerHTML='<p class="sub" style="margin:10px 0 0">ยังไม่มีบันทึก</p>';return}
+  el.innerHTML='<p class="sub" style="margin:12px 0 4px"><b>บันทึกล่าสุด</b></p>'+
+    rows.map(function(r){
+      return '<div style="border-top:1px solid var(--line2);padding:9px 0;font-size:14.5px">'+
+        '<b style="font-size:13px;color:var(--ink2)">'+thDate(r.created_at)+'</b><br>'+esc(r.note||"")+'</div>';
+    }).join("");
+}
+async function renderChannels(){
+  var el=document.getElementById("chList"); if(!el)return;
+  var prefs=null; try{prefs=await CSBackend.getNotifyPrefs()}catch(e){}
+  var ch=(prefs&&prefs.channels)||{inapp:true,push:false,sms:false};
+  el.innerHTML=NOTIFY_CHANNELS.map(function(c){
+    var dis=c.off||c.always;
+    return '<label class="chk" style="font-size:16px;'+(c.off?"opacity:.55":"")+'">'+
+      '<input type="checkbox" data-ch="'+c.k+'"'+((c.always||ch[c.k])?" checked":"")+(dis?" disabled":"")+'>'+
+      '<span>'+c.nm+'<span style="display:block;font-size:13px;color:var(--ink3)">'+c.hint+'</span></span></label>';
+  }).join("")+
+  (pushSupported()&&Notification.permission==="denied"
+    ? '<p class="sub" style="margin:8px 0 0;color:var(--c2)">เบราว์เซอร์ปิดการแจ้งเตือนไว้ — ต้องเปิดในการตั้งค่าเบราว์เซอร์ก่อน</p>' : '')+
+  '<button class="ghostb" id="chSave" style="margin-top:10px">บันทึกการตั้งค่า</button>';
+  document.getElementById("chSave").addEventListener("click",async function(){
+    var out={inapp:true,sms:false};
+    var pushBox=el.querySelector('[data-ch="push"]');
+    out.push=!!(pushBox&&pushBox.checked);
+    if(out.push){
+      var ok=await pushAsk();
+      if(!ok){out.push=false;if(pushBox)pushBox.checked=false;toast("เบราว์เซอร์ไม่อนุญาตการแจ้งเตือน")}
+    }
+    try{
+      await CSBackend.saveNotifyPrefs(out);
+      toast("บันทึกการตั้งค่าแล้ว");
+      if(out.push){pushSeenLoad();pushShow("CareSignal","เปิดการแจ้งเตือนบนเครื่องแล้ว")}
+    }catch(e){toast("บันทึกไม่สำเร็จ")}
   });
 }
 
