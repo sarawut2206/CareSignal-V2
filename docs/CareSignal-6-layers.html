@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>CareSignal — ระบบเดียวที่มองได้ 6 ชั้น</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:16mm 15mm 18mm}
+:root{
+  --ink:#16233B; --ink2:#4A5B78; --ink3:#8494AE;
+  --line:#DCE4F0; --line2:#EDF2FA;
+  --brand:#1D4ED8; --brand2:#2563EB; --navy:#0F1B33;
+  --c4:#0E9F6E; --c3:#C79200; --c2:#D97706; --c1:#DC2626;
+  --c4b:#E8F7F1; --c3b:#FEF7E2; --c2b:#FDEEDC; --c1b:#FDECEC;
+  --surf:#F5F8FD;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Sarabun","Prompt",sans-serif;color:var(--ink);
+  font-size:10.6pt;line-height:1.72;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2,h3,h4{font-family:"Prompt","Sarabun",sans-serif;margin:0}
+p{margin:0 0 7pt}
+a{color:var(--brand);text-decoration:none}
+.page-break{page-break-before:always}
+.avoid{page-break-inside:avoid}
+
+/* ---------- ปก ---------- */
+.cover{height:252mm;display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(145deg,#12244A,#1D4ED8 55%,#2E68E8);
+  color:#fff;padding:22mm 18mm;margin:-16mm -15mm 0;page-break-after:always}
+.cover .tag{font-size:9pt;letter-spacing:.24em;text-transform:uppercase;color:#9FC0FF;font-weight:600}
+.cover h1{font-size:34pt;line-height:1.15;margin:8pt 0 6pt;letter-spacing:-.02em}
+.cover .sub{font-size:14pt;color:#CBDCFF;margin-bottom:16pt;font-weight:400}
+.cover .lead{font-size:11pt;color:#E4EDFF;max-width:150mm;line-height:1.8}
+.cover .meta{margin-top:auto;padding-top:14pt;border-top:1px solid rgba(255,255,255,.25);
+  font-size:9.5pt;color:#B9CEF5;display:flex;gap:20pt;flex-wrap:wrap}
+.cover .meta b{color:#fff;display:block;font-size:10.5pt;font-weight:600}
+
+/* ---------- โครงหน้า ---------- */
+h2{font-size:17pt;letter-spacing:-.01em;margin:0 0 3pt;color:var(--navy)}
+h2 .num{color:var(--brand2);font-weight:700;margin-right:6pt}
+.h2sub{color:var(--ink2);font-size:10pt;margin:0 0 10pt;padding-bottom:7pt;border-bottom:2px solid var(--line)}
+h3{font-size:12pt;margin:12pt 0 5pt;color:var(--navy)}
+h4{font-size:10.5pt;margin:9pt 0 3pt}
+
+.card{background:var(--surf);border:1px solid var(--line);border-radius:7pt;padding:9pt 11pt;margin:8pt 0}
+.card.plain{background:#fff}
+.note{background:#EAF1FE;border-left:3.5pt solid var(--brand2);border-radius:0 6pt 6pt 0;padding:8pt 11pt;margin:8pt 0;font-size:10pt}
+.warn{background:#FEF7E2;border-left:3.5pt solid #E0A83C;border-radius:0 6pt 6pt 0;padding:8pt 11pt;margin:8pt 0;font-size:10pt}
+.quote{background:var(--navy);color:#E8EFFB;border-radius:7pt;padding:11pt 13pt;margin:9pt 0;font-size:10.5pt;line-height:1.75}
+.quote b{color:#FCD34D}
+
+table{width:100%;border-collapse:collapse;font-size:9.6pt;margin:7pt 0}
+th,td{text-align:left;padding:5.5pt 7pt;border-bottom:1px solid var(--line2);vertical-align:top}
+th{background:var(--surf);font-size:8.6pt;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink2);font-weight:600;border-bottom:1.5px solid var(--line)}
+td.n{white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.tot td{border-top:1.5px solid var(--line);font-weight:600;background:var(--surf)}
+
+.pill{display:inline-block;padding:1.5pt 7pt;border-radius:99pt;font-size:8.4pt;font-weight:600;white-space:nowrap}
+.p4{background:var(--c4b);color:#0A6E4C}.p3{background:var(--c3b);color:#8A6500}
+.p2{background:var(--c2b);color:#9A5209}.p1{background:var(--c1b);color:#A81E1E}
+.pb{background:#E4ECFB;color:#1A3E93}.pg{background:#EEF1F6;color:#5A6B85}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8pt}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt}
+.kv{display:flex;justify-content:space-between;gap:10pt;padding:3.5pt 0;border-bottom:1px dashed var(--line);font-size:9.8pt}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--ink2)}
+.kv .v{font-weight:600;text-align:right;white-space:nowrap}
+
+/* ชั้น 6 ชั้น */
+.layer{display:flex;gap:9pt;align-items:flex-start;padding:7pt 0;border-bottom:1px solid var(--line2)}
+.layer:last-child{border-bottom:0}
+.layer .no{flex:none;width:19pt;height:19pt;border-radius:5pt;background:var(--brand2);color:#fff;
+  font-weight:700;font-size:9.5pt;display:flex;align-items:center;justify-content:center;margin-top:1pt}
+.layer .tx{flex:1}
+.layer .tx b{display:block;font-size:10.8pt;color:var(--navy)}
+.layer .tx span{font-size:9.6pt;color:var(--ink2)}
+
+/* ลำดับขั้น */
+.steps{counter-reset:s;margin:8pt 0}
+.step{counter-increment:s;position:relative;padding:5pt 0 5pt 24pt;font-size:10pt;border-bottom:1px solid var(--line2)}
+.step:last-child{border-bottom:0}
+.step::before{content:counter(s);position:absolute;left:0;top:5pt;width:16pt;height:16pt;border-radius:50%;
+  background:var(--brand2);color:#fff;font-size:8.6pt;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step b{color:var(--navy)}
+
+.stat{background:#fff;border:1px solid var(--line);border-radius:7pt;padding:8pt 10pt;text-align:center}
+.stat .big{font-size:19pt;font-weight:700;color:var(--brand);line-height:1.1;font-family:"Prompt",sans-serif}
+.stat .lb{font-size:8.6pt;color:var(--ink2);margin-top:2pt}
+
+.status-ok{color:var(--c4);font-weight:600}
+.status-part{color:var(--c2);font-weight:600}
+.status-no{color:var(--c1);font-weight:600}
+.mono{font-family:Consolas,"Courier New",monospace;font-size:9pt}
+.small{font-size:9.2pt;color:var(--ink2)}
+ul{margin:4pt 0 7pt;padding-left:15pt}
+li{margin-bottom:2.5pt}
+.foot{margin-top:14pt;padding-top:8pt;border-top:1px solid var(--line);font-size:8.6pt;color:var(--ink3)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ ปก ═══════════ -->
+<div class="cover">
+  <div class="tag">คู่มือทำความเข้าใจระบบ · ฉบับตรวจสอบกับซอร์สโค้ดจริง</div>
+  <h1>CareSignal<br>ระบบเดียวที่มองได้ 6 ชั้น</h1>
+  <div class="sub">แพลตฟอร์ม Pre-Claim Intelligence สำหรับประกันดูแลระยะยาว</div>
+  <div class="lead">
+    เอกสารนี้อธิบาย CareSignal ในแบบที่จำได้ — ไม่ต้องจำว่ามีไฟล์อะไรหรือฟังก์ชันอะไร
+    แต่เข้าใจว่าระบบมีกี่ชั้น แต่ละชั้นทำอะไร และวันนี้ชั้นไหน<b>ทำงานจริงแล้ว</b>
+    ชั้นไหนยังเป็น<b>สมมติฐาน</b> และชั้นไหน<b>ยังต้องพิสูจน์</b>
+    ทุกตัวเลขในเอกสารนี้ถูกตรวจกับซอร์สโค้ดและฐานข้อมูลจริง ณ วันที่จัดทำ
+  </div>
+  <div class="meta">
+    <div><b>เอนจินวิเคราะห์</b>เวอร์ชัน 1.4.1 · กฎ R1–R10</div>
+    <div><b>สถานะ</b>Working Prototype + Validation Infrastructure</div>
+    <div><b>จัดทำ</b>15 สิงหาคม 2569</div>
+    <div><b>เพื่อ</b>OIC InsurTech Award 2026</div>
+  </div>
+</div>
+
+<!-- ═══════════ 1 ═══════════ -->
+<h2><span class="num">1</span>CareSignal คืออะไร</h2>
+<p class="h2sub">คำอธิบายที่ตรงกับระบบจริง ไม่ใช่คำโฆษณา</p>
+
+<p>CareSignal ไม่ควรถูกอธิบายว่าเป็นเพียง “แอปตรวจสุขภาพผู้สูงอายุ” และไม่ควรอธิบายว่าเป็น “AI ทำนายว่าใครจะเคลม” เพราะทั้งสองอย่างไม่ตรงกับสิ่งที่ระบบทำอยู่</p>
+
+<div class="quote">
+CareSignal คือ <b>แพลตฟอร์ม Pre-Claim Intelligence สำหรับประกันดูแลระยะยาว</b>
+ที่ติดตามการเปลี่ยนแปลงของสมรรถภาพผู้สูงอายุอย่างต่อเนื่องจากที่บ้าน
+เพื่อค้นหาสัญญาณการถดถอย<b>ก่อน</b>เข้าสู่ภาวะพึ่งพิง แล้วเชื่อมข้อมูลไปสู่ผู้เอาประกัน
+ครอบครัว Care Manager และบริษัทประกัน เพื่อให้มีโอกาสเข้าแทรกแซง<b>ก่อนเกิดเหตุรุนแรงหรือก่อนเคลม</b>
+</div>
+
+<p>หัวใจจึงไม่ใช่ “คะแนนครั้งเดียว” แต่คือ <b>Functional Trajectory</b> — เส้นทางการเปลี่ยนแปลงของสมรรถภาพคนคนเดิมตามเวลา</p>
+
+<h3>ปัญหาที่พยายามแก้</h3>
+<p>ในประกันแบบดั้งเดิม บริษัทมีข้อมูลเป็น “จุด” — ตอนสมัคร ข้อมูลสุขภาพบางส่วน และตอนเกิดเคลมแล้ว แต่ภาวะพึ่งพิงของผู้สูงอายุจำนวนมากเกิดจากกระบวนการเสื่อมถอยที่ค่อย ๆ เปลี่ยน CareSignal พยายามสร้างข้อมูลระหว่างสองจุดนั้น</p>
+
+<div class="card">
+  <div style="text-align:center;font-size:10.5pt;font-weight:600;color:var(--navy);letter-spacing:.02em">
+    พึ่งตนเองได้ &nbsp;→&nbsp; เริ่มถดถอย &nbsp;→&nbsp; เสี่ยงมากขึ้น &nbsp;→&nbsp; พึ่งพิง &nbsp;→&nbsp; เคลม
+  </div>
+  <p class="small" style="text-align:center;margin:6pt 0 0">คำถามของระบบคือ “เราเห็นการเปลี่ยนแปลงก่อนถึงคำว่าพึ่งพิงได้หรือไม่”</p>
+</div>
+
+<p>แนวทางที่เลือกคือให้ผู้สูงอายุประเมินสมรรถภาพซ้ำได้ง่ายจากบ้าน แล้วนำผลวันนี้ไปเทียบกับผลของ<b>ตัวเองในอดีต</b> แทนที่จะดูเฉพาะค่าเฉลี่ยประชากร — ซึ่งเป็นเหตุผลที่ระบบมีทั้งคะแนนปัจจุบันและเอนจินวิเคราะห์แนวโน้ม</p>
+
+<h2 style="margin-top:16pt"><span class="num">2</span>ผู้เกี่ยวข้องทั้งระบบ</h2>
+<p class="h2sub">ใครทำอะไร และได้อะไร</p>
+
+<table>
+<thead><tr><th style="width:26%">ผู้เกี่ยวข้อง</th><th style="width:38%">ทำอะไรในระบบ</th><th>ได้อะไร</th></tr></thead>
+<tbody>
+<tr><td><b>ผู้เอาประกัน / ผู้สูงอายุ</b></td><td>ประเมินสมรรถภาพ ดูผล ดูแนวโน้ม และเป็นผู้อนุมัติสิทธิ์ให้ครอบครัว</td><td>รู้การเปลี่ยนแปลงของตนเองก่อนเกิดเหตุรุนแรง และควบคุมข้อมูลของตัวเองได้</td></tr>
+<tr><td><b>ครอบครัว / ผู้ดูแล</b></td><td>ติดตามสมาชิกที่อนุญาตให้ดูแล บันทึกสิ่งที่สังเกตเห็น</td><td>รับรู้และช่วยเหลือเร็วขึ้น มีเวลาปรับบ้านและพาไปพบผู้เชี่ยวชาญ</td></tr>
+<tr><td><b>Care Manager / พยาบาล</b></td><td>รับเคสที่ระบบคัดกรอง ดูเหตุผล และตัดสินใจส่งต่อ</td><td>ไม่ต้องติดตามทุกคนเท่ากัน ใช้เวลากับคนที่ต้องการจริง</td></tr>
+<tr><td><b>บริษัทประกัน</b></td><td>ดูภาพรวมพอร์ตและการกระจายความเสี่ยงแบบลดทอนตัวตน</td><td>เห็นแนวโน้มความเสี่ยงของพอร์ตและออกแบบโปรแกรมป้องกัน</td></tr>
+<tr><td><b>นักคณิตศาสตร์ประกันภัย</b></td><td>ในอนาคตนำข้อมูลที่ผ่านการตรวจสอบแล้วไปศึกษาความเสี่ยงและราคา</td><td>ข้อมูลใหม่สำหรับออกแบบผลิตภัณฑ์และวิเคราะห์เชิงคณิตศาสตร์ประกันภัย</td></tr>
+<tr><td><b>ผู้กำกับดูแล / ผู้ตรวจสอบ</b></td><td>ตรวจเรื่อง AI, PDPA, การใช้ข้อมูล และผลิตภัณฑ์</td><td>ตรวจสอบย้อนหลังได้ และอธิบายเหตุผลของระบบได้ทุกข้อ</td></tr>
+</tbody>
+</table>
+
+<!-- ═══════════ 3 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">3</span>สถาปัตยกรรม 6 ชั้น</h2>
+<p class="h2sub">ถ้าจำภาพนี้ได้ จะเข้าใจ CareSignal เกือบทั้งหมด</p>
+
+<div class="card plain">
+  <div class="layer"><div class="no">1</div><div class="tx"><b>ชั้นผู้ใช้ — Member &amp; Family Layer</b>
+    <span>แอปสมาชิกและครอบครัว (CareSignal App / Vision) · เลือกบทบาทที่หน้าแรก · ไม่มีจอเจ้าหน้าที่ปนอยู่เลย</span></div></div>
+  <div class="layer"><div class="no">2</div><div class="tx"><b>ชั้นการวัด — Measurement Layer</b>
+    <span>Computer Vision จับ 33 จุดบนร่างกาย · ลุกนั่ง 5 ครั้ง · ลุกเดิน 3 เมตร · ทรงตัว 4 ท่า · แบบประเมิน</span></div></div>
+  <div class="layer"><div class="no">3</div><div class="tx"><b>ชั้นวิเคราะห์ — Analysis Layer</b>
+    <span>คะแนนเต็ม 12 · Functional Trajectory · เอนจินกฎ R1–R10 แบบอธิบายได้ ไม่ใช่กล่องดำ</span></div></div>
+  <div class="layer"><div class="no">4</div><div class="tx"><b>ชั้นข้อมูลกลาง — Data Layer</b>
+    <span>Supabase / PostgreSQL · 13 ตาราง · 30 นโยบาย Row Level Security · 7 ทริกเกอร์ · Consent · Audit Log</span></div></div>
+  <div class="layer"><div class="no">5</div><div class="tx"><b>ชั้นการดูแล — Care Layer</b>
+    <span>แอปเจ้าหน้าที่ (CareSignal Staff) · คิวเคสเรียงตามความเร่งด่วน · มนุษย์เป็นผู้ตัดสินการส่งต่อ</span></div></div>
+  <div class="layer"><div class="no">6</div><div class="tx"><b>ชั้นประกัน — Insurance Intelligence Layer</b>
+    <span>พอร์ตความเสี่ยงแบบแฝงชื่อ · การออกแบบผลิตภัณฑ์ · การวิเคราะห์เชิงคณิตศาสตร์ประกันภัยในอนาคต</span></div></div>
+</div>
+
+<div class="note"><b>สิ่งที่เปลี่ยนไปในเวอร์ชันล่าสุด</b> — ชั้นที่ 1 กับชั้นที่ 5 ถูกแยกออกเป็นคนละแอปโดยสิ้นเชิงแล้ว
+ผู้เอาประกันและครอบครัวใช้แอปหนึ่ง เจ้าหน้าที่ใช้อีกแอปหนึ่งซึ่งต้องเข้าสู่ระบบทุกครั้งและไม่มีข้อมูลสาธิตอยู่เลย
+ทำให้อธิบายกับผู้กำกับดูแลได้ง่ายว่าไม่ใช่แอปเดียวที่ทุกคนเห็นทุกอย่าง</div>
+
+<h3>สามแอปในระบบ</h3>
+<table>
+<thead><tr><th style="width:24%">แอป</th><th style="width:24%">สำหรับใคร</th><th>เมนู</th><th style="width:13%">ขนาดไฟล์</th></tr></thead>
+<tbody>
+<tr><td><b>CareSignal App</b><br><span class="small">แอปสมาชิกเต็มรูปแบบ</span></td><td>ผู้เอาประกัน<br>+ ครอบครัว</td><td>หน้าแรก · ตรวจร่างกาย · แนวโน้ม · ครอบครัว</td><td class="n">289 KB</td></tr>
+<tr><td><b>CareSignal Vision</b><br><span class="small">เน้นการวัดด้วยกล้อง</span></td><td>ผู้เอาประกัน</td><td>ประเมิน · แนวโน้ม · ข้อมูลของฉัน · วิจัย</td><td class="n">251 KB</td></tr>
+<tr><td><b>CareSignal Staff</b><br><span class="small">ธีมน้ำเงินเข้ม แยกให้เห็นชัด</span></td><td>Care Manager<br>พยาบาล · บริษัทประกัน</td><td>คิวเคส · พอร์ต · ฉัน</td><td class="n">27 KB</td></tr>
+</tbody>
+</table>
+
+<h2 style="margin-top:14pt"><span class="num">4</span>เส้นทางการประเมิน</h2>
+<p class="h2sub">สิ่งที่เกิดขึ้นจริงตั้งแต่เปิดกล้องจนได้ผล</p>
+
+<div class="steps">
+  <div class="step"><b>ยืนยันตัวตนและเตรียมตัว</b> — ให้กล้องจำใบหน้าไว้ครั้งเดียว เพื่อตรวจว่าเป็นคนเดิมขณะวัด</div>
+  <div class="step"><b>ลุกนั่ง 5 ครั้ง (FTSST)</b> — กล้องนับครั้งและจับเวลาเอง เริ่มจับเวลาตั้งแต่เริ่มขยับจริง ไม่ใช่ตอนกดปุ่ม</div>
+  <div class="step"><b>ลุกเดิน 3 เมตร (TUG)</b> — วางป้าย 2 จุด กลับมานั่ง ระบบเห็นเองว่านั่งแล้วจึงนับ 3-2-1 · ตรวจว่าเดินครบรอบจริงและวัดการเดินตรง</div>
+  <div class="step"><b>ทรงตัว 4 ท่า (4-Stage Balance)</b> — ท่าละ 10 วินาที มีเสียงบอกทุกท่า หยุดจับเวลาเมื่อขยับเท้าตามเกณฑ์ CDC</div>
+  <div class="step"><b>ตอบคำถามและรับผล</b> — ประวัติหกล้ม · จำนวนยา · ดัชนีบาร์เธลฉบับย่อ 5 ด้าน แล้วเห็นแนวโน้มพร้อมเหตุผลเป็นตัวเลข</div>
+</div>
+
+<div class="warn"><b>ภาพวิดีโอไม่ถูกบันทึกและไม่ถูกส่งออกจากเครื่อง</b> — กล้องแปลงร่างเป็นจุดข้อต่อ 33 จุดในเครื่อง
+แล้วเก็บเฉพาะตัวเลขเวลา จำนวนครั้ง และค่าความโคลง นี่คือเหตุผลที่เลือกประมวลผลบนอุปกรณ์ ไม่ใช่ส่งภาพขึ้นเซิร์ฟเวอร์</div>
+
+<!-- ═══════════ 5 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">5</span>คะแนนเต็ม 12 และเกณฑ์การให้คะแนน</h2>
+<p class="h2sub">ยิ่งได้คะแนนมากยิ่งแข็งแรง — ออกแบบให้ผู้สูงอายุอยากทำคะแนนให้ดีขึ้น</p>
+
+<table>
+<thead><tr><th style="width:24%">องค์ประกอบ</th><th style="width:9%">เต็ม</th><th>เกณฑ์การให้คะแนน</th></tr></thead>
+<tbody>
+<tr><td><b>ลุกนั่ง 5 ครั้ง</b><br><span class="small">Five-Times Sit-to-Stand</span></td><td class="n">4</td>
+    <td>เทียบค่าตัดตามอายุ (cut): ≤ cut = 4 · ≤ cut+2 = 3 · ≤ cut+4.5 = 2 · ≤ 60 วิ = 1 · เกินนั้น = 0</td></tr>
+<tr><td><b>การทรงตัว</b><br><span class="small">4-Stage Balance Test</span></td><td class="n">3</td>
+    <td>ผ่านครบ 4 ท่า = 3 · ผ่าน 3 ท่า = 2 · ผ่าน 2 ท่า = 1 · น้อยกว่านั้น = 0</td></tr>
+<tr><td><b>ประวัติหกล้ม</b></td><td class="n">2</td>
+    <td>ไม่เคยล้ม = 2 · ล้ม 1 ครั้ง = 1 · ล้มตั้งแต่ 2 ครั้ง = 0</td></tr>
+<tr><td><b>จำนวนยาประจำ</b></td><td class="n">1</td>
+    <td>น้อยกว่า 4 ชนิด = 1 · ตั้งแต่ 4 ชนิดขึ้นไป = 0</td></tr>
+<tr><td><b>กิจวัตรประจำวัน</b><br><span class="small">บาร์เธลฉบับย่อ 5 ด้าน</span></td><td class="n">2</td>
+    <td>เทียบเป็นดัชนีเต็ม 20: 12–20 (ติดสังคม) = 2 · 5–11 (ติดบ้าน) = 1 · 0–4 (ติดเตียง) = 0</td></tr>
+<tr class="tot"><td>รวม</td><td class="n">12</td><td>ระดับ 4 = 10–12 · ระดับ 3 = 8–9 · ระดับ 2 = 5–7 · ระดับ 1 = 0–4</td></tr>
+</tbody>
+</table>
+
+<div class="grid2">
+  <div class="card">
+    <h4 style="margin-top:0">ค่าตัดเกณฑ์ลุกนั่งตามอายุ</h4>
+    <div class="kv"><span class="k">อายุต่ำกว่า 60 ปี</span><span class="v">10.0 วินาที</span></div>
+    <div class="kv"><span class="k">อายุ 60–69 ปี</span><span class="v">11.5 วินาที</span></div>
+    <div class="kv"><span class="k">อายุ 70 ปีขึ้นไป</span><span class="v">12.1 วินาที</span></div>
+    <p class="small" style="margin:5pt 0 0">ใช้ค่าจากงานวิจัยประชากรไทย (Poncumhak 2014; Intaruk 2021) ไม่ใช่ค่าจากประชากรตะวันตก</p>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">TUG ไม่ได้อยู่ในคะแนน 12</h4>
+    <p class="small" style="margin:0">ลุกเดิน 3 เมตรเป็นส่วนหนึ่งของการประเมิน แต่<b>ไม่ถูกนำไปบวกในคะแนนรวม</b>
+    ระบบใช้เป็นกฎเฝ้าระวังแยกต่างหาก (R10) โดยใช้เกณฑ์ 12 วินาทีของ CDC STEADI
+    และนับเฉพาะรอบที่ระบบยืนยันว่าเดินครบระยะจริง</p>
+  </div>
+</div>
+
+<div class="warn"><b>ข้อจำกัดที่ต้องพูดให้ตรง</b> — คะแนนเต็ม 12 นี้เป็น <b>Composite Scoring Logic ของต้นแบบ</b>
+ประกอบขึ้นจากปัจจัยที่มีวรรณกรรมรองรับรายตัว แต่<b>ตัวชุดคะแนนรวมยังไม่ผ่าน Clinical Validation</b>
+ต้องตรวจสอบกับข้อมูลผู้สูงอายุจริงอีกครั้งก่อนนำไปใช้ตัดสินใจทางคลินิกหรือทางประกัน</div>
+
+<h2 style="margin-top:14pt"><span class="num">6</span>Functional Trajectory — หัวใจของระบบ</h2>
+<p class="h2sub">ทำไมคะแนนวันนี้อย่างเดียวจึงไม่พอ</p>
+
+<p>สมมติผู้สูงอายุคนหนึ่งได้คะแนน <span class="mono">11 → 10 → 8 → 6</span> ในสี่ครั้งที่ผ่านมา สิ่งที่ CareSignal สนใจไม่ใช่ “วันนี้ได้ 6” แต่คือ <b>“คนนี้กำลังลดลงอย่างต่อเนื่อง”</b> — คนที่ได้ 6 มาตลอดกับคนที่เพิ่งตกจาก 11 มาเหลือ 6 ต้องการการดูแลคนละแบบ</p>
+
+<p>ระบบคำนวณทิศทางด้วยความชันของเส้นถดถอยเชิงเส้นบนแกนเวลาจริง จึงไม่ถูกหลอกเมื่อผู้ใช้วัดถี่ ๆ ในวันเดียว แล้วสรุปเป็นภาษาคนว่า <b>ดีขึ้น / คงที่ / ถดถอย</b> พร้อมอัตราการเปลี่ยนแปลงต่อเดือน และแสดงเป็นกราฟเส้นที่มีตัวเลขกำกับทุกจุด</p>
+
+<!-- ═══════════ 7 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">7</span>เอนจินวิเคราะห์ความเสี่ยง — กฎ R1–R10</h2>
+<p class="h2sub">เวอร์ชัน 1.4.1 · เป็นกฎที่อธิบายได้ ไม่ใช่ Machine Learning</p>
+
+<table>
+<thead><tr><th style="width:7%">รหัส</th><th style="width:27%">กฎ</th><th>เงื่อนไขที่ทำให้จุดติด</th><th style="width:9%">น้ำหนัก</th></tr></thead>
+<tbody>
+<tr><td class="n"><b>R1</b></td><td>ลุกนั่งช้าลงมาก</td><td>ช้ากว่าสถิติดีที่สุดของตัวเอง ≥ 2.3 วินาที หรือ ≥ 15%</td><td class="n">1–2</td></tr>
+<tr><td class="n"><b>R2</b></td><td>ข้ามเกณฑ์เสี่ยงตามอายุ</td><td>ครั้งก่อนยังต่ำกว่าค่าตัด แต่ครั้งนี้เกิน</td><td class="n">2</td></tr>
+<tr><td class="n"><b>R3</b></td><td>มีเหตุหกล้มใหม่</td><td>คะแนนหมวดหกล้มลดลงจากครั้งก่อน</td><td class="n">2</td></tr>
+<tr><td class="n"><b>R4</b></td><td>คะแนนรวมถดถอย</td><td>ต่ำกว่าคะแนนดีที่สุดของตัวเอง ≥ 2 คะแนน</td><td class="n">1–2</td></tr>
+<tr><td class="n"><b>R5</b></td><td>ยาหลายชนิด + ทรงตัวไม่ผ่าน</td><td>ยา ≥ 4 ชนิด และคะแนนทรงตัว ≤ 1</td><td class="n">2</td></tr>
+<tr><td class="n"><b>R6</b></td><td>ทำกิจวัตรได้น้อยลง</td><td>ระดับ ADL ลดลงจากครั้งก่อน (ข้ามระดับ)</td><td class="n">3</td></tr>
+<tr><td class="n"><b>R7</b></td><td>จังหวะลุกไม่สม่ำเสมอ</td><td>ความแปรปรวนของเวลาต่อครั้ง ≥ 25%</td><td class="n">1</td></tr>
+<tr><td class="n"><b>R8</b></td><td>ทรงตัวถดถอยเป็นท่า</td><td>ท่าที่เคยยืนผ่านครบ 10 วินาที ทำไม่ได้แล้ว</td><td class="n">1–2</td></tr>
+<tr><td class="n"><b>R9</b></td><td>บาร์เธลลดก่อนข้ามระดับ</td><td>ต่ำกว่าสถิติดีที่สุด ≥ 2 คะแนน ทั้งที่ยังอยู่ระดับเดิม</td><td class="n">1–2</td></tr>
+<tr><td class="n"><b>R10</b></td><td>ลุกเดิน 3 เมตรช้ากว่าเกณฑ์</td><td>TUG ≥ 12 วินาที เฉพาะรอบที่ยืนยันว่าเดินครบระยะ</td><td class="n">1–2</td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>ทำไมเลือกกฎแทน Machine Learning</b> — เพราะยังไม่มีข้อมูลผู้สูงอายุหลายพันคนพร้อมผลลัพธ์ระยะยาวมากพอ
+จะฝึกโมเดลแล้วอ้างว่า “ทำนายภาวะพึ่งพิงได้” ระบบจึงแยกชัดว่า <b>AI จริงคือ Computer Vision</b> ส่วน
+<b>เอนจินวิเคราะห์เป็นกฎที่ตรวจสอบได้</b> เมื่อสถานะขึ้นสีส้ม เราตอบได้ว่า “เพราะ R1 และ R3” ไม่ใช่ “โมเดลให้ค่า 0.72 แต่ไม่รู้เพราะอะไร”</div>
+
+<h3>สีสถานะมาจากไหน</h3>
+<p>ระบบรวมน้ำหนักของกฎทุกข้อที่จุดติดเป็น <b>คะแนนความรุนแรงรวม</b> แล้วตัดสินตามลำดับจากบนลงล่าง หยุดที่ข้อแรกที่เป็นจริง</p>
+
+<table>
+<thead><tr><th style="width:14%">สี</th><th style="width:36%">เข้าเงื่อนไขเมื่อ</th><th style="width:16%">ประเมินซ้ำ</th><th>ระบบทำอะไรต่อ</th></tr></thead>
+<tbody>
+<tr><td><span class="pill p1">แดง</span></td><td>รวม ≥ 5 <b>หรือ</b> R6 จุดติด <b>หรือ</b> คะแนนระดับ 1</td><td class="n">7 วัน</td><td>ส่งต่อพยาบาลประเมินที่บ้านภายใน 72 ชั่วโมง</td></tr>
+<tr><td><span class="pill p2">ส้ม</span></td><td>รวม 3–4 <b>หรือ</b> คะแนนระดับ 2</td><td class="n">21 วัน</td><td>Care Manager โทรติดตามภายใน 7 วัน</td></tr>
+<tr><td><span class="pill p3">เหลือง</span></td><td>รวม 1–2</td><td class="n">45 วัน</td><td>ส่งแผนป้องกันให้ทำเองที่บ้าน</td></tr>
+<tr><td><span class="pill p4">เขียว</span></td><td>ไม่มีกฎข้อใดจุดติด</td><td class="n">90 วัน</td><td>ดูแลตนเองตามแผนปกติ</td></tr>
+</tbody>
+</table>
+
+<p class="small">ลำดับนี้สำคัญ — คนที่คะแนนรวมยังดีแต่กฎจุดติดหนักถึง 5 จะยังได้สีแดง เพราะ<b>ทิศทางการเปลี่ยนแปลงสำคัญกว่าตัวเลขวันนี้</b>
+· ตัวเลขรอบประเมินซ้ำและ SLA เหล่านี้เป็น<b>การออกแบบกระบวนการของ CareSignal</b> ไม่ใช่มาตรฐานทางการแพทย์ที่ได้รับอนุมัติแล้ว</p>
+
+<!-- ═══════════ 8 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">8</span>ระบบบัญชีครอบครัว — Account ≠ Permission</h2>
+<p class="h2sub">ส่วนที่ออกแบบใหม่ทั้งหมด และเป็นจุดแข็งด้าน Data Governance</p>
+
+<div class="quote">หลักการที่ยึด: <b>การรู้รหัสสมาชิก ไม่เท่ากับ มีสิทธิ์อ่านข้อมูลสุขภาพ</b><br>
+ครอบครัวมีบัญชีของตัวเอง แต่จะเห็นข้อมูลผู้เอาประกันได้เฉพาะสิ่งที่ผู้เอาประกันอนุมัติเป็นรายการ</div>
+
+<div class="steps">
+  <div class="step"><b>ผู้เอาประกันสร้างรหัสเชิญ 6 หลัก</b> — หมดอายุใน 24 ชั่วโมง ใช้ได้ครั้งเดียว ไม่ใช่รหัสถาวร</div>
+  <div class="step"><b>ครอบครัวสมัครบัญชีของตัวเอง</b> — เบอร์โทรและรหัส 4 หลักของตนเอง แยกจากบัญชีผู้เอาประกัน</div>
+  <div class="step"><b>กรอกรหัสเชิญและระบุความสัมพันธ์</b> — เกิดเป็น “คำขอ” สถานะรออนุมัติ · <b>ยังอ่านข้อมูลไม่ได้เลย</b></div>
+  <div class="step"><b>ผู้เอาประกันอนุมัติและติ๊กเลือกสิทธิ์</b> — เลือกทีละรายการว่าให้ดูอะไรได้บ้าง</div>
+  <div class="step"><b>ครอบครัวจึงเห็นเฉพาะรายการที่ติ๊กไว้</b> — ถอนสิทธิ์ได้ทุกเมื่อและมีผลทันที</div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h4 style="margin-top:0">ชั้นที่ 1 · สิทธิ์ดูข้อมูล (6 รายการ)</h4>
+    <p class="small" style="margin:0 0 4pt">ผู้เอาประกันติ๊กเลือก</p>
+    <ul style="margin:0;font-size:9.5pt">
+      <li>สถานะล่าสุด (สีและคะแนนรวม)</li>
+      <li>แนวโน้มสมรรถภาพย้อนหลัง</li>
+      <li>ผลการทดสอบ (ลุกนั่ง · ลุกเดิน · ทรงตัว)</li>
+      <li>ความสามารถทำกิจวัตรประจำวัน</li>
+      <li>รับการแจ้งเตือนเมื่อความเสี่ยงเปลี่ยน</li>
+      <li>ข้อมูลยาที่ใช้ประจำ <span class="small">(ปิดไว้เป็นค่าเริ่มต้น)</span></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">ชั้นที่ 2 · หัวข้อแจ้งเตือน (5 หัวข้อ)</h4>
+    <p class="small" style="margin:0 0 4pt">ผู้เอาประกันเลือกว่าให้แจ้งเรื่องอะไร</p>
+    <ul style="margin:0;font-size:9.5pt">
+      <li>เมื่อสถานะเปลี่ยน</li>
+      <li>เมื่อเข้าเขตส้มหรือแดง</li>
+      <li>เมื่อมีการหกล้มครั้งใหม่</li>
+      <li>เมื่อทำกิจวัตรได้น้อยลง</li>
+      <li>เมื่อถึงกำหนดประเมินครั้งถัดไป</li>
+    </ul>
+    <p class="small" style="margin:5pt 0 0"><b>ชั้นที่ 3</b> ครอบครัวเลือกเองว่าจะรับทางไหน (ในแอป · แจ้งบนเครื่อง · SMS)</p>
+  </div>
+</div>
+
+<div class="note"><b>ทำไมแยกสิทธิ์ออกจากช่องทาง</b> — สิทธิ์ในการเปิดเผยข้อมูลกับความต้องการรับการแจ้งเตือนเป็นคนละเรื่อง
+ผู้เอาประกันไม่ควรถูกบังคับให้กำหนดช่องทางรับของคนอื่น และครอบครัวไม่ควรเปิดรับหัวข้อที่เจ้าของข้อมูลไม่ได้อนุญาต</div>
+
+<h3>ผลการทดสอบด้านความปลอดภัย (ทดสอบกับฐานข้อมูลจริง)</h3>
+<table>
+<thead><tr><th>สถานการณ์</th><th style="width:20%">ผลตรวจที่อ่านได้</th><th style="width:20%">ผลลัพธ์</th></tr></thead>
+<tbody>
+<tr><td>มีบัญชีครอบครัว แต่ยังไม่ผูกกับใคร</td><td class="n">0 รายการ</td><td class="status-ok">ถูกต้อง</td></tr>
+<tr><td>ส่งคำขอแล้ว แต่ยังไม่ได้รับอนุมัติ</td><td class="n">0 รายการ</td><td class="status-ok">ถูกต้อง</td></tr>
+<tr><td>ได้รับอนุมัติแล้ว</td><td class="n">2 รายการ</td><td class="status-ok">ถูกต้อง</td></tr>
+<tr><td>อนุมัติแต่ปิดสิทธิ์ ADL และยา</td><td>เห็นผลตรวจ แต่ไม่มีแถวกิจวัตรประจำวัน</td><td class="status-ok">ถูกต้อง</td></tr>
+<tr><td>ผู้เอาประกันถอนสิทธิ์</td><td class="n">0 รายการทันที</td><td class="status-ok">ถูกต้อง</td></tr>
+<tr><td>ปิดหัวข้อแจ้งเตือน 2 จาก 5 แล้วเกิดเหตุที่ตรงทุกหัวข้อ</td><td>ได้รับเฉพาะ 3 หัวข้อที่อนุญาต</td><td class="status-ok">ถูกต้อง</td></tr>
+</tbody>
+</table>
+
+<p class="small"><b>สำคัญ:</b> ทั้งหมดนี้บังคับที่ <b>Row Level Security บนฐานข้อมูล</b> ไม่ใช่การซ่อนบนหน้าจอ —
+ต่อให้แก้โค้ดฝั่งหน้าเว็บ เซิร์ฟเวอร์ก็ไม่ส่งข้อมูลให้ · ปัจจุบันมี 30 นโยบายบน 13 ตาราง</p>
+
+<!-- ═══════════ 9 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">9</span>ใครเห็นอะไร</h2>
+<p class="h2sub">ข้อมูลชุดเดียวกันถูกตัดทอนต่างกันตามหน้าที่</p>
+
+<table>
+<thead><tr><th style="width:26%">ข้อมูล</th><th>ผู้เอาประกัน</th><th>ครอบครัว</th><th>Care Manager</th><th>บริษัทประกัน</th></tr></thead>
+<tbody>
+<tr><td>ชื่อ-นามสกุล</td><td class="status-ok">เห็น</td><td>เห็น (หลังอนุมัติ)</td><td>เฉพาะเคสที่รับผิดชอบ</td><td class="status-no">ไม่เห็น</td></tr>
+<tr><td>เบอร์โทรศัพท์</td><td class="status-ok">เห็น</td><td class="status-no">ไม่เห็น</td><td>เฉพาะเคสที่ต้องติดต่อ</td><td class="status-no">ไม่เห็น</td></tr>
+<tr><td>รหัสแฝง <span class="mono">P-XXXXXXX</span></td><td class="status-ok">เห็น</td><td class="status-ok">เห็น</td><td class="status-ok">เห็น</td><td class="status-ok">เห็น</td></tr>
+<tr><td>ผลการทดสอบทั้งหมด</td><td class="status-ok">เห็นเต็ม</td><td class="status-part">เฉพาะที่อนุญาต</td><td class="status-ok">เห็นเต็ม</td><td class="status-ok">เห็นเต็ม</td></tr>
+<tr><td>ช่วงอายุและเพศ</td><td class="status-ok">เห็น</td><td>เห็นอายุ</td><td class="status-ok">เห็น</td><td class="status-ok">เห็น</td></tr>
+<tr><td>สีสถานะและกฎที่จุดติด</td><td>พร้อมคำอธิบาย</td><td class="status-part">เฉพาะที่อนุญาต</td><td>พร้อมคำอธิบาย</td><td>เฉพาะสี</td></tr>
+<tr><td>ข้อมูลยาที่ใช้ประจำ</td><td class="status-ok">เห็น</td><td class="status-part">ต้องอนุญาตแยก</td><td class="status-ok">เห็น</td><td class="status-no">ไม่เห็น</td></tr>
+<tr><td><b>ภาพวิดีโอขณะทดสอบ</b></td><td colspan="4" style="text-align:center"><b class="status-no">ไม่มีใครเห็น — ระบบไม่บันทึกวิดีโอเลย</b></td></tr>
+</tbody>
+</table>
+
+<div class="note"><b>ข้อมูลแฝงชื่อยังคงเป็นข้อมูลส่วนบุคคลตาม PDPA</b> — การแทนชื่อด้วยรหัสสุ่มไม่ทำให้ข้อมูลกลายเป็นข้อมูลนิรนาม
+เพราะยังเชื่อมกลับหาตัวบุคคลได้ ระบบจึงยังคุ้มครองข้อมูลชุดนี้เต็มรูปแบบ และผู้ใช้ถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</div>
+
+<h2 style="margin-top:14pt"><span class="num">10</span>ฐานข้อมูลและการตรวจสอบย้อนหลัง</h2>
+<p class="h2sub">สถานะจริง ณ วันที่จัดทำ</p>
+
+<div class="grid3">
+  <div class="stat"><div class="big">13</div><div class="lb">ตารางข้อมูล</div></div>
+  <div class="stat"><div class="big">30</div><div class="lb">นโยบายสิทธิ์ (RLS)</div></div>
+  <div class="stat"><div class="big">7</div><div class="lb">ทริกเกอร์บังคับกติกา</div></div>
+</div>
+
+<table>
+<thead><tr><th style="width:30%">ตาราง</th><th>เก็บอะไร</th></tr></thead>
+<tbody>
+<tr><td class="mono">profiles</td><td>โปรไฟล์ผู้ใช้ · รหัสแฝง · บทบาท (user / care_manager / insurer / admin)</td></tr>
+<tr><td class="mono">assessments</td><td>ผลประเมินแต่ละครั้ง — เวลา คะแนน ระดับ วิธีวัด</td></tr>
+<tr><td class="mono">risk_signals</td><td>สัญญาณความเสี่ยงและกฎที่จุดติดในแต่ละครั้ง</td></tr>
+<tr><td class="mono">referrals</td><td>คิวส่งต่อและผลการตัดสินของ Care Manager</td></tr>
+<tr><td class="mono">consents</td><td>ความยินยอมแยกตามวัตถุประสงค์ ถอนได้ทีละอัน</td></tr>
+<tr><td class="mono">audit_logs</td><td>ใครเปิดดูอะไรเมื่อไร — <b>เขียนได้อย่างเดียว ไม่มีทางแก้หรือลบ แม้แต่ผู้ดูแลระบบ</b></td></tr>
+<tr><td class="mono">caregiver_invites</td><td>รหัสเชิญครอบครัว พร้อมเวลาหมดอายุ</td></tr>
+<tr><td class="mono">caregiver_links</td><td>การเชื่อมโยงครอบครัว · สถานะ · สิทธิ์รายข้อ · หัวข้อแจ้งเตือน</td></tr>
+<tr><td class="mono">family_notifications</td><td>การแจ้งเตือนที่ส่งถึงครอบครัว แยกตามหัวข้อ</td></tr>
+<tr><td class="mono">family_checkins</td><td>บันทึกสิ่งที่ครอบครัวสังเกตเห็น</td></tr>
+<tr><td class="mono">validation_trials</td><td>ข้อมูลการตรวจสอบความแม่นของเครื่องมือวัด</td></tr>
+<tr><td class="mono">mrv_requests</td><td>คำขอตรวจสอบกับเวชระเบียน</td></tr>
+</tbody>
+</table>
+
+<p class="small">ทริกเกอร์สำคัญที่บังคับกติกาไว้ที่ฐานข้อมูล: <b>AI อนุมัติเคสเองไม่ได้</b> ·
+<b>ผู้ใช้เลื่อนบทบาทตัวเองไม่ได้</b> · <b>ขอตรวจเวชระเบียนโดยไม่มีความยินยอมไม่ได้</b> ·
+<b>ถอนความยินยอมแล้วคำขอที่ค้างถูกยกเลิกอัตโนมัติ</b> — เขียนไว้ที่ฐานข้อมูลเพราะแก้โค้ดหน้าเว็บก็เลี่ยงไม่ได้</p>
+
+<!-- ═══════════ 11 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">11</span>สถานะความพร้อมของแต่ละส่วน</h2>
+<p class="h2sub">ส่วนที่สำคัญที่สุดของเอกสารนี้ — ต้องพูดให้ตรงกับความจริง</p>
+
+<table>
+<thead><tr><th style="width:34%">เรื่อง</th><th style="width:16%">สถานะ</th><th>รายละเอียด</th></tr></thead>
+<tbody>
+<tr><td>แอปสมาชิก / Vision / Staff</td><td><span class="pill p4">ทำงานจริง</span></td><td>แยก 3 แอป มีระบบสิทธิ์และการเข้าสู่ระบบครบ</td></tr>
+<tr><td>Computer Vision — FTSST</td><td><span class="pill p4">ทำงานจริง</span></td><td>นับครั้งและจับเวลาอัตโนมัติ เริ่มจับที่การเคลื่อนไหวจริง</td></tr>
+<tr><td>Computer Vision — TUG</td><td><span class="pill p4">ทำงานจริง</span></td><td>ตรวจการเดินไป-กลับครบรอบ แยกเวลาขาไป-ขากลับ วัดการเดินตรง</td></tr>
+<tr><td>Computer Vision — Balance</td><td><span class="pill p4">ทำงานจริง</span></td><td>ยึดลำตัวเป็นหลัก ทำงานได้แม้กล้องเห็นเท้าไม่ชัด</td></tr>
+<tr><td>เอนจินกฎ R1–R10</td><td><span class="pill p4">ทำงานจริง</span></td><td>สองแอปให้ผลตรงกัน ทดสอบอัตโนมัติผ่านทุกเคส</td></tr>
+<tr><td>ระบบครอบครัว + สิทธิ์</td><td><span class="pill p4">ทำงานจริง</span></td><td>เชิญ → ขอ → อนุมัติ → กำหนดสิทธิ์ บังคับที่ RLS</td></tr>
+<tr><td>Backend + RLS + Audit</td><td><span class="pill p4">ทำงานจริง</span></td><td>13 ตาราง · 30 นโยบาย · ทดสอบเจาะระบบข้ามบัญชีแล้วถูกกันทุกกรณี</td></tr>
+<tr><td>ใช้ออฟไลน์ / ติดตั้งเป็นแอป</td><td><span class="pill p4">ทำงานจริง</span></td><td>PWA · Service Worker แคชโมเดลและไฟล์โปรแกรม</td></tr>
+<tr><td>แจ้งเตือนบนเครื่อง</td><td><span class="pill p3">บางส่วน</span></td><td>ใช้ได้เมื่อเปิดแอปหรือเปิดค้างไว้ · การแจ้งขณะปิดแอปสนิทต้องมีเซิร์ฟเวอร์ push แยก</td></tr>
+<tr><td>แจ้งเตือนทาง SMS</td><td><span class="pill pg">ยังไม่มี</span></td><td>ต้องต่อผู้ให้บริการส่งข้อความ · ในแอปล็อกไว้และระบุตามจริง</td></tr>
+<tr><td>ยืนยันใบหน้าต่อเนื่อง</td><td><span class="pill p3">ต้นแบบ</span></td><td>ตรวจว่าเป็นคนเดิมขณะวัด · <b>ไม่ใช่ e-KYC</b> ตามมาตรฐานสถาบันการเงิน</td></tr>
+<tr><td>คะแนนรวม 12 คะแนน</td><td><span class="pill p3">ต้องตรวจสอบ</span></td><td>ปัจจัยรายตัวมีวรรณกรรมรองรับ แต่ชุดคะแนนรวมยังไม่ผ่าน Clinical Validation</td></tr>
+<tr><td>เครื่องมือวัดผลนำร่อง</td><td><span class="pill p3">มีเครื่องมือ<br>ยังไม่มีข้อมูล</span></td><td>มีโปรโตคอลและหน้าเก็บข้อมูลเทียบนาฬิกาจับเวลาแล้ว แต่ยังต้องเก็บข้อมูลจริง</td></tr>
+<tr><td>อัตราเบี้ยและส่วนลด</td><td><span class="pill pb">สมมติฐาน</span></td><td>ตัวเลขจำลองเพื่อสาธิต ต้องผ่านการสอบทานทางคณิตศาสตร์ประกันภัยและการกำกับดูแล</td></tr>
+<tr><td>ระยะรอคอยและเงื่อนไข</td><td><span class="pill pb">สมมติฐาน</span></td><td>เป็นการออกแบบผลิตภัณฑ์ ไม่ใช่กรมธรรม์ที่ได้รับอนุมัติ</td></tr>
+<tr><td>ลดการเคลม / ลด Loss Ratio</td><td><span class="pill p1">ยังไม่มีหลักฐาน</span></td><td>ต้องใช้ข้อมูลนำร่องขนาดใหญ่และเวลานาน · <b>ห้ามอ้างในการนำเสนอ</b></td></tr>
+<tr><td>ทำนายภาวะพึ่งพิงรายบุคคล</td><td><span class="pill p1">ไม่อ้าง</span></td><td>ระบบไม่ได้ทำนาย แต่ตรวจจับการเปลี่ยนแปลงที่เกิดขึ้นแล้ว</td></tr>
+</tbody>
+</table>
+
+<h3>การตรวจสอบมี 3 ระดับ ห้ามปนกัน</h3>
+<div class="grid3">
+  <div class="card">
+    <h4 style="margin-top:0">1 · Technical</h4>
+    <p class="small" style="margin:0">กล้องนับถูกไหม จับเวลาใกล้นาฬิกาจริงไหม ล้มเหลวบ่อยแค่ไหน<br>
+    <b class="status-part">มีเครื่องมือวัดแล้ว ยังไม่มีข้อมูลจริง</b></p>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">2 · Clinical</h4>
+    <p class="small" style="margin:0">สัญญาณที่จับได้สัมพันธ์กับการประเมินของผู้เชี่ยวชาญหรือการถดถอยจริงไหม<br>
+    <b class="status-no">ยังต้องทำ Pilot จริง</b></p>
+  </div>
+  <div class="card">
+    <h4 style="margin-top:0">3 · Actuarial</h4>
+    <p class="small" style="margin:0">ช่วยลดอุบัติการณ์พึ่งพิงหรือค่าเคลมจริงหรือไม่<br>
+    <b class="status-no">ยังไม่มีหลักฐานเพียงพอ</b></p>
+  </div>
+</div>
+
+<!-- ═══════════ 12 ═══════════ -->
+<div class="page-break"></div>
+<h2><span class="num">12</span>สรุปสำหรับการนำเสนอ</h2>
+<p class="h2sub">ประโยคที่ใช้ตอบได้ทุกคำถาม</p>
+
+<h3>ถ้าถูกถามว่า “CareSignal วันนี้อยู่ขั้นไหน”</h3>
+<div class="quote">
+วันนี้ CareSignal อยู่ในระดับ <b>Working Prototype</b> ที่สามารถวัดสมรรถภาพด้วยกล้อง
+สร้าง Functional Trajectory วิเคราะห์สัญญาณความเสี่ยงแบบอธิบายได้ และเชื่อมเข้าสู่กระบวนการดูแล
+ของ Care Manager และบริษัทประกันได้จริง พร้อมมีระบบสิทธิ์ข้อมูลที่บังคับที่ฐานข้อมูลและเครื่องมือ
+ตรวจสอบความแม่นของการวัด — แต่<b>ยังต้องผ่าน Pilot กับผู้สูงอายุจริง การตรวจสอบทางคลินิก
+และการสอบทานทางคณิตศาสตร์ประกันภัยและการกำกับดูแล</b> ก่อนนำไปใช้เป็นผลิตภัณฑ์ประกันจริง
+</div>
+
+<h3>สามเส้นทางที่ต้องจำ</h3>
+<div class="card plain">
+  <div class="layer"><div class="no" style="background:var(--navy)">คน</div><div class="tx">
+    <b>เส้นทางของคน</b><span>ผู้สูงอายุ → CareSignal → ครอบครัว → Care Manager / ผู้เชี่ยวชาญ → บริษัทประกัน</span></div></div>
+  <div class="layer"><div class="no" style="background:var(--navy)">ข้อมูล</div><div class="tx">
+    <b>เส้นทางของข้อมูล</b><span>กล้อง + แบบประเมิน → คะแนน → แนวโน้ม → สัญญาณความเสี่ยง → การส่งต่อ → พอร์ต</span></div></div>
+  <div class="layer"><div class="no" style="background:var(--navy)">หลักฐาน</div><div class="tx">
+    <b>เส้นทางของหลักฐาน</b><span>วรรณกรรม → ต้นแบบ → ตรวจสอบทางเทคนิค → Pilot → ตรวจสอบทางคลินิก → ผลลัพธ์ด้านประกัน</span></div></div>
+</div>
+
+<h3>จุดยืนที่ควรใช้</h3>
+<p>ความแข็งแรงของโครงการไม่ได้อยู่ที่ “เราใช้ AI” — เพราะหลายระบบก็ทำแบบประเมินได้ และหลายบริษัทก็มีโปรแกรมส่งเสริมสุขภาพ จุดที่ CareSignal ควรยืนคือ</p>
+
+<div class="quote">
+การนำ <b>Functional Trajectory ก่อนภาวะพึ่งพิง</b> มาเชื่อมกับ<b>การป้องกัน</b>
+และ<b>กระบวนการทำงานของธุรกิจประกัน</b> พร้อมระบบสิทธิ์ข้อมูลที่ผู้เอาประกันควบคุมเองได้จริง
+ไม่ใช่การอ้างว่าคิดค้นแบบทดสอบใหม่ หรืออ้างว่าทำนายการเคลมได้
+</div>
+
+<h3>ประโยคเดียวที่ต้องจำ</h3>
+<div class="card" style="background:#EAF1FE;border-color:#B9D0FA">
+<p style="margin:0;font-size:11pt;line-height:1.8">
+CareSignal ไม่ได้พยายามทำนายว่าใครจะเคลม แต่พยายามสร้าง<b>ข้อมูลสมรรถภาพต่อเนื่อง</b>
+ที่วันนี้บริษัทประกันเห็นได้ยาก เพื่อค้นหาสัญญาณการถดถอยให้เร็วขึ้น ส่งคนเข้าไปดูแลก่อน
+และในระยะยาวสร้างฐานข้อมูลที่เชื่อม Functional Trajectory กับภาวะพึ่งพิงและผลลัพธ์ด้านประกัน
+</p>
+</div>
+
+<div class="foot">
+<b>CareSignal</b> — ผลงานเข้าประกวด OIC InsurTech Award 2026 · ประเภทบุคคลทั่วไป · โจทย์ความเสี่ยงด้านสังคมสูงวัย<br>
+ยังไม่ใช่ผลิตภัณฑ์ประกันภัยที่เสนอขายจริง · การเสนอขายประกันภัยต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ.<br>
+ทุกตัวเลขในเอกสารนี้ตรวจกับซอร์สโค้ดและฐานข้อมูลจริงเมื่อ 15 สิงหาคม 2569 · เอนจินเวอร์ชัน 1.4.1 · Service Worker v17<br>
+ซอร์สโค้ด: github.com/sarawut2206/CareSignal-V2 · ระบบสาธิต: sarawut2206.github.io/CareSignal-V2
+</div>
+
+</body>
+</html>
