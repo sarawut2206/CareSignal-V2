@@ -207,8 +207,7 @@ body.camfs .hudtop{display:none}
   <div class="tabs" id="tabs" hidden>
     <button data-go="assess" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg><b>ประเมิน</b></button>
     <button data-go="trend"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 15v-4M12 15V8M16 15v-6"/></svg><b>แนวโน้ม</b></button>
-    <button data-go="cases"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>เคส</b></button>
-    <button data-go="insurer"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>บริษัทประกัน</b></button>
+    <button data-go="staffinfo"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>เจ้าหน้าที่</b></button>
     <button data-go="pilot" id="tabPilot" hidden><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/><circle cx="7" cy="9" r="1.6"/><circle cx="12" cy="5" r="1.6"/><circle cx="17" cy="12" r="1.6"/></svg><b>วิจัย</b></button>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -805,7 +804,7 @@ function render(arg){
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,tug:tugV,q:qV,result:resultV,
+  var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,tug:tugV,q:qV,result:resultV,staffinfo:staffInfoV,
           trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,mydata:mydataV,balance:balanceV}[S.screen]||assessV;
   fn(arg);
 }
@@ -1961,6 +1960,23 @@ function balanceScore(passed){
 /* ============================================================
    ลุกเดิน 3 เมตร (Timed Up & Go) — ตรวจการเดินไป-กลับด้วยกล้อง
    ============================================================ */
+
+/* หน้าชี้ทาง: งานเจ้าหน้าที่แยกไปอยู่แอป CareSignal Staff แล้ว
+   แอปนี้เป็นของผู้เอาประกันล้วน ๆ — ไม่มีจอเจ้าหน้าที่ปนอีกต่อไป */
+function staffInfoV(){
+  head("พื้นที่เจ้าหน้าที่","ย้ายไปแอป CareSignal Staff แล้ว","แอปนี้สำหรับผู้เอาประกันและครอบครัวเท่านั้น","assess");
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>ทำไมต้องแยกแอป</h3>'+
+  '<p class="sub" style="margin:0">งานของ Care Manager และบริษัทประกันเกี่ยวข้องกับข้อมูลของสมาชิกหลายคน จึงแยกไปอยู่ในแอปเจ้าหน้าที่ที่<b>ต้องเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่ทุกครั้ง</b> — แอปนี้จะเหลือเฉพาะข้อมูลของตัวท่านเอง</p></div>'+
+  '<div class="card"><h3>สำหรับเจ้าหน้าที่</h3>'+
+  '<div class="rowline"><span class="k">คิวเคส (Care Manager)</span><span class="v">ในแอป Staff</span></div>'+
+  '<div class="rowline"><span class="k">พอร์ตความเสี่ยง (บริษัทประกัน)</span><span class="v">ในแอป Staff</span></div>'+
+  '<div class="rowline"><span class="k">แดชบอร์ดจอใหญ่ + MFA</span><span class="v">บนเว็บ</span></div></div>'+
+  '<button class="cta" id="openStaff">เปิดแอปเจ้าหน้าที่ (ต้องล็อกอิน)</button>'+
+  '<div class="disc">บัญชีเจ้าหน้าที่ต้องได้รับการกำหนดบทบาทจากผู้ดูแลระบบ · สิทธิ์ข้อมูลบังคับด้วย Row Level Security ฝั่งเซิร์ฟเวอร์</div></div>';
+  document.getElementById("openStaff").addEventListener("click",function(){location.href="./CareSignal-Staff.html"});
+}
+
 function tugV(){
   head("ลุกเดิน 3 เมตร","Timed Up & Go",
        "วางป้าย 2 จุด แล้วกลับมานั่งเก้าอี้ · ระบบจะรู้เองว่าท่านนั่งแล้ว แล้วนับ 3-2-1 ให้","assess");

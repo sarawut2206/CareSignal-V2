@@ -118,7 +118,8 @@ table.dt tr:last-child td{border-bottom:0}
     <button data-page="site" aria-selected="true">หน้าหลัก</button>
     <button data-page="cm">Care Manager</button>
     <button data-page="ins">บริษัทประกัน</button>
-    <button data-page="evi">หลักฐานวิชาการ</button>
+    <button data-page="staff">แอปเจ้าหน้าที่</button>
+<button data-page="evi">หลักฐานวิชาการ</button>
     <button data-page="ai">Responsible AI</button>
     <button data-page="pilot">แผนวัดผลนำร่อง</button>
   </div>
@@ -246,6 +247,24 @@ table.dt tr:last-child td{border-bottom:0}
 
 
 <!-- ==================== RESPONSIBLE AI ==================== -->
+
+<div id="pg-staff" hidden><div class="wrap portal">
+  <div id="gate-staff"></div><div id="body-staff" hidden>
+  <div class="kick">STAFF APP</div>
+  <h2 class="sec">ดาวน์โหลดแอปเจ้าหน้าที่</h2>
+  <p class="secsub">CareSignal Staff — แอปมือถือสำหรับ Care Manager พยาบาล และเจ้าหน้าที่บริษัทประกัน แยกจากแอปของผู้เอาประกันโดยสิ้นเชิง</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+    <div class="card"><h3>1 · เปิดแอปบนมือถือ</h3>
+      <p style="font-size:13.5px;color:var(--ink2)">เปิดลิงก์นี้ด้วยเบราว์เซอร์บนมือถือของเจ้าหน้าที่ แล้วเข้าสู่ระบบด้วยบัญชีเดียวกับที่ใช้ในหน้านี้</p>
+      <a href="./CareSignal-Staff.html" style="display:inline-block;background:var(--brand);color:#fff;text-decoration:none;font-weight:600;padding:11px 22px;border-radius:11px;font-size:14px">เปิด CareSignal Staff →</a></div>
+    <div class="card"><h3>2 · ติดตั้งเป็นแอป</h3>
+      <p style="font-size:13.5px;color:var(--ink2)">Android (Chrome): เมนู ⋮ → <b>ติดตั้งแอป</b><br>iPhone (Safari): ปุ่มแชร์ → <b>เพิ่มลงในหน้าจอโฮม</b><br>แอปจะติดตั้งแยกจากแอปสมาชิก มีไอคอนของตัวเอง</p></div>
+    <div class="card"><h3>3 · สิ่งที่ทำได้ในแอป</h3>
+      <p style="font-size:13.5px;color:var(--ink2)">Care Manager: คิวเคสเรียงตามความเร่งด่วน กดยืนยัน/ไม่ส่งต่อได้ทันที<br>บริษัทประกัน: พอร์ตความเสี่ยงแบบแฝงชื่อ<br>ทุกการตัดสินบันทึกลง audit log</p></div>
+  </div>
+  <div class="notice" style="margin-top:16px">แอปเจ้าหน้าที่<b>ต้องออนไลน์และต้องเข้าสู่ระบบทุกครั้ง</b> — เปิดแอปโดยไม่มีบัญชีเจ้าหน้าที่จะเห็นเพียงหน้าเข้าสู่ระบบ ไม่มีข้อมูลใด ๆ · สิทธิ์ข้อมูลจริงบังคับด้วย Row Level Security บนฐานข้อมูล</div>
+</div></div></div>
+
 <div id="pg-ai" hidden><div class="wrap portal">
   <div class="kick">RESPONSIBLE AI · MODEL CARD</div>
   <h2 class="sec">ระบบตัดสินใจอย่างไร และตรวจสอบได้อย่างไร</h2>
@@ -593,7 +612,9 @@ async function renderPilot(){
 var GATED={cm:{nm:"Care Manager",roles:["care_manager","admin"],
                 why:"หน้านี้แสดงคิวเคสของสมาชิกที่ต้องติดต่อดูแล จึงเปิดเฉพาะพยาบาลและ Care Manager ที่ได้รับมอบหมาย"},
            ins:{nm:"บริษัทประกัน",roles:["insurer","admin"],
-                why:"หน้านี้แสดงพอร์ตความเสี่ยงแบบแฝงชื่อของสมาชิกทั้งพอร์ต จึงเปิดเฉพาะเจ้าหน้าที่บริษัทประกันที่ได้รับมอบหมาย"}};
+                why:"หน้านี้แสดงพอร์ตความเสี่ยงแบบแฝงชื่อของสมาชิกทั้งพอร์ต จึงเปิดเฉพาะเจ้าหน้าที่บริษัทประกันที่ได้รับมอบหมาย"},
+           staff:{nm:"ดาวน์โหลดแอปเจ้าหน้าที่",roles:["care_manager","insurer","admin"],
+                why:"แอปเจ้าหน้าที่เข้าถึงคิวเคสและพอร์ตความเสี่ยง จึงเปิดให้ดาวน์โหลดเฉพาะบัญชีเจ้าหน้าที่ที่ยืนยันตัวแล้ว"}};
 
 /* ประตูถูกเรียกตั้งแต่ต้นไฟล์ ซึ่งเร็วกว่าบรรทัด var CLOUD=... ที่อยู่ด้านล่าง
    (var ยกเฉพาะการประกาศ ไม่ยกค่า) จึงต้องอ่านผ่านตัวช่วยที่ทนค่า undefined */
@@ -642,7 +663,8 @@ function renderGate(target){
     }catch(e){}
     renderGate(target);
     if(gateOK(target)){
-      if(target==="cm"){renderCM();renderCloudCM()}else{renderINS();renderCloudINS()}
+      if(target==="cm"){renderCM();renderCloudCM()}
+      else if(target==="ins"){renderINS();renderCloudINS()}
       toast("ตรวจสิทธิ์แล้ว · บทบาท "+(CLOUD.role||"—"));
     }
   });
@@ -685,7 +707,8 @@ function renderGate(target){
       if(gateOK(target)){
         toast("เข้าสู่ระบบแล้ว · บทบาท "+(CLOUD.role||"—")+(vf.length?" · ผ่าน MFA":""));
         renderGate(target);
-        if(target==="cm"){renderCM();renderCloudCM()}else{renderINS();renderCloudINS()}
+        if(target==="cm"){renderCM();renderCloudCM()}
+        else if(target==="ins"){renderINS();renderCloudINS()}
       }else{
         toast("บัญชีนี้ไม่มีสิทธิ์เข้าหน้านี้");
         renderGate(target);
@@ -706,7 +729,7 @@ function renderGate(target){
 }
 
 /* ===== นำทางหน้า ===== */
-var PAGES=["site","cm","ins","ai","pilot","evi"];
+var PAGES=["site","cm","ins","staff","ai","pilot","evi"];
 document.addEventListener("click",function(e){
   var b=e.target.closest("[data-page]");
   if(!b)return;
@@ -717,12 +740,13 @@ document.addEventListener("click",function(e){
   window.scrollTo(0,0);
   if(p==="cm"){ if(renderGate("cm")){renderCM();renderCloudCM()} }
   if(p==="ins"){ if(renderGate("ins")){renderINS();renderCloudINS()} }
+  if(p==="staff")renderGate("staff");
   if(p==="ai")renderAI();
   if(p==="pilot")renderPilot();
 });
 
 /* ปิดประตูไว้ก่อนตั้งแต่โหลดหน้า — กันเนื้อหาแวบให้เห็นระหว่างรอตรวจสิทธิ์ */
-renderGate('cm');renderGate('ins');
+renderGate('cm');renderGate('ins');renderGate('staff');
 
 /* ===== เครื่องคำนวณเบี้ย ===== */
 var C={age:62,sex:"f",plan:"m",tier:0,pay:"m"};
@@ -1034,7 +1058,7 @@ async function renderCloudINS(){
       if(p&&p.id===u.id){CLOUD.session=true;CLOUD.role=p.role;CLOUD.email=u.email;await refreshMfaState()}
       else{try{await CSBackend.signOut()}catch(e2){}}}
   }catch(e){}
-  renderGate('cm');renderGate('ins');
+  renderGate('cm');renderGate('ins');renderGate('staff');
   renderCloudCM();renderCloudINS();
 })();
 
@@ -1046,6 +1070,7 @@ async function renderCloudINS(){
     document.querySelectorAll(".navlinks button").forEach(function(x){x.setAttribute("aria-selected",x.dataset.page===h)});
     if(h==="cm"){ if(renderGate("cm")){renderCM();renderCloudCM()} }
     if(h==="ins"){ if(renderGate("ins")){renderINS();renderCloudINS()} }
+    if(h==="staff")renderGate("staff");
     if(h==="ai")renderAI();
     if(h==="pilot")renderPilot();
   }

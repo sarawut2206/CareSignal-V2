@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://esm.sh https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="CareSignal Staff — แอปเจ้าหน้าที่: คิวเคสของ Care Manager และพอร์ตความเสี่ยงของบริษัทประกัน เข้าได้เฉพาะบัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์">
+<meta name="theme-color" content="#101B31">
+<link rel="manifest" href="./manifest-staff.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./favicon-64.png">
+<title>CareSignal Staff — แอปเจ้าหน้าที่</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F6FB; --surf:#FFF; --surf2:#EAF0FE; --navy:#101B31;
+  --ink:#16233B; --ink2:#5B6B84; --ink3:#93A1B7;
+  --line:#DFE7F2; --line2:#EDF2FA; --brand:#2563EB;
+  --c4:#0E9F6E; --c3:#C79200; --c2:#D97706; --c1:#DC2626;
+  --c4b:#E3F6EF; --c3b:#FEF6DE; --c2b:#FDECD8; --c1b:#FEE9E9;
+  --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sh:0 1px 2px rgba(22,35,59,.05),0 8px 24px rgba(22,35,59,.07);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.phone{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg)}
+.bar{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;gap:10px}
+.bar b{font-size:16px;letter-spacing:-.01em}
+.bar b i{color:#FCD34D;font-style:normal}
+.chip{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:99px;letter-spacing:.06em}
+.view{flex:1;padding:18px 16px calc(86px + env(safe-area-inset-bottom))}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh);margin-bottom:14px}
+h1{font-size:21px;letter-spacing:-.02em;margin:2px 0 4px}
+h3{font-size:15.5px;margin:0 0 10px}
+.sub{font-size:13.5px;color:var(--ink2);margin:0 0 4px}
+.kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8BB0F8;font-weight:600}
+.hd{background:var(--navy);color:#fff;padding:6px 18px 18px}
+.hd p{color:rgba(255,255,255,.72);font-size:13px;margin:4px 0 0}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.field input{width:100%;font-family:inherit;font-size:16px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:#fff;color:var(--ink)}
+.cta{display:block;width:100%;border:0;border-radius:15px;background:var(--brand);color:#fff;font-family:inherit;font-size:16.5px;font-weight:600;padding:15px;cursor:pointer;margin:6px 0}
+.ghostb{display:block;width:100%;border:1.5px solid var(--line);border-radius:15px;background:#fff;color:var(--ink2);font-family:inherit;font-size:14.5px;padding:12px;cursor:pointer;margin:8px 0}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;max-width:520px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;border:0;background:none;font-family:inherit;font-size:11.5px;color:var(--ink3);padding:9px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button[aria-selected="true"]{color:var(--brand);font-weight:600}
+.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;color:#fff}
+.rowline{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line2);font-size:13.5px}
+.rowline:last-child{border-bottom:0}
+.rowline .k{color:var(--ink2)}
+.rowline .v{font-family:var(--mono);font-weight:600;text-align:right}
+.case{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:#fff}
+.case .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.case .who{font-family:var(--mono);font-size:12.5px;color:var(--ink2)}
+.flag{font-size:12.5px;color:var(--ink2);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:6px 0}
+.btnrow{display:flex;gap:8px;margin-top:10px}
+.btnrow button{flex:1;border-radius:11px;font-family:inherit;font-size:13.5px;font-weight:600;padding:10px;cursor:pointer}
+.ok{border:0;background:var(--c4);color:#fff}
+.no{border:1.5px solid var(--line);background:#fff;color:var(--ink2)}
+.empty{text-align:center;color:var(--ink3);font-size:14px;padding:28px 10px}
+.notice{background:var(--surf2);border:1px solid #CFE0FD;border-radius:13px;padding:13px 15px;font-size:13px;color:#1E3A6E;margin-bottom:14px}
+.warnbox{background:#FEE9E9;border:1px solid #F3B5B5;border-radius:13px;padding:13px 15px;font-size:13.5px;color:#A81E1E;margin-bottom:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:var(--navy);color:#fff;font-size:13.5px;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.mixbar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.mixbar i{display:block;height:100%}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line2)}
+th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+td.num{font-family:var(--mono);white-space:nowrap}
+.tblwrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="bar"><b>Care<i>Signal</i> Staff</b><span class="chip" id="chip">ยังไม่เข้าสู่ระบบ</span></div>
+  <div class="hd" id="hd"><div class="kick">STAFF CONSOLE</div><h1 id="hdT">แอปเจ้าหน้าที่</h1><p id="hdP">คิวเคสและพอร์ตความเสี่ยง — เฉพาะบัญชีที่ได้รับสิทธิ์</p></div>
+  <div class="view" id="view"></div>
+  <div class="tabs" id="tabs" hidden>
+    <button data-go="queue" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>คิวเคส</b></button>
+    <button data-go="port"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>พอร์ต</b></button>
+    <button data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg><b>ฉัน</b></button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
+<script src="./cs-backend.js?v=142"></script>
+<script>
+/* ============================================================
+   CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
+   ------------------------------------------------------------
+   ผู้ใช้: Care Manager / พยาบาล → คิวเคสส่งต่อ
+          เจ้าหน้าที่บริษัทประกัน → พอร์ตความเสี่ยงแบบแฝงชื่อ
+   ไม่มีข้อมูลสาธิตในแอปนี้ — ทุกแถวมาจากฐานข้อมูลกลางจริง และสิทธิ์
+   ถูกบังคับด้วย Row Level Security ฝั่งเซิร์ฟเวอร์ ประตูหน้าจอเป็นเพียง
+   ชั้นการใช้งาน ไม่ใช่ชั้นความปลอดภัย
+   ============================================================ */
+var V=document.getElementById("view"), TABS=document.getElementById("tabs");
+var ST={screen:"login", role:null, email:null, name:null};
+var LV_NM={stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"เร่งด่วน"};
+var LV_C ={stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"};
+var ROLE_NM={care_manager:"Care Manager / พยาบาล",insurer:"เจ้าหน้าที่บริษัทประกัน",admin:"ผู้ดูแลระบบ"};
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2800)}
+function head(t,p){document.getElementById("hdT").textContent=t;document.getElementById("hdP").textContent=p||""}
+function chip(){document.getElementById("chip").textContent=ST.role?("บทบาท · "+(ST.role==="care_manager"?"CM":ST.role.toUpperCase())):"ยังไม่เข้าสู่ระบบ"}
+function thDate(iso){if(!iso)return "—";try{var d=new Date(iso);return d.toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"})+" "+d.toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"})}catch(e){return iso}}
+
+function mfaPrompt(){
+  return new Promise(function(resolve){
+    var w=document.createElement("div");
+    w.style.cssText="position:fixed;inset:0;background:rgba(15,27,51,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px";
+    w.innerHTML='<div style="background:#fff;border-radius:20px;padding:26px;max-width:380px;width:100%">'+
+      '<h3 style="margin:0 0 8px;font-size:18px">🔐 ยืนยันตัวตนสองชั้น</h3>'+
+      '<p style="margin:0 0 14px;font-size:13.5px;color:var(--ink2)">เปิดแอป Authenticator แล้วกรอกรหัส 6 หลักของบัญชีนี้</p>'+
+      '<input id="mfaCode" inputmode="numeric" maxlength="6" placeholder="000000" style="width:100%;box-sizing:border-box;font-size:30px;letter-spacing:.35em;text-align:center;padding:14px;border:1.5px solid var(--line);border-radius:14px;font-family:var(--mono);margin-bottom:12px">'+
+      '<button id="mfaGo" class="cta" style="margin:0 0 8px">ยืนยัน</button>'+
+      '<button id="mfaNo" class="ghostb" style="margin:0">ยกเลิก</button></div>';
+    document.body.appendChild(w);
+    w.querySelector("#mfaGo").addEventListener("click",function(){var c=w.querySelector("#mfaCode").value.trim();w.remove();resolve(/^\d{6}$/.test(c)?c:null)});
+    w.querySelector("#mfaNo").addEventListener("click",function(){w.remove();resolve(null)});
+    setTimeout(function(){var el=w.querySelector("#mfaCode");if(el)el.focus()},80);
+  });
+}
+
+/* ---------- เข้าสู่ระบบ ---------- */
+function loginV(){
+  ST.screen="login"; TABS.hidden=true;
+  head("เข้าสู่ระบบเจ้าหน้าที่","เฉพาะบัญชีที่ผู้ดูแลระบบกำหนดบทบาทแล้วเท่านั้น");
+  V.innerHTML='<div class="card">'+
+    '<div class="field"><label>อีเมลเจ้าหน้าที่</label><input id="lEm" type="email" autocomplete="username" placeholder="name@company.com"></div>'+
+    '<div class="field"><label>รหัสผ่าน</label><input id="lPw" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
+    '<button class="cta" id="lGo">เข้าสู่ระบบ</button></div>'+
+    '<div class="notice"><b>สำหรับเจ้าหน้าที่เท่านั้น</b> — ผู้เอาประกันและครอบครัวใช้แอป CareSignal (แอปสมาชิก) ไม่ใช่แอปนี้ · บัญชีใหม่ต้องให้ผู้ดูแลระบบกำหนดบทบาทก่อนจึงเข้าได้ (ฐานข้อมูลบล็อกการเลื่อนบทบาทด้วยตนเอง)</div>'+
+    '<div class="card" style="background:var(--surf2);border-color:#CFE0FD"><h3>ความปลอดภัย</h3>'+
+    '<p class="sub" style="margin:0">สิทธิ์ข้อมูลบังคับด้วย Row Level Security บนฐานข้อมูล · ทุกการเปิดดูและการตัดสินเคสถูกบันทึกลง audit log ที่แก้ไขไม่ได้ · รองรับ MFA (ตั้งค่าจากแดชบอร์ดบนเว็บ)</p></div>';
+  document.getElementById("lGo").addEventListener("click",doLogin);
+  document.getElementById("lPw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin()});
+}
+async function doLogin(){
+  var em=(document.getElementById("lEm").value||"").trim();
+  var pw=document.getElementById("lPw").value||"";
+  if(!em||!pw){toast("กรอกอีเมลและรหัสผ่าน");return}
+  var b=document.getElementById("lGo"); b.disabled=true; b.textContent="กำลังตรวจสอบ…";
+  try{
+    try{await CSBackend.signOut()}catch(e0){}
+    await CSBackend.signInStaff(em,pw);
+    var f=await CSBackend.mfaFactors();
+    var vf=(f.totp||[]).filter(function(x){return x.status==="verified"});
+    if(vf.length){
+      var code=await mfaPrompt();
+      if(!code){await CSBackend.signOut();toast("ยกเลิกการเข้าสู่ระบบ");loginV();return}
+      await CSBackend.mfaVerify(vf[0].id,code);
+    }
+    var pr=await CSBackend.loadProfile();
+    var cu=await CSBackend.currentUser();
+    if(!pr||!cu||pr.id!==cu.id){
+      try{await CSBackend.signOut()}catch(e1){}
+      toast("พบ session ซ้อนจากแท็บอื่น — ปิดแท็บอื่นแล้วลองใหม่");loginV();return;
+    }
+    if(["care_manager","insurer","admin"].indexOf(pr.role)<0){
+      try{await CSBackend.signOut()}catch(e2){}
+      head("เข้าสู่ระบบเจ้าหน้าที่","บัญชีนี้ยังไม่ได้รับสิทธิ์");
+      V.innerHTML='<div class="warnbox"><b>บัญชีนี้ไม่ใช่บัญชีเจ้าหน้าที่</b><br>'+esc(em)+' มีบทบาท '+esc(pr.role||"ยังไม่กำหนด")+' — แจ้งผู้ดูแลระบบให้กำหนดบทบาท care_manager หรือ insurer ก่อน</div>'+
+        '<button class="ghostb" id="back">กลับไปเข้าสู่ระบบ</button>';
+      document.getElementById("back").addEventListener("click",loginV);
+      return;
+    }
+    ST.role=pr.role; ST.email=em; ST.name=pr.display_name||em;
+    chip(); TABS.hidden=false;
+    toast("เข้าสู่ระบบแล้ว · "+(ROLE_NM[ST.role]||ST.role)+(vf.length?" · ผ่าน MFA":""));
+    go(ST.role==="insurer"?"port":"queue");
+  }catch(e){
+    toast("เข้าสู่ระบบไม่สำเร็จ: "+(e.message||""));
+    b.disabled=false; b.textContent="เข้าสู่ระบบ";
+  }
+}
+
+/* ---------- คิวเคส (Care Manager) ---------- */
+async function queueV(){
+  head("คิวเคสวันนี้","เรียงตามความเร่งด่วน — เคสจากสมาชิกที่วัดผ่านแอปและเข้าเกณฑ์ส่งต่อ");
+  if(ST.role!=="care_manager"&&ST.role!=="admin"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะ Care Manager</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูคิวเคสรายบุคคลไม่ได้ ตามหลักแบ่งสิทธิ์ข้อมูล — ใช้แท็บ "พอร์ต" แทน</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลดคิวเคส…</div>';
+  var q=[];
+  try{q=await CSBackend.listReferralQueue()}catch(e){}
+  var order={urgent:0,decline:1,watch:2,stable:3};
+  var pending=q.filter(function(x){return x.status==="pending"})
+               .sort(function(a,b){return (order[a.level]||9)-(order[b.level]||9)});
+  var done=q.filter(function(x){return x.status!=="pending"}).slice(0,6);
+  var html='';
+  if(!pending.length)html+='<div class="card"><div class="empty">ไม่มีเคสรอตัดสิน 🎉<br><span style="font-size:12.5px">เมื่อสมาชิกวัดผ่านแอปและเข้าเกณฑ์ส่งต่อ เคสจะขึ้นที่นี่ทันที</span></div></div>';
+  pending.forEach(function(c){
+    var pr=c.profiles||{};
+    var flags=(c.flags||[]).map(function(f){return '<div class="flag"><b>'+esc(f.id||"")+'</b> '+esc(f.text||"")+'</div>'}).join("");
+    html+='<div class="case"><div class="top">'+
+      '<span class="pill" style="background:'+(LV_C[c.level]||"#93A1B7")+'">'+(LV_NM[c.level]||esc(c.level))+'</span>'+
+      '<span class="who">'+esc(pr.pseudonym||"—")+' · '+esc(pr.display_name||"")+'</span>'+
+      '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(c.created_at)+'</span></div>'+
+      '<div style="font-size:13.5px">'+esc(c.action||c.recommendation||"ตรวจสอบและตัดสินการส่งต่อ")+(c.sla?' · <b>'+esc(c.sla)+'</b>':'')+'</div>'+
+      flags+
+      '<div class="btnrow"><button class="ok" data-ok="'+c.id+'">✓ ยืนยันส่งต่อ</button>'+
+      '<button class="no" data-no="'+c.id+'">ยังไม่ส่งต่อ</button></div></div>';
+  });
+  if(done.length){
+    html+='<div class="card"><h3>ตัดสินล่าสุด</h3>'+done.map(function(c){
+      var pr=c.profiles||{};
+      return '<div class="rowline"><span class="k">'+esc(pr.pseudonym||"—")+'</span><span class="v" style="color:'+(c.status==="approved"?"var(--c4)":"var(--ink3)")+'">'+(c.status==="approved"?"ส่งต่อแล้ว":"ไม่ส่งต่อ")+'</span></div>';
+    }).join("")+'</div>';
+  }
+  html+='<div class="notice">การตัดสินทุกครั้งบันทึกชื่อผู้ตัดสินและเวลาใน audit log · AI จัดลำดับและอธิบายเหตุผลเท่านั้น การส่งต่อจริงตัดสินโดยคุณ</div>';
+  V.innerHTML=html;
+  V.querySelectorAll("[data-ok],[data-no]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      var ok=b.hasAttribute("data-ok"), id=b.dataset.ok||b.dataset.no;
+      b.disabled=true;
+      try{await CSBackend.decideReferral(id,ok);toast(ok?"ยืนยันส่งต่อแล้ว":"บันทึกว่ายังไม่ส่งต่อ");queueV()}
+      catch(e){toast("ตัดสินไม่สำเร็จ — ต้องเป็นบัญชี Care Manager");b.disabled=false}
+    });
+  });
+}
+
+/* ---------- พอร์ต (บริษัทประกัน) ---------- */
+async function portV(){
+  head("พอร์ตความเสี่ยง","ข้อมูลแบบแฝงชื่อทั้งพอร์ต — ไม่มีชื่อและเบอร์โทรของสมาชิก");
+  if(ST.role!=="insurer"&&ST.role!=="admin"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะเจ้าหน้าที่บริษัทประกัน</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') ใช้แท็บ "คิวเคส" สำหรับงานดูแลรายบุคคล</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลดพอร์ต…</div>';
+  var rows=[];
+  try{rows=await CSBackend.insurerPortfolio()}catch(e){}
+  if(!rows.length){V.innerHTML='<div class="card"><div class="empty">ยังไม่มีสมาชิกที่เปิดการแชร์ข้อมูลในพอร์ต</div></div>';return}
+  var mix={stable:0,watch:0,decline:0,urgent:0,none:0};
+  rows.forEach(function(r){mix[r.risk_level||"none"]=(mix[r.risk_level||"none"]||0)+1});
+  var n=rows.length;
+  function seg(k,c){var w=(mix[k]||0)/n*100;return w?'<i style="width:'+w+'%;background:'+c+'"></i>':''}
+  var html='<div class="card"><h3>ภาพรวม '+n+' ราย</h3>'+
+    '<div class="mixbar">'+seg("urgent","var(--c1)")+seg("decline","var(--c2)")+seg("watch","var(--c3)")+seg("stable","var(--c4)")+seg("none","#C6D2E4")+'</div>'+
+    '<div class="rowline"><span class="k">🔴 เร่งด่วน</span><span class="v">'+(mix.urgent||0)+'</span></div>'+
+    '<div class="rowline"><span class="k">🟠 ถดถอย</span><span class="v">'+(mix.decline||0)+'</span></div>'+
+    '<div class="rowline"><span class="k">🟡 เฝ้าสังเกต</span><span class="v">'+(mix.watch||0)+'</span></div>'+
+    '<div class="rowline"><span class="k">🟢 คงที่</span><span class="v">'+(mix.stable||0)+'</span></div></div>'+
+    '<div class="card"><h3>รายพอร์ต (แฝงชื่อ)</h3><div class="tblwrap"><table><thead><tr><th>รหัส</th><th>ช่วงอายุ</th><th>คะแนน</th><th>ลุกนั่ง</th><th>สัญญาณ</th></tr></thead><tbody>'+
+    rows.slice(0,80).map(function(r){
+      return '<tr><td class="num">'+esc(r.pseudonym||"—")+'</td><td>'+esc(r.age_band||"—")+'</td>'+
+        '<td class="num">'+(r.score!=null?r.score+"/12":"—")+'</td>'+
+        '<td class="num">'+(r.ftsst_seconds!=null?(+r.ftsst_seconds).toFixed(1)+" วิ":"—")+'</td>'+
+        '<td><span class="pill" style="background:'+(LV_C[r.risk_level]||"#93A1B7")+'">'+(LV_NM[r.risk_level]||"—")+'</span></td></tr>';
+    }).join("")+'</tbody></table></div></div>'+
+    '<div class="notice">ข้อมูลแฝงชื่อยังเป็นข้อมูลส่วนบุคคลตาม PDPA · ทุกการเปิดดูพอร์ตถูกบันทึกใน audit log</div>';
+  V.innerHTML=html;
+}
+
+/* ---------- ฉัน ---------- */
+function meV(){
+  head("บัญชีของฉัน",ST.email||"");
+  V.innerHTML='<div class="card"><h3>บัญชีเจ้าหน้าที่</h3>'+
+    '<div class="rowline"><span class="k">ชื่อ</span><span class="v">'+esc(ST.name||"—")+'</span></div>'+
+    '<div class="rowline"><span class="k">อีเมล</span><span class="v" style="font-size:11.5px">'+esc(ST.email||"—")+'</span></div>'+
+    '<div class="rowline"><span class="k">บทบาท</span><span class="v">'+esc(ROLE_NM[ST.role]||ST.role||"—")+'</span></div></div>'+
+    '<div class="card"><h3>เครื่องมือเพิ่มเติม (บนเว็บ)</h3>'+
+    '<p class="sub">แดชบอร์ดจอใหญ่ การเปิดใช้ MFA และการตรวจสอบกับเวชระเบียน อยู่ที่แดชบอร์ดบนเว็บ</p>'+
+    '<button class="ghostb" id="openWeb">เปิดแดชบอร์ดบนเว็บ</button></div>'+
+    '<button class="cta" id="out" style="background:#fff;color:var(--c1);border:1.5px solid #F3B5B5">ออกจากระบบ</button>'+
+    '<p class="sub" style="text-align:center">CareSignal Staff · เอนจิน 1.4.1 · ต้นแบบเพื่อการประกวด OIC InsurTech Award 2026</p>';
+  document.getElementById("openWeb").addEventListener("click",function(){location.href="./CareSignal-Web.html#"+(ST.role==="insurer"?"ins":"cm")});
+  document.getElementById("out").addEventListener("click",async function(){
+    try{await CSBackend.signOut()}catch(e){}
+    ST.role=null;ST.email=null;ST.name=null;chip();
+    toast("ออกจากระบบแล้ว");loginV();
+  });
+}
+
+/* ---------- นำทาง ---------- */
+var FN={login:loginV,queue:queueV,port:portV,me:meV};
+function go(sc){
+  ST.screen=sc;(FN[sc]||loginV)();
+  TABS.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===sc)});
+  window.scrollTo(0,0);
+}
+TABS.addEventListener("click",function(e){var b=e.target.closest("[data-go]");if(b)go(b.dataset.go)});
+
+/* ---------- บูต ---------- */
+(async function(){
+  loginV();
+  try{
+    var ok=await CSBackend.init();
+    if(!ok){V.insertAdjacentHTML("afterbegin",'<div class="warnbox">เชื่อมต่อฐานข้อมูลกลางไม่ได้ — แอปเจ้าหน้าที่ต้องออนไลน์เท่านั้น</div>');return}
+    var u=await CSBackend.currentUser();
+    if(u){
+      var p=await CSBackend.loadProfile();
+      if(p&&p.id===u.id&&["care_manager","insurer","admin"].indexOf(p.role)>=0){
+        ST.role=p.role;ST.email=u.email;ST.name=p.display_name||u.email;
+        chip();TABS.hidden=false;
+        go(ST.role==="insurer"?"port":"queue");
+      }else{try{await CSBackend.signOut()}catch(e){}}
+    }
+  }catch(e){}
+})();
+
+/* PWA */
+if("serviceWorker" in navigator&&location.protocol!=="file:"){
+  navigator.serviceWorker.register("./sw.js").catch(function(){});
+}
+</script>
+</body>
+</html>

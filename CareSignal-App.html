@@ -944,7 +944,7 @@ function render(arg){
   T.hidden = !S.data.profile || ["assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"me",ai:"me"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,register:registerV,login:loginV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={loading:loadingV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -960,7 +960,8 @@ function welcomeV(){
   '<div class="rowline"><span class="k">ผลเสี่ยง ส่งต่อพยาบาล</span><span class="v">72 ชม.</span></div></div>'+
   '<div class="notice">ข้อสัญญาที่เราให้ไว้กับคุณ: ผลตรวจใช้<b>ลดค่าเบี้ยได้อย่างเดียว</b> ไม่มีการขึ้นค่าเบี้ยหรือไม่รับประกันเพราะผลตรวจแย่ลง และการอนุมัติเงินทุกครั้งตัดสินโดยคนจริง ไม่ใช่คอมพิวเตอร์</div>'+
   '<button class="cta loop" data-go="register">เริ่มใช้งาน · สร้างบัญชี</button>'+
-  '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button></div>';
+  '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button>'+
+  '<button class="ghostb" data-go="family" style="border-color:#C7DBFB;color:var(--brand)">👨‍👩‍👧 สำหรับครอบครัว/ผู้ดูแล · ดูผลของคนที่คุณดูแล</button></div>';
 }
 function registerV(){
   head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้คำนวณเกณฑ์อายุและเบี้ยประกันของคุณ เก็บในฐานข้อมูลของคุณเอง","welcome");
@@ -1060,6 +1061,104 @@ function loginV(){
       toast("ยินดีต้อนรับกลับ · ดึงผล "+rows.length+" รายการ");
       go("home");
     }catch(e){this.disabled=false;this.textContent="เข้าสู่ระบบ";toast("เข้าสู่ระบบไม่สำเร็จ ตรวจสอบเบอร์และรหัสอีกครั้ง")}
+  });
+}
+
+
+/* ============================================================
+   โหมดครอบครัว / ผู้ดูแล — ดูอย่างเดียว
+   ------------------------------------------------------------
+   ครอบครัวเข้าดูผลของผู้เอาประกันด้วยเบอร์และรหัส 4 หลักที่
+   ผู้เอาประกัน "มอบให้เอง" (นี่คือกลไกความยินยอมของโหมดนี้ —
+   ระบบย้ำบนหน้าจอว่าต้องได้รับจากเจ้าของข้อมูลโดยตรง)
+   ข้อมูลถูกอ่านมาแสดงเท่านั้น ไม่แตะ S.data ของบัญชีในเครื่องนี้
+   และไม่มีปุ่มแก้ไข/ประเมิน/ชำระเงินใด ๆ ในโหมดนี้
+   ============================================================ */
+function familyV(){
+  head("โหมดครอบครัว","ดูผลของคนที่คุณดูแล","ต้องได้รับเบอร์โทรและรหัส 4 หลักจากผู้เอาประกันโดยตรง","welcome");
+  V.innerHTML='<div class="anim senior">'+
+  '<div class="card"><h3>โหมดนี้ทำอะไรได้</h3>'+
+  '<div class="rowline"><span class="k">ดูสถานะสีและคะแนนล่าสุด</span><span class="v">ได้</span></div>'+
+  '<div class="rowline"><span class="k">ดูแนวโน้มย้อนหลัง</span><span class="v">ได้</span></div>'+
+  '<div class="rowline"><span class="k">ดูคำแนะนำการดูแล</span><span class="v">ได้</span></div>'+
+  '<div class="rowline"><span class="k">แก้ไขข้อมูล / ทำแบบประเมินแทน</span><span class="v" style="color:var(--c1)">ไม่ได้</span></div></div>'+
+  '<div class="notice">การเข้าดูครั้งนี้ถือเป็นความยินยอมของผู้เอาประกันผ่านการมอบรหัสให้โดยตรง · ทุกการเข้าดูถูกบันทึกใน audit log ของบัญชี · หากผู้เอาประกันต้องการยกเลิก ให้เปลี่ยนรหัส 4 หลักหรือแจ้งทีมดูแล</div>'+
+  '<div class="card">'+
+  '<div class="field"><label>เบอร์โทรของผู้เอาประกัน</label><input id="faPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
+  '<div class="field"><label>รหัส 4 หลัก (ที่ผู้เอาประกันมอบให้)</label><input id="faPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
+  '<button class="cta loop" id="faGo">เข้าดูข้อมูล</button></div>';
+  document.getElementById("faGo").addEventListener("click",async function(){
+    var ph=document.getElementById("faPhone").value.trim(), pin=document.getElementById("faPin").value.trim();
+    if(!/^0\d{8,9}$/.test(ph)){toast("กรุณากรอกเบอร์โทรให้ถูกต้อง");return}
+    if(!/^\d{4}$/.test(pin)){toast("รหัสต้องเป็นตัวเลข 4 หลัก");return}
+    this.disabled=true;this.textContent="กำลังเข้าดู…";
+    try{
+      await CSBackend.signInUser(ph,pin);
+      var prof=CSBackend.getProfile();
+      var rows=await CSBackend.listAssessments(60);
+      try{await CSBackend.audit("family.view","ครอบครัว/ผู้ดูแลเข้าดูข้อมูลผ่านโหมดครอบครัว ("+rows.length+" รายการ)")}catch(eA){}
+      renderFamilyView(prof,rows);
+    }catch(e){
+      this.disabled=false;this.textContent="เข้าดูข้อมูล";
+      toast("เข้าดูไม่สำเร็จ — ตรวจสอบเบอร์และรหัสอีกครั้ง");
+    }
+  });
+}
+function renderFamilyView(prof,rows){
+  /* แปลงแถวจากฐานข้อมูลเป็นรูปแบบเดียวกับในแอป แล้วยืมเอนจินแนวโน้มจริงมาคิด
+     โดยไม่แตะข้อมูลของบัญชีในเครื่อง (สลับชี้ชั่วคราวแล้วคืนเสมอ) */
+  var A=rows.map(function(r){return {at:r.assessed_at,score:r.score,max:r.score_max,tier:r.tier,
+    ftsst:r.ftsst_seconds!=null?+r.ftsst_seconds:null,tug:r.tug_seconds!=null?+r.tug_seconds:null,
+    parts:r.parts||{},cv:r.cadence_cv!=null?+r.cadence_cv:null}}).reverse();
+  var nm=prof&&prof.display_name?prof.display_name:"ผู้เอาประกัน";
+  var age=prof&&prof.birth_year_be?ageFrom(prof.birth_year_be,prof.birth_month):null;
+  var tr=null;
+  if(A.length){
+    var keep=S.data;
+    try{ S.data={assessments:A,profile:{age:age||70,name:nm},audit:[]}; tr=trajectory(); }
+    catch(e){ tr=null }
+    S.data=keep;
+  }
+  var last=A[A.length-1];
+  var lvNm={stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"ต้องดูแลเร่งด่วน"};
+  var lvC={stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"};
+  var lv=tr?tr.level:"stable";
+  head("โหมดครอบครัว","คุณ"+esc(nm),(age?"อายุ "+age+" ปี · ":"")+"ผลตรวจ "+A.length+" ครั้ง","welcome");
+  var html='<div class="anim senior">';
+  if(!A.length){
+    html+='<div class="card"><p class="sub" style="margin:0">ยังไม่มีผลตรวจในระบบ — ชวนให้ท่านทำแบบประเมินครั้งแรกผ่านแอปนี้ได้เลย</p></div>';
+  }else{
+    html+='<div class="card" style="text-align:center;border:2px solid '+lvC[lv]+'">'+
+      '<p class="sub" style="margin:0 0 6px">สถานะล่าสุด · '+thDate(last.at)+'</p>'+
+      '<div style="width:64px;height:64px;border-radius:50%;background:'+lvC[lv]+';margin:6px auto 10px;box-shadow:inset 0 -4px 10px rgba(0,0,0,.15)"></div>'+
+      '<div style="font-size:21px;font-weight:700">'+lvNm[lv]+'</div>'+
+      '<p class="sub" style="margin:8px 0 0">คะแนน '+last.score+' / '+last.max+(last.ftsst?' · ลุกนั่ง '+last.ftsst.toFixed(1)+' วิ':'')+(last.tug?' · ลุกเดิน '+last.tug.toFixed(1)+' วิ':'')+'</p></div>';
+    if(tr&&tr.flags&&tr.flags.length){
+      html+='<div class="card"><h3>สิ่งที่ระบบสังเกตเห็น</h3>'+tr.flags.map(function(f){
+        return '<p class="sub" style="border-left:3px solid '+lvC[lv]+';padding-left:10px;margin:8px 0">'+esc(f.text)+'</p>'}).join("")+'</div>';
+    }
+    if(tr){
+      html+='<div class="card"><h3>สิ่งที่ครอบครัวช่วยได้ตอนนี้</h3>'+
+        (lv==="urgent"?'<p class="sub" style="margin:0">โปรดติดต่อหรือไปเยี่ยมโดยเร็ว · ทีมพยาบาลกำลังถูกส่งต่อให้ประเมินถึงบ้าน'+(tr.referral?' ('+esc(tr.referral.sla||"")+')':'')+' · เก็บของกีดขวางทางเดิน เปิดไฟให้สว่าง และอยู่ใกล้เมื่อท่านลุกเดิน</p>'
+        :lv==="decline"?'<p class="sub" style="margin:0">ควรโทรหาหรือแวะเยี่ยมในสัปดาห์นี้ · Care Manager จะติดต่อภายใน 7 วัน · ชวนท่านทำกายภาพเบา ๆ และตรวจดูยาที่กินร่วมกันหลายชนิด</p>'
+        :lv==="watch"?'<p class="sub" style="margin:0">มีสัญญาณเล็กน้อยที่ควรเฝ้าดู · ชวนท่านประเมินซ้ำใน '+tr.nextDays+' วัน และชวนออกกำลังขาอย่างสม่ำเสมอ</p>'
+        :'<p class="sub" style="margin:0">สมรรถภาพคงที่ดี · นัดประเมินซ้ำใน '+tr.nextDays+' วัน · การโทรหาสม่ำเสมอคือการป้องกันที่ดีที่สุด</p>')+'</div>';
+    }
+    if(A.length>1){
+      html+='<div class="card"><h3>ย้อนหลัง '+Math.min(A.length,8)+' ครั้งล่าสุด</h3>'+
+        A.slice(-8).reverse().map(function(x){
+          return '<div class="rowline"><span class="k">'+thDate(x.at)+'</span><span class="v">'+x.score+'/'+x.max+(x.ftsst?' · '+x.ftsst.toFixed(1)+' วิ':'')+'</span></div>';
+        }).join("")+'</div>';
+    }
+  }
+  html+='<div class="notice">โหมดครอบครัวเป็นการดูอย่างเดียว · หากพบเหตุฉุกเฉิน โทร <b>1669</b> ทันที</div>'+
+    '<button class="ghostb" id="faOut">ออกจากโหมดครอบครัว</button></div>';
+  V.innerHTML=html;
+  document.getElementById("faOut").addEventListener("click",async function(){
+    try{await CSBackend.signOut()}catch(e){}
+    CLOUD.session=false;
+    toast("ออกจากโหมดครอบครัวแล้ว");
+    go("welcome");
   });
 }
 
