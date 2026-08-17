@@ -88,6 +88,18 @@ th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line2)}
 th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
 td.num{font-family:var(--mono);white-space:nowrap}
 .tblwrap{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center;cursor:pointer}
+.kpi[aria-pressed="true"]{border-color:var(--gold);background:rgba(245,185,62,.14)}
+.kpi b{display:block;font-size:22px;font-family:var(--mono);color:#fff;line-height:1.2}
+.kpi span{font-size:11px;color:var(--ink2);line-height:1.3;display:block;margin-top:2px}
+.seg{display:flex;gap:6px;margin-bottom:12px}
+.seg button{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink2);
+  font-family:inherit;font-size:13px;padding:9px;border-radius:11px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--goldink);border-color:var(--gold);font-weight:600}
+.spark{display:block;width:100%;height:44px;margin:2px 0 6px}
+.chip2{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.12);color:var(--ink2);margin:0 4px 4px 0}
+.linkbtn{border:0;background:none;color:var(--gold);font-family:inherit;font-size:12.5px;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
@@ -105,7 +117,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=211"></script>
+<script src="./cs-backend.js?v=212"></script>
 <script src="./cs-meds.js?v=1"></script>
 <script>
 /* ============================================================
@@ -200,11 +212,14 @@ async function doLogin(){
 }
 
 /* ============================================================
-   คิวเคส (Care Manager) — วงจรชีวิตเคสก่อนการเคลม
+   Care Manager — Action Dashboard
    ------------------------------------------------------------
-   เคสไม่ได้เปิดจากหน้าจอนี้ — ทริกเกอร์ในฐานข้อมูลเปิดให้เองทุกครั้ง
-   ที่มีสัญญาณระดับเหลืองขึ้นไป หน้านี้จึงเป็น "ที่ทำงาน" ของเคส
-   ไม่ใช่ที่สร้างเคส และทุกการเลื่อนสถานะบันทึกชื่อผู้ทำใน audit log
+   หน้านี้ตอบคำถามเดียว: "วันนี้ต้องทำอะไรกับใคร"
+   จึงไม่ใช่หน้าดูกราฟ แต่เป็นคิวงานที่กดทำได้ทันที
+
+   ลำดับความสำคัญคิดที่ฐานข้อมูล (view cm_worklist) ตามลำดับ
+   แดงก่อน → เกินกำหนดติดต่อ → ใกล้ครบกำหนด → ติดต่อไม่ได้ไว้ท้าย
+   เหตุผลที่ไม่เรียงบนหน้าจอ: เจ้าหน้าที่หลายคนต้องเห็นลำดับเดียวกัน
    ============================================================ */
 var CASE_STEPS=[
   {k:"new",          nm:"เคสใหม่",           next:"reviewing",    btn:"รับเคสนี้"},
@@ -214,87 +229,319 @@ var CASE_STEPS=[
   {k:"intervention", nm:"อยู่ระหว่างดูแล",    next:"follow_up_due",btn:"ถึงกำหนดติดตาม"},
   {k:"follow_up_due",nm:"ถึงกำหนดติดตาม",    next:"stable",       btn:"ดีขึ้น/คงที่ — ปิดเคส"}
 ];
+/* บาง webview และ PWA บล็อก prompt() — ถ้าเรียกตรงแล้วโยน error
+   ตัวจัดการเหตุการณ์ทั้งก้อนจะตายเงียบ ปุ่มจะกดไม่ติดโดยไม่มีคำอธิบาย
+   ห่อไว้เพื่อให้ "บันทึกโดยไม่มีโน้ต" ยังทำงานได้เสมอ */
+function ask(msg,required){
+  var v=null;
+  try{ v=window.prompt(msg) }catch(e){ v=null }
+  if(v===null&&required)return null;
+  return v||"";
+}
 function caseStep(k){for(var i=0;i<CASE_STEPS.length;i++)if(CASE_STEPS[i].k===k)return CASE_STEPS[i];return null}
 var SIG_NM={S1:"หกล้มครั้งใหม่",S2:"หกล้มซ้ำ/บาดเจ็บ",S3:"ความเสี่ยงจากยา",
             S4:"กำลังขาและการทรงตัวถดถอย",S5:"เดินช้าลง",S6:"กิจวัตรประจำวันลดลง",
             S7:"ธงแดงด้านความปลอดภัย"};
 var DEST_NM={doctor:"แพทย์",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",
              nurse:"พยาบาล/ผู้จัดการดูแล",family:"ครอบครัว",community:"เครือข่ายชุมชน"};
+/* ผลการติดต่อ — คำที่ใช้ตรงกับสิ่งที่เกิดจริงหน้างาน */
+var CONTACT_RESULTS=[
+  {k:"reached",          nm:"ติดต่อสำเร็จ",        cls:"ok"},
+  {k:"family_confirmed", nm:"ครอบครัวยืนยันแผน",   cls:"ok"},
+  {k:"booked",           nm:"นัดหมายแล้ว",         cls:"ok"},
+  {k:"referred_ok",      nm:"ส่งต่อสำเร็จ",        cls:"ok"},
+  {k:"no_answer",        nm:"ติดต่อไม่ได้",        cls:"no"},
+  {k:"refused",          nm:"ผู้ใช้ปฏิเสธ",        cls:"no"},
+  {k:"new_event",        nm:"มีเหตุการณ์ใหม่",     cls:"no"}
+];
+var WL={rows:[],filter:"all",tab:"cases"};
 
-function slaLeft(c){
-  var due=new Date(c.opened_at).getTime()+(c.sla_hours||72)*3600000;
-  var h=Math.round((due-Date.now())/3600000);
+function slaText(c){
   if(c.contacted_at)return {txt:"ติดต่อแล้ว",cls:"var(--c4)"};
-  if(h<0)          return {txt:"เกินกำหนด "+Math.abs(h)+" ชม.",cls:"var(--c1)"};
+  var h=Math.round((new Date(c.due_at).getTime()-Date.now())/3600000);
+  if(c.unreachable)return {txt:"ติดต่อไม่ได้ "+(c.attempts||0)+" ครั้ง",cls:"var(--c3)"};
+  if(h<0)return {txt:"เกินกำหนด "+Math.abs(h)+" ชม.",cls:"var(--c1)"};
   return {txt:"ต้องติดต่อภายใน "+h+" ชม.",cls:h<=12?"var(--c2)":"var(--ink2)"};
+}
+/* งานถัดไปที่ควรทำ — มาจากสัญญาณที่แรงที่สุดของเคส */
+function nextAction(c){
+  if(c.next_action)return c.next_action;
+  var s=(c.signals||[])[0];
+  if(c.med_review_open)return "ส่งเภสัชกรทบทวนยา";
+  if(!c.contacted_at)return "โทรติดต่อ";
+  if(c.ref_open)return "ติดตามผลการส่งต่อ";
+  if(c.fu_due)return "โทรติดตามตามนัด";
+  if(s&&s.dest)return "ประสานส่งต่อ "+(DEST_NM[s.dest]||s.dest);
+  return "ทบทวนเคส";
 }
 
 async function queueV(){
-  head("คิวเคส","เคสเปิดอัตโนมัติเมื่อพบสัญญาณเสี่ยง — เรียงตามความเร่งด่วนและเวลาที่ค้าง");
+  head("งานวันนี้","ใครเสี่ยง · ต้องทำอะไร · ใครรับผิดชอบ · ครบกำหนดเมื่อไร");
   if(ST.role!=="care_manager"&&ST.role!=="admin"){
     V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะ Care Manager</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูเคสรายบุคคลไม่ได้ ตามหลักแบ่งสิทธิ์ข้อมูล — ใช้แท็บ "พอร์ต" แทน</div>';
     return;
   }
-  V.innerHTML='<div class="empty">กำลังโหลดคิวเคส…</div>';
-  var q=[];
-  try{q=await CSBackend.caseQueue()}catch(e){}
-  var order={urgent:0,decline:1,watch:2,stable:3};
-  q.sort(function(a,b){
-    var d=(a.level in order?order[a.level]:9)-(b.level in order?order[b.level]:9);
-    return d!==0?d:(new Date(a.opened_at)-new Date(b.opened_at));
-  });
-  var byStatus={};
-  q.forEach(function(c){byStatus[c.status]=(byStatus[c.status]||0)+1});
+  V.innerHTML='<div class="empty">กำลังโหลดคิวงาน…</div>';
+  try{WL.rows=await CSBackend.cmWorklist()}catch(e){WL.rows=[]}
+  renderQueue();
+}
+function renderQueue(){
+  var rows=WL.rows;
+  var k={
+    newRed:   rows.filter(function(c){return c.level==="urgent"&&c.status==="new"}).length,
+    dueToday: rows.filter(function(c){return !c.contacted_at&&new Date(c.due_at)-Date.now()<86400000}).length,
+    overdue:  rows.filter(function(c){return c.overdue}).length,
+    ref:      rows.filter(function(c){return c.ref_open>0}).length,
+    med:      rows.filter(function(c){return c.med_review_open>0}).length,
+    unreach:  rows.filter(function(c){return c.unreachable}).length,
+    fu:       rows.filter(function(c){return c.fu_due>0}).length
+  };
+  var tile=function(id,n,label,col){
+    return '<button class="kpi" data-f="'+id+'" aria-pressed="'+(WL.filter===id)+'">'+
+      '<b style="color:'+(n?col:"var(--ink3)")+'">'+n+'</b><span>'+label+'</span></button>';
+  };
+  var html='<div class="kpis">'+
+    tile("newRed",k.newRed,"เคสแดงใหม่","var(--c1)")+
+    tile("dueToday",k.dueToday,"ต้องติดต่อวันนี้","var(--c2)")+
+    tile("overdue",k.overdue,"เกินกำหนด","var(--c1)")+
+    tile("ref",k.ref,"รอผลส่งต่อ","var(--c3)")+
+    tile("med",k.med,"รอทบทวนยา","var(--c3)")+
+    tile("unreach",k.unreach,"ติดต่อไม่ได้","var(--ink2)")+
+  '</div>'+
+  '<div class="seg"><button data-tab="cases" aria-pressed="'+(WL.tab==="cases")+'">คิวเคส ('+rows.length+')</button>'+
+    '<button data-tab="fu" aria-pressed="'+(WL.tab==="fu")+'">งานติดตาม ('+k.fu+')</button></div>';
 
-  var html='';
-  if(!q.length){
-    html+='<div class="card"><div class="empty">ไม่มีเคสค้าง 🎉<br><span style="font-size:12.5px">เมื่อสมาชิกประเมินแล้วพบสัญญาณระดับเหลืองขึ้นไป ระบบจะเปิดเคสที่นี่ทันที</span></div></div>';
-  }else{
-    html+='<div class="card"><h3>สรุปคิว '+q.length+' เคส</h3>'+
-      CASE_STEPS.map(function(st){
-        var n=byStatus[st.k]||0;
-        return n?'<div class="rowline"><span class="k">'+st.nm+'</span><span class="v">'+n+'</span></div>':'';
-      }).join("")+'</div>';
+  var list=rows.slice();
+  if(WL.tab==="fu")list=list.filter(function(c){return c.fu_due>0});
+  if(WL.filter==="newRed")   list=list.filter(function(c){return c.level==="urgent"&&c.status==="new"});
+  if(WL.filter==="dueToday") list=list.filter(function(c){return !c.contacted_at&&new Date(c.due_at)-Date.now()<86400000});
+  if(WL.filter==="overdue")  list=list.filter(function(c){return c.overdue});
+  if(WL.filter==="ref")      list=list.filter(function(c){return c.ref_open>0});
+  if(WL.filter==="med")      list=list.filter(function(c){return c.med_review_open>0});
+  if(WL.filter==="unreach")  list=list.filter(function(c){return c.unreachable});
+
+  if(!list.length){
+    html+='<div class="card"><div class="empty">'+(rows.length?"ไม่มีเคสในกลุ่มนี้":"ไม่มีเคสค้าง 🎉<br><span style=\"font-size:12.5px\">เมื่อสมาชิกประเมินแล้วพบสัญญาณระดับเหลืองขึ้นไป ระบบจะเปิดเคสที่นี่ทันที</span>")+'</div></div>';
   }
-  q.forEach(function(c){
-    var pr=c.profiles||{}, sl=slaLeft(c), step=caseStep(c.status);
-    var sigs=(c.signals||[]).map(function(f){
-      var nm=f.nm||SIG_NM[f.k]||f.text||f.id||"";
-      var dest=f.dest?' → '+(DEST_NM[f.dest]||f.dest):"";
-      return '<div class="flag"><b>'+esc(f.k||f.id||"")+'</b> '+esc(nm)+esc(dest)+
-             (f.act?'<br><span style="color:var(--ink3)">'+esc(f.act)+'</span>':'')+'</div>';
+  list.forEach(function(c){
+    var sl=slaText(c), step=caseStep(c.status);
+    var sigs=(c.signals||[]).slice(0,3).map(function(f){
+      return '<span class="chip2">'+esc(f.k||f.id||"")+' '+esc(f.nm||SIG_NM[f.k]||f.text||"")+'</span>';
     }).join("");
     html+='<div class="case"><div class="top">'+
       '<span class="pill" style="background:'+(LV_C[c.level]||"#5B77B4")+'">'+(LV_NM[c.level]||esc(c.level))+'</span>'+
-      '<span class="who">'+esc(pr.pseudonym||"—")+' · '+esc(pr.display_name||"")+'</span>'+
+      '<span class="who">'+esc(c.pseudonym||"—")+' · '+esc(c.display_name||"")+(c.age?" · "+c.age+" ปี":"")+'</span>'+
       '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(c.opened_at)+'</span></div>'+
-      '<div class="rowline"><span class="k">สถานะ</span><span class="v">'+esc(step?step.nm:c.status)+'</span></div>'+
-      '<div class="rowline"><span class="k">กำหนดติดต่อ</span><span class="v" style="color:'+sl.cls+'">'+esc(sl.txt)+'</span></div>'+
-      (pr.phone?'<div class="rowline"><span class="k">โทร</span><span class="v"><a href="tel:'+esc(pr.phone)+'" style="color:var(--gold)">'+esc(pr.phone)+'</a></span></div>':'')+
-      sigs+
-      '<div class="btnrow">'+
-        (step&&step.next?'<button class="ok" data-adv="'+c.id+'" data-to="'+step.next+'">'+esc(step.btn)+'</button>':'')+
-        '<button class="no" data-close="'+c.id+'">ปิดเคส</button></div></div>';
+      (sigs?'<div style="margin:2px 0 6px">'+sigs+'</div>':'')+
+      '<div class="rowline"><span class="k">งานถัดไป</span><span class="v" style="font-family:inherit;font-weight:600;text-align:right">'+esc(nextAction(c))+'</span></div>'+
+      '<div class="rowline"><span class="k">กำหนด</span><span class="v" style="color:'+sl.cls+'">'+esc(sl.txt)+'</span></div>'+
+      '<div class="rowline"><span class="k">สถานะ</span><span class="v" style="font-family:inherit;font-weight:500">'+esc(step?step.nm:c.status)+'</span></div>'+
+      (c.phone?'<div class="rowline"><span class="k">โทร</span><span class="v"><a href="tel:'+esc(c.phone)+'" style="color:var(--gold)">'+esc(c.phone)+'</a>'+
+        (c.carer_phone?' · ผู้ดูแล <a href="tel:'+esc(c.carer_phone)+'" style="color:var(--gold)">'+esc(c.carer_phone)+'</a>':'')+'</span></div>':'')+
+      '<div class="btnrow" style="flex-wrap:wrap">'+
+        '<button class="ok" data-open="'+c.id+'" data-uid="'+c.user_id+'" style="flex:1 1 100%">เปิดรายละเอียดเคส</button></div>'+
+      '<div class="btnrow" style="flex-wrap:wrap;margin-top:6px">'+
+        CONTACT_RESULTS.slice(0,4).map(function(r){
+          return '<button class="'+r.cls+'" data-log="'+c.id+'" data-res="'+r.k+'" style="flex:1 1 45%;font-size:12.5px;padding:8px">'+esc(r.nm)+'</button>'}).join("")+
+      '</div></div>';
   });
-  html+='<div class="notice">เคสเปิดอัตโนมัติจากสัญญาณเสี่ยง — ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น <b>การตัดสินใจทางคลินิกและการส่งต่อทุกครั้งเป็นของคุณ</b> · ทุกการเลื่อนสถานะบันทึกชื่อผู้ทำและเวลาใน audit log ที่ลบไม่ได้ · ระบบนี้ไม่วินิจฉัยโรค ไม่สั่งปรับยา และไม่ตัดสินการจ่ายสินไหม</div>';
+  html+='<div class="notice">เคสเปิดอัตโนมัติจากสัญญาณเสี่ยง ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น — <b>การตัดสินใจทางคลินิกและการส่งต่อทุกครั้งเป็นของคุณ</b> · ทุกการติดต่อและเลื่อนสถานะบันทึกชื่อผู้ทำใน audit log ที่ลบไม่ได้ · ระบบไม่วินิจฉัยโรค ไม่สั่งปรับยา และไม่ตัดสินการจ่ายสินไหม</div>';
   V.innerHTML=html;
-  V.querySelectorAll("[data-adv]").forEach(function(b){
-    b.addEventListener("click",async function(){
-      b.disabled=true;
-      try{await CSBackend.updateCase(b.dataset.adv,b.dataset.to);toast("อัปเดตสถานะเคสแล้ว");queueV()}
-      catch(e){toast("อัปเดตไม่สำเร็จ — ต้องเป็นบัญชี Care Manager");b.disabled=false}
-    });
-  });
-  V.querySelectorAll("[data-close]").forEach(function(b){
-    b.addEventListener("click",async function(){
-      var why=prompt("ปิดเคสเพราะอะไร (บันทึกลง audit log)");
-      if(why===null)return;
-      b.disabled=true;
-      try{await CSBackend.updateCase(b.dataset.close,"closed",why||"ปิดโดยเจ้าหน้าที่");toast("ปิดเคสแล้ว");queueV()}
-      catch(e){toast("ปิดเคสไม่สำเร็จ");b.disabled=false}
-    });
-  });
+
+  V.querySelectorAll("[data-f]").forEach(function(b){b.addEventListener("click",function(){
+    WL.filter=(WL.filter===b.dataset.f)?"all":b.dataset.f; renderQueue();
+  })});
+  V.querySelectorAll("[data-tab]").forEach(function(b){b.addEventListener("click",function(){
+    WL.tab=b.dataset.tab; WL.filter="all"; renderQueue();
+  })});
+  V.querySelectorAll("[data-open]").forEach(function(b){b.addEventListener("click",function(){
+    caseDetailV(b.dataset.open,b.dataset.uid);
+  })});
+  V.querySelectorAll("[data-log]").forEach(function(b){b.addEventListener("click",async function(){
+    var c=WL.rows.filter(function(x){return x.id===b.dataset.log})[0]; if(!c)return;
+    var note=ask("บันทึกเพิ่มเติม (ไม่บังคับ)");
+    b.disabled=true;
+    try{await CSBackend.logContact(c,b.dataset.res,note);toast("บันทึกการติดต่อแล้ว");queueV()}
+    catch(e){toast("บันทึกไม่สำเร็จ");b.disabled=false}
+  })});
 }
+
+/* ============================================================
+   หน้ารายละเอียดเคส — ข้อมูลพอสำหรับ "ประสานงาน" ไม่ใช่โชว์คะแนน
+   ============================================================ */
+function spark(vals,color,invert){
+  /* กราฟเส้นสั้น ๆ พอให้เห็นทิศทาง ไม่ต้องมีแกนหรือตัวเลขรก */
+  var v=vals.filter(function(x){return x!=null});
+  if(v.length<2)return '<div style="font-size:12px;color:var(--ink3)">ยังมีข้อมูลไม่พอวาดแนวโน้ม</div>';
+  var mn=Math.min.apply(null,v), mx=Math.max.apply(null,v), rg=(mx-mn)||1;
+  var w=280,h=40,step=w/(v.length-1);
+  var pts=v.map(function(x,i){return (i*step).toFixed(1)+","+(h-((x-mn)/rg)*h).toFixed(1)}).join(" ");
+  var worse=invert?(v[v.length-1]<v[0]):(v[v.length-1]>v[0]);
+  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+
+    '<polyline points="'+pts+'" fill="none" stroke="'+(worse?"var(--c1)":"var(--c4)")+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+
+    '</svg>';
+}
+async function caseDetailV(caseId,userId){
+  head("รายละเอียดเคส","กำลังโหลด…");
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var d=null; try{d=await CSBackend.caseDetail(caseId,userId)}catch(e){}
+  if(!d||!d.c){V.innerHTML='<div class="card"><div class="empty">เปิดเคสไม่ได้</div></div>'+
+    '<button class="ghostb" onclick="queueV()">← กลับคิวงาน</button>';return}
+  var c=d.c, A=d.assess||[];
+  head("รายละเอียดเคส",esc(c.pseudonym||"")+" · "+esc(c.display_name||""));
+  var last=A[A.length-1]||{};
+  var sl=slaText(c);
+  var sig=(c.signals||[]).map(function(f){
+    return '<div class="flag"><b>'+esc(f.k||f.id||"")+'</b> '+esc(f.nm||SIG_NM[f.k]||f.text||"")+
+      (f.dest?' → '+esc(DEST_NM[f.dest]||f.dest):'')+
+      (f.act?'<br><span style="color:var(--ink3)">'+esc(f.act)+'</span>':'')+
+      (f.why&&f.why.length?'<br><span style="color:var(--ink3);font-size:11.5px">'+esc(f.why.join(" · "))+'</span>':'')+'</div>';
+  }).join("")||'<div class="empty" style="padding:10px">ไม่มีรายละเอียดสัญญาณ</div>';
+
+  /* ธงความปลอดภัยจากการประเมินล่าสุด */
+  var fd=last.falls_detail||{}, sg=last.safety_gate||{}, ans=sg.ans||sg||{};
+  var flags=[
+    ["ล้มแล้วบาดเจ็บ", fd.injury>=2],
+    ["หมดสติ/สงสัยเป็นลม", fd.loc>=1],
+    ["ลุกเองไม่ได้", fd.getup>=3],
+    ["เจ็บหน้าอก/หายใจลำบาก", ans.chest>=2],
+    ["หน้ามืดรุนแรง", ans.faint>=2],
+    ["อ่อนแรงเฉียบพลัน", ans.stroke>=2],
+    ["หยุดทดสอบเพื่อความปลอดภัย", !!last.not_tested]
+  ];
+  var anyFlag=flags.some(function(f){return f[1]});
+
+  var medRows=(d.meds||[]).map(function(m){
+    var col=m.frid_level===2?"var(--c1)":m.frid_level===1?"var(--c2)":m.frid_level===0?"var(--c4)":"var(--ink3)";
+    var g=CSMeds.FRID[m.frid_group];
+    return '<div class="rowline"><span class="k">'+esc(m.inn||m.brand_text||"ไม่ระบุชื่อ")+(m.dose_text?" "+esc(m.dose_text):"")+
+      '</span><span class="v" style="color:'+col+';font-family:inherit;font-size:12.5px">'+esc(g?g.nm:"ยังไม่จัดกลุ่ม")+'</span></div>';
+  }).join("");
+
+  V.innerHTML=
+    '<button class="ghostb" id="back" style="margin:0 0 12px">← กลับคิวงาน</button>'+
+    (anyFlag?'<div class="warnbox"><b>ธงความปลอดภัย</b><br>'+
+      flags.filter(function(f){return f[1]}).map(function(f){return "• "+esc(f[0])}).join("<br>")+
+      '<div class="btnrow" style="flex-wrap:wrap;margin-top:10px">'+
+        '<button class="ok" data-act="notify" style="flex:1 1 45%">แจ้งผู้ดูแล</button>'+
+        '<button class="ok" data-act="refer" style="flex:1 1 45%">ประสานส่งต่อ</button>'+
+      '</div></div>':'')+
+
+    '<div class="card"><h3>ผู้เอาประกัน</h3>'+
+      '<div class="rowline"><span class="k">รหัสสมาชิก</span><span class="v">'+esc(c.pseudonym||"—")+'</span></div>'+
+      '<div class="rowline"><span class="k">ชื่อ</span><span class="v" style="font-family:inherit">'+esc(c.display_name||"—")+'</span></div>'+
+      '<div class="rowline"><span class="k">อายุ / เพศ</span><span class="v">'+(c.age||"—")+' ปี · '+(c.sex==="f"?"หญิง":c.sex==="m"?"ชาย":"—")+'</span></div>'+
+      (c.phone?'<div class="rowline"><span class="k">โทรศัพท์</span><span class="v"><a href="tel:'+esc(c.phone)+'" style="color:var(--gold)">'+esc(c.phone)+'</a></span></div>':'')+
+      (c.carer_name||c.carer_phone?'<div class="rowline"><span class="k">ผู้ดูแลหลัก</span><span class="v" style="font-family:inherit">'+esc(c.carer_name||"—")+
+        (c.carer_phone?' · <a href="tel:'+esc(c.carer_phone)+'" style="color:var(--gold)">'+esc(c.carer_phone)+'</a>':'')+'</span></div>':'')+
+      (c.province?'<div class="rowline"><span class="k">พื้นที่</span><span class="v" style="font-family:inherit">'+esc(c.province)+'</span></div>':'')+
+      (c.mobility_aid?'<div class="rowline"><span class="k">อุปกรณ์ช่วยเดิน</span><span class="v" style="font-family:inherit">'+esc(c.mobility_aid)+'</span></div>':'')+
+      '<div class="rowline"><span class="k">กำหนดติดต่อ</span><span class="v" style="color:'+sl.cls+'">'+esc(sl.txt)+'</span></div>'+
+    '</div>'+
+
+    '<div class="card"><h3>สัญญาณที่ทำให้เปิดเคส</h3>'+
+      '<div class="rowline"><span class="k">ระดับปัจจุบัน</span><span class="v"><span class="pill" style="background:'+(LV_C[c.level]||"#5B77B4")+'">'+(LV_NM[c.level]||esc(c.level))+'</span></span></div>'+
+      sig+'</div>'+
+
+    '<div class="card"><h3>แนวโน้ม</h3>'+
+      '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง (วิ)</span><span class="v">'+A.map(function(x){return x.ftsst_seconds!=null?(+x.ftsst_seconds).toFixed(1):"—"}).join(" → ")+'</span></div>'+
+      spark(A.map(function(x){return x.ftsst_seconds!=null?+x.ftsst_seconds:null}),null,false)+
+      '<div class="rowline"><span class="k">ลุกเดิน 3 เมตร (วิ)</span><span class="v">'+A.map(function(x){return x.tug_seconds!=null?(+x.tug_seconds).toFixed(1):"—"}).join(" → ")+'</span></div>'+
+      spark(A.map(function(x){return x.tug_seconds!=null?+x.tug_seconds:null}),null,false)+
+      '<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+A.map(function(x){return (x.parts&&x.parts.adl!=null)?x.parts.adl:"—"}).join(" → ")+'</span></div>'+
+      spark(A.map(function(x){return (x.parts&&x.parts.adl!=null)?x.parts.adl:null}),null,true)+
+      '<div class="rowline"><span class="k">คะแนนรวม</span><span class="v">'+A.map(function(x){return x.score!=null?x.score:"—"}).join(" → ")+'</span></div>'+
+    '</div>'+
+
+    (medRows?'<div class="card"><h3>ยาที่ใช้ประจำ</h3>'+medRows+
+      (c.med_review_open?'<p class="tiny" style="color:var(--c3)">มีคำขอทบทวนยารอเภสัชกรอยู่ — ดูที่แท็บ "ทบทวนยา"</p>':'')+'</div>':'')+
+
+    '<div class="card"><h3>เหตุการณ์ที่รายงานเข้ามา</h3>'+
+      ((d.events||[]).length?d.events.map(function(e){
+        return '<div class="rowline"><span class="k">'+esc(EV_NM[e.kind]||e.kind)+'</span><span class="v">'+thDate(e.created_at)+'</span></div>'}).join("")
+       :'<div class="empty" style="padding:10px">ยังไม่มีเหตุการณ์</div>')+'</div>'+
+
+    '<div class="card"><h3>การส่งต่อ</h3>'+
+      ((d.refs||[]).length?d.refs.map(function(r){
+        return '<div class="rowline"><span class="k">'+esc(DEST_NM[r.destination]||r.destination||r.action||"—")+'</span>'+
+          '<span class="v" style="font-family:inherit;font-size:12.5px">'+esc(refNm2(r.status))+'</span></div>'+
+          '<div class="btnrow" style="margin-top:4px;margin-bottom:8px">'+
+            (r.status!=="booked"&&r.status!=="completed"&&r.status!=="outcome_recorded"?'<button class="ok" data-ref="'+r.id+'" data-to="booked" style="font-size:12px;padding:7px">นัดหมายแล้ว</button>':'')+
+            (r.status!=="completed"&&r.status!=="outcome_recorded"?'<button class="ok" data-ref="'+r.id+'" data-to="completed" style="font-size:12px;padding:7px">ไปพบแล้ว</button>':'')+
+            (r.status==="completed"?'<button class="ok" data-ref="'+r.id+'" data-to="outcome_recorded" style="font-size:12px;padding:7px">บันทึกผล</button>':'')+
+            '<button class="no" data-ref="'+r.id+'" data-to="unreachable" style="font-size:12px;padding:7px">ติดต่อไม่ได้</button>'+
+          '</div>';
+      }).join(""):'<div class="empty" style="padding:10px">ยังไม่มีการส่งต่อ</div>')+
+      '<div style="margin-top:8px"><label style="font-size:12.5px;color:var(--ink2);display:block;margin-bottom:6px">เปิดการส่งต่อใหม่</label>'+
+      '<div class="btnrow" style="flex-wrap:wrap">'+
+        Object.keys(DEST_NM).slice(0,4).map(function(k){
+          return '<button class="ok" data-newref="'+k+'" style="flex:1 1 45%;font-size:12.5px;padding:8px">'+esc(DEST_NM[k])+'</button>'}).join("")+
+      '</div></div></div>'+
+
+    '<div class="card"><h3>นัดติดตาม</h3>'+
+      ((d.fups||[]).length?d.fups.map(function(f){
+        var due=new Date(f.due_at), late=f.status==="pending"&&due<new Date();
+        return '<div class="rowline"><span class="k">'+esc(FU_NM[f.kind]||f.kind)+'</span><span class="v" style="color:'+(f.status==="done"?"var(--c4)":late?"var(--c1)":"var(--ink2)")+'">'+
+          (f.status==="done"?"ทำแล้ว":thDate(f.due_at)+(late?" (เกิน)":""))+'</span></div>'}).join("")
+       :'<div class="empty" style="padding:10px">ยังไม่มีนัดติดตาม</div>')+'</div>'+
+
+    '<div class="card"><h3>บันทึกการติดต่อ</h3>'+
+      '<div class="btnrow" style="flex-wrap:wrap">'+CONTACT_RESULTS.map(function(r){
+        return '<button class="'+r.cls+'" data-log2="'+r.k+'" style="flex:1 1 45%;font-size:12.5px;padding:8px">'+esc(r.nm)+'</button>'}).join("")+'</div>'+
+      ((d.contacts||[]).length?'<div style="margin-top:10px">'+d.contacts.map(function(l){
+        var nm=(CONTACT_RESULTS.filter(function(x){return x.k===l.result})[0]||{}).nm||l.result;
+        return '<div class="rowline"><span class="k">'+esc(nm)+(l.note?' · '+esc(l.note):'')+'</span><span class="v">'+thDate(l.created_at)+'</span></div>'
+      }).join("")+'</div>':'')+'</div>'+
+
+    '<div class="card"><h3>เลื่อนสถานะเคส</h3>'+
+      '<div class="btnrow" style="flex-wrap:wrap">'+
+        (caseStep(c.status)&&caseStep(c.status).next?'<button class="ok" data-adv="'+caseStep(c.status).next+'" style="flex:1 1 100%">'+esc(caseStep(c.status).btn)+'</button>':'')+
+        '<button class="no" data-close2="1" style="flex:1 1 100%;margin-top:6px">ปิดเคส</button></div></div>';
+
+  document.getElementById("back").addEventListener("click",queueV);
+  V.querySelectorAll("[data-log2]").forEach(function(b){b.addEventListener("click",async function(){
+    var note=ask("บันทึกเพิ่มเติม (ไม่บังคับ)");
+    b.disabled=true;
+    try{await CSBackend.logContact(c,b.dataset.log2,note);toast("บันทึกแล้ว");caseDetailV(caseId,userId)}
+    catch(e){toast("บันทึกไม่สำเร็จ");b.disabled=false}
+  })});
+  V.querySelectorAll("[data-ref]").forEach(function(b){b.addEventListener("click",async function(){
+    b.disabled=true;
+    try{
+      var extra={};
+      if(b.dataset.to==="outcome_recorded"){var o=ask("ผลที่ได้รับจากผู้เชี่ยวชาญ",true);if(o===null){b.disabled=false;return}extra.outcome={result:o}}
+      if(b.dataset.to==="completed"){extra.note=ask("บันทึกย่อ (ไม่บังคับ)")}
+      await CSBackend.updateReferral(b.dataset.ref,b.dataset.to,extra);
+      toast("อัปเดตการส่งต่อแล้ว");caseDetailV(caseId,userId);
+    }catch(e){toast("อัปเดตไม่สำเร็จ");b.disabled=false}
+  })});
+  V.querySelectorAll("[data-newref]").forEach(function(b){b.addEventListener("click",async function(){
+    var act=ask("ระบุสิ่งที่ต้องการให้ "+DEST_NM[b.dataset.newref]+" ทำ",true);
+    if(!act){toast("ยกเลิก — ต้องระบุสิ่งที่ต้องการให้ทำ");return}
+    b.disabled=true;
+    try{await CSBackend.createReferralFor(userId,caseId,b.dataset.newref,act,c.level);toast("เปิดการส่งต่อแล้ว");caseDetailV(caseId,userId)}
+    catch(e){toast("เปิดไม่สำเร็จ");b.disabled=false}
+  })});
+  var adv=V.querySelector("[data-adv]");
+  if(adv)adv.addEventListener("click",async function(){
+    adv.disabled=true;
+    try{await CSBackend.updateCase(caseId,adv.dataset.adv);toast("อัปเดตสถานะแล้ว");caseDetailV(caseId,userId)}
+    catch(e){toast("อัปเดตไม่สำเร็จ");adv.disabled=false}
+  });
+  V.querySelector("[data-close2]").addEventListener("click",async function(){
+    var why=ask("ปิดเคสเพราะอะไร (บันทึกลง audit log)",true); if(why===null)return;
+    try{await CSBackend.updateCase(caseId,"closed",why||"ปิดโดยเจ้าหน้าที่");toast("ปิดเคสแล้ว");queueV()}
+    catch(e){toast("ปิดไม่สำเร็จ")}
+  });
+  V.querySelectorAll("[data-act]").forEach(function(b){b.addEventListener("click",function(){
+    if(b.dataset.act==="notify"){toast("โทรหาผู้ดูแลจากเบอร์ด้านล่าง");window.scrollTo(0,300)}
+    else{toast("เลือกปลายทางการส่งต่อด้านล่าง");window.scrollTo(0,document.body.scrollHeight*0.6)}
+  })});
+}
+var EV_NM={fall:"หกล้ม",near_fall:"เกือบล้ม",med_change:"ปรับยา",dizzy:"เวียนหัว",hospital:"เข้าโรงพยาบาล",adl_drop:"กิจวัตรลดลง"};
+var FU_NM={checkin_7d:"โทรติดตาม 7 วัน",review_30d:"ทบทวน 30 วัน",reassess:"ประเมินซ้ำ",referral_check:"ตามผลการส่งต่อ"};
+function refNm2(k){var m={pending:"รอยืนยัน",approved:"ยืนยันแล้ว",acknowledged:"ผู้ใช้รับทราบ",booked:"นัดหมายแล้ว",
+  completed:"ไปพบแล้ว",outcome_recorded:"บันทึกผลแล้ว",declined:"ปฏิเสธ",unreachable:"ติดต่อไม่ได้"};return m[k]||k}
 
 /* ---------- พอร์ต (บริษัทประกัน) ---------- */
 async function portV(){

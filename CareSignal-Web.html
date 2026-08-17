@@ -366,7 +366,7 @@ table.dt tr:last-child td{border-bottom:0}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แดชบอร์ดเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิก */</script>
-<script src="./cs-backend.js?v=211"></script>
+<script src="./cs-backend.js?v=212"></script>
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
@@ -986,19 +986,28 @@ async function renderCloudINS(){
   var el=document.getElementById("cloudINS"); if(!el)return;
   if(!CSBackend.isCloud()){el.innerHTML="";return}
   if(!CLOUD.session){el.innerHTML=staffLoginHTML("ins");bindStaffAuth(el,"ins",renderCloudINS);return}
+  /* มุมมองพอร์ตของบริษัทประกัน — เหลือเฉพาะระดับความเสี่ยงและความต่อเนื่อง
+     ของการติดตาม · คะแนนและเวลาลุกนั่งรายคนถูกตัดออกจาก view ที่ฐานข้อมูลแล้ว
+     เพราะเป็นข้อมูลทางคลินิกรายบุคคลที่บริษัทประกันไม่จำเป็นต้องใช้ */
   var port=await CSBackend.insurerPortfolio();
-  var mix={4:0,3:0,2:0,1:0};port.forEach(function(r){if(mix[r.tier]!==undefined)mix[r.tier]++});
+  var mix={stable:0,watch:0,decline:0,urgent:0};
+  port.forEach(function(r){ if(mix[r.risk_level]!==undefined)mix[r.risk_level]++ });
+  var LVNM={stable:["เขียว","t4"],watch:["เหลือง","t3"],decline:["ส้ม","t2"],urgent:["แดง","t1"]};
   var rows=port.slice(0,15).map(function(r){
-    var t=CFG.tiers[r.tier]||{nm:"—",b:""};
-    return '<tr><td class="mono">'+esc(r.pseudonym)+'</td><td>'+esc(r.age_band||"—")+'</td><td>'+(r.sex==="f"?"หญิง":"ชาย")+'</td>'+
-    '<td class="mono">'+(r.score!=null?r.score+" / 12":"—")+'</td>'+
-    '<td class="mono">'+(r.ftsst_seconds!=null?(+r.ftsst_seconds).toFixed(1)+" วิ":"—")+'</td>'+
-    '<td>'+(r.tier?'<span class="tag '+t.b+'" style="margin:0">'+t.nm+'</span>':"—")+'</td>'+
-    '<td>'+r.n_assessments+'</td></tr>';
+    var t=LVNM[r.risk_level];
+    return '<tr><td class="mono">'+esc(r.pseudonym)+'</td><td>'+esc(r.age_band||"—")+'</td>'+
+      '<td>'+(r.sex==="f"?"หญิง":r.sex==="m"?"ชาย":"—")+'</td>'+
+      '<td>'+(t?'<span class="tag '+t[1]+'" style="margin:0">'+t[0]+'</span>':"—")+'</td>'+
+      '<td>'+r.n_assessments+'</td>'+
+      '<td>'+(r.active_monitored?'<span style="color:#0E9F6E">ยังติดตามอยู่</span>':'<span style="color:#8FA3CF">ขาดการติดตาม</span>')+'</td></tr>';
   }).join("");
   el.innerHTML=cloudPanel(staffBarHTML()+
-    '<p style="font-size:13px;margin:12px 0 8px"><b>พอร์ตจริงจากฐานข้อมูลกลาง</b> — ข้อมูลแฝงชื่อผ่าน view เท่านั้น (บังคับที่ฐานข้อมูล) · '+port.length+' ราย · เขียว '+mix[4]+' เหลือง '+mix[3]+' ส้ม '+mix[2]+' แดง '+mix[1]+' · <button id="csReloadIns" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
-    (port.length?'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>รหัสแฝงชื่อ</th><th>ช่วงอายุ</th><th>เพศ</th><th>คะแนน</th><th>ลุกนั่ง</th><th>ระดับ</th><th>ครั้ง</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    '<p style="font-size:13px;margin:12px 0 8px"><b>พอร์ตจริงจากฐานข้อมูลกลาง</b> — แฝงชื่อผ่าน view เท่านั้น (บังคับที่ฐานข้อมูล) · '+
+      port.length+' ราย · เขียว '+mix.stable+' เหลือง '+mix.watch+' ส้ม '+mix.decline+' แดง '+mix.urgent+' · '+
+      '<button id="csReloadIns" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
+    '<div class="notice" style="margin:0 0 12px"><b>ตารางนี้ไม่มีค่าทางคลินิกรายคน</b> — ไม่มีคะแนน ไม่มีเวลาลุกนั่ง ไม่มีชื่อ เบอร์โทร หรือข้อมูลยา '+
+      'เพราะบริษัทประกันไม่จำเป็นต้องใช้ข้อมูลระดับนั้นในการบริหารพอร์ต · ค่าเหล่านั้นเปิดเฉพาะทีมดูแลที่รับผิดชอบเคสนั้นจริง ๆ</div>'+
+    (port.length?'<div style="overflow-x:auto"><table class="dt"><thead><tr><th>รหัสแฝงชื่อ</th><th>ช่วงอายุ</th><th>เพศ</th><th>ระดับความเสี่ยง</th><th>ประเมิน (ครั้ง)</th><th>การติดตาม</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
               :'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีข้อมูลในพอร์ต — หากบทบาทของบัญชีนี้ไม่ใช่ insurer/care_manager ระบบจะคืนค่าว่างเปล่าโดยอัตโนมัติ (RLS)</p>'));
   el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;CLOUD.mfaOn=false;renderCloudCM();renderCloudINS()});
   var mf2=el.querySelector("#csMfaOn"); if(mf2)mf2.addEventListener("click",mfaEnrollFlow);
@@ -1007,22 +1016,19 @@ async function renderCloudINS(){
 }
 
 /* ============================================================
-   ชั้นวัดผล — Outcome & Insurance Value
+   Insurer Dashboard — Population & Outcome
    ------------------------------------------------------------
-   แบ่งหน้าจอเป็นสองส่วนที่ห้ามปนกันเด็ดขาด
-     ส่วนบน  "วัดได้จริง"  — ทุกตัวเลขนับจากฐานข้อมูลผ่าน view รายงานกลุ่ม
-     ส่วนล่าง "แบบจำลอง"   — ตัวเลขทางการเงิน ยังไม่มีข้อมูลเคลมจริงมารองรับ
-   ที่ต้องแยกเพราะถ้าเอา ROI ไปวางปนกับตัวเลขที่นับได้จริง คนอ่านจะเข้าใจว่า
-   ระบบพิสูจน์ผลลัพธ์ทางการเงินแล้ว ซึ่งยังไม่จริง
-   ============================================================ */
-/* ============================================================
-   Portfolio Intelligence — รายงานเชิงกลุ่มสำหรับบริษัทประกัน
-   ------------------------------------------------------------
-   แสดง 5 กลุ่มตามสายงานจริง: ประชากร → ความเสี่ยง → การดูแล →
-   การส่งต่อ → ผลลัพธ์
-   ทุกตัวเลขนับจากฐานข้อมูลผ่าน view ที่คืนค่าแถวเดียว ไม่มี user_id
-   และไม่มีตัวเลขเบี้ย ส่วนลด หรือค่าสินไหม — ระบบนี้ไม่ทำเรื่องราคา
-   ช่องที่ยังไม่มีข้อมูลจริงประกาศว่า "รอเชื่อมข้อมูล" ไม่ใส่ตัวเลขสมมติ
+   ตอบคำถามของบริษัทประกัน: "พอร์ตเราเสี่ยงตรงไหน โปรแกรมทำงานจริงไหม
+   และผลลัพธ์ดีขึ้นหรือไม่" — ไม่ใช่รายชื่อผู้ป่วย
+
+   โครงตามมาตรฐาน population health management
+     ระบุประชากร (มี denominator ชัด) → จัดชั้นความเสี่ยง
+     → วัดการทำงานของ intervention → วัดผลลัพธ์ → รอข้อมูลเคลม
+
+   ความเป็นส่วนตัวที่บังคับไว้
+     * ทุกตัวเลขมาจาก view ที่ไม่มี user_id
+     * การแยกกลุ่มกดตัวเลขที่ n < 10 กันการระบุตัวบุคคลทางอ้อม
+     * ไม่มีคะแนน ไม่มีเวลาลุกนั่งรายคน ไม่มีชื่อ เบอร์ หรือข้อมูลยา
    ============================================================ */
 function pctOf(a,b){return b?Math.round(a/b*100):0}
 async function renderCloudOUT(){
@@ -1030,12 +1036,56 @@ async function renderCloudOUT(){
   if(!CSBackend.isCloud()||!CLOUD.session){el.innerHTML="";return}
   var o=await CSBackend.insurerOutcomes();
   if(!o){el.innerHTML="";return}
-  var py=+o.person_years||0;
-  /* อัตราต่อ 100 คน-ปีเชื่อถือได้ต่อเมื่อฐานเวลามากพอ — โปรแกรมที่เพิ่งเริ่ม
-     เหตุการณ์เดียวจะกลายเป็นอัตราหลักพัน ซึ่งดูเป็นวิทยาศาสตร์แต่ไม่มีความหมาย */
-  var PY_MIN=5, rateOK=py>=PY_MIN;
-  var per100=function(n){return rateOK?(n/py*100).toFixed(1)+" ครั้ง":n+" ครั้ง"};
+  var fn=await CSBackend.insurerFunnel();
+  var st=await CSBackend.insurerStrata();
+  var sg=await CSBackend.insurerSignals();
+
+  var py=+o.person_years||0, PY_MIN=5, rateOK=py>=PY_MIN;
+  var per100=function(n){return rateOK?(n/py*100).toFixed(1):n};
+  var rateUnit=rateOK?" ต่อ 100 คน-ปี":" ครั้ง";
   var rateNote=rateOK?"ต่อ 100 คน-ปี":"จำนวนครั้งใน 12 เดือน · ฐานเวลายังน้อยเกินกว่าจะคิดเป็นอัตรา";
+  var hd=function(t,sub){return '<div style="margin:18px 0 8px"><div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em">'+t+'</div>'+
+    (sub?'<div style="font-size:12px;color:#7A8AA6;margin-top:2px">'+sub+'</div>':'')+'</div>'};
+
+  /* ---- กรวยประชากร: ทุกเปอร์เซ็นต์ต้องมีฐานหารที่ประกาศไว้ ---- */
+  var f=fn||{eligible:o.n_members,enrolled:o.n_members,assessed:o.n_ever_assessed,active_monitored:o.n_active_30d};
+  var funnelRow=function(nm,n,base,note){
+    var pc=base?Math.round(n/base*100):0;
+    return '<div class="rowline"><span class="k">'+nm+(note?' <span style="color:#8FA3CF;font-size:11.5px">'+note+'</span>':'')+'</span>'+
+      '<span class="v">'+n+' ราย'+(base&&base!==n?' · '+pc+'%':'')+'</span></div>'+
+      '<div style="height:7px;background:var(--line2);border-radius:99px;margin:2px 0 8px"><div style="height:100%;width:'+pc+'%;background:var(--brand,#2563EB);border-radius:99px"></div></div>';
+  };
+
+  /* ---- การแยกกลุ่ม พร้อมกดเซลล์เล็ก ---- */
+  var dimNm={age:"ช่วงอายุ",sex:"เพศ",province:"พื้นที่"};
+  var strataHTML="";
+  ["age","sex","province"].forEach(function(dim){
+    var rows=(st||[]).filter(function(x){return x.dim===dim});
+    if(!rows.length)return;
+    strataHTML+='<div style="font-size:12.5px;font-weight:600;color:#3A4A66;margin:10px 0 4px">'+dimNm[dim]+'</div>';
+    rows.forEach(function(r){
+      var nm=r.bucket==="f"?"หญิง":r.bucket==="m"?"ชาย":r.bucket;
+      if(r.suppressed){
+        strataHTML+='<div class="rowline"><span class="k">'+esc(nm)+'</span>'+
+          '<span class="v" style="color:#8FA3CF;font-family:inherit;font-size:12px">กลุ่มเล็กเกินไป (n='+r.n+') — ปิดตัวเลขไว้</span></div>';
+        return;
+      }
+      var tot=r.n||1, g=Math.round(r.green/tot*100), y=Math.round(r.yellow/tot*100), rd=Math.round(r.red/tot*100);
+      strataHTML+='<div class="rowline"><span class="k">'+esc(nm)+' (n='+r.n+')</span>'+
+        '<span class="v">เขียว '+g+'% · เหลือง '+y+'% · แดง '+rd+'%</span></div>'+
+        '<div style="display:flex;height:8px;border-radius:99px;overflow:hidden;margin:2px 0 8px;background:var(--line2)">'+
+          '<i style="width:'+g+'%;background:#0E9F6E"></i><i style="width:'+y+'%;background:#D9A21B"></i><i style="width:'+rd+'%;background:#C7443E"></i></div>';
+    });
+  });
+
+  /* ---- สัดส่วนชนิดสัญญาณ ---- */
+  var SIGNM={S1:"หกล้มครั้งใหม่",S2:"หกล้มซ้ำ/บาดเจ็บ",S3:"ความเสี่ยงจากยา",S4:"กำลังขา/ทรงตัวถดถอย",
+             S5:"เดินช้าลง",S6:"กิจวัตรลดลง",S7:"ธงแดงความปลอดภัย"};
+  var sigHTML=(sg||[]).length?sg.map(function(x){
+    return '<div class="rowline"><span class="k">'+esc(x.signal)+' '+esc(SIGNM[x.signal]||"")+'</span><span class="v">'+x.n+' · '+x.pct+'%</span></div>'+
+      '<div style="height:7px;background:var(--line2);border-radius:99px;margin:2px 0 8px"><div style="height:100%;width:'+x.pct+'%;background:#E07A2F;border-radius:99px"></div></div>';
+  }).join(""):'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีสัญญาณในช่วง 12 เดือน</p>';
+
   var lv=[["stable","เขียว · คงที่","#0E9F6E"],["watch","เหลือง · เฝ้าสังเกต","#D9A21B"],
           ["decline","ส้ม · ถดถอย","#E07A2F"],["urgent","แดง · เร่งด่วน","#C7443E"]];
   var tot=o.lv_stable+o.lv_watch+o.lv_decline+o.lv_urgent;
@@ -1044,69 +1094,69 @@ async function renderCloudOUT(){
     return '<div class="rowline"><span class="k">'+x[1]+'</span><span class="v">'+n+' ราย · '+pc+'%</span></div>'+
       '<div style="height:8px;background:var(--line2);border-radius:99px;margin:4px 0 10px"><div style="height:100%;width:'+pc+'%;background:'+x[2]+';border-radius:99px"></div></div>';
   }).join("");
-  var hd=function(t){return '<div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin:6px 0 8px">'+t+'</div>'};
 
   el.innerHTML=cloudPanel(
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'+
-      '<b style="font-size:15px">📊 รายงานพอร์ต — ความเสี่ยง การดูแล และผลลัพธ์</b>'+
+      '<b style="font-size:15px">📊 รายงานพอร์ต — ประชากร ความเสี่ยง การดูแล ผลลัพธ์</b>'+
       '<span style="background:#E3F6EF;color:#0E9F6E;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px">นับจริงจากฐานข้อมูล</span></div>'+
-    '<p style="font-size:12.5px;color:#5B6B84;margin:0 0 14px">ทุกตัวเลขเป็น<b>ค่ารวมของทั้งพอร์ต</b> ดึงผ่าน view ที่คืนค่าแถวเดียว '+
-      'ไม่มี user_id ไม่มีรายบุคคล — ต่อให้ query ตรงก็ไล่กลับไปหาตัวบุคคลไม่ได้ · '+
-      '<b>ไม่มีตัวเลขเบี้ย ส่วนลด หรือค่าสินไหมในรายงานนี้</b> เพราะระบบไม่ทำเรื่องราคา · '+
-      'ฐานเวลาในโปรแกรม '+py.toFixed(2)+' คน-ปี · '+
+    '<p style="font-size:12.5px;color:#5B6B84;margin:0 0 6px">ทุกตัวเลขเป็น<b>ค่ารวมของทั้งพอร์ต</b> จาก view ที่ไม่มี user_id · '+
+      '<b>ไม่มีชื่อ เบอร์โทร คะแนนรายคน เวลาลุกนั่งรายคน หรือข้อมูลยา</b> — ข้อมูลเหล่านั้นเปิดเฉพาะทีมดูแลที่รับผิดชอบเคส · '+
+      'การแยกกลุ่มปิดตัวเลขเมื่อกลุ่มเล็กกว่า 10 คน เพื่อกันการระบุตัวบุคคลทางอ้อม · '+
       '<button id="csReloadOut" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
 
-    hd("ก · ประชากรในโปรแกรม")+
-    '<div class="kpirow">'+
-      kpi("สมาชิกในโปรแกรม",o.n_members+" ราย","ยินยอมแชร์ข้อมูล · ประเมินรวม "+o.n_assessments+" ครั้ง")+
-      kpi("เคยประเมินอย่างน้อย 1 ครั้ง",pctOf(o.n_ever_assessed,o.n_members)+"%",o.n_ever_assessed+" / "+o.n_members+" ราย")+
+    hd("ก · ประชากรในโปรแกรม","ทุกเปอร์เซ็นต์ด้านล่างคิดจากฐานหารที่ประกาศไว้ตรงนี้")+
+    funnelRow("ผู้มีสิทธิ์ใช้ (eligible)",f.eligible,f.eligible,"")+
+    funnelRow("ยินยอมเข้าร่วม (enrolled)",f.enrolled,f.eligible,"จากผู้มีสิทธิ์")+
+    funnelRow("ประเมินแล้วอย่างน้อย 1 ครั้ง",f.assessed,f.enrolled,"จากผู้เข้าร่วม")+
+    funnelRow("ยังติดตามอยู่ (90 วัน)",f.active_monitored,f.enrolled,"จากผู้เข้าร่วม")+
+    '<div class="kpirow" style="margin-top:8px">'+
       kpi("ประเมินใน 30 วัน",pctOf(o.n_active_30d,o.n_members)+"%","สมาชิก "+o.n_active_30d+" ราย · รวม "+o.n_assessed_30d+" ครั้ง")+
-      kpi("หยุดทดสอบเพื่อความปลอดภัย",o.n_not_tested+" ครั้ง","Safety Gate ทำงาน ไม่ปล่อยให้ทดสอบทั้งที่มีอาการ")+
+      kpi("หยุดทดสอบเพื่อความปลอดภัย",o.n_not_tested+" ครั้ง","Safety Gate ทำงาน")+
+      kpi("ฐานเวลาในโปรแกรม",py.toFixed(2)+" คน-ปี","ตัวหารของอัตราต่อ 100 คน-ปี")+
     '</div>'+
 
-    hd("ข · การกระจายความเสี่ยง")+
+    hd("ข · การจัดชั้นความเสี่ยง")+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="outgrid">'+
-      '<div>'+(tot?mixHTML:'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีผลประเมินในพอร์ต</p>')+'</div>'+
-      '<div>'+
+      '<div>'+(tot?mixHTML:'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีผลประเมินในพอร์ต</p>')+
         '<div class="rowline"><span class="k">ระดับดีขึ้น</span><span class="v" style="color:#0E9F6E">'+o.n_improved+' ราย</span></div>'+
         '<div class="rowline"><span class="k">ระดับแย่ลง</span><span class="v" style="color:#C7443E">'+o.n_worsened+' ราย</span></div>'+
-        '<div class="rowline"><span class="k">ผู้ที่มีผลเทียบได้</span><span class="v">'+o.n_comparable+' ราย</span></div>'+
-        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">เทียบผู้ใช้กับตัวเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น — ต้องมีผลอย่างน้อย 2 ครั้งจึงนับได้</p></div>'+
+        '<div class="rowline"><span class="k">เคสที่กลับมาเปิดใหม่</span><span class="v">'+(o.case_reescalated||0)+' ราย</span></div></div>'+
+      '<div>'+(strataHTML||'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีข้อมูลพอแยกกลุ่ม</p>')+'</div>'+
     '</div>'+
 
-    hd("ค · การดูแลก่อนเกิดการเคลม")+
+    hd("ค · ชนิดสัญญาณที่พบ","ใช้เลือกว่าควรลงทุน intervention แบบไหนก่อน")+
+    sigHTML+
+
+    hd("ง · การทำงานของโปรแกรม (intervention performance)")+
     '<div class="kpirow">'+
-      kpi("เคสที่เปิดทั้งหมด",o.case_total+" เคส","เปิดอัตโนมัติเมื่อสัญญาณถึงระดับเหลืองขึ้นไป")+
-      kpi("ติดต่อได้ภายในกำหนด",pctOf(o.case_contacted_in_sla,o.case_contacted)+"%",o.case_contacted_in_sla+" / "+o.case_contacted+" เคสที่ติดต่อแล้ว")+
-      kpi("เคสที่ยังทำงานอยู่",o.case_working+" เคส","ใหม่ "+o.case_new+" · ปิดแล้ว "+o.case_closed+(o.case_overdue?" · เกินกำหนด "+o.case_overdue:""))+
-      kpi("ทำตามนัดติดตาม",pctOf(o.n_fu_done,o.n_fu_due)+"%",o.n_fu_done+" / "+o.n_fu_due+" นัดที่ถึงกำหนด · ค้าง "+o.n_fu_open)+
+      kpi("เคสที่เปิด",o.case_total+" เคส","เปิดอัตโนมัติเมื่อสัญญาณถึงระดับเหลืองขึ้นไป")+
+      kpi("ติดต่อได้ในกำหนด",pctOf(o.case_contacted_in_sla,o.case_contacted)+"%",o.case_contacted_in_sla+" / "+o.case_contacted+" เคสที่ติดต่อแล้ว"+(o.case_overdue?" · เกินกำหนด "+o.case_overdue:""))+
+      kpi("ส่งต่อสำเร็จ",pctOf(o.n_ref_completed,o.n_ref_confirmed)+"%",o.n_ref_completed+" / "+o.n_ref_confirmed+" ที่ยืนยันส่งต่อ")+
+      kpi("ทบทวนยาสำเร็จ",pctOf(o.n_medrev_done,o.n_medrev)+"%",(o.n_medrev_done||0)+" / "+(o.n_medrev||0)+" คำขอ · ค้าง "+(o.n_medrev_open||0))+
+      kpi("ติดตามตามนัด",pctOf(o.n_fu_done,o.n_fu_due)+"%",o.n_fu_done+" / "+o.n_fu_due+" นัดที่ถึงกำหนด")+
+      kpi("เคสปิดว่าคงที่/ดีขึ้น",pctOf(o.case_stable,o.case_total)+"%",(o.case_stable||0)+" เคส · ติดต่อไม่ได้ "+(o.case_unreachable||0))+
     '</div>'+
 
+    hd("จ · ผลลัพธ์ด้านสุขภาพ",rateNote)+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="outgrid">'+
-      '<div>'+hd("ง · การส่งต่อ — ไปถึงปลายทางจริงไหม")+
-        '<div class="rowline"><span class="k">ระบบแนะนำให้ส่งต่อ</span><span class="v">'+o.n_ref+' เคส</span></div>'+
-        '<div class="rowline"><span class="k">บุคลากรยืนยัน</span><span class="v">'+o.n_ref_confirmed+' · '+pctOf(o.n_ref_confirmed,o.n_ref)+'%</span></div>'+
-        '<div class="rowline"><span class="k">นัดหมายแล้ว</span><span class="v">'+o.n_ref_booked+' · '+pctOf(o.n_ref_booked,o.n_ref_confirmed)+'%</span></div>'+
-        '<div class="rowline"><span class="k"><b>ไปพบผู้เชี่ยวชาญจริง</b></span><span class="v"><b>'+o.n_ref_completed+' · '+pctOf(o.n_ref_completed,o.n_ref_confirmed)+'%</b></span></div>'+
-        '<div class="rowline"><span class="k">บันทึกผลลัพธ์แล้ว</span><span class="v">'+o.n_ref_outcome+'</span></div>'+
-        (o.n_ref_lost?'<div class="rowline"><span class="k">ปฏิเสธ / ติดต่อไม่ได้</span><span class="v" style="color:#C7443E">'+o.n_ref_lost+'</span></div>':'')+
-        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">อัตรา "ไปพบจริง" คือตัวชี้วัดที่บอกว่าวงจรปิดสนิทหรือไม่ — ส่งต่อแล้วไม่มีใครไป เท่ากับยังไม่ได้ป้องกันอะไร</p></div>'+
-      '<div>'+hd("จ · ผลลัพธ์ที่รายงานเข้ามา")+
-        '<div class="rowline"><span class="k">หกล้ม</span><span class="v">'+per100(o.ev_fall)+'</span></div>'+
-        '<div class="rowline"><span class="k">เกือบล้ม</span><span class="v">'+per100(o.ev_near_fall)+'</span></div>'+
-        '<div class="rowline"><span class="k">เข้าโรงพยาบาล/ห้องฉุกเฉิน</span><span class="v">'+per100(o.ev_hospital)+'</span></div>'+
-        '<div class="rowline"><span class="k">กิจวัตรประจำวันลดลง</span><span class="v">'+per100(o.ev_adl_drop)+'</span></div>'+
-        '<div class="rowline"><span class="k">มีการปรับยา</span><span class="v">'+per100(o.ev_med_change)+'</span></div>'+
-        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">'+esc(rateNote)+' · มาจากที่สมาชิกและครอบครัวรายงานเข้ามาเอง ไม่ใช่ข้อมูลเคลม</p></div>'+
+      '<div><div class="rowline"><span class="k">หกล้ม</span><span class="v">'+per100(o.ev_fall)+rateUnit+'</span></div>'+
+        '<div class="rowline"><span class="k">เกือบล้ม</span><span class="v">'+per100(o.ev_near_fall)+rateUnit+'</span></div>'+
+        '<div class="rowline"><span class="k">เข้าโรงพยาบาล/ห้องฉุกเฉิน</span><span class="v">'+per100(o.ev_hospital)+rateUnit+'</span></div></div>'+
+      '<div><div class="rowline"><span class="k">กิจวัตรประจำวันลดลง</span><span class="v">'+per100(o.ev_adl_drop)+rateUnit+'</span></div>'+
+        '<div class="rowline"><span class="k">มีการปรับยา</span><span class="v">'+per100(o.ev_med_change)+rateUnit+'</span></div>'+
+        '<div class="rowline"><span class="k">สัดส่วนที่ระดับคงที่/ดีขึ้น</span><span class="v">'+
+          (o.n_comparable?pctOf(o.n_comparable-o.n_worsened,o.n_comparable)+"%":"—")+'</span></div>'+
+        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">มาจากที่สมาชิกและครอบครัวรายงานเข้ามาเอง ไม่ใช่ข้อมูลเคลม</p></div>'+
     '</div>'+
 
-    /* ช่องที่ยังไม่มีข้อมูลจริง — ประกาศให้ชัด ไม่เติมตัวเลขสมมติ */
     '<div style="border:1.5px dashed #C2CFE3;background:#F7FAFF;border-radius:14px;padding:16px;margin-top:18px">'+
-      '<b style="font-size:14px;color:#3A4A66">แนวโน้มค่าสินไหม — รอเชื่อมข้อมูลจริง</b>'+
-      '<p style="font-size:12.5px;color:#5B6B84;margin:8px 0 0">CareSignal ไม่มีข้อมูลการเคลมของบริษัทประกัน จึงยัง<b>คำนวณแนวโน้มค่าสินไหมไม่ได้</b> '+
-      'ช่องนี้จะเติมได้เมื่อบริษัทประกันเชื่อมข้อมูลเคลมเข้ากับรายงานนี้ในการนำร่อง โดยจับคู่ที่ระดับกลุ่มไม่ใช่รายบุคคล<br>'+
-      'ระบบเลือกแสดงว่า<b>"ยังไม่มีข้อมูล"</b> แทนการใส่ตัวเลขประมาณการ เพราะตัวเลขที่ดูน่าเชื่อแต่ไม่มีฐานข้อมูลรองรับ '+
-      'จะถูกเข้าใจผิดว่าเป็นผลที่พิสูจน์แล้ว</p></div>');
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<b style="font-size:14px;color:#3A4A66">ผลลัพธ์ทางธุรกิจและค่าสินไหม</b>'+
+        '<span style="background:#E4EBF6;color:#3A4A66;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">Claims validation: รอเชื่อมข้อมูลจากบริษัทประกัน</span></div>'+
+      '<p style="font-size:12.5px;color:#5B6B84;margin:8px 0 0">ตัวชี้วัดที่จะเติมได้เมื่อเชื่อมข้อมูลเคลมจริง — ความถี่และความรุนแรงของเคลมจากการหกล้ม · '+
+      'อัตราเข้า ER/IPD · เคลมกระดูกสะโพกหัก · ต้นทุนต่อสมาชิกต่อปี · net savings · ROI<br>'+
+      'ตอนนี้ระบบ<b>ไม่แสดงตัวเลขเหล่านี้ และไม่แสดงข้อความว่า "ลดเคลมได้แล้ว"</b> เพราะยังไม่มีข้อมูลเคลมและยังไม่มีกลุ่มเปรียบเทียบ '+
+      'การนำร่องที่จับคู่ข้อมูลระดับกลุ่มจะเป็นตัวตัดสิน ไม่ใช่การประมาณการ</p></div>');
 
   var rl=el.querySelector("#csReloadOut"); if(rl)rl.addEventListener("click",renderCloudOUT);
 }

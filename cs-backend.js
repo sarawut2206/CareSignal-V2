@@ -310,6 +310,98 @@ var CSBackend = (function () {
     return r.data;
   }
   /* ============================================================
+     Care Manager — Action Dashboard
+     ------------------------------------------------------------
+     คิวงานมาจาก view cm_worklist ซึ่งรวมทุกอย่างที่ต้องใช้ตัดสินใจ
+     ไว้ในแถวเดียว (ระดับ · สัญญาณ · กำหนดติดต่อ · เบอร์ · งานค้าง)
+     เพื่อไม่ต้องยิงหลายคำสั่งบนมือถือที่สัญญาณไม่ดี
+     view นี้เปิดเฉพาะ care_manager/admin — บริษัทประกันอ่านไม่ได้
+     ============================================================ */
+  async function cmWorklist() {
+    if (!isCloud()) return [];
+    var r = await sb.from("cm_worklist").select("*").order("priority", { ascending: true }).limit(200);
+    if (r.error) { console.warn(r.error); return []; }
+    await audit("worklist.view", null, "เปิดคิวงาน " + (r.data || []).length + " เคส");
+    return r.data || [];
+  }
+  /* บันทึกผลการติดต่อ — เลื่อนสถานะเคสให้อัตโนมัติตามผลที่ได้ */
+  async function logContact(c, result, note, channel) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("contact_log").insert({
+      case_id: c.id, user_id: c.user_id, by_staff: u.id,
+      channel: channel || "phone", result: result, note: note || null
+    });
+    if (r.error) throw r.error;
+    var now = new Date().toISOString(), patch = { updated_at: now, assigned_to: u.id };
+    if (result === "no_answer") {
+      patch.attempts = (c.attempts || 0) + 1;
+      if (patch.attempts >= 3) patch.unreachable = true;   /* พยายาม 3 ครั้งแล้วยังไม่ได้ */
+    } else {
+      patch.attempts = (c.attempts || 0) + 1;
+      patch.unreachable = false;
+      if (!c.contacted_at) patch.contacted_at = now;
+      if (c.status === "new") patch.status = "contacted";
+    }
+    if (result === "referred_ok") patch.status = "referred";
+    if (result === "booked") patch.status = "referred";
+    if (result === "refused") { patch.status = "closed"; patch.closed_at = now; patch.close_reason = "ผู้ใช้ปฏิเสธการดูแล"; }
+    await sb.from("care_cases").update(patch).eq("id", c.id);
+    await audit("contact.log", c.id, "บันทึกการติดต่อ: " + result + (note ? " · " + note : ""));
+    return true;
+  }
+  /* ข้อมูลทั้งหมดของเคสเดียว — ใช้ในหน้ารายละเอียด */
+  async function caseDetail(caseId, userId) {
+    if (!isCloud()) return null;
+    var out = {};
+    var q = await Promise.all([
+      sb.from("cm_worklist").select("*").eq("id", caseId).limit(1),
+      sb.from("assessments").select("assessed_at,score,tier,ftsst_seconds,tug_seconds,parts,falls_detail,meds_detail,safety_gate,not_tested")
+        .eq("user_id", userId).order("assessed_at", { ascending: true }).limit(12),
+      sb.from("care_events").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+      sb.from("referrals").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
+      sb.from("follow_ups").select("*").eq("user_id", userId).order("due_at", { ascending: true }).limit(10),
+      sb.from("contact_log").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+      sb.from("care_plans").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1),
+      sb.from("medications").select("inn,brand_text,frid_group,frid_level,dose_text").eq("user_id", userId).eq("active", true)
+    ]);
+    out.c = (q[0].data || [])[0] || null;
+    out.assess = q[1].data || []; out.events = q[2].data || []; out.refs = q[3].data || [];
+    out.fups = q[4].data || []; out.contacts = q[5].data || []; out.plan = (q[6].data || [])[0] || null;
+    out.meds = q[7].data || [];
+    await audit("case.open", caseId, "เปิดดูรายละเอียดเคส");
+    return out;
+  }
+  /* สร้างการส่งต่อจากหน้าเคส (Care Manager เป็นผู้ตัดสินใจ) */
+  async function createReferralFor(userId, caseId, dest, action, level) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("referrals").insert({
+      user_id: userId, case_id: caseId, destination: dest, action: action,
+      level: level || "watch", sla: "ตามระดับความเร่งด่วน", reasons: [],
+      status: "approved", decided_by: u.id, decided_at: new Date().toISOString()
+    }).select().single();
+    if (r.error) throw r.error;
+    await audit("referral.create", r.data.id, "เปิดการส่งต่อไปยัง " + dest + " · " + action);
+    return r.data;
+  }
+  async function insurerFunnel() {
+    if (!isCloud()) return null;
+    var r = await sb.from("insurer_funnel").select("*").limit(1);
+    return (r.data || [])[0] || null;
+  }
+  async function insurerStrata() {
+    if (!isCloud()) return [];
+    var r = await sb.from("insurer_strata").select("*");
+    return r.data || [];
+  }
+  async function insurerSignals() {
+    if (!isCloud()) return [];
+    var r = await sb.from("insurer_signals").select("*");
+    return r.data || [];
+  }
+
+  /* ============================================================
      ยา — Medication Classification Pipeline
      ------------------------------------------------------------
      OCR ทำในเครื่อง (Tesseract.js) ไม่มีการส่งภาพไปประมวลผลภายนอก
@@ -882,6 +974,9 @@ var CSBackend = (function () {
     insurerPortfolio: insurerPortfolio, insurerOutcomes: insurerOutcomes,
     myCases: myCases, caseQueue: caseQueue, updateCase: updateCase,
     updateReferral: updateReferral,
+    cmWorklist: cmWorklist, logContact: logContact, caseDetail: caseDetail,
+    createReferralFor: createReferralFor,
+    insurerFunnel: insurerFunnel, insurerStrata: insurerStrata, insurerSignals: insurerSignals,
     listMeds: listMeds, saveMed: saveMed, retireMed: retireMed,
     uploadMedPhoto: uploadMedPhoto, medPhotoUrl: medPhotoUrl, myMedReview: myMedReview,
     medReviewQueue: medReviewQueue, medsOf: medsOf, pharmacistFix: pharmacistFix,
