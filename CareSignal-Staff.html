@@ -118,7 +118,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
 <script src="./cs-backend.js?v=213"></script>
-<script src="./cs-meds.js?v=1"></script>
+<script src="./cs-meds.js?v=2"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -647,7 +647,7 @@ async function medsV(){
   var q=[]; try{q=await CSBackend.medReviewQueue()}catch(e){}
   if(!q.length){V.innerHTML='<div class="card"><div class="empty">ไม่มีคำขอทบทวนยาค้าง 🎉</div></div>'+
     '<div class="notice">ระบบเปิดคำขอเองเมื่อสมาชิกบันทึกยากลุ่มเสี่ยงสูงอย่างน้อย 1 รายการ · กลุ่มเสี่ยงปานกลางตั้งแต่ 2 · ยาที่ระบบไม่รู้จัก · หรือใช้ยารวมตั้งแต่ 5 รายการ</div>';return}
-  var html='<div class="notice"><b>ระบบไม่สั่งหยุด ลด หรือเพิ่มยา</b> — หน้านี้ให้ยืนยันหรือแก้การจัดกลุ่มที่ระบบทำไว้ และบันทึกข้อสรุปเพื่อส่งต่อแพทย์ ทุกการแก้บันทึกชื่อผู้ทำใน audit log</div>';
+  var html='<div class="notice"><b>ระบบไม่สั่งหยุด ลด หรือเพิ่มยา</b> — หน้านี้ให้ยืนยันหรือแก้การจัดกลุ่มที่ระบบทำไว้ และบันทึกข้อสรุปเพื่อส่งต่อแพทย์ ทุกการแก้บันทึกชื่อผู้ทำใน audit log<br><span class="tiny" style="margin-top:6px;display:block">รายการที่ขึ้นว่า <b>ยังไม่จัดกลุ่ม</b> คือยาที่ไม่อยู่ในฐานข้อมูล 155 ตัวยาของระบบ (ยังไม่ได้เชื่อม TMT/อย.) ไม่ได้แปลว่ายานั้นมีปัญหา — ระบบเลือกส่งให้ท่านจัดกลุ่มแทนการเดา</span></div>';
   q.forEach(function(r){
     var pr=r.profiles||{}, sm=r.summary||{};
     html+='<div class="case" data-rv="'+r.id+'"><div class="top">'+
