@@ -4209,7 +4209,7 @@ function roleGateV(target,roleName){
   head("พื้นที่ผู้เชี่ยวชาญ","หน้านี้ไม่ใช่ของผู้เอาประกัน","ในระบบจริงต้องเข้าสู่ระบบด้วยบัญชี"+roleName+"ก่อน","assess");
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">คุณกำลังจะเข้าชมในบทบาท: '+esc(roleName)+'</h3>'+
-  '<p class="sub" style="margin:0">เดโมนี้เปิดให้เข้าชมได้เพื่อการนำเสนอ แต่ในระบบใช้งานจริง หน้านี้อยู่หลังการยืนยันตัวตนและการกำหนดสิทธิ์ (role-based access) — ผู้เอาประกันจะไม่เห็นข้อมูลของผู้อื่น และ AI ไม่มีสิทธิ์ตัดสินใจแทน'+esc(roleName)+'ในทุกกรณี</p></div>'+
+  '<p class="sub" style="margin:0">เดโมนี้เปิดให้เข้าชมได้เพื่อการนำเสนอ แต่ในระบบใช้งานจริง หน้านี้อยู่หลังการยืนยันตัวตนและการแบ่งสิทธิ์การเข้าถึงตามบทบาท (role-based access) — ผู้เอาประกันจะไม่เห็นข้อมูลของผู้อื่น และ AI ไม่มีสิทธิ์ตัดสินใจแทน'+esc(roleName)+'ในทุกกรณี</p></div>'+
   '<button class="cta" id="roleOk">เข้าชมในบทบาท'+esc(roleName)+' (สาธิต)</button>'+
   '<button class="ghostb" data-go="assess">กลับหน้าประเมิน</button></div>';
   document.getElementById("roleOk").addEventListener("click",function(){
