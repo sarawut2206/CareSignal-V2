@@ -97,6 +97,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
   <div class="view" id="view"></div>
   <div class="tabs" id="tabs" hidden>
     <button data-go="queue" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>คิวเคส</b></button>
+    <button data-go="meds"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/><path d="M12 12v4"/></svg><b>ทบทวนยา</b></button>
     <button data-go="port"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>พอร์ต</b></button>
     <button data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg><b>ฉัน</b></button>
   </div>
@@ -104,7 +105,8 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=210"></script>
+<script src="./cs-backend.js?v=211"></script>
+<script src="./cs-meds.js?v=1"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -371,7 +373,88 @@ function meV(){
 }
 
 /* ---------- นำทาง ---------- */
-var FN={login:loginV,queue:queueV,port:portV,me:meV};
+/* ============================================================
+   คิวทบทวนยา — ขั้น human-in-the-loop ของ Medication Pipeline
+   ------------------------------------------------------------
+   คำขอเปิดอัตโนมัติจากฐานข้อมูลเมื่อพบยากลุ่มเสี่ยงหกล้ม ยาไม่รู้จัก
+   หรือใช้ยาหลายรายการ เภสัชกร/พยาบาลเห็นรูปซองยา + รายการที่ระบบ
+   จัดกลุ่มไว้ แล้ว "ยืนยัน" หรือ "แก้" ทีละรายการ ทุกการแก้บันทึก
+   ชื่อผู้แก้ ระบบไม่มีปุ่ม "สั่งหยุดยา" — มีแต่ข้อสรุปเพื่อส่งแพทย์
+   ============================================================ */
+var REC_NM={consult_doctor:"แนะนำพบแพทย์ทบทวนยา",monitor:"เฝ้าสังเกตอาการ",no_action:"ไม่พบประเด็น",adjusted_by_doctor:"แพทย์ปรับยาแล้ว"};
+async function medsV(){
+  head("ทบทวนยา","คำขอที่ระบบเปิดเมื่อพบยากลุ่มเสี่ยงหกล้ม ยาไม่รู้จัก หรือใช้ยาหลายรายการ");
+  if(ST.role!=="care_manager"&&ST.role!=="admin"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะเภสัชกร / Care Manager</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูรายการยารายบุคคลไม่ได้</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var q=[]; try{q=await CSBackend.medReviewQueue()}catch(e){}
+  if(!q.length){V.innerHTML='<div class="card"><div class="empty">ไม่มีคำขอทบทวนยาค้าง 🎉</div></div>'+
+    '<div class="notice">ระบบเปิดคำขอเองเมื่อสมาชิกบันทึกยากลุ่มเสี่ยงสูงอย่างน้อย 1 รายการ · กลุ่มเสี่ยงปานกลางตั้งแต่ 2 · ยาที่ระบบไม่รู้จัก · หรือใช้ยารวมตั้งแต่ 5 รายการ</div>';return}
+  var html='<div class="notice"><b>ระบบไม่สั่งหยุด ลด หรือเพิ่มยา</b> — หน้านี้ให้ยืนยันหรือแก้การจัดกลุ่มที่ระบบทำไว้ และบันทึกข้อสรุปเพื่อส่งต่อแพทย์ ทุกการแก้บันทึกชื่อผู้ทำใน audit log</div>';
+  q.forEach(function(r){
+    var pr=r.profiles||{}, sm=r.summary||{};
+    html+='<div class="case" data-rv="'+r.id+'"><div class="top">'+
+      '<span class="pill" style="background:'+(sm.high>0?"var(--c1)":sm.unknown>0?"var(--c3)":"var(--c2)")+'">'+
+        (sm.high>0?"เสี่ยงสูง":sm.unknown>0?"มียาไม่รู้จัก":"หลายรายการ")+'</span>'+
+      '<span class="who">'+esc(pr.pseudonym||"—")+' · '+esc(pr.display_name||"")+'</span>'+
+      '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(r.requested_at)+'</span></div>'+
+      '<div class="rowline"><span class="k">เหตุผล</span><span class="v" style="font-family:inherit;font-weight:500;text-align:right">'+esc(r.reason||"—")+'</span></div>'+
+      '<div class="medlist" data-uid="'+r.user_id+'" data-rv="'+r.id+'"><div class="empty" style="padding:10px">กำลังโหลดรายการยา…</div></div>'+
+      '<div class="field" style="margin-top:8px"><label>ข้อสรุปของเภสัชกร</label><textarea data-out="'+r.id+'" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:rgba(0,14,50,.35);color:#fff" placeholder="เช่น พบ diazepam ร่วมกับ amitriptyline — แนะนำให้แพทย์พิจารณาทบทวน"></textarea></div>'+
+      '<div class="btnrow" style="flex-wrap:wrap">'+Object.keys(REC_NM).map(function(k){
+        return '<button class="'+(k==="no_action"?"no":"ok")+'" data-close="'+r.id+'" data-rec="'+k+'" style="flex:1 1 45%">'+esc(REC_NM[k])+'</button>'}).join("")+'</div></div>';
+  });
+  V.innerHTML=html;
+  /* โหลดรายการยาแต่ละคน */
+  V.querySelectorAll(".medlist").forEach(async function(box){
+    var meds=[]; try{meds=await CSBackend.medsOf(box.dataset.uid)}catch(e){}
+    if(!meds.length){box.innerHTML='<div class="empty" style="padding:10px">ไม่พบรายการยาที่ยังใช้อยู่</div>';return}
+    var rows=await Promise.all(meds.map(async function(x){
+      var lv=x.frid_level, col=lv===2?"var(--c1)":lv===1?"var(--c2)":lv===0?"var(--c4)":"var(--ink3)";
+      var g=CSMeds.FRID[x.frid_group]; var gn=g?g.nm:(x.frid_group==="unknown"||!x.frid_group?"ยังไม่จัดกลุ่ม":x.frid_group);
+      var url=x.photo_path?await CSBackend.medPhotoUrl(x.photo_path):null;
+      var opts=Object.keys(CSMeds.FRID).map(function(k){return '<option value="'+k+'"'+(k===x.frid_group?" selected":"")+'>'+esc(CSMeds.FRID[k].nm)+'</option>'}).join("");
+      return '<div class="flag" style="border-left-color:'+col+'">'+
+        '<b>'+esc(x.inn||x.brand_text||"ไม่ระบุชื่อ")+'</b>'+(x.dose_text?' '+esc(x.dose_text):'')+(x.freq_text?' · '+esc(x.freq_text):'')+
+        (x.atc?' <span style="color:var(--ink3);font-size:11px">'+esc(x.atc)+'</span>':'')+
+        '<br><span style="color:'+col+'">'+esc(gn)+'</span>'+
+        ' <span style="color:var(--ink3);font-size:11px">· '+esc(x.source==="photo_ocr"?"อ่านจากรูป":x.source==="purpose_only"?"ระบุแค่วัตถุประสงค์":"พิมพ์เอง")+
+        (x.match_conf!=null?" "+Math.round(x.match_conf*100)+"%":"")+(x.purpose?" · "+esc(x.purpose):"")+
+        (x.confirmed_by==="pharmacist"?" · <b style='color:var(--c4)'>เภสัชกรยืนยันแล้ว</b>":"")+'</span>'+
+        (url?'<br><a href="'+url+'" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">เปิดดูรูปซองยา</a>':'')+
+        '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'+
+          '<input data-inn="'+x.id+'" value="'+esc(x.inn||"")+'" placeholder="ตัวยาสำคัญ" style="flex:1;min-width:120px;font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+
+          '<select data-grp="'+x.id+'" style="flex:1;min-width:140px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+opts+'</select>'+
+          '<button class="ok" data-fix="'+x.id+'" style="flex:0 0 auto;padding:6px 12px;font-size:12.5px;border-radius:8px">ยืนยัน/แก้</button>'+
+          '<button class="no" data-stop="'+x.id+'" style="flex:0 0 auto;padding:6px 10px;font-size:12.5px;border-radius:8px">เลิกใช้แล้ว</button></div></div>';
+    }));
+    box.innerHTML=rows.join("");
+    box.querySelectorAll("[data-fix]").forEach(function(b){b.addEventListener("click",async function(){
+      var id=b.dataset.fix, inn=box.querySelector('[data-inn="'+id+'"]').value.trim()||null, grp=box.querySelector('[data-grp="'+id+'"]').value;
+      var lv=CSMeds.FRID[grp]?CSMeds.FRID[grp].lv:null;
+      var atc=inn&&CSMeds.BY_INN[inn]?CSMeds.BY_INN[inn].atc:null;
+      b.disabled=true;
+      try{await CSBackend.pharmacistFix(id,{inn:inn,atc:atc,frid_group:grp,frid_level:lv});toast("บันทึกแล้ว");medsV()}
+      catch(e){toast("บันทึกไม่สำเร็จ");b.disabled=false}
+    })});
+    box.querySelectorAll("[data-stop]").forEach(function(b){b.addEventListener("click",async function(){
+      b.disabled=true;
+      try{await CSBackend.pharmacistFix(b.dataset.stop,{active:false,review_note:"เภสัชกรระบุว่าเลิกใช้แล้ว"});toast("บันทึกว่าเลิกใช้แล้ว");medsV()}
+      catch(e){toast("ไม่สำเร็จ");b.disabled=false}
+    })});
+  });
+  V.querySelectorAll("[data-close]").forEach(function(b){b.addEventListener("click",async function(){
+    var id=b.dataset.close, rec=b.dataset.rec, out=(V.querySelector('[data-out="'+id+'"]')||{}).value||"";
+    if(rec!=="no_action"&&!out.trim()){toast("กรุณาเขียนข้อสรุปก่อนปิด");return}
+    b.disabled=true;
+    try{await CSBackend.closeMedReview(id,out.trim()||null,rec);toast("ปิดการทบทวนแล้ว");medsV()}
+    catch(e){toast("ปิดไม่สำเร็จ");b.disabled=false}
+  })});
+}
+
+var FN={login:loginV,queue:queueV,meds:medsV,port:portV,me:meV};
 function go(sc){
   ST.screen=sc;(FN[sc]||loginV)();
   TABS.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===sc)});

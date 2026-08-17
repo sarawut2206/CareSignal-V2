@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://tessdata.projectnaptha.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- ล็อก layout ไว้ที่ 430 หน่วยแล้วให้เบราว์เซอร์ขยายเต็มจอจริง —
      ทำให้ขนาดตัวอักษรเป็นสัดส่วนเดียวกันทุกเครื่อง แม้อุปกรณ์ที่ตั้งค่าการแสดงผล
      ให้รายงานจอกว้างผิดปกติ (เช่น 800+ CSS px) ก็ไม่ทำให้ตัวอักษรหดเล็ก -->
@@ -239,7 +239,8 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=210"></script>
+<script src="./cs-backend.js?v=211"></script>
+<script src="./cs-meds.js?v=1"></script>
 <script>
 "use strict";
 var LOGO='<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none">'+
@@ -545,7 +546,7 @@ function baselineRisk(d, age){
     why:"บ่งชี้กำลังกล้ามเนื้อไม่พอ และเสี่ยงนอนติดพื้นนานหากล้มขณะอยู่คนเดียว"});
   if(d.notTested) reds.push({id:"B5",text:"ไม่สามารถทำการทดสอบกายภาพได้อย่างปลอดภัย",
     why:"มีอาการที่ต้องได้รับการประเมินโดยบุคลากรก่อน จึงยังไม่ควรทดสอบเอง"});
-  var fs=fridScore(m.purposes);
+  var fs=(m.summary&&m.summary.high!=null)?m.summary:fridScore(m.purposes);   /* pipeline ให้ค่าตรงกว่าวัตถุประสงค์ */
   if(fs.high>=2 && (d.balance!=null&&d.balance<=1))
     reds.push({id:"B6",text:"ใช้ยากลุ่มเสี่ยงสูงตั้งแต่ 2 กลุ่ม ร่วมกับการทรงตัวบกพร่อง",
       why:"ยากลุ่มกดประสาทหลายชนิดร่วมกับการทรงตัวที่ไม่ดี เพิ่มความเสี่ยงแบบทวีคูณ"});
@@ -3266,87 +3267,285 @@ function renderFallsQ(i){
 }
 
 /* ---------- หน้ายาแบบละเอียด ---------- */
+/* ============================================================
+   ยา — Medication Classification Pipeline
+   ------------------------------------------------------------
+     ถ่ายรูปซองยา → OCR ในเครื่อง (Tesseract.js ไทย+อังกฤษ)
+     → ระบบเสนอชื่อยา → ผู้ใช้/ผู้ดูแล ยืนยัน · แก้ · ไม่แน่ใจ
+     → จับคู่ตัวยาสำคัญ → ATC → กลุ่ม FRID
+     → เข้าเกณฑ์ → ส่งเภสัชกรทบทวน (เปิดคำขออัตโนมัติที่ฐานข้อมูล)
+
+   ทำไมไม่ให้ AI ตัดสินเอง: ฉลากยาไทยอ่านยาก ชื่อการค้าหลากหลาย
+   และความผิดพลาดเรื่องยาเสี่ยงสูงกว่าเรื่องอื่นมาก ระบบจึง "เสนอ"
+   แล้วให้คนกดยืนยันทุกรายการ ถ้า OCR ไม่มั่นใจ ถอยไปให้เลือก
+   "ใช้รักษาอะไร" แล้วให้เภสัชกรจัดกลุ่มแทน — ไม่เดา
+   ระบบไม่สั่งหยุด ลด หรือเพิ่มยา ทุกกรณี
+   ============================================================ */
+var OCR={worker:null,state:"idle"};
+async function ocrLoad(onStatus){
+  if(OCR.worker)return OCR.worker;
+  OCR.state="loading";
+  if(onStatus)onStatus("กำลังโหลดตัวอ่านฉลาก (ครั้งแรกใช้เวลาสักครู่)…");
+  var mod=await import("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js");
+  var T=mod.default||mod;
+  OCR.worker=await T.createWorker(["tha","eng"],1,{
+    logger:function(m){ if(onStatus&&m.status==="recognizing text")onStatus("กำลังอ่านฉลาก "+Math.round((m.progress||0)*100)+"%") }
+  });
+  OCR.state="ready";
+  return OCR.worker;
+}
+/* ย่อรูปก่อน OCR — มือถือถ่ายมา 12MP อ่านช้าและไม่จำเป็น */
+function shrinkImage(file,maxW){
+  return new Promise(function(res){
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      var sc=Math.min(1,(maxW||1400)/img.width);
+      var c=document.createElement("canvas");
+      c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+      var ctx=c.getContext("2d");
+      ctx.drawImage(img,0,0,c.width,c.height);
+      /* เพิ่มคอนทราสต์เล็กน้อย ช่วยฉลากซีด */
+      var d=ctx.getImageData(0,0,c.width,c.height), px=d.data;
+      for(var i=0;i<px.length;i+=4){
+        var g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+        g=Math.max(0,Math.min(255,(g-128)*1.35+128));
+        px[i]=px[i+1]=px[i+2]=g;
+      }
+      ctx.putImageData(d,0,0);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){res({blob:b,canvas:c})},"image/jpeg",0.85);
+    };
+    img.src=url;
+  });
+}
+
 function renderMedsQ(i){
   head("ข้อ "+(i+1)+" จาก "+QS.length,"ยาที่ใช้ประจำ",
-       "ไม่ต้องจำชื่อยา — บอกแค่ว่าใช้เพื่ออะไร ระบบจะส่งให้เภสัชกรทบทวนให้","assess");
-  if(!S.draft.medsDetail)S.draft.medsDetail={purposes:[],changed:[],symptoms:[]};
-  var m=S.draft.medsDetail;
+       "ถ่ายรูปซองยาให้ระบบอ่านชื่อยา แล้วท่านกดยืนยัน — ระบบไม่ตัดสินเอง และไม่สั่งปรับยา","assess");
+  if(!S.draft.medsDetail)S.draft.medsDetail={purposes:[],changed:[],symptoms:[],items:[]};
+  var m=S.draft.medsDetail; if(!m.items)m.items=[];
+
   V.innerHTML='<div class="anim">'+
     '<div class="card" style="background:var(--surf2)"><h3>ระบบนี้ไม่แตะยาของท่าน</h3>'+
-    '<p class="sub" style="margin:0">CareSignal <b>ไม่สั่งหยุด ลด หรือเพิ่มยา</b> เราเพียงตั้งข้อสังเกตว่าควรให้<b>เภสัชกรหรือแพทย์ทบทวน</b>รายการยาหรือไม่ การปรับยาต้องทำโดยผู้มีใบอนุญาตเท่านั้น</p></div>'+
+    '<p class="sub" style="margin:0">CareSignal <b>ไม่สั่งหยุด ลด หรือเพิ่มยา</b> เราเพียงจัดกลุ่มยาเพื่อดูว่าควรให้<b>เภสัชกรหรือแพทย์ทบทวน</b>หรือไม่ การปรับยาต้องทำโดยผู้มีใบอนุญาตเท่านั้น</p></div>'+
 
     '<div class="card"><h3 style="font-size:16px">ปัจจุบันใช้ยาประจำกี่รายการ</h3><div id="mcWrap"></div></div>'+
 
-    '<div class="card"><h3 style="font-size:16px">ใช้ยาเพื่อเรื่องใดบ้าง (เลือกได้หลายข้อ)</h3>'+
-    '<p class="sub" style="margin:-4px 0 8px">ถ้าไม่แน่ใจ ให้ดูที่ซองยาหรือถามผู้ดูแล</p><div id="mpWrap"></div></div>'+
+    '<div class="card" id="medPipe"><h3 style="font-size:16px">รายการยาของท่าน</h3>'+
+    '<p class="sub" style="margin:-4px 0 10px">ถ่ายรูปซองยา ขวดยา หรือฉลากทีละอย่าง ระบบจะอ่านชื่อแล้วให้ท่านยืนยัน</p>'+
+    '<div id="medList"></div>'+
+    '<label class="cta" style="display:block;text-align:center;cursor:pointer;margin:10px 0 6px">📷 ถ่ายรูปซองยา'+
+      '<input type="file" id="mPhoto" accept="image/*" capture="environment" hidden></label>'+
+    '<button class="ghostb" id="mManual">พิมพ์ชื่อยาเอง</button>'+
+    '<button class="ghostb" id="mPurpose">ไม่รู้ชื่อยา — บอกว่าใช้รักษาอะไร</button>'+
+    '<div id="medWork" hidden style="margin-top:10px"></div>'+
+    '<p class="sub" id="medStatus" style="margin:8px 0 0"></p></div>'+
 
     '<div class="card"><h3 style="font-size:16px">ใน 14 วันที่ผ่านมา มีการเปลี่ยนแปลงยาหรือไม่</h3><div id="mgWrap"></div></div>'+
     '<div class="card" id="msCard" hidden><h3 style="font-size:16px">หลังใช้ยาหรือหลังปรับยา มีอาการหรือไม่</h3><div id="msWrap"></div></div>'+
-
-    '<div class="card"><h3 style="font-size:16px">แนบรูปซองยาหรือใบสั่งยา (ไม่บังคับ)</h3>'+
-    '<p class="sub" style="margin:-4px 0 8px">รูปนี้<b>ส่งให้เภสัชกรดูตอนทบทวนยา</b> ระบบไม่อ่านฉลากเองและไม่ตีความยาจากรูป เพราะการอ่านผิดอันตรายกว่าไม่มี</p>'+
-    '<input type="file" id="mPhoto" accept="image/*" style="font-size:15px">'+
-    '<p class="sub" id="mPhotoNote" style="margin:8px 0 0"></p></div>'+
     verifyNotice()+
     '<button class="cta" id="mGo" disabled>ถัดไป</button></div>';
 
-  function multi(wrap,list,arrKey,onlyNone){
+  var status=function(t){var e=document.getElementById("medStatus");if(e)e.textContent=t||""};
+
+  function multi(wrap,list,arrKey){
     document.getElementById(wrap).innerHTML=list.map(function(g){
       var on=(m[arrKey]||[]).indexOf(g.k)>=0;
       return '<button class="pick" data-mk="'+arrKey+'" data-mv="'+g.k+'" style="'+
         (on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+(on?"✓ ":"")+esc(g.nm)+'</button>';
     }).join("");
   }
-  function renderM(){
+  function lvColor(lv){return lv===2?"var(--c1)":lv===1?"var(--c2)":lv===0?"var(--c4)":"var(--ink3)"}
+  function renderList(){
+    var el=document.getElementById("medList");
+    if(!m.items.length){el.innerHTML='<p class="sub" style="margin:0 0 6px;color:var(--ink3)">ยังไม่มีรายการ</p>';return}
+    el.innerHTML=m.items.map(function(x,ix){
+      var c=x.inn?CSMeds.classify(x.inn):{frid:"unknown",lv:null,fridNm:"ยังไม่ระบุตัวยา — เภสัชกรจะช่วยจัดกลุ่ม"};
+      if(x.frid&&x.frid!=="unknown"){c.frid=x.frid;c.lv=x.lv;c.fridNm=CSMeds.FRID[x.frid]?CSMeds.FRID[x.frid].nm:x.frid}
+      var nm=x.inn||x.brand||(x.purpose?"ยาสำหรับ "+esc(x.purpose):"ยาไม่ทราบชื่อ");
+      return '<div class="rowline" style="align-items:flex-start"><span class="k" style="flex:1">'+
+        '<b>'+esc(nm)+'</b>'+(x.dose?' · '+esc(x.dose):'')+(x.freq?' · '+esc(x.freq):'')+
+        '<br><span style="font-size:12.5px;color:'+lvColor(c.lv)+'">'+esc(c.fridNm)+'</span>'+
+        (x.source==="photo_ocr"?'<span style="font-size:11.5px;color:var(--ink3)"> · อ่านจากรูป'+(x.conf!=null?' ('+Math.round(x.conf*100)+'%)':'')+'</span>':'')+
+        '</span><button class="ghostb" data-rm="'+ix+'" style="width:auto;padding:6px 10px;margin:0;font-size:12.5px">ลบ</button></div>';
+    }).join("");
+    el.querySelectorAll("[data-rm]").forEach(function(b){b.addEventListener("click",function(){m.items.splice(+b.dataset.rm,1);renderList();syncSummary()})});
+  }
+  function syncSummary(){
+    /* คงโครงสร้างเดิมของ purposes/fridScore ไว้ให้เอนจินความเสี่ยงและชั้นสัญญาณ */
+    var sum=CSMeds.summarize(m.items.map(function(x){return {inn:x.inn,frid:x.frid,lv:x.lv}}));
+    m.summary=sum;
+    var derived=[];
+    m.items.forEach(function(x){
+      var c=x.frid&&x.frid!=="unknown"?{frid:x.frid,lv:x.lv}:(x.inn?CSMeds.classify(x.inn):null);
+      if(c&&c.lv===2)derived.push(c.frid==="bzd"?"sleep":c.frid==="antidep"?"depr":c.frid==="opioid"?"pain":c.frid==="anticonv"?"seiz":"anx");
+      else if(c&&c.lv===1)derived.push(c.frid==="antihtn"?"bp":c.frid==="diuretic"?"diur":c.frid==="relax"?"muscle":c.frid==="alpha"?"prost":c.frid==="bladder"?"incont":"allergy");
+      else if(x.purpose)derived.push(x.purpose);
+    });
+    m.purposes=derived.filter(function(v,i,a){return a.indexOf(v)===i});
+    if(m.count==null&&m.items.length)m.count=m.items.length>=10?4:m.items.length>=6?3:m.items.length>=4?2:1;
+    document.getElementById("mGo").disabled=(m.count==null);
+    var el=document.getElementById("mcWrap"); if(el)renderCount();
+  }
+  function renderCount(){
     document.getElementById("mcWrap").innerHTML=MED_COUNT.map(function(o){
       var on=m.count===o[1];
       return '<button class="pick" data-mc="'+o[1]+'" style="'+
         (on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+(on?"✓ ":"")+esc(o[0])+'</button>';
     }).join("");
-    multi("mpWrap",FRID_GROUPS,"purposes");
+    V.querySelectorAll("[data-mc]").forEach(function(b){
+      b.addEventListener("click",function(){
+        m.count=+b.dataset.mc;
+        if(m.count===0){m.items=[];m.purposes=[];m.changed=["none"];m.symptoms=[]}
+        renderCount();renderList();syncSummary();renderChange();
+      });
+    });
+    document.getElementById("mGo").disabled=(m.count==null);
+  }
+  function renderChange(){
     multi("mgWrap",MED_CHANGE,"changed");
     var changed=(m.changed||[]).filter(function(x){return x!=="none"}).length>0;
     document.getElementById("msCard").hidden=!changed;
     if(changed)multi("msWrap",MED_SYMPTOM,"symptoms");
-    document.getElementById("mGo").disabled = (m.count==null);
-    V.querySelectorAll("[data-mc]").forEach(function(b){
-      b.addEventListener("click",function(){
-        m.count=+b.dataset.mc;
-        if(m.count===0){m.purposes=[];m.changed=["none"];m.symptoms=[]}
-        renderM();
-      });
-    });
     V.querySelectorAll("[data-mk]").forEach(function(b){
       b.addEventListener("click",function(){
         var key=b.dataset.mk, val=b.dataset.mv;
         if(!m[key])m[key]=[];
         var ix=m[key].indexOf(val);
-        /* "ไม่มี" กับตัวเลือกอื่นเลือกพร้อมกันไม่ได้ */
         if(ix>=0)m[key].splice(ix,1);
-        else{
-          if(val==="none")m[key]=["none"];
-          else m[key]=m[key].filter(function(x){return x!=="none"}).concat([val]);
-        }
-        renderM();
+        else{ if(val==="none")m[key]=["none"]; else m[key]=m[key].filter(function(x){return x!=="none"}).concat([val]); }
+        renderChange();
       });
     });
   }
-  renderM();
-  document.getElementById("mPhoto").addEventListener("change",function(){
-    var f=this.files&&this.files[0];
-    document.getElementById("mPhotoNote").textContent = f
-      ? "แนบแล้ว: "+f.name+" — จะส่งให้เภสัชกรเมื่อมีการส่งต่อ (ไม่ส่งขึ้นระบบกลางในเวอร์ชันนี้)"
-      : "";
-    m.photoAttached=!!f;
+
+  /* ---------- กล่องงาน: ยืนยันชื่อยาที่ระบบเสนอ ---------- */
+  function work(html){var w=document.getElementById("medWork");w.hidden=false;w.innerHTML=html}
+  function workClose(){var w=document.getElementById("medWork");w.hidden=true;w.innerHTML=""}
+
+  function confirmBox(cands,ctx){
+    /* cands: [{inn,conf,token}] · ctx: {ocr,doses,freq,photoFile} */
+    var top=cands[0];
+    var opts=cands.slice(0,3).map(function(c,ix){
+      var cl=CSMeds.classify(c.inn);
+      return '<button class="pick" data-pick="'+ix+'" style="text-align:left"><b>'+esc(c.inn)+'</b>'+
+        ' <span style="font-size:12px;color:var(--ink3)">('+Math.round(c.conf*100)+'% · เห็นคำว่า “'+esc(c.token)+'”)</span><br>'+
+        '<span style="font-size:12.5px;color:'+lvColor(cl.lv)+'">'+esc(cl.fridNm)+'</span></button>';
+    }).join("");
+    work('<div class="notice" style="margin:0 0 10px"><b>ระบบตรวจพบ: '+esc(top.inn)+(ctx.doses&&ctx.doses[0]?' '+esc(ctx.doses[0]):'')+'</b><br>ถูกต้องหรือไม่? กดยืนยัน หรือเลือกตัวที่ถูก</div>'+
+      opts+
+      '<div class="field" style="margin-top:8px"><label>ขนาดยา (ถ้ามี)</label><input id="wDose" value="'+esc(ctx.doses&&ctx.doses[0]||"")+'" placeholder="เช่น 5 mg"></div>'+
+      '<div class="field"><label>วิธีใช้ (ถ้ามี)</label><input id="wFreq" value="'+esc(ctx.freq&&ctx.freq[0]||"")+'" placeholder="เช่น ก่อนนอน"></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="cta" id="wOk" style="flex:1;margin:0">✓ ยืนยัน '+esc(top.inn)+'</button>'+
+        '<button class="ghostb" id="wEdit" style="flex:1;margin:0">แก้ไขชื่อ</button>'+
+        '<button class="ghostb" id="wUnsure" style="flex:1;margin:0">ไม่แน่ใจ</button></div>'+
+      (ctx.ocr?'<details style="margin-top:8px"><summary style="font-size:12.5px;color:var(--ink3)">ข้อความที่อ่านได้จากรูป</summary><pre style="font-size:11.5px;white-space:pre-wrap;color:var(--ink2)">'+esc(ctx.ocr.slice(0,400))+'</pre></details>':''));
+    var chosen=0;
+    var pickBtns=document.querySelectorAll("[data-pick]");
+    pickBtns.forEach(function(b){b.addEventListener("click",function(){chosen=+b.dataset.pick;pickBtns.forEach(function(x){x.style.borderColor="";x.style.fontWeight=""});b.style.borderColor="var(--brand)";b.style.fontWeight="600";document.getElementById("wOk").textContent="✓ ยืนยัน "+cands[chosen].inn})});
+    document.getElementById("wOk").addEventListener("click",function(){
+      var c=cands[chosen], cl=CSMeds.classify(c.inn);
+      addItem({inn:c.inn,brand:c.token,dose:document.getElementById("wDose").value.trim(),freq:document.getElementById("wFreq").value.trim(),
+               atc:cl.atc,frid:cl.frid,lv:cl.lv,source:ctx.ocr?"photo_ocr":"manual",conf:c.conf,ocr:ctx.ocr,photoFile:ctx.photoFile,by:"user"});
+    });
+    document.getElementById("wEdit").addEventListener("click",function(){manualBox(ctx)});
+    document.getElementById("wUnsure").addEventListener("click",function(){purposeBox(ctx)});
+  }
+  function manualBox(ctx){
+    ctx=ctx||{};
+    work('<div class="field"><label>พิมพ์ชื่อยาตามที่เห็นบนซอง (ไทยหรืออังกฤษ)</label><input id="wName" placeholder="เช่น Amlodipine หรือ ยานอนหลับสีขาว" autofocus></div>'+
+      '<div id="wSuggest"></div>'+
+      '<div class="field"><label>ขนาดยา (ถ้ามี)</label><input id="wDose" value="'+esc(ctx.doses&&ctx.doses[0]||"")+'"></div>'+
+      '<div style="display:flex;gap:8px"><button class="cta" id="wOk" style="flex:1;margin:0">บันทึก</button><button class="ghostb" id="wCancel" style="flex:1;margin:0">ยกเลิก</button></div>');
+    var inp=document.getElementById("wName"), sug=document.getElementById("wSuggest");
+    inp.addEventListener("input",function(){
+      var r=CSMeds.matchToken(inp.value);
+      sug.innerHTML=r?'<p class="sub" style="margin:0 0 6px;color:var(--c4)">น่าจะเป็น <b>'+esc(r.inn)+'</b> · '+esc(CSMeds.classify(r.inn).fridNm)+'</p>':'<p class="sub" style="margin:0 0 6px;color:var(--ink3)">ไม่พบในฐานข้อมูล — จะบันทึกชื่อตามที่พิมพ์ แล้วให้เภสัชกรจัดกลุ่ม</p>';
+    });
+    document.getElementById("wOk").addEventListener("click",function(){
+      var nm=inp.value.trim(); if(!nm){toast("กรุณาพิมพ์ชื่อยา");return}
+      var r=CSMeds.matchToken(nm), cl=r?CSMeds.classify(r.inn):null;
+      addItem({inn:r?r.inn:null,brand:nm,dose:document.getElementById("wDose").value.trim(),atc:cl?cl.atc:null,
+               frid:cl?cl.frid:"unknown",lv:cl?cl.lv:null,source:ctx.ocr?"photo_ocr":"manual",conf:r?r.conf:null,ocr:ctx.ocr||null,photoFile:ctx.photoFile,by:"user"});
+    });
+    document.getElementById("wCancel").addEventListener("click",workClose);
+  }
+  function purposeBox(ctx){
+    ctx=ctx||{};
+    work('<p class="sub" style="margin:0 0 8px">ไม่เป็นไร — บอกแค่ว่ายานี้ใช้เพื่ออะไร เภสัชกรจะช่วยดูจากรูปให้</p>'+
+      '<div id="wPur">'+FRID_GROUPS.map(function(g){return '<button class="pick" data-pur="'+g.k+'">'+esc(g.nm)+'</button>'}).join("")+'</div>'+
+      '<button class="ghostb" id="wCancel">ยกเลิก</button>');
+    document.querySelectorAll("[data-pur]").forEach(function(b){b.addEventListener("click",function(){
+      var g=FRID_GROUPS.filter(function(x){return x.k===b.dataset.pur})[0];
+      addItem({inn:null,brand:null,purpose:g.k,frid:"unknown",lv:null,source:"purpose_only",ocr:ctx.ocr||null,photoFile:ctx.photoFile,by:"user"});
+    })});
+    document.getElementById("wCancel").addEventListener("click",workClose);
+  }
+  async function addItem(x){
+    /* อัปโหลดรูปเมื่อมี session — เก็บ path ไว้ให้เภสัชกรเปิดดู */
+    if(x.photoFile&&typeof CSBackend!=="undefined"&&CSBackend.isCloud()){
+      try{ var sh=await shrinkImage(x.photoFile,1200); x.photo=await CSBackend.uploadMedPhoto(new File([sh.blob],"med.jpg",{type:"image/jpeg"})); }catch(e){}
+    }
+    delete x.photoFile;
+    m.items.push(x);
+    workClose(); renderList(); syncSummary();
+    var cl=x.frid&&x.frid!=="unknown"?{lv:x.lv}:(x.inn?CSMeds.classify(x.inn):{lv:null});
+    status(cl.lv===2?"บันทึกแล้ว — ยานี้อยู่ในกลุ่มที่ควรให้เภสัชกรทบทวน":cl.lv===1?"บันทึกแล้ว — จะรวมให้เภสัชกรดูพร้อมรายการอื่น":cl.lv===0?"บันทึกแล้ว — ไม่อยู่ในกลุ่มเสี่ยงหกล้ม":"บันทึกแล้ว — เภสัชกรจะช่วยจัดกลุ่มให้");
+    speak(cl.lv===2?"บันทึกแล้ว ยานี้อยู่ในกลุ่มที่ควรให้เภสัชกรทบทวน":"บันทึกแล้ว");
+  }
+
+  /* ---------- OCR จากรูป ---------- */
+  document.getElementById("mPhoto").addEventListener("change",async function(){
+    var f=this.files&&this.files[0]; this.value=""; if(!f)return;
+    status("กำลังเตรียมรูป…");
+    try{
+      var sh=await shrinkImage(f,1400);
+      var w=await ocrLoad(status);
+      status("กำลังอ่านฉลาก…");
+      var r=await w.recognize(sh.canvas);
+      var text=(r&&r.data&&r.data.text)||"";
+      var ex=CSMeds.extract(text);
+      status("");
+      if(ex.candidates.length&&ex.candidates[0].conf>=0.6){
+        confirmBox(ex.candidates,{ocr:text,doses:ex.doses,freq:ex.freq,photoFile:f});
+      }else{
+        work('<div class="notice" style="margin:0 0 10px">อ่านชื่อยาจากรูปนี้ไม่ชัดพอ — ไม่เป็นไร เลือกวิธีอื่นได้ รูปจะถูกเก็บให้เภสัชกรดูอยู่ดี</div>'+
+          '<button class="cta" id="wRetry" style="margin:0 0 8px">📷 ถ่ายใหม่ให้ชัดขึ้น</button>'+
+          '<button class="ghostb" id="wType">พิมพ์ชื่อยาเอง</button>'+
+          '<button class="ghostb" id="wPur2">บอกว่าใช้รักษาอะไร</button>'+
+          (text.trim()?'<details style="margin-top:8px"><summary style="font-size:12.5px;color:var(--ink3)">ข้อความที่อ่านได้</summary><pre style="font-size:11.5px;white-space:pre-wrap;color:var(--ink2)">'+esc(text.slice(0,400))+'</pre></details>':''));
+        document.getElementById("wRetry").addEventListener("click",function(){workClose();document.getElementById("mPhoto").click()});
+        document.getElementById("wType").addEventListener("click",function(){manualBox({ocr:text,doses:ex.doses,photoFile:f})});
+        document.getElementById("wPur2").addEventListener("click",function(){purposeBox({ocr:text,photoFile:f})});
+      }
+    }catch(e){
+      status("");
+      work('<div class="notice" style="margin:0 0 10px">ตัวอ่านฉลากใช้ไม่ได้ในเครื่องนี้ (ต้องต่ออินเทอร์เน็ตครั้งแรก) — พิมพ์ชื่อยาหรือบอกวัตถุประสงค์แทนได้</div>'+
+        '<button class="cta" id="wType" style="margin:0 0 8px">พิมพ์ชื่อยาเอง</button><button class="ghostb" id="wPur2">บอกว่าใช้รักษาอะไร</button>');
+      document.getElementById("wType").addEventListener("click",function(){manualBox({photoFile:f})});
+      document.getElementById("wPur2").addEventListener("click",function(){purposeBox({photoFile:f})});
+    }
   });
-  document.getElementById("mGo").addEventListener("click",function(){
-    /* คะแนนชั้นธุรกิจ (เต็ม 1) */
+  document.getElementById("mManual").addEventListener("click",function(){manualBox({})});
+  document.getElementById("mPurpose").addEventListener("click",function(){purposeBox({})});
+
+  renderCount(); renderList(); renderChange(); syncSummary();
+
+  document.getElementById("mGo").addEventListener("click",async function(){
     S.draft.meds = (m.count!=null&&m.count>=2&&m.count!==9)?0:1;
-    var fs=fridScore(m.purposes);
-    audit("บันทึกข้อมูลยา",
-      "จำนวน "+(MED_COUNT.filter(function(o){return o[1]===m.count})[0]||["—"])[0]+
-      " · กลุ่มเสี่ยงสูง "+fs.high+" กลุ่ม เสี่ยงปานกลาง "+fs.mod+" กลุ่ม"+
+    var sum=CSMeds.summarize(m.items.map(function(x){return {inn:x.inn,frid:x.frid,lv:x.lv}}));
+    m.summary=sum;
+    /* บันทึกรายการยาลงฐานข้อมูล (ทีละรายการ) — ทริกเกอร์จะเปิดคำขอทบทวนให้เองเมื่อเข้าเกณฑ์ */
+    if(typeof CSBackend!=="undefined"&&CSBackend.isCloud()){
+      for(var k=0;k<m.items.length;k++){ if(m.items[k].saved)continue;
+        try{await CSBackend.saveMed(m.items[k]);m.items[k].saved=true}catch(e){} }
+    }
+    audit("บันทึกข้อมูลยา (pipeline)",
+      "รายการ "+m.items.length+" · กลุ่มเสี่ยงสูง "+sum.high+" · ปานกลาง "+sum.mod+" · ไม่รู้จัก "+sum.unknown+
+      (sum.needsReview?" · เข้าเกณฑ์ส่งเภสัชกรทบทวน":"")+
       ((m.changed||[]).filter(function(x){return x!=="none"}).length?" · มีการปรับยาใน 14 วัน":""));
+    if(sum.needsReview)toast("มียาที่ควรให้เภสัชกรทบทวน — ระบบส่งคำขอให้แล้ว");
     go("q",i+1);
   });
 }

@@ -309,6 +309,108 @@ var CSBackend = (function () {
     await audit("case.update", id, "เลื่อนสถานะเคสเป็น " + status + (note ? " · " + note : ""));
     return r.data;
   }
+  /* ============================================================
+     ยา — Medication Classification Pipeline
+     ------------------------------------------------------------
+     OCR ทำในเครื่อง (Tesseract.js) ไม่มีการส่งภาพไปประมวลผลภายนอก
+     รูปซองยาขึ้น storage bucket private (path ขึ้นต้นด้วย user_id
+     บังคับด้วย RLS) เพื่อให้เภสัชกรดูตอนทบทวนเท่านั้น
+     ============================================================ */
+  async function listMeds() {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("medications").select("*")
+      .eq("user_id", u.id).eq("active", true).order("created_at", { ascending: false });
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function saveMed(m) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var row = {
+      user_id: u.id, inn: m.inn || null, brand_text: m.brand || null,
+      dose_text: m.dose || null, freq_text: m.freq || null, atc: m.atc || null,
+      frid_group: m.frid || "unknown", frid_level: (m.lv == null ? null : m.lv),
+      purpose: m.purpose || null, source: m.source || "manual",
+      ocr_text: m.ocr || null, match_conf: (m.conf == null ? null : m.conf),
+      photo_path: m.photo || null, confirmed_by: m.by || "user"
+    };
+    var r = await sb.from("medications").insert(row).select().single();
+    if (r.error) throw r.error;
+    await audit("med.add", u.id, "บันทึกยา " + (m.inn || m.brand || "ไม่ระบุชื่อ") + " · กลุ่ม " + (m.frid || "unknown") + " · ที่มา " + (m.source || "manual"));
+    return r.data;
+  }
+  async function retireMed(id) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("medications").update({ active: false, updated_at: new Date().toISOString() }).eq("id", id);
+    if (r.error) throw r.error;
+    await audit("med.retire", null, "ระบุว่าเลิกใช้ยา " + id);
+    return true;
+  }
+  async function uploadMedPhoto(file) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var ext = (file.type === "image/png") ? "png" : (file.type === "image/webp" ? "webp" : "jpg");
+    var path = u.id + "/" + Date.now() + "." + ext;
+    var r = await sb.storage.from("med-photos").upload(path, file, { contentType: file.type, upsert: false });
+    if (r.error) throw r.error;
+    await audit("med.photo", u.id, "อัปโหลดรูปซองยาเพื่อให้เภสัชกรดู");
+    return path;
+  }
+  async function medPhotoUrl(path) {
+    if (!isCloud() || !path) return null;
+    var r = await sb.storage.from("med-photos").createSignedUrl(path, 600);   /* 10 นาที */
+    return r.data ? r.data.signedUrl : null;
+  }
+  async function myMedReview() {
+    if (!isCloud()) return null;
+    var u = await currentUser(); if (!u) return null;
+    var r = await sb.from("med_reviews").select("*").eq("user_id", u.id)
+      .order("requested_at", { ascending: false }).limit(1);
+    return (r.data || [])[0] || null;
+  }
+  /* ---- ฝั่งเจ้าหน้าที่ ---- */
+  async function medReviewQueue() {
+    if (!isCloud()) return [];
+    var r = await sb.from("med_reviews")
+      .select("*, profiles!med_reviews_user_id_fkey(pseudonym, display_name, birth_year_be, sex)")
+      .eq("status", "pending").order("requested_at", { ascending: true }).limit(100);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function medsOf(userId) {
+    if (!isCloud()) return [];
+    var r = await sb.from("medications").select("*").eq("user_id", userId).eq("active", true)
+      .order("frid_level", { ascending: false, nullsFirst: true });
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function pharmacistFix(medId, patch) {
+    /* เภสัชกรแก้กลุ่ม/ตัวยา — บันทึกว่าใครแก้ */
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var row = { reviewed_at: new Date().toISOString(), reviewed_by: u.id, confirmed_by: "pharmacist",
+                updated_at: new Date().toISOString() };
+    ["inn", "atc", "frid_group", "frid_level", "review_note", "active"].forEach(function (k) {
+      if (patch[k] !== undefined) row[k] = patch[k];
+    });
+    var r = await sb.from("medications").update(row).eq("id", medId).select().single();
+    if (r.error) throw r.error;
+    await audit("med.pharmacist_fix", medId, "เภสัชกรยืนยัน/แก้รายการยา → " + (patch.frid_group || "") + " " + (patch.review_note || ""));
+    return r.data;
+  }
+  async function closeMedReview(id, outcome, recommend) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("med_reviews").update({
+      status: "done", reviewed_at: new Date().toISOString(), reviewed_by: u.id,
+      outcome: outcome || null, recommend: recommend || null
+    }).eq("id", id).select().single();
+    if (r.error) throw r.error;
+    await audit("med.review_done", id, "เภสัชกรปิดการทบทวนยา · " + (recommend || ""));
+    return r.data;
+  }
+
   /* เลื่อนสถานะการส่งต่อ จนถึงบันทึกผลลัพธ์ — ตัวชี้วัดว่าไปถึงปลายทางจริง */
   async function updateReferral(id, status, extra) {
     if (!isCloud()) throw new Error("offline");
@@ -780,6 +882,10 @@ var CSBackend = (function () {
     insurerPortfolio: insurerPortfolio, insurerOutcomes: insurerOutcomes,
     myCases: myCases, caseQueue: caseQueue, updateCase: updateCase,
     updateReferral: updateReferral,
+    listMeds: listMeds, saveMed: saveMed, retireMed: retireMed,
+    uploadMedPhoto: uploadMedPhoto, medPhotoUrl: medPhotoUrl, myMedReview: myMedReview,
+    medReviewQueue: medReviewQueue, medsOf: medsOf, pharmacistFix: pharmacistFix,
+    closeMedReview: closeMedReview,
     createInvite: createInvite, listMyCarers: listMyCarers, decideCarer: decideCarer,
     updateCarerPermissions: updateCarerPermissions, revokeCarer: revokeCarer,
     redeemInvite: redeemInvite, famMembers: famMembers, famAssessments: famAssessments,
