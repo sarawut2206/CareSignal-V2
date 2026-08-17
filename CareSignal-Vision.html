@@ -239,7 +239,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=145"></script>
+<script src="./cs-backend.js?v=200"></script>
 <script>
 "use strict";
 var LOGO='<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none">'+
@@ -432,6 +432,154 @@ function ftsstPoints(sec,age){
   if(sec==null)return 0;
   return sec<=cut?4 : sec<=cut+2?3 : sec<=cut+4.5?2 : sec<=60?1 : 0;
 }
+
+/* ============================================================
+   ระบบวงจรปิด v2 — คัดกรอง → จัดระดับ → แผน → ติดตาม → ส่งต่อ → วัดผล
+   ============================================================ */
+
+/* ---------- Safety Gate: ถามก่อนให้ทำการทดสอบกายภาพ ----------
+   เหตุผล: เดิมระบบให้ผู้สูงอายุลุกนั่ง 5 ครั้งและยืนขาเดียวโดยไม่ถาม
+   ว่าวันนี้มีอาการอันตรายหรือไม่ ซึ่งเสี่ยงทั้งต่อผู้ใช้และต่อโครงการ
+   ข้อ 1–4 เป็น red flag ถ้าตอบ "มี" ต้องหยุดและส่งต่อ ไม่ใช่ให้ทดสอบต่อ */
+var SAFETY_Q=[
+  {k:"faint",  q:"วันนี้มีอาการหน้ามืด เวียนศีรษะมาก หรือเหมือนจะเป็นลมหรือไม่",
+   o:[["ไม่มี",0],["ไม่แน่ใจ",1],["มี",2]], red:2},
+  {k:"chest",  q:"วันนี้มีอาการเจ็บหน้าอก หายใจลำบากผิดปกติ หรือใจสั่นรุนแรงหรือไม่",
+   o:[["ไม่มี",0],["มี",2]], red:2},
+  {k:"stroke", q:"มีอาการอ่อนแรงเฉียบพลัน หน้าเบี้ยว พูดไม่ชัด หรือแขนขาชาหรือไม่",
+   o:[["ไม่มี",0],["มี",2]], red:2},
+  {k:"injury", q:"เพิ่งหกล้ม บาดเจ็บ ผ่าตัด หรือแพทย์ห้ามเดิน/ลงน้ำหนักหรือไม่",
+   o:[["ไม่มี",0],["มี",2]], red:2},
+  {k:"helper", q:"ขณะทำการทดสอบ มีผู้ดูแลอยู่ใกล้ ๆ หรือไม่",
+   o:[["มี",0],["ไม่มี",1]], red:9}   /* ไม่ใช่ red flag แต่บันทึกไว้ */
+];
+function safetyVerdict(ans){
+  var reds=[];
+  SAFETY_Q.forEach(function(q){ if(ans[q.k]!=null && ans[q.k]>=q.red)reds.push(q.k) });
+  var alone = ans.helper===1;
+  return {safe:reds.length===0, reds:reds, alone:alone,
+          urgent:reds.indexOf("chest")>=0||reds.indexOf("stroke")>=0};
+}
+
+/* ---------- ประวัติการหกล้มแบบละเอียด ----------
+   "ล้มกี่ครั้ง" อย่างเดียวหยาบเกินไป — ล้มแล้วลุกเองไม่ได้ กับ ล้มแล้วลุกได้ทันที
+   คือคนละความเสี่ยง และล้มแล้วหมดสติเป็นเรื่องหัวใจ/สมอง ไม่ใช่การทรงตัว */
+var FALL_Q=[
+  {k:"count", q:"ในช่วง 12 เดือนที่ผ่านมา เคยหกล้มหรือไม่", always:true,
+   o:[["ไม่เคย",0],["เคย 1 ครั้ง",1],["เคย 2 ครั้ง",2],["เคย 3 ครั้ง",3],["เคย 4 ครั้งขึ้นไป",4],["จำไม่ได้",9]]},
+  {k:"when",  q:"ครั้งล่าสุดเกิดเมื่อใด",
+   o:[["ภายใน 30 วัน",0],["1–3 เดือน",1],["4–6 เดือน",2],["7–12 เดือน",3]]},
+  {k:"injury",q:"มีอาการบาดเจ็บหรือไม่",
+   o:[["ไม่มี",0],["ฟกช้ำ/แผลเล็กน้อย",1],["ต้องพบแพทย์",2],["เข้าโรงพยาบาล",3],["กระดูกหัก",4],["ศีรษะกระแทก",5]]},
+  {k:"loc",   q:"มีหมดสติหรือจำเหตุการณ์ไม่ได้หรือไม่",
+   o:[["ไม่มี",0],["ไม่แน่ใจ",1],["มี",2]]},
+  {k:"getup", q:"หลังล้ม ลุกขึ้นเองได้หรือไม่",
+   o:[["ได้ทันที",0],["ได้แต่ใช้เวลานาน",1],["ต้องมีคนช่วย",2],["ลุกเองไม่ได้",3]]}
+];
+/* คำถามคัดกรองเร็ว 3 ข้อตามกรอบ CDC STEADI */
+var STEADI3=[
+  {k:"fell",    q:"เคยล้มในปีที่ผ่านมาไหม"},
+  {k:"unsteady",q:"รู้สึกไม่มั่นคงขณะยืนหรือเดินไหม"},
+  {k:"worried", q:"กังวลหรือกลัวว่าจะล้มไหม"}
+];
+
+/* ---------- ยา: ถามวัตถุประสงค์แทนชื่อยา ----------
+   ผู้สูงอายุจำชื่อยาไม่ได้ แต่บอกได้ว่ากินเพื่ออะไร — และวัตถุประสงค์
+   แมปเข้ากลุ่มยาที่เพิ่มความเสี่ยงหกล้ม (FRID) ได้โดยตรง
+   ระบบใช้เป็นธงเพื่อ "ส่งให้เภสัชกรทบทวน" เท่านั้น ไม่ใช่คำสั่งให้หยุดยา */
+var MED_COUNT=[["ไม่ได้ใช้ยาประจำ",0],["1–3 รายการ",1],["4–5 รายการ",2],["6–9 รายการ",3],["10 รายการขึ้นไป",4],["ไม่แน่ใจ",9]];
+var FRID_GROUPS=[
+  {k:"sleep",  nm:"นอนไม่หลับ",              frid:2},
+  {k:"anx",    nm:"เครียด/กังวล",            frid:2},
+  {k:"depr",   nm:"ซึมเศร้า",                frid:2},
+  {k:"pain",   nm:"ปวดรุนแรง",               frid:2},
+  {k:"seiz",   nm:"ชัก/ปวดเส้นประสาท",       frid:2},
+  {k:"allergy",nm:"ภูมิแพ้/หวัดที่ทำให้ง่วง", frid:1},
+  {k:"bp",     nm:"ความดัน/หัวใจ",           frid:1},
+  {k:"diur",   nm:"ขับปัสสาวะ/บวมน้ำ",       frid:1},
+  {k:"muscle", nm:"กล้ามเนื้อเกร็ง/ปวดหลัง",  frid:1},
+  {k:"prost",  nm:"ปัสสาวะขัด/ต่อมลูกหมาก",   frid:1},
+  {k:"incont", nm:"กลั้นปัสสาวะไม่อยู่",       frid:1},
+  {k:"other",  nm:"อื่น ๆ",                   frid:0}
+];
+var MED_CHANGE=[
+  {k:"start", nm:"เริ่มยาใหม่"},{k:"up", nm:"เพิ่มขนาดยา"},{k:"down", nm:"ลดขนาดยา"},
+  {k:"stop", nm:"หยุดยา"},{k:"time", nm:"เปลี่ยนเวลาใช้ยา"},{k:"none", nm:"ไม่มี/ไม่แน่ใจ"}
+];
+var MED_SYMPTOM=[
+  {k:"drowsy",nm:"ง่วงมากผิดปกติ"},{k:"dizzy",nm:"เวียนหัว"},
+  {k:"ortho", nm:"หน้ามืดเมื่อลุกยืน"},{k:"gait",nm:"เดินเซ"},
+  {k:"blur",  nm:"ตามัว"},{k:"confuse",nm:"สับสน"},{k:"none",nm:"ไม่มี"}
+];
+/* คะแนนความเสี่ยงจากยา: กลุ่มเสี่ยงสูง(2) นับหนัก กลุ่มเสี่ยงปานกลาง(1) นับเบา */
+function fridScore(purposes){
+  var high=0, mod=0;
+  (purposes||[]).forEach(function(k){
+    var g=FRID_GROUPS.filter(function(x){return x.k===k})[0];
+    if(!g)return; if(g.frid===2)high++; else if(g.frid===1)mod++;
+  });
+  return {high:high, mod:mod, total:high*2+mod};
+}
+
+/* ============================================================
+   Baseline Risk Stratification — ทำงานได้ตั้งแต่การประเมินครั้งแรก
+   ------------------------------------------------------------
+   ช่องว่างเดิมที่แก้ตรงนี้: เอนจินเดิมเทียบกับอดีตของตัวเองอย่างเดียว
+   ผู้ใช้ครั้งแรกจึงได้ "คงที่" เสมอ แม้จะล้ม 3 ครั้งและลุกเองไม่ได้
+   ตอนนี้มีสองชั้นทำงานคู่กัน: baseline (ค่าสัมบูรณ์) + trajectory (เทียบตัวเอง)
+   ระดับสุดท้ายใช้อันที่แย่กว่า
+   ============================================================ */
+function baselineRisk(d, age){
+  var reds=[], yellows=[];
+  var f=d.fallsDetail||{}, m=d.medsDetail||{};
+  var fc=f.count;
+
+  /* ---- แดง ---- */
+  if(fc!=null&&fc>=2&&fc!==9) reds.push({id:"B1",text:"หกล้มตั้งแต่ 2 ครั้งขึ้นไปใน 12 เดือน",
+    why:"การล้มซ้ำเป็นตัวทำนายการล้มครั้งถัดไปที่ชัดที่สุด"});
+  if(f.injury!=null&&f.injury>=2) reds.push({id:"B2",text:"ล้มแล้วบาดเจ็บจนต้องพบแพทย์หรือเข้าโรงพยาบาล",
+    why:"การล้มที่มีการบาดเจ็บบ่งชี้ความรุนแรงและความเสี่ยงกระดูกหักซ้ำ"});
+  if(f.loc!=null&&f.loc>=1) reds.push({id:"B3",text:"ล้มแล้วหมดสติหรือจำเหตุการณ์ไม่ได้",
+    why:"อาจไม่ใช่เรื่องการทรงตัว แต่เป็นภาวะหมดสติที่ต้องหาสาเหตุทางหัวใจหรือสมอง"});
+  if(f.getup!=null&&f.getup>=3) reds.push({id:"B4",text:"ล้มแล้วลุกขึ้นเองไม่ได้",
+    why:"บ่งชี้กำลังกล้ามเนื้อไม่พอ และเสี่ยงนอนติดพื้นนานหากล้มขณะอยู่คนเดียว"});
+  if(d.notTested) reds.push({id:"B5",text:"ไม่สามารถทำการทดสอบกายภาพได้อย่างปลอดภัย",
+    why:"มีอาการที่ต้องได้รับการประเมินโดยบุคลากรก่อน จึงยังไม่ควรทดสอบเอง"});
+  var fs=fridScore(m.purposes);
+  if(fs.high>=2 && (d.balance!=null&&d.balance<=1))
+    reds.push({id:"B6",text:"ใช้ยากลุ่มเสี่ยงสูงตั้งแต่ 2 กลุ่ม ร่วมกับการทรงตัวบกพร่อง",
+      why:"ยากลุ่มกดประสาทหลายชนิดร่วมกับการทรงตัวที่ไม่ดี เพิ่มความเสี่ยงแบบทวีคูณ"});
+
+  /* ---- เหลือง ---- */
+  if(fc===1) yellows.push({id:"B7",text:"หกล้ม 1 ครั้งใน 12 เดือน",
+    why:"ล้มครั้งแรกเพิ่มโอกาสล้มซ้ำใน 12 เดือนถัดไปอย่างชัดเจน"});
+  if(d.steadi&&(d.steadi.unsteady||d.steadi.worried))
+    yellows.push({id:"B8",text:"รู้สึกไม่มั่นคงขณะเดิน หรือกังวลว่าจะล้ม",
+      why:"ความรู้สึกของเจ้าตัวเป็นสัญญาณคัดกรองที่ CDC STEADI ใช้เป็นข้อแรก"});
+  if(d.ftsst!=null&&d.ftsst>CFG.ftsstCut(age))
+    yellows.push({id:"B9",text:"เวลาลุกนั่งสูงกว่าเกณฑ์ของช่วงอายุ",
+      why:"สะท้อนกำลังกล้ามเนื้อขาส่วนล่างที่ลดลง"});
+  if(d.tug!=null&&d.tug>=12&&d.tugDistanceOk!==false)
+    yellows.push({id:"B10",text:"ลุกเดิน 3 เมตรใช้เวลาตั้งแต่ 12 วินาที",
+      why:"เกณฑ์คัดกรองของ CDC STEADI"});
+  if(d.balPassed!=null&&d.balPassed<3)
+    yellows.push({id:"B11",text:"ยืนต่อเท้าไม่ครบ 10 วินาที",
+      why:"หนึ่งในสัญญาณเสี่ยงตามชุดคัดกรอง 4-Stage Balance Test"});
+  if(m.count!=null&&m.count>=2&&m.count!==9)
+    yellows.push({id:"B12",text:"ใช้ยาประจำตั้งแต่ 4 รายการขึ้นไป",
+      why:"การใช้ยาหลายชนิดสัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น"});
+  if(fs.total>=2)
+    yellows.push({id:"B13",text:"ใช้ยาในกลุ่มที่อาจเพิ่มความเสี่ยงหกล้ม",
+      why:"ควรให้เภสัชกรหรือแพทย์ทบทวนรายการยา ไม่ควรปรับหรือหยุดยาเอง"});
+  if(m.changed&&m.changed.length&&m.changed.indexOf("none")<0&&
+     m.symptoms&&m.symptoms.length&&m.symptoms.indexOf("none")<0)
+    yellows.push({id:"B14",text:"เพิ่งปรับยาแล้วมีอาการเวียนหัว ง่วง หรือเดินเซ",
+      why:"อาการหลังปรับยาเป็นช่วงที่ความเสี่ยงหกล้มสูงที่สุด"});
+
+  var level = reds.length?"urgent" : (yellows.length?"watch":"stable");
+  return {level:level, reds:reds, yellows:yellows, flags:reds.concat(yellows)};
+}
+
 function scoreOf(d,age){
   var parts={ftsst:ftsstPoints(d.ftsst,age), balance:d.balance||0, falls:d.falls==null?0:d.falls,
               meds:d.meds==null?0:d.meds, adl:d.adl==null?0:d.adl};
@@ -440,7 +588,7 @@ function scoreOf(d,age){
 }
 
 var ENGINE={
-  version:"1.4.1-vision",
+  version:"2.0.0-vision",
   kind:"rule-based-explainable",
   rules:{
     R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ",src:"MCID ของ Five-Times Sit-to-Stand ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
@@ -452,7 +600,21 @@ var ENGINE={
     R7:{nm:"ความสม่ำเสมอของจังหวะลดลง",src:"ความแปรปรวนของเวลาต่อครั้งสะท้อนความล้าของกล้ามเนื้อขา"},
     R8:{nm:"การทรงตัวถดถอยเป็นท่า",src:"CDC STEADI 4-Stage Balance Test — ท่าที่เคยยืนได้ครบ 10 วินาทีแล้วทำไม่ได้ คือการสูญเสียความสามารถที่วัดซ้ำได้"},
     R9:{nm:"คะแนนบาร์เธลลดลงก่อนข้ามระดับ",src:"Barthel ADL Index 20 คะแนน — ตรวจจับการถดถอยภายในระดับเดียวกัน ก่อนจะตกไปอีกระดับ"},
-    R10:{nm:"ลุกเดิน 3 เมตรช้ากว่าเกณฑ์",src:"CDC STEADI — Timed Up and Go ตั้งแต่ 12 วินาทีขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มสูงขึ้น"}
+    R10:{nm:"ลุกเดิน 3 เมตรช้ากว่าเกณฑ์",src:"CDC STEADI — Timed Up and Go ตั้งแต่ 12 วินาทีขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มสูงขึ้น"},
+    B1:{nm:"หกล้มซ้ำใน 12 เดือน",src:"CDC STEADI — การล้มซ้ำเป็นตัวทำนายการล้มครั้งถัดไปที่ชัดที่สุด"},
+    B2:{nm:"ล้มแล้วบาดเจ็บต้องพบแพทย์",src:"ความรุนแรงของการล้มสัมพันธ์กับความเสี่ยงกระดูกหักซ้ำ"},
+    B3:{nm:"ล้มแล้วหมดสติ",src:"อาจเป็นภาวะหมดสติจากหัวใจหรือสมอง ต้องหาสาเหตุ ไม่ใช่แค่ฝึกการทรงตัว"},
+    B4:{nm:"ล้มแล้วลุกเองไม่ได้",src:"บ่งชี้กำลังกล้ามเนื้อไม่พอ และเสี่ยงนอนติดพื้นนานหากอยู่คนเดียว"},
+    B5:{nm:"ทดสอบไม่ได้ด้วยเหตุผลความปลอดภัย",src:"Safety Gate — ต้องให้บุคลากรประเมินก่อน"},
+    B6:{nm:"ยากลุ่มเสี่ยงสูงหลายกลุ่มร่วมกับทรงตัวบกพร่อง",src:"STOPPFall; Beers Criteria — ปฏิสัมพันธ์แบบทวีคูณ"},
+    B7:{nm:"หกล้ม 1 ครั้งใน 12 เดือน",src:"WHO Step Safely 2021"},
+    B8:{nm:"รู้สึกไม่มั่นคงหรือกลัวล้ม",src:"CDC STEADI — คำถามคัดกรอง 3 ข้อ"},
+    B9:{nm:"เวลาลุกนั่งเกินเกณฑ์ช่วงอายุ",src:"ค่าตัดประชากรไทย (Poncumhak 2014; Intaruk 2021)"},
+    B10:{nm:"TUG ตั้งแต่ 12 วินาที",src:"CDC STEADI"},
+    B11:{nm:"ยืนต่อเท้าไม่ครบ 10 วินาที",src:"CDC 4-Stage Balance Test"},
+    B12:{nm:"ใช้ยาประจำตั้งแต่ 4 รายการ",src:"Polypharmacy สัมพันธ์กับความเสี่ยงหกล้ม"},
+    B13:{nm:"ใช้ยากลุ่มเพิ่มความเสี่ยงหกล้ม (FRID)",src:"STOPPFall 2021 — ธงเพื่อส่งเภสัชกรทบทวน ไม่ใช่คำสั่งหยุดยา"},
+    B14:{nm:"เพิ่งปรับยาแล้วมีอาการ",src:"ช่วงหลังปรับยาเป็นช่วงที่ความเสี่ยงหกล้มสูงที่สุด"}
   },
   cadence:{stable:90,watch:45,decline:21,urgent:7},
   levelNm:{stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"ต้องดูแลเร่งด่วน"},
@@ -543,9 +705,27 @@ function trajectory(){
       text:"ลุกเดิน 3 เมตรแล้วกลับมานั่ง ใช้เวลา "+last.tug.toFixed(1)+" วินาที (เกณฑ์คัดกรอง 12 วินาที)",
       why:"CDC STEADI ใช้ 12 วินาทีเป็นจุดคัดกรองความเสี่ยงหกล้ม — เป็นจุดเริ่มเฝ้าระวัง ไม่ใช่คำวินิจฉัย"});
 
+  /* ---------- รวมชั้น Baseline เข้ากับชั้น Trajectory ----------
+     Baseline ใช้ค่าสัมบูรณ์ ทำงานได้ตั้งแต่การประเมินครั้งแรก
+     Trajectory เทียบกับอดีตของตัวเอง ต้องมีอย่างน้อย 2 ครั้ง
+     ระดับสุดท้ายใช้อันที่แย่กว่า เพื่อไม่ให้ผู้ใช้ครั้งแรกที่ล้มซ้ำ
+     ได้สถานะเขียวเพียงเพราะยังไม่มีประวัติให้เทียบ */
+  var bl=baselineRisk({
+    fallsDetail:last.fallsDetail, medsDetail:last.medsDetail, steadi:last.steadi,
+    ftsst:last.ftsst, tug:last.tug, tugDistanceOk:last.tugDistanceOk,
+    balPassed:last.balPassed, balance:last.parts?last.parts.balance:null,
+    notTested:last.notTested
+  }, p.age);
+  out.baseline=bl;
+  bl.reds.forEach(function(f){ out.flags.push({id:f.id,sev:3,text:f.text,why:f.why,baseline:true}) });
+  bl.yellows.forEach(function(f){ out.flags.push({id:f.id,sev:1,text:f.text,why:f.why,baseline:true}) });
+
   var sev=out.flags.reduce(function(a,b){return a+b.sev},0);
   var hasADL=out.flags.some(function(f){return f.id==="R6"});
-  out.level = (last.tier===1||hasADL||sev>=5)?"urgent" : (last.tier===2||sev>=3)?"decline" : sev>=1?"watch":"stable";
+  var byRules = (last.tier===1||hasADL||sev>=5)?"urgent" : (last.tier===2||sev>=3)?"decline" : sev>=1?"watch":"stable";
+  var ORD={stable:0,watch:1,decline:2,urgent:3}, NM=["stable","watch","decline","urgent"];
+  out.level = NM[Math.max(ORD[byRules], ORD[bl.level])];   /* ใช้อันที่แย่กว่าเสมอ */
+  out.byRules=byRules;
   out.nextDays=ENGINE.cadence[out.level];
   out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
   out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
@@ -682,7 +862,13 @@ async function cloudSync(rec,tr){
     var a=await CSBackend.saveAssessment({
       at:rec.at,method:rec.method,ftsst:rec.ftsst,reps:rec.reps,cv:rec.cv,gaps:rec.gaps,
       score:rec.score,max:rec.max,tier:rec.tier,parts:rec.parts,
-      verified:!!rec.verified,engine:ENGINE.version});
+      verified:!!rec.verified,engine:ENGINE.version,
+      tug:rec.tug,
+      /* ข้อมูลเชิงลึกของระบบวงจรปิด v2 */
+      safetyGate:rec.safetyVerdict?{answers:rec.safety,verdict:rec.safetyVerdict}:null,
+      fallsDetail:rec.fallsDetail, medsDetail:rec.medsDetail,
+      baselineLevel:tr&&tr.baseline?tr.baseline.level:null,
+      notTested:!!rec.notTested});
     rec.cloudId=a.id;
     try{var L=S.data.assessments;for(var i=L.length-1;i>=0;i--){if(L[i].at===rec.at){L[i].cloudId=a.id;break}}await DB.set("visionData",S.data)}catch(e){}
     if(tr){
@@ -830,7 +1016,7 @@ function render(arg){
   var tp=document.getElementById("tabPilot"); if(tp)tp.hidden=!PILOT;
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
-  var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,calib:calibV,test:testV,tug:tugV,q:qV,result:resultV,
+  var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,safety:safetyV,safetyStop:safetyStopV,plan:planV,events:eventsV,calib:calibV,test:testV,tug:tugV,q:qV,result:resultV,
           trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,mydata:mydataV,balance:balanceV}[S.screen]||assessV;
   fn(arg);
 }
@@ -948,6 +1134,75 @@ function bindLogoutBtn(){
   if(b)b.addEventListener("click",logoutFlow);
 }
 
+
+/* ---------- หน้าคัดกรองความปลอดภัย ---------- */
+function safetyV(){
+  head("ก่อนเริ่มทดสอบ","ตรวจความปลอดภัยก่อน","ตอบตามความจริง เพื่อไม่ให้เกิดอันตรายระหว่างทดสอบ","assess");
+  if(!S.draft.safety)S.draft.safety={};
+  var a=S.draft.safety;
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ทำไมต้องถามก่อน</h3>'+
+  '<p class="sub" style="margin:0">การทดสอบมีการลุกยืนและยืนขาเดียว หากวันนี้มีอาการบางอย่าง การทดสอบอาจเป็นอันตราย ระบบจะหยุดให้เองและแนะนำสิ่งที่ควรทำแทน</p></div>'+
+  '<div id="sgWrap"></div>'+
+  '<button class="cta" id="sgGo" disabled>ตรวจสอบและไปต่อ</button>'+
+  '<button class="ghostb" data-go="assess">ยกเลิก</button></div>';
+  function renderSG(){
+    document.getElementById("sgWrap").innerHTML=SAFETY_Q.map(function(q,i){
+      return '<div class="card"><h3 style="font-size:16px">'+(i+1)+' · '+esc(q.q)+'</h3>'+
+        q.o.map(function(o){
+          var on=a[q.k]===o[1];
+          return '<button class="pick" data-sq="'+q.k+'" data-sv="'+o[1]+'" style="'+
+            (on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+(on?"✓ ":"")+esc(o[0])+'</button>';
+        }).join("")+'</div>';
+    }).join("");
+    document.getElementById("sgGo").disabled = Object.keys(a).length<SAFETY_Q.length;
+    V.querySelectorAll("[data-sq]").forEach(function(b){
+      b.addEventListener("click",function(){ a[b.dataset.sq]=+b.dataset.sv; renderSG() });
+    });
+  }
+  renderSG();
+  document.getElementById("sgGo").addEventListener("click",function(){
+    var vd=safetyVerdict(a);
+    S.draft.safetyVerdict=vd;
+    audit("คัดกรองความปลอดภัยก่อนทดสอบ",
+      vd.safe?("ผ่าน — ไม่พบอาการที่ต้องหยุด"+(vd.alone?" (ทำคนเดียว)":"")):
+              ("พบสัญญาณอันตราย: "+vd.reds.join(", ")+" — หยุดการทดสอบกายภาพ"));
+    if(vd.safe)go("face"); else go("safetyStop");
+  });
+}
+/* หน้าหยุดเพื่อความปลอดภัย — ไม่ให้ทดสอบต่อ แต่ยังเก็บข้อมูลและส่งต่อได้ */
+function safetyStopV(){
+  var vd=S.draft.safetyVerdict||{reds:[]};
+  head("หยุดการทดสอบเพื่อความปลอดภัย","วันนี้ยังไม่ควรทดสอบด้วยตนเอง","","assess");
+  var msg = vd.urgent
+    ? '<div class="card" style="background:var(--c1b);border:2px solid var(--c1)"><h3 style="color:var(--c1)">อาการที่ท่านแจ้งต้องได้รับการดูแลโดยเร็ว</h3>'+
+      '<p class="sub" style="margin:0;font-size:16px">หากมีอาการเจ็บหน้าอก หายใจลำบาก อ่อนแรงเฉียบพลัน หน้าเบี้ยว หรือพูดไม่ชัด <b>โทร 1669 ทันที</b> — อย่ารอประเมินซ้ำ</p></div>'
+    : '<div class="card" style="background:var(--c2b);border:2px solid var(--c2)"><h3 style="color:var(--c2)">ควรให้บุคลากรประเมินก่อน</h3>'+
+      '<p class="sub" style="margin:0;font-size:16px">อาการที่ท่านแจ้งทำให้การลุกยืนและยืนขาเดียวด้วยตนเองมีความเสี่ยง ระบบจึงบันทึกว่า<b>ยังไม่ได้ทดสอบด้วยเหตุผลด้านความปลอดภัย</b></p></div>';
+  V.innerHTML='<div class="anim">'+msg+
+  '<div class="card"><h3>สิ่งที่ควรทำตอนนี้</h3>'+
+  '<div class="rowline"><span class="k">1 · พักในที่ปลอดภัย</span><span class="v">นั่งหรือนอน</span></div>'+
+  '<div class="rowline"><span class="k">2 · แจ้งคนใกล้ตัว</span><span class="v">อย่าอยู่คนเดียว</span></div>'+
+  '<div class="rowline"><span class="k">3 · ปรึกษาแพทย์หรือเภสัชกร</span><span class="v">ก่อนประเมินซ้ำ</span></div>'+
+  '<p class="sub" style="margin:10px 0 0">ระบบได้แจ้งผู้ดูแลของท่านตามสิทธิ์ที่ท่านอนุญาตไว้แล้ว</p></div>'+
+  '<button class="cta" id="ssSave">บันทึกและแจ้งทีมดูแล</button>'+
+  '<button class="ghostb" data-go="assess">กลับหน้าแรก</button>'+
+  '<div class="disc">ระบบนี้ไม่ใช่บริการฉุกเฉิน หากอาการรุนแรงให้โทร 1669</div></div>';
+  document.getElementById("ssSave").addEventListener("click",async function(){
+    this.disabled=true;this.textContent="กำลังบันทึก…";
+    S.draft.notTested=true;
+    S.draft.ftsst=null;S.draft.tug=null;S.draft.balPassed=null;
+    try{
+      if(CLOUD.session&&CSBackend.isCloud()){
+        await CSBackend.reportEvent("dizzy",{source:"safety_gate",reds:(S.draft.safetyVerdict||{}).reds||[]},
+          (S.draft.safetyVerdict||{}).urgent?"high":"medium");
+      }
+    }catch(e){}
+    toast("บันทึกและแจ้งทีมดูแลแล้ว");
+    go("assess");
+  });
+}
+
 function assessV(){
   var p=S.data.profile, last=S.data.assessments[S.data.assessments.length-1];
   head("ประเมิน","สวัสดี คุณ"+esc(p.name),"อายุ "+p.age+" ปี · เกณฑ์เวลาของช่วงอายุนี้คือ "+CFG.ftsstCut(p.age).toFixed(1)+" วินาที");
@@ -966,7 +1221,9 @@ function assessV(){
   '<p class="sub" style="color:#FCD34D;margin:8px 0 0">กล้องจะนับครั้งและจับเวลาให้เอง ไม่ต้องกดปุ่มระหว่างทำ</p></div>'+
   lastCard+
   fontBarHTML()+
-  '<button class="cta" data-go="face">เปิดกล้องและเริ่มทดสอบ</button>'+
+  '<button class="cta" data-go="safety">เริ่มทดสอบ</button>'+
+  '<button class="ghostb" data-go="plan">📋 แผนดูแลของฉัน</button>'+
+  '<button class="ghostb" data-go="events">🩹 รายงานเหตุการณ์ (ล้ม · ปรับยา · เข้า รพ.)</button>'+
   '<button class="ghostb" id="manual">ทำแบบจับเวลาเอง (กรณีกล้องใช้ไม่ได้)</button>'+
   logoutBtnHTML()+
   '<div class="disc">ระบบสนับสนุนการตัดสินใจ ไม่ใช่การวินิจฉัยทางการแพทย์ · หากรู้สึกเวียนศีรษะหรือเจ็บระหว่างทำ ให้หยุดทันที</div></div>';
@@ -2328,11 +2585,9 @@ async function startBalancePipeline(){
 var QS=[
   {k:"balance",q:"ความรู้สึกของท่านเองต่อการทรงตัว",fromCamera:true,
    o:[["มั่นคงดี ยืนขาเดียวได้สบาย",3],["มั่นคงพอควร ต่อเท้าได้แต่ขาเดียวยาก",2],["รู้สึกโคลง ต้องมีที่จับใกล้มือ",1],["ทรงตัวลำบาก ต้องมีคนช่วย",0]]},
-  {k:"falls",q:"ในรอบ 12 เดือน หกล้มกี่ครั้ง",verify:true,
-   o:[["ไม่เคยล้ม",2],["ล้ม 1 ครั้ง",1],["ล้มตั้งแต่ 2 ครั้ง",0]]},
-  {k:"meds",q:"ตอนนี้กินยาประจำกี่ชนิด",verify:true,
-   o:[["น้อยกว่า 4 ชนิด",1],["ตั้งแต่ 4 ชนิดขึ้นไป",0]]},
-  {k:"adl",q:"ความสามารถในการทำกิจวัตรประจำวัน",barthel:true,o:[]}
+  {k:"falls",q:"ประวัติการหกล้ม",fallsDetail:true,verify:true,o:[]},
+  {k:"meds", q:"ยาที่ใช้ประจำ",medsDetail:true,verify:true,o:[]},
+  {k:"adl",  q:"ความสามารถในการทำกิจวัตรประจำวัน",barthel:true,o:[]}
 ];
 
 /* ============================================================
@@ -2397,8 +2652,153 @@ function cameraObs(){
 }
 
 /* ---------- หน้าคำถาม: รองรับทั้งแบบเลือกตอบ และรูบริกบาร์เธล ---------- */
+
+/* ---------- หน้าประวัติการหกล้มแบบละเอียด ---------- */
+function renderFallsQ(i){
+  head("ข้อ "+(i+1)+" จาก "+QS.length,"ประวัติการหกล้ม",
+       "ตอบตามความจริง — รายละเอียดช่วยให้ระบบแยกได้ว่าเป็นเรื่องการทรงตัวหรือเรื่องอื่น","assess");
+  if(!S.draft.fallsDetail)S.draft.fallsDetail={};
+  var f=S.draft.fallsDetail;
+  V.innerHTML='<div class="anim">'+
+    '<div class="card" style="background:var(--surf2)"><h3>ทำไมถามละเอียด</h3>'+
+    '<p class="sub" style="margin:0">การล้มแล้วลุกเองได้ทันที กับการล้มแล้วลุกเองไม่ได้ คือความเสี่ยงคนละระดับ และการล้มแล้วหมดสติอาจเป็นเรื่องหัวใจหรือสมอง ไม่ใช่เรื่องการทรงตัว ระบบจึงต้องแยกให้ออก</p></div>'+
+    '<div id="fWrap"></div>'+
+    '<div class="card"><h3>คำถามคัดกรองเร็ว</h3>'+
+    '<p class="sub" style="margin:-4px 0 8px">ตามชุดคัดกรอง CDC STEADI</p>'+
+    STEADI3.map(function(q){
+      return '<label class="chk" style="font-size:16px"><input type="checkbox" data-s3="'+q.k+'"'+
+        ((S.draft.steadi||{})[q.k]?" checked":"")+'><span>'+esc(q.q)+'</span></label>';
+    }).join("")+'</div>'+
+    verifyNotice()+
+    '<button class="cta" id="fGo" disabled>ถัดไป</button></div>';
+  function renderF(){
+    var show=FALL_Q.filter(function(q){ return q.always || (f.count>0&&f.count!==9) });
+    document.getElementById("fWrap").innerHTML=show.map(function(q){
+      return '<div class="card"><h3 style="font-size:16px">'+esc(q.q)+'</h3>'+
+        q.o.map(function(o){
+          var on=f[q.k]===o[1];
+          return '<button class="pick" data-fq="'+q.k+'" data-fv="'+o[1]+'" style="'+
+            (on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+(on?"✓ ":"")+esc(o[0])+'</button>';
+        }).join("")+'</div>';
+    }).join("");
+    var need=show.length;
+    document.getElementById("fGo").disabled = show.filter(function(q){return f[q.k]!=null}).length<need;
+    V.querySelectorAll("[data-fq]").forEach(function(b){
+      b.addEventListener("click",function(){
+        f[b.dataset.fq]=+b.dataset.fv;
+        if(b.dataset.fq==="count"&&(f.count===0||f.count===9)){delete f.when;delete f.injury;delete f.loc;delete f.getup}
+        renderF();
+      });
+    });
+  }
+  renderF();
+  V.querySelectorAll("[data-s3]").forEach(function(c){
+    c.addEventListener("change",function(){
+      if(!S.draft.steadi)S.draft.steadi={};
+      S.draft.steadi[c.dataset.s3]=c.checked;
+    });
+  });
+  document.getElementById("fGo").addEventListener("click",function(){
+    /* แปลงเป็นคะแนนสำหรับชั้นธุรกิจ (เต็ม 2) — ไม่ใช่ตัวตัดสินความเสี่ยงทางคลินิก */
+    S.draft.falls = (f.count===0||f.count===9)?2:(f.count===1?1:0);
+    audit("บันทึกประวัติการหกล้ม",
+      "จำนวน "+(f.count===9?"จำไม่ได้":f.count+" ครั้ง")+
+      (f.injury!=null?" · บาดเจ็บระดับ "+f.injury:"")+
+      (f.getup!=null?" · ลุกเอง "+FALL_Q[4].o[f.getup][0]:""));
+    go("q",i+1);
+  });
+}
+
+/* ---------- หน้ายาแบบละเอียด ---------- */
+function renderMedsQ(i){
+  head("ข้อ "+(i+1)+" จาก "+QS.length,"ยาที่ใช้ประจำ",
+       "ไม่ต้องจำชื่อยา — บอกแค่ว่าใช้เพื่ออะไร ระบบจะส่งให้เภสัชกรทบทวนให้","assess");
+  if(!S.draft.medsDetail)S.draft.medsDetail={purposes:[],changed:[],symptoms:[]};
+  var m=S.draft.medsDetail;
+  V.innerHTML='<div class="anim">'+
+    '<div class="card" style="background:var(--surf2)"><h3>ระบบนี้ไม่แตะยาของท่าน</h3>'+
+    '<p class="sub" style="margin:0">CareSignal <b>ไม่สั่งหยุด ลด หรือเพิ่มยา</b> เราเพียงตั้งข้อสังเกตว่าควรให้<b>เภสัชกรหรือแพทย์ทบทวน</b>รายการยาหรือไม่ การปรับยาต้องทำโดยผู้มีใบอนุญาตเท่านั้น</p></div>'+
+
+    '<div class="card"><h3 style="font-size:16px">ปัจจุบันใช้ยาประจำกี่รายการ</h3><div id="mcWrap"></div></div>'+
+
+    '<div class="card"><h3 style="font-size:16px">ใช้ยาเพื่อเรื่องใดบ้าง (เลือกได้หลายข้อ)</h3>'+
+    '<p class="sub" style="margin:-4px 0 8px">ถ้าไม่แน่ใจ ให้ดูที่ซองยาหรือถามผู้ดูแล</p><div id="mpWrap"></div></div>'+
+
+    '<div class="card"><h3 style="font-size:16px">ใน 14 วันที่ผ่านมา มีการเปลี่ยนแปลงยาหรือไม่</h3><div id="mgWrap"></div></div>'+
+    '<div class="card" id="msCard" hidden><h3 style="font-size:16px">หลังใช้ยาหรือหลังปรับยา มีอาการหรือไม่</h3><div id="msWrap"></div></div>'+
+
+    '<div class="card"><h3 style="font-size:16px">แนบรูปซองยาหรือใบสั่งยา (ไม่บังคับ)</h3>'+
+    '<p class="sub" style="margin:-4px 0 8px">รูปนี้<b>ส่งให้เภสัชกรดูตอนทบทวนยา</b> ระบบไม่อ่านฉลากเองและไม่ตีความยาจากรูป เพราะการอ่านผิดอันตรายกว่าไม่มี</p>'+
+    '<input type="file" id="mPhoto" accept="image/*" style="font-size:15px">'+
+    '<p class="sub" id="mPhotoNote" style="margin:8px 0 0"></p></div>'+
+    verifyNotice()+
+    '<button class="cta" id="mGo" disabled>ถัดไป</button></div>';
+
+  function multi(wrap,list,arrKey,onlyNone){
+    document.getElementById(wrap).innerHTML=list.map(function(g){
+      var on=(m[arrKey]||[]).indexOf(g.k)>=0;
+      return '<button class="pick" data-mk="'+arrKey+'" data-mv="'+g.k+'" style="'+
+        (on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+(on?"✓ ":"")+esc(g.nm)+'</button>';
+    }).join("");
+  }
+  function renderM(){
+    document.getElementById("mcWrap").innerHTML=MED_COUNT.map(function(o){
+      var on=m.count===o[1];
+      return '<button class="pick" data-mc="'+o[1]+'" style="'+
+        (on?"border-color:var(--brand);background:var(--surf2);font-weight:600":"")+'">'+(on?"✓ ":"")+esc(o[0])+'</button>';
+    }).join("");
+    multi("mpWrap",FRID_GROUPS,"purposes");
+    multi("mgWrap",MED_CHANGE,"changed");
+    var changed=(m.changed||[]).filter(function(x){return x!=="none"}).length>0;
+    document.getElementById("msCard").hidden=!changed;
+    if(changed)multi("msWrap",MED_SYMPTOM,"symptoms");
+    document.getElementById("mGo").disabled = (m.count==null);
+    V.querySelectorAll("[data-mc]").forEach(function(b){
+      b.addEventListener("click",function(){
+        m.count=+b.dataset.mc;
+        if(m.count===0){m.purposes=[];m.changed=["none"];m.symptoms=[]}
+        renderM();
+      });
+    });
+    V.querySelectorAll("[data-mk]").forEach(function(b){
+      b.addEventListener("click",function(){
+        var key=b.dataset.mk, val=b.dataset.mv;
+        if(!m[key])m[key]=[];
+        var ix=m[key].indexOf(val);
+        /* "ไม่มี" กับตัวเลือกอื่นเลือกพร้อมกันไม่ได้ */
+        if(ix>=0)m[key].splice(ix,1);
+        else{
+          if(val==="none")m[key]=["none"];
+          else m[key]=m[key].filter(function(x){return x!=="none"}).concat([val]);
+        }
+        renderM();
+      });
+    });
+  }
+  renderM();
+  document.getElementById("mPhoto").addEventListener("change",function(){
+    var f=this.files&&this.files[0];
+    document.getElementById("mPhotoNote").textContent = f
+      ? "แนบแล้ว: "+f.name+" — จะส่งให้เภสัชกรเมื่อมีการส่งต่อ (ไม่ส่งขึ้นระบบกลางในเวอร์ชันนี้)"
+      : "";
+    m.photoAttached=!!f;
+  });
+  document.getElementById("mGo").addEventListener("click",function(){
+    /* คะแนนชั้นธุรกิจ (เต็ม 1) */
+    S.draft.meds = (m.count!=null&&m.count>=2&&m.count!==9)?0:1;
+    var fs=fridScore(m.purposes);
+    audit("บันทึกข้อมูลยา",
+      "จำนวน "+(MED_COUNT.filter(function(o){return o[1]===m.count})[0]||["—"])[0]+
+      " · กลุ่มเสี่ยงสูง "+fs.high+" กลุ่ม เสี่ยงปานกลาง "+fs.mod+" กลุ่ม"+
+      ((m.changed||[]).filter(function(x){return x!=="none"}).length?" · มีการปรับยาใน 14 วัน":""));
+    go("q",i+1);
+  });
+}
+
 function qV(i){
   i=i||0; var q=QS[i];
+  if(q.fallsDetail){ renderFallsQ(i); return }
+  if(q.medsDetail){ renderMedsQ(i); return }
 
   /* ---- แบบรูบริก: ดัชนีบาร์เธล 10 รายการ ---- */
   if(q.barthel){
@@ -2482,6 +2882,12 @@ async function finishAssess(){
            verified:!!S.draft.identityVerified,
            idChecks:S.draft.identityChecks||0, idFails:S.draft.identityFails||0,
            tug:S.draft.tug!=null?S.draft.tug:null,
+           safety:S.draft.safety||null,
+           safetyVerdict:S.draft.safetyVerdict||null,
+           notTested:!!S.draft.notTested,
+           fallsDetail:S.draft.fallsDetail||null,
+           medsDetail:S.draft.medsDetail||null,
+           steadi:S.draft.steadi||null,
            tugOut:S.draft.tugOut!=null?S.draft.tugOut:null,
            tugBack:S.draft.tugBack!=null?S.draft.tugBack:null,
            tugDistanceOk:S.draft.tugDistanceOk!=null?S.draft.tugDistanceOk:null,
@@ -2792,6 +3198,196 @@ function trendSummaryHTML(A,age){
   return '<div class="card" style="border:2px solid var(--'+(cls==="t4"?"c4":cls==="t1"?"c1":"c3")+')">'+
     '<h3 style="font-size:19px;margin:0 0 4px">แนวโน้มโดยรวม: <span style="color:var(--'+(cls==="t4"?"c4":cls==="t1"?"c1":"c3")+')">'+icon+' '+dir+'</span></h3>'+
     '<p class="sub" style="font-size:15px;margin:0 0 12px">'+msg+'</p>'+rows+'</div>';
+}
+
+
+/* ============================================================
+   Care Pathway — แผนดูแลรายระดับ พร้อมตารางติดตาม
+   ------------------------------------------------------------
+   จุดที่ทำให้ "วงจรปิด": ไม่จบที่การบอกสี แต่สร้างรายการที่ต้องทำ
+   กำหนดวันติดตาม และตามว่าไปพบผู้เชี่ยวชาญจริงหรือยัง
+   ============================================================ */
+var PATHWAY={
+  stable:{nm:"เขียว · ดูแลตนเองตามปกติ",
+    items:[
+      {k:"edu",   nm:"อ่านคู่มือป้องกันการหกล้ม"},
+      {k:"home",  nm:"ตรวจบ้านตามรายการจุดเสี่ยง"},
+      {k:"exer",  nm:"ออกกำลังกายฝึกกำลังขา สัปดาห์ละ 2–3 ครั้ง"}
+    ],
+    follow:[{kind:"checkin_7d",days:180,nm:"เช็กอินสั้น"},{kind:"reassess",days:365,nm:"ประเมินเต็มรูปแบบ"}]},
+  watch:{nm:"เหลือง · เฝ้าสังเกตและป้องกัน",
+    items:[
+      {k:"home",  nm:"ตรวจบ้าน เก็บของกีดขวาง เพิ่มแสงสว่าง"},
+      {k:"exer",  nm:"เริ่มโปรแกรมฝึกกำลังและการทรงตัว"},
+      {k:"med",   nm:"นำรายการยาไปให้เภสัชกรหรือแพทย์ทบทวน"},
+      {k:"shoe",  nm:"เปลี่ยนเป็นรองเท้าหุ้มส้นที่พื้นไม่ลื่น"}
+    ],
+    follow:[{kind:"checkin_7d",days:14,nm:"เช็กว่าเริ่มทำตามแผนหรือยัง"},
+            {kind:"review_30d",days:30,nm:"ทบทวนแผน"},
+            {kind:"reassess",days:60,nm:"ประเมินซ้ำ"}]},
+  decline:{nm:"ส้ม · ต้องมีคนติดตาม",
+    items:[
+      {k:"cm",    nm:"รอ Care Manager ติดต่อภายใน 7 วัน"},
+      {k:"med",   nm:"ทบทวนยากับเภสัชกรหรือแพทย์"},
+      {k:"home",  nm:"ประเมินความปลอดภัยในบ้าน"},
+      {k:"exer",  nm:"ฝึกกำลังและการทรงตัวภายใต้คำแนะนำ"},
+      {k:"family",nm:"แจ้งครอบครัวให้ช่วยสังเกตการเดิน"}
+    ],
+    follow:[{kind:"checkin_7d",days:7,nm:"เช็กการเริ่มแผน"},
+            {kind:"review_30d",days:30,nm:"ทบทวนแผน"},
+            {kind:"reassess",days:60,nm:"ประเมินซ้ำ"}]},
+  urgent:{nm:"แดง · ต้องได้รับการประเมินโดยบุคลากร",
+    items:[
+      {k:"ref",   nm:"พบแพทย์หรือพยาบาลเพื่อประเมิน"},
+      {k:"med",   nm:"ให้เภสัชกรทบทวนยาทั้งหมด"},
+      {k:"safe",  nm:"จัดบ้านให้ปลอดภัยทันที และอย่าอยู่คนเดียว"},
+      {k:"family",nm:"แจ้งครอบครัวให้มาดูแลใกล้ชิด"},
+      {k:"physio",nm:"ปรึกษานักกายภาพบำบัด"}
+    ],
+    follow:[{kind:"referral_check",days:7,nm:"เช็กว่าไปพบผู้เชี่ยวชาญแล้วหรือยัง"},
+            {kind:"reassess",days:30,nm:"ประเมินซ้ำ"},
+            {kind:"review_30d",days:60,nm:"ติดตามต่อเนื่อง"}]}
+};
+var REFERRAL_TYPE={
+  urgent:[{k:"doctor",nm:"แพทย์"},{k:"pharmacist",nm:"เภสัชกร"},{k:"physio",nm:"นักกายภาพบำบัด"}],
+  decline:[{k:"pharmacist",nm:"เภสัชกร"},{k:"physio",nm:"นักกายภาพบำบัด"}],
+  watch:[{k:"pharmacist",nm:"เภสัชกร"}], stable:[]
+};
+
+/* ---------- หน้าแผนดูแล ---------- */
+async function planV(){
+  var tr=trajectory();
+  if(!tr){head("แผนดูแล","ยังไม่มีข้อมูล","","assess");
+    V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ประเมินครั้งแรกก่อน แล้วระบบจะสร้างแผนให้</p></div>'+
+      '<button class="cta" data-go="assess">เริ่มประเมิน</button></div>';return}
+  var P=PATHWAY[tr.level], lvC=ENGINE.levelColor[tr.level];
+  head("แผนดูแลของฉัน",P.nm,"ทำทีละข้อ ติ๊กเมื่อทำแล้ว","assess");
+  V.innerHTML='<div class="anim"><div id="planBody"><div class="card"><p class="sub" style="margin:0">กำลังโหลดแผน…</p></div></div></div>';
+
+  var plan=null;
+  try{ if(CLOUD.session)plan=await CSBackend.latestPlan() }catch(e){}
+  var items=(plan&&plan.items&&plan.items.length)?plan.items:P.items.map(function(x){return {k:x.k,nm:x.nm,done:false}});
+
+  function render(){
+    var done=items.filter(function(x){return x.done}).length;
+    var refs=REFERRAL_TYPE[tr.level]||[];
+    document.getElementById("planBody").innerHTML=
+      '<div class="card" style="border:2px solid '+lvC+'"><h3 style="color:'+lvC+'">'+esc(P.nm)+'</h3>'+
+      '<p class="sub" style="margin:0">ทำแล้ว '+done+' จาก '+items.length+' ข้อ</p>'+
+      '<div class="track" style="margin-top:8px"><i style="width:'+(done/items.length*100)+'%;background:'+lvC+'"></i></div></div>'+
+      '<div class="card"><h3>สิ่งที่ต้องทำ</h3>'+
+      items.map(function(x,ix){
+        return '<label class="chk" style="font-size:16px"><input type="checkbox" data-pi="'+ix+'"'+(x.done?" checked":"")+'>'+
+               '<span>'+esc(x.nm)+'</span></label>';
+      }).join("")+
+      '<button class="ghostb" id="planSave" style="margin-top:8px">บันทึกความคืบหน้า</button></div>'+
+      (refs.length?'<div class="card"><h3>ผู้ที่ควรไปพบ</h3>'+
+        refs.map(function(r){return '<div class="rowline"><span class="k">'+esc(r.nm)+'</span>'+
+          '<span class="v"><button class="pick" data-ref="'+r.k+'" style="margin:0;padding:6px 14px;font-size:13.5px">ไปพบแล้ว</button></span></div>'}).join("")+
+        '<p class="sub" style="margin:10px 0 0">กดยืนยันเมื่อไปพบจริง เพื่อให้ทีมดูแลรู้ว่าเคสเดินหน้าแล้ว</p></div>':'')+
+      '<div class="card"><h3>ตารางติดตาม</h3>'+
+      P.follow.map(function(f){
+        var d=new Date(Date.now()+f.days*864e5);
+        return '<div class="rowline"><span class="k">'+esc(f.nm)+'</span><span class="v">'+thDate(d.toISOString())+'</span></div>';
+      }).join("")+'</div>'+
+      '<button class="ghostb" data-go="events">รายงานเหตุการณ์ที่เกิดขึ้น</button>';
+    V.querySelectorAll("[data-pi]").forEach(function(c){
+      c.addEventListener("change",function(){
+        items[+c.dataset.pi].done=c.checked;
+        items[+c.dataset.pi].done_at=c.checked?new Date().toISOString():null;
+        render();
+      });
+    });
+    document.getElementById("planSave").addEventListener("click",async function(){
+      this.disabled=true;this.textContent="กำลังบันทึก…";
+      try{
+        if(!CLOUD.session){toast("บันทึกในเครื่องแล้ว")}
+        else if(plan){await CSBackend.updatePlanItems(plan.id,items);toast("บันทึกความคืบหน้าแล้ว")}
+        else{
+          plan=await CSBackend.savePlan({level:tr.level,items:items,
+            dueAt:new Date(Date.now()+tr.nextDays*864e5).toISOString()});
+          await CSBackend.scheduleFollowUps(plan.id,P.follow.map(function(f){
+            return {kind:f.kind,dueAt:new Date(Date.now()+f.days*864e5).toISOString()}}));
+          toast("สร้างแผนและตั้งวันติดตามแล้ว");
+        }
+      }catch(e){toast("บันทึกไม่สำเร็จ")}
+      this.disabled=false;this.textContent="บันทึกความคืบหน้า";
+    });
+    V.querySelectorAll("[data-ref]").forEach(function(b){
+      b.addEventListener("click",async function(){
+        b.disabled=true;b.textContent="✓ บันทึกแล้ว";
+        try{
+          if(CLOUD.session)await CSBackend.reportEvent("referral_done",{type:b.dataset.ref},"low");
+          audit("ยืนยันการไปพบผู้เชี่ยวชาญ","ประเภท: "+b.dataset.ref);
+          toast("ขอบคุณ — ทีมดูแลรับทราบแล้ว");
+        }catch(e){}
+      });
+    });
+  }
+  render();
+}
+
+/* ---------- หน้ารายงานเหตุการณ์ (Event Trigger) ----------
+   หัวใจของวงจรปิด: ถ้าไม่มีหน้านี้ ระบบจะรู้เรื่องก็ต่อเมื่อถึงรอบ
+   ประเมินถัดไป ซึ่งอาจอีก 90 วัน — สายเกินไปสำหรับการล้มหรือการปรับยา */
+var EVENT_KINDS=[
+  {k:"fall",      nm:"หกล้ม",                  ic:"🩹", sev:"high"},
+  {k:"near_fall", nm:"เกือบล้ม",                ic:"⚠️", sev:"medium"},
+  {k:"med_change",nm:"เริ่มยาใหม่หรือปรับยา",   ic:"💊", sev:"medium"},
+  {k:"dizzy",     nm:"เวียนหัว/หน้ามืดมากขึ้น", ic:"😵", sev:"medium"},
+  {k:"hospital",  nm:"เข้าโรงพยาบาล",           ic:"🏥", sev:"high"},
+  {k:"adl_drop",  nm:"ทำกิจวัตรได้น้อยลง",       ic:"📉", sev:"medium"}
+];
+async function eventsV(){
+  head("รายงานเหตุการณ์","แจ้งทันทีเมื่อมีอะไรเกิดขึ้น","ไม่ต้องรอถึงรอบประเมินถัดไป ระบบจะทบทวนความเสี่ยงให้ใหม่ทันที","assess");
+  V.innerHTML='<div class="anim">'+
+    '<div class="card"><h3>เกิดอะไรขึ้น</h3>'+
+    EVENT_KINDS.map(function(e){
+      return '<button class="pick" data-ev="'+e.k+'" style="font-size:16px">'+e.ic+' '+esc(e.nm)+'</button>';
+    }).join("")+'</div>'+
+    '<div class="card" id="evForm" hidden><h3 id="evT"></h3>'+
+    '<div class="field"><label>รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>'+
+    '<input id="evNote" placeholder="เช่น ล้มในห้องน้ำ ไม่บาดเจ็บ"></div>'+
+    '<button class="cta" id="evGo">ส่งรายงาน</button></div>'+
+    '<div class="card"><h3>เหตุการณ์ที่รายงานไว้</h3><div id="evList"><p class="sub" style="margin:0">กำลังโหลด…</p></div></div>'+
+    '<div class="disc">หากเป็นเหตุฉุกเฉิน โทร <b>1669</b> ทันที ระบบนี้ไม่ใช่บริการฉุกเฉิน</div></div>';
+
+  var picked=null;
+  V.querySelectorAll("[data-ev]").forEach(function(b){
+    b.addEventListener("click",function(){
+      picked=EVENT_KINDS.filter(function(x){return x.k===b.dataset.ev})[0];
+      V.querySelectorAll("[data-ev]").forEach(function(x){x.style.borderColor="";x.style.fontWeight=""});
+      b.style.borderColor="var(--brand)";b.style.fontWeight="700";
+      document.getElementById("evForm").hidden=false;
+      document.getElementById("evT").textContent=picked.ic+" "+picked.nm;
+    });
+  });
+  document.getElementById("evGo").addEventListener("click",async function(){
+    if(!picked){toast("เลือกเหตุการณ์ก่อน");return}
+    this.disabled=true;this.textContent="กำลังส่ง…";
+    try{
+      if(CLOUD.session)await CSBackend.reportEvent(picked.k,{note:document.getElementById("evNote").value.trim()||null},picked.sev);
+      audit("รายงานเหตุการณ์","ประเภท: "+picked.nm);
+      toast("ส่งรายงานแล้ว — ทีมดูแลและครอบครัวได้รับแจ้ง");
+      if(picked.k==="fall"||picked.k==="hospital")
+        setTimeout(function(){toast("แนะนำให้ประเมินซ้ำเมื่อพร้อม เพื่อดูว่าสมรรถภาพเปลี่ยนไปหรือไม่")},2600);
+      document.getElementById("evNote").value="";
+      loadEv();
+    }catch(e){toast("ส่งไม่สำเร็จ")}
+    this.disabled=false;this.textContent="ส่งรายงาน";
+  });
+  async function loadEv(){
+    var el=document.getElementById("evList"); if(!el)return;
+    var rows=[]; try{ if(CLOUD.session)rows=await CSBackend.listEvents(null,15) }catch(e){}
+    if(!rows.length){el.innerHTML='<p class="sub" style="margin:0">ยังไม่มีเหตุการณ์ที่รายงาน</p>';return}
+    el.innerHTML=rows.map(function(r){
+      var e=EVENT_KINDS.filter(function(x){return x.k===r.kind})[0]||{ic:"•",nm:r.kind};
+      return '<div class="rowline"><span class="k">'+e.ic+' '+esc(e.nm)+
+        ((r.detail&&r.detail.note)?'<br><span style="font-size:13px;color:var(--ink3)">'+esc(r.detail.note)+'</span>':'')+
+        '</span><span class="v" style="font-size:12.5px">'+thDate(r.created_at)+'</span></div>';
+    }).join("");
+  }
+  loadEv();
 }
 
 function trendV(){

@@ -228,7 +228,14 @@ var CSBackend = (function () {
       adl_source:   a.adlSource   || "self_reported",
       identity_verified: !!a.verified,
       engine_version: a.engine || "unknown",
-      duration_sec: a.durSec != null ? a.durSec : null
+      duration_sec: a.durSec != null ? a.durSec : null,
+      /* ข้อมูลเชิงลึกของระบบวงจรปิด v2 */
+      safety_gate:    a.safetyGate    || null,
+      falls_detail:   a.fallsDetail   || null,
+      meds_detail:    a.medsDetail    || null,
+      test_quality:   a.testQuality   || null,
+      baseline_level: a.baselineLevel || null,
+      not_tested:     !!a.notTested
     };
     var r = await sb.from("assessments").insert(row).select().single();
     if (r.error) throw r.error;
@@ -603,6 +610,91 @@ var CSBackend = (function () {
     return r.data || [];
   }
 
+
+  /* ============================================================
+     ระบบวงจรปิด — เหตุการณ์ · แผนดูแล · การติดตาม · การส่งต่อ
+     ============================================================ */
+  async function reportEvent(kind, detail, severity) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    /* ผู้รายงานอาจเป็นครอบครัว จึงต้องระบุ user_id ของเจ้าของข้อมูลแยกจากผู้รายงาน */
+    var owner = (detail && detail.memberId) || u.id;
+    var r = await sb.from("care_events").insert({
+      user_id: owner, reporter_id: u.id, kind: kind,
+      detail: detail || null, severity: severity || "medium"
+    }).select().single();
+    if (r.error) throw r.error;
+    await audit("event." + kind, owner, "รายงานเหตุการณ์: " + kind);
+    return r.data;
+  }
+  async function listEvents(userId, limit) {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("care_events").select("*")
+      .eq("user_id", userId || u.id).order("created_at", { ascending: false }).limit(limit || 30);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function savePlan(plan) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("care_plans").insert({
+      user_id: u.id, assessment_id: plan.assessmentId || null,
+      level: plan.level, items: plan.items || [], due_at: plan.dueAt || null
+    }).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function latestPlan(userId) {
+    if (!isCloud()) return null;
+    var u = await currentUser(); if (!u) return null;
+    var r = await sb.from("care_plans").select("*")
+      .eq("user_id", userId || u.id).order("created_at", { ascending: false }).limit(1);
+    if (r.error) { console.warn(r.error); return null; }
+    return (r.data || [])[0] || null;
+  }
+  async function updatePlanItems(planId, items) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("care_plans").update({ items: items }).eq("id", planId).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function scheduleFollowUps(planId, list) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var rows = list.map(function (f) {
+      return { user_id: u.id, plan_id: planId, kind: f.kind, due_at: f.dueAt };
+    });
+    var r = await sb.from("follow_ups").insert(rows).select();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function listFollowUps(userId, limit) {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("follow_ups").select("*")
+      .eq("user_id", userId || u.id).order("due_at", { ascending: true }).limit(limit || 20);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function completeFollowUp(id, note) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("follow_ups")
+      .update({ status: "done", done_at: new Date().toISOString(), note: note || null })
+      .eq("id", id).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function completeReferral(id, note) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("referrals")
+      .update({ completed_at: new Date().toISOString(), completed_note: note || null })
+      .eq("id", id).select().single();
+    if (r.error) throw r.error;
+    await audit("referral.completed", null, "ยืนยันว่าไปพบผู้เชี่ยวชาญแล้ว");
+    return r.data;
+  }
+
   return {
     init: init, isCloud: isCloud, mode: getMode, client: client,
     signUpUser: signUpUser, signInUser: signInUser,
@@ -620,6 +712,10 @@ var CSBackend = (function () {
     redeemInvite: redeemInvite, famMembers: famMembers, famAssessments: famAssessments,
     famRisk: famRisk, famReferrals: famReferrals, famNotifications: famNotifications,
     notifRead: notifRead, famCancelRequest: famCancelRequest,
+    reportEvent: reportEvent, listEvents: listEvents,
+    savePlan: savePlan, latestPlan: latestPlan, updatePlanItems: updatePlanItems,
+    scheduleFollowUps: scheduleFollowUps, listFollowUps: listFollowUps,
+    completeFollowUp: completeFollowUp, completeReferral: completeReferral,
     updateNotifyTypes: updateNotifyTypes, getNotifyPrefs: getNotifyPrefs,
     saveNotifyPrefs: saveNotifyPrefs, addCheckin: addCheckin, listCheckins: listCheckins,
     saveTrial: saveTrial, listTrials: listTrials,

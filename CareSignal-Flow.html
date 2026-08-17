@@ -124,7 +124,7 @@ footer a{color:#93B4F5}
 <div class="hero"><div class="wrap">
   <div class="kick">คู่มือทำความเข้าใจระบบ</div>
   <h1>ข้อมูลจากแอปเดินทางไปไหน<br>และสีแต่ละสีหมายความว่าอะไร</h1>
-  <p class="lead">หน้านี้อธิบายทุกอย่างที่เกิดขึ้นตั้งแต่ผู้สูงอายุลุกนั่งหน้ากล้อง จนกลายเป็นเคสสีแดงบนจอของ Care Manager — ด้วย<b>ตัวเลขเกณฑ์จริงที่โปรแกรมใช้</b> ไม่ใช่คำอธิบายลอย ๆ ทุกค่าในหน้านี้ตรงกับเอนจินเวอร์ชัน <span class="mono">1.4.1</span></p>
+  <p class="lead">หน้านี้อธิบายทุกอย่างที่เกิดขึ้นตั้งแต่ผู้สูงอายุลุกนั่งหน้ากล้อง จนกลายเป็นเคสสีแดงบนจอของ Care Manager — ด้วย<b>ตัวเลขเกณฑ์จริงที่โปรแกรมใช้</b> ไม่ใช่คำอธิบายลอย ๆ ทุกค่าในหน้านี้ตรงกับเอนจินเวอร์ชัน <span class="mono">2.0.0</span></p>
 </div></div>
 
 <!-- ============ 1. เส้นทางข้อมูล ============ -->
@@ -138,6 +138,9 @@ footer a{color:#93B4F5}
       <h3>วัดที่บ้าน</h3>
       <p class="small" style="margin:0">แอปบนมือถือ ใช้กล้องหน้าอย่างเดียว</p>
       <ul>
+        <li><b>คัดกรองความปลอดภัยก่อน</b> — ถาม 5 ข้อ ถ้ามีอาการอันตรายจะหยุดและส่งต่อ ไม่ให้ทดสอบ</li>
+        <li>ประวัติหกล้มแบบละเอียด — เมื่อไร บาดเจ็บแค่ไหน หมดสติไหม ลุกเองได้ไหม</li>
+        <li>ยาที่ใช้ประจำ — ถามวัตถุประสงค์แทนชื่อยา เพื่อดูกลุ่มที่เพิ่มความเสี่ยงหกล้ม</li>
         <li>ลุกนั่ง 5 ครั้ง — จับเวลาตั้งแต่เริ่มขยับ</li>
         <li>ลุกเดิน 3 เมตร (TUG) — รอจนนั่งเก้าอี้แล้วนับ 3-2-1 · ตรวจว่าเดินไป-กลับครบรอบจริง และวัดการเดินตรง</li>
         <li>ทรงตัว 4 ท่า ท่าละ 10 วินาที — เสียงบอกทุกท่า นับ 3-2-1 · วัดจากลำตัวเป็นหลัก ทำงานได้แม้เห็นเท้าไม่ชัด</li>
@@ -253,7 +256,13 @@ footer a{color:#93B4F5}
 
 <!-- ============ 3. กฎ R1–R10 ============ -->
 <section><div class="wrap">
-  <h2>กฎ 10 ข้อที่ทำให้สถานะเปลี่ยนสี</h2>
+  <h2>กฎ 24 ข้อที่ตัดสินสถานะ — สองชั้นทำงานคู่กัน</h2>
+  <div class="note" style="margin-bottom:18px"><b>ชั้นที่ 1 · คัดกรองพื้นฐาน (B1–B14)</b> ใช้ค่าสัมบูรณ์ตามเกณฑ์สากล
+  ทำงานได้<b>ตั้งแต่การประเมินครั้งแรก</b> — เช่น ล้ม 2 ครั้งใน 12 เดือน หรือล้มแล้วลุกเองไม่ได้ ขึ้นแดงทันที
+  ไม่ต้องรอให้มีประวัติเปรียบเทียบ<br><br>
+  <b>ชั้นที่ 2 · แนวโน้ม (R1–R10)</b> เทียบผู้ใช้กับตัวเองในอดีต ต้องมีผลอย่างน้อย 2 ครั้ง<br><br>
+  <b>ระดับสุดท้ายใช้อันที่แย่กว่า</b> — ปิดช่องโหว่เดิมที่ผู้ประเมินครั้งแรกซึ่งเสี่ยงสูงจะได้สถานะเขียว
+  เพราะยังไม่มีประวัติให้เทียบ</div>
   <p class="sec-sub">คะแนนอย่างเดียวไม่พอ เพราะคนที่คะแนน 9 มาตลอดแล้วอยู่ ๆ ตกเหลือ 6 น่าห่วงกว่าคนที่ได้ 6 มาตั้งแต่แรก ระบบจึงเทียบผู้ใช้<b>กับตัวเองในอดีต</b> เป็นหลัก แต่ละกฎมี<b>น้ำหนักความรุนแรง</b> ซึ่งจะถูกนำไปบวกกันในขั้นถัดไป</p>
 
   <div class="tblwrap">
@@ -391,6 +400,14 @@ footer a{color:#93B4F5}
           <select id="iMed"><option value="1">น้อยกว่า 4 ชนิด</option><option value="0" selected>ตั้งแต่ 4 ชนิดขึ้นไป</option></select></div>
         <div class="field"><label>ดัชนีบาร์เธล (เต็ม 20)</label><input id="iBar" type="number" value="15" min="0" max="20"></div>
         <div class="field"><label>ลุกเดิน 3 เมตร — TUG (วินาที · 0 = ไม่ได้วัด)</label><input id="iTug" type="number" step="0.1" value="0" min="0"></div>
+        <div class="field"><label>ล้มแล้วบาดเจ็บระดับใด</label>
+          <select id="iFallInj"><option value="0" selected>ไม่บาดเจ็บ / ไม่เคยล้ม</option><option value="1">ฟกช้ำเล็กน้อย</option><option value="2">ต้องพบแพทย์</option><option value="3">เข้าโรงพยาบาล</option><option value="4">กระดูกหัก</option></select></div>
+        <div class="field"><label>หลังล้ม ลุกขึ้นเองได้ไหม</label>
+          <select id="iGetup"><option value="0" selected>ได้ทันที / ไม่เคยล้ม</option><option value="1">ได้แต่ใช้เวลานาน</option><option value="2">ต้องมีคนช่วย</option><option value="3">ลุกเองไม่ได้</option></select></div>
+        <div class="field"><label>ล้มแล้วหมดสติไหม</label>
+          <select id="iLoc"><option value="0" selected>ไม่มี</option><option value="1">ไม่แน่ใจ</option><option value="2">มี</option></select></div>
+        <div class="field"><label>ยากลุ่มเสี่ยงสูง (นอนหลับ · คลายกังวล · ซึมเศร้า · แก้ปวดแรง)</label>
+          <select id="iFridHigh"><option value="0" selected>ไม่ใช้</option><option value="1">1 กลุ่ม</option><option value="2">2 กลุ่มขึ้นไป</option></select></div>
       </div>
     </div>
 
@@ -466,13 +483,13 @@ footer a{color:#93B4F5}
 
 <footer><div class="wrap">
   <p style="margin:0 0 8px"><b style="color:#fff">CareSignal</b> — ระบบต้นแบบเพื่อการประกวด OIC InsurTech Award 2026</p>
-  <p style="margin:0">ยังไม่ใช่ผลิตภัณฑ์ประกันภัยที่เสนอขายจริง · การเสนอขายประกันภัยต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ. · เกณฑ์ทุกค่าในหน้านี้ตรงกับเอนจินเวอร์ชัน 1.4.1 ที่ทำงานอยู่ในแอปจริง<br>
+  <p style="margin:0">ยังไม่ใช่ผลิตภัณฑ์ประกันภัยที่เสนอขายจริง · การเสนอขายประกันภัยต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ. · เกณฑ์ทุกค่าในหน้านี้ตรงกับเอนจินเวอร์ชัน 2.0.0 ที่ทำงานอยู่ในแอปจริง<br>
   <a href="./index.html">หน้าแรก</a> · <a href="./CareSignal-Vision.html">เปิดแอปประเมิน</a> · <a href="./CareSignal-Web.html">แดชบอร์ดเจ้าหน้าที่</a> · <a href="./CareSignal-Actuarial.html">แบบจำลองคำนวณเบี้ย</a></p>
 </div></footer>
 
 <script>
 /* ============================================================
-   สูตรชุดเดียวกับที่อยู่ใน CareSignal-Vision.html (ENGINE 1.4.0)
+   สูตรชุดเดียวกับที่อยู่ใน CareSignal-Vision.html (ENGINE 2.0.0)
    คัดลอกมาตรง ๆ เพื่อให้หน้านี้อธิบายสิ่งที่ระบบทำจริง ไม่ใช่สิ่งที่เราคิดว่ามันทำ
    ============================================================ */
 function ftsstCut(age){return age<60?10.0:(age<70?11.5:12.1)}
@@ -497,7 +514,8 @@ function calc(){
       fall=num("iFall"), med=num("iMed"), bar=num("iBar"),
       bestFt=num("iBestFt"), prevFt=num("iPrevFt"), bestSc=num("iBestSc"),
       prevFall=num("iPrevFall"), prevAdl=num("iPrevAdl"), cv=num("iCv")/100,
-      bestBal=num("iBestBal"), bestBar=num("iBestBar"), tug=num("iTug");
+      bestBal=num("iBestBal"), bestBar=num("iBestBar"), tug=num("iTug"),
+      fallInj=num("iFallInj"), getup=num("iGetup"), loc=num("iLoc"), fridHigh=num("iFridHigh");
 
   var parts={ftsst:ftsstPoints(ft,age), balance:balancePoints(balPass),
              falls:fall, meds:med, adl:barthelAdl(bar)};
@@ -533,9 +551,32 @@ function calc(){
   if(tug>=12) flags.push({id:"R10",sev:tug>=15?2:1,
     t:"ลุกเดิน 3 เมตร ใช้เวลา "+tug.toFixed(1)+" วินาที (เกณฑ์คัดกรอง CDC: 12 วินาที)"});
 
+  /* ---------- ชั้นที่ 1 · คัดกรองพื้นฐาน (B) ----------
+     ใช้ค่าสัมบูรณ์ ทำงานได้ตั้งแต่การประเมินครั้งแรก ไม่ต้องมีประวัติเทียบ */
+  var bReds=[], bYellows=[];
+  var fallCount = fall===2?0:(fall===1?1:2);   /* แปลงกลับจากคะแนนเป็นจำนวนครั้ง */
+  if(fallCount>=2) bReds.push({id:"B1",t:"หกล้มตั้งแต่ 2 ครั้งขึ้นไปใน 12 เดือน"});
+  if(fallInj>=2)   bReds.push({id:"B2",t:"ล้มแล้วบาดเจ็บจนต้องพบแพทย์หรือเข้าโรงพยาบาล"});
+  if(loc>=1)       bReds.push({id:"B3",t:"ล้มแล้วหมดสติหรือจำเหตุการณ์ไม่ได้"});
+  if(getup>=3)     bReds.push({id:"B4",t:"ล้มแล้วลุกขึ้นเองไม่ได้"});
+  if(fridHigh>=2 && parts.balance<=1)
+                   bReds.push({id:"B6",t:"ใช้ยากลุ่มเสี่ยงสูง 2 กลุ่มขึ้นไป ร่วมกับการทรงตัวบกพร่อง"});
+  if(fallCount===1) bYellows.push({id:"B7",t:"หกล้ม 1 ครั้งใน 12 เดือน"});
+  var cutB=age<60?10.0:(age<70?11.5:12.1);
+  if(ft>cutB)      bYellows.push({id:"B9",t:"เวลาลุกนั่งสูงกว่าเกณฑ์ของช่วงอายุ"});
+  if(tug>=12)      bYellows.push({id:"B10",t:"ลุกเดิน 3 เมตรตั้งแต่ 12 วินาที"});
+  if(balPass<3)    bYellows.push({id:"B11",t:"ยืนต่อเท้าไม่ครบ 10 วินาที"});
+  if(med===0)      bYellows.push({id:"B12",t:"ใช้ยาประจำตั้งแต่ 4 รายการขึ้นไป"});
+  if(fridHigh>=1)  bYellows.push({id:"B13",t:"ใช้ยาในกลุ่มที่อาจเพิ่มความเสี่ยงหกล้ม"});
+  bReds.forEach(function(b){flags.push({id:b.id,sev:3,t:b.t})});
+  bYellows.forEach(function(b){flags.push({id:b.id,sev:1,t:b.t})});
+  var blLevel = bReds.length?"urgent":(bYellows.length?"watch":"stable");
+
   var sev=flags.reduce(function(a,b){return a+b.sev},0);
   var hasADL=flags.some(function(f){return f.id==="R6"});
-  var level=(tier===1||hasADL||sev>=5)?"urgent":(tier===2||sev>=3)?"decline":sev>=1?"watch":"stable";
+  var byRules=(tier===1||hasADL||sev>=5)?"urgent":(tier===2||sev>=3)?"decline":sev>=1?"watch":"stable";
+  var ORD={stable:0,watch:1,decline:2,urgent:3}, NMS=["stable","watch","decline","urgent"];
+  var level=NMS[Math.max(ORD[byRules],ORD[blLevel])];   /* ใช้อันที่แย่กว่าเสมอ */
 
   /* ---- แสดงผล ---- */
   var L=LV[level], o=document.getElementById("out");
@@ -547,7 +588,8 @@ function calc(){
     '<div style="font-size:15px;margin-top:6px"><b>นัดประเมินซ้ำใน '+L.days+' วัน · '+L.ref+'</b></div>';
 
   var why;
-  if(level==="urgent")  why = tier===1?"คะแนนรวมตกอยู่ในระดับ 1":(hasADL?"กฎ R6 จุดติด (ทำกิจวัตรได้น้อยลง)":"ความรุนแรงรวม "+sev+" ≥ 5");
+  if(level==="urgent")  why = bReds.length?("ชั้นคัดกรองพื้นฐานพบสัญญาณรุนแรง: "+bReds.map(function(b){return b.id}).join(", ")):
+                                (tier===1?"คะแนนรวมตกอยู่ในระดับ 1":(hasADL?"กฎ R6 จุดติด (ทำกิจวัตรได้น้อยลง)":"ความรุนแรงรวม "+sev+" ≥ 5"));
   else if(level==="decline") why = tier===2?"คะแนนรวมอยู่ในระดับ 2":"ความรุนแรงรวม "+sev+" ≥ 3";
   else if(level==="watch") why = "มีกฎจุดติด ความรุนแรงรวม "+sev;
   else why = "ไม่มีกฎข้อใดจุดติด";
