@@ -321,78 +321,160 @@ function statusHTML(){
 }
 var VOICE={on:(function(){try{return localStorage.getItem("cs:voice")!=="off"}catch(e){return true}})()};
 /* ============================================================
-   สั่งงานด้วยเสียง — "เริ่มทดสอบ" / "หยุด"
+   สั่งงานด้วยเสียง รุ่นที่ 3 — "ระบบเป็นผู้ฟัง คนเป็นผู้สั่ง"
    ------------------------------------------------------------
-   ผู้ใช้จริงสะท้อนว่าระบบชอบเริ่มจับเวลาเอง ทั้งที่ผู้สูงอายุ
-   ยังจัดท่าไม่เสร็จ ทุกการทดสอบผ่านกล้องจึงเปลี่ยนเป็น
-   "ระบบบอกเมื่อพร้อม แล้วรอคำสั่งจากผู้ใช้เสมอ":
-   พูดว่า "เริ่มทดสอบ" (หรือกดปุ่ม) จึงจะเริ่มนับ
-   ใช้ Web Speech API ภาษาไทยของเบราว์เซอร์ — เครื่องที่ไม่รองรับ
-   ยังใช้ปุ่มได้ครบทุกอย่าง ไม่มีฟีเจอร์ไหนถูกล็อกไว้กับเสียง
+   สิ่งที่รุ่นก่อนพังจริง และรุ่นนี้แก้ตรงจุด
+
+   (1) ระบบ "ปิดหู" ขณะตัวเองพูด — โค้ดเดิมทิ้งเสียงเข้าทั้งหมด
+       ระหว่าง speechSynthesis กำลังทำงาน ประโยคแนะนำของระบบยาว
+       หลายวินาที ผู้ใช้ที่พูดคำสั่งช่วงนั้นจึงถูกทิ้งทุกครั้ง
+       รุ่นนี้ฟังตลอดเวลา แล้วใช้ "ตัวกรองเสียงสะท้อน" แทน:
+       จำข้อความที่ระบบเพิ่งพูด ถ้าสิ่งที่ได้ยินตรงกับของตัวเองจึงข้าม
+       ผู้ใช้พูดแทรกได้ทันทีโดยไม่ต้องรอระบบพูดจบ
+
+   (2) อ่านผลระหว่างพิมพ์ (interim) — ข้อความยังไม่นิ่ง เปลี่ยนไปมา
+       ทำให้จับคำผิดและสั่งซ้ำ รุ่นนี้ตัดสินใจจาก "ผลสุดท้าย" เท่านั้น
+       ส่วนผลระหว่างทางเอาไปแสดงบนจอให้เห็นว่าระบบได้ยินอะไรอยู่
+
+   (3) คำสั่งชนกัน — ของเดิมกฎ "ไม่ผ่าน" มีคำว่า จับ (จับพยุง)
+       เมื่อผู้ใช้พูด "เริ่มจับเวลา" ระบบจึงตีเป็น "ไม่ผ่าน" ทันที
+       รุ่นนี้เขียนกฎใหม่ให้ตรงคำ และทดสอบประโยคที่เคยชนกันไว้ครบ
+
+   (4) ไมค์ตายเงียบ — Chrome ปิดการฟังเองเมื่อเงียบนาน หรือเมื่อ
+       เกิด no-speech/network ของเดิมสั่ง start() ซ้ำทันทีจนเกิด
+       InvalidStateError แล้วหยุดไปเลย รุ่นนี้มีตัวกันซ้อนและต่อชีวิต
+       ให้เอง พร้อมป้ายบนจอบอกสถานะไมค์ตลอดเวลา
+
+   ทุกคำสั่งมีปุ่มบนหน้าจอทดแทนเสมอ เครื่องที่ไม่รองรับเสียงใช้ได้ครบ
    ============================================================ */
-var VC={rec:null,on:false,handler:null,lastFire:0,
+var VC={rec:null,on:false,handler:null,lastFire:0,lastHeard:"",live:"",
+        starting:false,echo:[],reviveT:null,
         supported:!!(window.SpeechRecognition||window.webkitSpeechRecognition)};
-/* คำสั่งที่รองรับ — จงใจให้สั้นและมีจำนวนน้อย
-   งานทบทวนการรู้จำเสียงในผู้สูงอายุชี้ว่าคำสั่งแบบสนทนาอิสระผิดพลาดง่าย
-   (ระดับเสียง สำเนียง ความชัด เสียงแวดล้อม) ระบบจึงใช้ guided workflow:
-   ระบบพูดนำ → ผู้ใช้ตอบด้วยคำสั้น ๆ → ระบบ "ตอบรับ" ให้ได้ยินทุกครั้ง
-   ทุกคำสั่งมีปุ่มบนหน้าจอทดแทนเสมอ ไม่มีอะไรที่ทำได้ด้วยเสียงอย่างเดียว
-   ลำดับในรายการนี้สำคัญ: ตรวจ "ไม่ผ่าน" ก่อน "ผ่าน" และ "ทำใหม่" ก่อน "เริ่ม" */
+
+/* คำสั่งที่รองรับ — สั้น จำนวนน้อย และไม่ชนกัน
+   ลำดับสำคัญ: ตรวจคำที่เจาะจงกว่าก่อนเสมอ
+   (บันทึกท่านั่ง/ท่ายืน ต้องมาก่อน "เริ่ม" · "ไม่ผ่าน" ต้องมาก่อน "ผ่าน") */
 var VC_CMDS=[
-  {k:"stop",  re:/หยุด|ยกเลิก|พอแล้ว|พอก่อน/,                 ack:"รับทราบ หยุดการทดสอบ"},
-  {k:"fail",  re:/ไม่ผ่าน|ไม่ได้|ทำไม่ได้|ล้ม|จับ/,              ack:"รับทราบ บันทึกว่าไม่ผ่าน"},
-  {k:"again", re:/ทำใหม่|ลองใหม่|เริ่มใหม่|อีกครั้ง/,             ack:"รับทราบ ทำท่านี้ใหม่"},
-  {k:"pass",  re:/ผ่าน|ทำได้|ได้แล้ว|ครบแล้ว/,                  ack:"รับทราบ บันทึกว่าผ่าน"},
-  {k:"next",  re:/ทำต่อ|ต่อไป|ถัดไป|ไปต่อ/,                    ack:"รับทราบ ไปขั้นตอนต่อไป"},
-  {k:"help",  re:/ช่วยเหลือ|ช่วยด้วย|ทำยังไง|คำสั่ง/,             ack:null},
-  {k:"done",  re:/จบ|เสร็จแล้ว|เรียบร้อย/,                      ack:"รับทราบ บันทึกผล"},
-  {k:"start", re:/เริ่ม|พร้อม|สตาร์ท|เอาเลย/,                    ack:"รับทราบ เริ่มจับเวลา"}
+  {k:"sit",   re:/(บันทึก|เก็บ|จำ).{0,4}(ท่า|ค่า)?นั่ง|นั่งแล้ว|บันทึกนั่ง/,  ack:"รับทราบ กำลังบันทึกท่านั่ง"},
+  {k:"stand", re:/(บันทึก|เก็บ|จำ).{0,4}(ท่า|ค่า)?ยืน|ยืนแล้ว|บันทึกยืน/,     ack:"รับทราบ กำลังบันทึกท่ายืน"},
+  {k:"stop",  re:/หยุด|ยกเลิก|พอแล้ว|พอก่อน/,                                ack:"รับทราบ หยุดการทดสอบ"},
+  {k:"fail",  re:/ไม่ผ่าน|ไม่ได้|ทำไม่ไหว|ล้ม|เสียหลัก|ต้องพยุง|จับราว/,        ack:"รับทราบ บันทึกว่าไม่ผ่าน"},
+  {k:"again", re:/ทำใหม่|ลองใหม่|เริ่มใหม่|อีกครั้ง|ใหม่อีก/,                   ack:"รับทราบ ทำท่านี้ใหม่"},
+  {k:"pass",  re:/ผ่าน|ทำได้|ได้แล้ว|ครบแล้ว|ยืนได้/,                          ack:"รับทราบ บันทึกว่าผ่าน"},
+  {k:"next",  re:/ทำต่อ|ต่อไป|ถัดไป|ไปต่อ|ท่าต่อไป/,                          ack:"รับทราบ ไปขั้นตอนต่อไป"},
+  {k:"help",  re:/ช่วยเหลือ|ช่วยด้วย|ทำยังไง|พูดว่าอะไร|มีคำสั่งอะไร|คำสั่ง/,     ack:null},
+  {k:"done",  re:/จบ|เสร็จแล้ว|เรียบร้อย/,                                    ack:"รับทราบ บันทึกผล"},
+  {k:"start", re:/เริ่ม|พร้อมแล้ว|สตาร์ท|เอาเลย|ลุยเลย/,                       ack:"รับทราบ เริ่มจับเวลา"}
 ];
-var VC_HELP="คำสั่งที่ใช้ได้คือ เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน · ช่วยเหลือ ทุกคำสั่งมีปุ่มบนหน้าจอด้วย";
+var VC_HELP="คำสั่งที่ใช้ได้คือ เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน "+
+            "ตอนสอบเทียบใช้ บันทึกท่านั่ง และ บันทึกท่ายืน ทุกคำสั่งมีปุ่มบนหน้าจอด้วย";
+function vcNorm(t){return String(t||"").replace(/[\s\u200b.,!?ๆฯ]/g,"")}
 function vcParse(t){
-  t=String(t||"").replace(/\s+/g,"");
+  t=vcNorm(t);
+  if(!t)return null;
   for(var i=0;i<VC_CMDS.length;i++)if(VC_CMDS[i].re.test(t))return VC_CMDS[i].k;
   return null;
 }
-/* ตอบรับให้ผู้ใช้รู้ว่าระบบได้ยินแล้ว — หัวใจของการคุยกับระบบให้รู้เรื่อง */
 function vcAck(cmd){
   if(cmd==="help"){speak(VC_HELP);return}
   for(var i=0;i<VC_CMDS.length;i++)
     if(VC_CMDS[i].k===cmd&&VC_CMDS[i].ack){speak(VC_CMDS[i].ack);return}
 }
+/* ---- ตัวกรองเสียงสะท้อน: จำสิ่งที่ระบบเพิ่งพูด ไม่ให้สั่งตัวเอง ---- */
+function vcRemember(text){
+  var t=vcNorm(text); if(!t)return null;
+  var e={t:t,until:Infinity};      /* ระหว่างพูดยังไม่หมดอายุ */
+  VC.echo.push(e);
+  if(VC.echo.length>6)VC.echo.shift();
+  return e;
+}
+function vcIsEcho(heard){
+  var h=vcNorm(heard), now=Date.now();
+  if(!h)return false;
+  for(var i=0;i<VC.echo.length;i++){
+    var e=VC.echo[i];
+    if(now>e.until)continue;
+    /* ได้ยินเป็นส่วนหนึ่งของสิ่งที่ระบบพูด = เสียงตัวเองสะท้อนกลับ */
+    if(e.t.indexOf(h)>=0)return true;
+  }
+  return false;
+}
+/* ---- ป้ายไมค์บนจอ: ผู้ใช้ต้องเห็นตลอดว่าระบบฟังอยู่และได้ยินอะไร ---- */
+function vcMount(){
+  var top=document.querySelector(".hudtop"); if(!top)return;
+  if(!document.getElementById("vcbadge")){
+    var b=document.createElement("span");
+    b.className="hudtag"; b.id="vcbadge";
+    top.appendChild(b);
+  }
+  vcRender();
+}
+function vcRender(){
+  var b=document.getElementById("vcbadge"); if(!b)return;
+  if(!VC.supported){b.textContent="🎤 เครื่องนี้ใช้ปุ่มแทนเสียง";return}
+  if(!VC.on){b.textContent="🎤 ปิดอยู่";return}
+  b.textContent=VC.live?("🎤 "+VC.live):(VC.lastHeard?("🎤 ได้ยิน: "+VC.lastHeard):"🎤 กำลังฟัง…");
+}
 function vcStart(handler){
   VC.handler=handler;
-  if(!VC.supported||VC.on)return VC.supported;
+  if(!VC.supported)return false;
+  if(VC.on){vcMount();return true}
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   try{
     VC.rec=new SR();
     VC.rec.lang="th-TH"; VC.rec.continuous=true; VC.rec.interimResults=true;
     VC.rec.onresult=function(ev){
-      /* กันเสียงแนะนำของระบบเองสั่งตัวเอง */
-      if(window.speechSynthesis&&speechSynthesis.speaking)return;
-      var t="";
-      for(var i=ev.resultIndex;i<ev.results.length;i++)t+=ev.results[i][0].transcript;
-      var cmd=vcParse(t);
-      if(!cmd)return;
-      var now=performance.now();
-      if(now-VC.lastFire<1800)return;                 /* กันคำสั่งรัวซ้อน */
-      VC.lastFire=now;
-      vcAck(cmd);                                     /* ตอบรับก่อนเสมอ */
-      if(cmd==="help")return;
-      if(VC.handler)VC.handler(cmd);
+      var interim="";
+      for(var i=ev.resultIndex;i<ev.results.length;i++){
+        var res=ev.results[i], txt=res[0]&&res[0].transcript||"";
+        if(!res.isFinal){interim+=txt;continue}
+        /* ---- ตัดสินใจจากผลสุดท้ายเท่านั้น ---- */
+        if(vcIsEcho(txt))continue;                    /* เสียงของระบบเอง */
+        var cmd=vcParse(txt);
+        VC.lastHeard=String(txt).trim().slice(0,24);
+        if(!cmd){VC.live="";vcRender();continue}
+        var now=performance.now();
+        if(now-VC.lastFire<1200){VC.live="";vcRender();continue}  /* กันสั่งรัวซ้อน */
+        VC.lastFire=now;
+        VC.live=""; vcRender();
+        vcAck(cmd);                                   /* ตอบรับให้ได้ยินทุกครั้ง */
+        if(cmd!=="help"&&VC.handler)VC.handler(cmd);
+      }
+      if(interim){VC.live=interim.trim().slice(0,24);vcRender()}
     };
-    VC.rec.onend=function(){ if(VC.on){try{VC.rec.start()}catch(e){}} };
+    /* Chrome หยุดฟังเองเมื่อเงียบนาน — ต่อชีวิตให้เสมอขณะยังอยู่หน้าทดสอบ */
+    VC.rec.onend=function(){ VC.starting=false; if(VC.on)vcRevive(400) };
     VC.rec.onerror=function(e){
-      if(e&&(e.error==="not-allowed"||e.error==="service-not-allowed")){VC.on=false;VC.supported=false}
+      var err=e&&e.error;
+      if(err==="not-allowed"||err==="service-not-allowed"){
+        VC.on=false; VC.supported=false; vcRender();
+        setStatus("yellow","ไมโครโฟนถูกปิดไว้ — ใช้ปุ่มบนหน้าจอแทนได้ทุกคำสั่ง",false);
+        return;
+      }
+      VC.starting=false;
+      if(VC.on)vcRevive(err==="network"?1500:600);    /* no-speech / aborted / network */
     };
-    VC.on=true;
-    VC.rec.start();
+    VC.on=true; VC.lastHeard=""; VC.live="";
+    vcTryStart();
+    vcMount();
     return true;
   }catch(e){VC.on=false;return false}
 }
+function vcTryStart(){
+  if(!VC.on||!VC.rec||VC.starting)return;
+  VC.starting=true;
+  try{VC.rec.start()}catch(e){VC.starting=false}   /* ซ้อนกัน = ยังฟังอยู่แล้ว ไม่ต้องทำอะไร */
+  vcRender();
+}
+function vcRevive(ms){
+  if(VC.reviveT)clearTimeout(VC.reviveT);
+  VC.reviveT=setTimeout(function(){VC.reviveT=null;vcTryStart()},ms||500);
+}
 function vcStop(){
-  VC.on=false;VC.handler=null;
-  if(VC.rec){try{VC.rec.stop()}catch(e){}VC.rec=null}
+  VC.on=false;VC.handler=null;VC.live="";VC.starting=false;
+  if(VC.reviveT){clearTimeout(VC.reviveT);VC.reviveT=null}
+  if(VC.rec){try{VC.rec.onend=null;VC.rec.stop()}catch(e){}VC.rec=null}
+  var b=document.getElementById("vcbadge"); if(b&&b.parentNode)b.parentNode.removeChild(b);
 }
 function vcHint(){return VC.supported?'พูดว่า "เริ่ม" หรือกดปุ่ม':"กดปุ่มเริ่มเมื่อพร้อม"}
 
@@ -406,6 +488,11 @@ function speak(text,opts){
     u.lang="th-TH"; u.rate=opts.rate||0.95; u.volume=1;
     var v=speechSynthesis.getVoices().filter(function(x){return /th/i.test(x.lang)});
     if(v.length)u.voice=v[0];
+    /* จำไว้ว่าระบบพูดอะไร เพื่อไม่ให้ไมค์รับเสียงตัวเองไปเป็นคำสั่ง
+       หมดอายุ 2.5 วินาทีหลังพูดจบ — สั้นพอที่ผู้ใช้จะพูดคำเดียวกันตามได้ */
+    var e=vcRemember(text);
+    if(e){u.onend=function(){e.until=Date.now()+2500};
+          u.onerror=function(){e.until=Date.now()+2500}}
     speechSynthesis.speak(u);
   }catch(e){}
 }
@@ -2610,10 +2697,10 @@ function calibV(){
   V.innerHTML='<div class="anim">'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
-  '<div class="hudbot"><div id="cstep" style="font-size:14px;font-weight:600">ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว</div>'+
+  '<div class="hudbot"><div id="cstep" style="font-size:14px;font-weight:600">บันทึกแล้ว: ท่านั่ง — · ท่ายืน —</div>'+
   '<div class="coach" id="coach">วางมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า</div></div></div></div>'+
   statusHTML()+
-  '<button class="cta" id="cap" disabled>บันทึกท่านั่ง</button>'+
+  '<button class="cta" id="cap" disabled>บันทึกท่านั่ง</button><button class="cta" id="capStand" disabled style="margin-top:8px">บันทึกท่ายืน</button>'+
   '<button class="ghostb" data-go="assessIntro">ยกเลิก</button>'+
   '<div class="disc">ภาพจากกล้องประมวลผลในเครื่องนี้เท่านั้น ไม่มีการอัปโหลดภาพหรือวิดีโอไปที่ใด</div></div>';
   startPipeline("calib");
@@ -2682,61 +2769,100 @@ function drawPose(ctx,canvas,video,lm){
     ctx.fillStyle=(i===23||i===24)?"#FCD34D":"#DBEAFE";ctx.fill();
   });
 }
+/* ============================================================
+   สอบเทียบ — คนเป็นผู้บอกว่าท่าไหนคือท่านั่ง ท่าไหนคือท่ายืน
+   ------------------------------------------------------------
+   ของเดิมระบบจับเวลา "นิ่งครบ 2 วินาที" แล้วบันทึกเอง โดยไม่รู้เลยว่า
+   ตอนนั้นคนนั่งอยู่หรือยืนอยู่ ถ้าผู้ใช้ยังไม่ทันนั่ง หรือยืนค้างอยู่
+   ค่าที่ได้ก็สลับกัน แล้วการนับลุกนั่งทั้งชุดก็เพี้ยนตามไปหมด
+
+   รุ่นนี้กลับด้าน: กล้อง "รายงาน" สิ่งที่เห็นอย่างเดียว ไม่บันทึกเอง
+   ผู้ใช้นั่งลงแล้วพูดว่า "บันทึกท่านั่ง" · ยืนขึ้นแล้วพูดว่า "บันทึกท่ายืน"
+   ระบบขานรับทุกครั้งว่าบันทึกอะไรไปแล้ว จะทำสลับลำดับก็ได้
+   ============================================================ */
 function setupCalib(video,canvas,ctx){
-  var step=0, sitVal=null, standVal=null, cur=null, armAt=0;
+  var sitVal=null, standVal=null, cur=null;
   var cap=document.getElementById("cap"), cstep=document.getElementById("cstep"), coach=document.getElementById("coach");
-  var AUTO=new AutoCapture({screen:"calib",holdMs:2000,readyText:"พร้อมแล้ว",
-    onFire:function(){doCapture()}});
-  speak("ขั้นตอนสอบเทียบ กรุณานั่งบนเก้าอี้ ให้เห็นตัวเต็มในกล้อง ระบบจะบันทึกให้เองอัตโนมัติ");
+  var capStand=document.getElementById("capStand");
+
+  function fmtState(){
+    return "บันทึกแล้ว: "+(sitVal!=null?"ท่านั่ง ✓":"ท่านั่ง —")+" · "+(standVal!=null?"ท่ายืน ✓":"ท่ายืน —");
+  }
+  /* กล้องบอกได้แค่ "เทียบกับค่าที่บันทึกไว้แล้ว สูงขึ้นหรือต่ำลง"
+     ไม่เดาเองว่านั่งหรือยืนเมื่อยังไม่มีอะไรให้เทียบ */
+  function seenText(){
+    if(cur==null)return null;
+    if(sitVal==null&&standVal==null)return null;
+    var ref=sitVal!=null?sitVal:standVal, isSit=sitVal!=null;
+    var d=cur-ref;
+    if(isSit)  return d>0.05?"ตอนนี้ตัวสูงกว่าค่าท่านั่งที่บันทึกไว้":"ตอนนี้ยังใกล้เคียงค่าท่านั่งที่บันทึกไว้";
+    return d<-0.05?"ตอนนี้ตัวต่ำกว่าค่าท่ายืนที่บันทึกไว้":"ตอนนี้ยังใกล้เคียงค่าท่ายืนที่บันทึกไว้";
+  }
   function loop(){
     if(S.screen!=="calib"){return}
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
+    var ok=false;
     if(lm){
       var q=visOK(lm), m=hipRatio(lm);
-      if(q<0.85){coach.textContent="ขยับมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า";cap.disabled=true;
-        setStatus("yellow","ยังเห็นตัวไม่ครบ — ถอยมือถือให้เห็นตั้งแต่หัวถึงเท้า")}
-      else if(m==null){coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";cap.disabled=true;
-        setStatus("yellow","ถอยห่างอีกนิด ให้เห็นทั้งตัว")}
-      else{cur=m;cap.disabled=false;
-        coach.textContent=step===0?"เห็นชัดแล้ว — นั่งนิ่ง ๆ ระบบจะบันทึกให้เอง":"เห็นชัดแล้ว — ยืนตรงนิ่ง ๆ ระบบจะบันทึกให้เอง";
-        if(!AUTO.counting)setStatus("green",step===0?"เห็นตัวชัดแล้ว — นั่งนิ่ง ๆ ระบบกำลังจะบันทึก":"เห็นตัวชัดแล้ว — ยืนนิ่ง ๆ ระบบกำลังจะบันทึก",false);}
-    }else{coach.textContent="ยังไม่พบคนในภาพ";cap.disabled=true;
-      setStatus("yellow","ยังไม่พบคนในภาพ — เข้ามาในกรอบกล้อง")}
-    AUTO.update(cur!=null && !cap.disabled && performance.now()>=armAt);
+      if(q<0.85){cur=null;coach.textContent="ขยับมือถือให้เห็นตั้งแต่ศีรษะถึงเท้า";
+        setStatus("yellow","ยังเห็นตัวไม่ครบ — ถอยมือถือให้เห็นตั้งแต่หัวถึงเท้า",false)}
+      else if(m==null){cur=null;coach.textContent="ยังจับสัดส่วนลำตัวไม่ได้ ลองถอยห่างอีกเล็กน้อย";
+        setStatus("yellow","ถอยห่างอีกนิด ให้เห็นทั้งตัว",false)}
+      else{
+        cur=m; ok=true;
+        var s=seenText();
+        coach.innerHTML="<b>"+esc(fmtState())+"</b><br>"+
+          (s?esc(s)+" — ":"")+'พูดว่า "บันทึกท่านั่ง" หรือ "บันทึกท่ายืน" (หรือกดปุ่ม)';
+        setStatus("green","เห็นตัวชัดแล้ว — ท่านเป็นผู้สั่งว่าจะบันทึกท่าไหน",false);
+      }
+    }else{cur=null;coach.textContent="ยังไม่พบคนในภาพ";
+      setStatus("yellow","ยังไม่พบคนในภาพ — เข้ามาในกรอบกล้อง",false)}
+    cap.disabled=!ok; if(capStand)capStand.disabled=!ok;
     RAF=requestAnimationFrame(loop);
   }
   loop();
-  cap.addEventListener("click",function(){AUTO.abort();doCapture()});
-  function doCapture(){
-    if(cur==null)return;
-    if(step===0){
-      sitVal=cur;step=1;
-      cstep.textContent="ขั้นที่ 2 · ยืนขึ้นตรง ๆ หนึ่งครั้ง";
-      cap.textContent="บันทึกท่ายืน";
-      toast("บันทึกท่านั่งแล้ว");
-      setStatus("green","บันทึกท่านั่งเรียบร้อย — ขั้นต่อไป ยืนขึ้นตรง ๆ",false);
-      speak("บันทึกท่านั่งเรียบร้อย ขั้นตอนต่อไป กรุณายืนขึ้นตรง ๆ แล้วยืนนิ่ง ๆ");
-      armAt=performance.now()+4000;
-      AUTO.reset();
-      return;
-    }else{
-      standVal=cur;
-      if(standVal-sitVal<0.045){
-        toast("ความต่างระหว่างท่านั่งกับท่ายืนน้อยเกินไป ลองใหม่โดยยืนให้ตรงสุด");
-        setStatus("red","ท่านั่งกับท่ายืนต่างกันน้อยเกินไป — เริ่มใหม่ กรุณานั่งลงก่อน");
-        speak("ท่านั่งกับท่ายืนต่างกันน้อยเกินไป เริ่มใหม่ กรุณานั่งลงก่อน");
-        step=0;cstep.textContent="ขั้นที่ 1 · นั่งบนเก้าอี้ให้เห็นเต็มตัว";cap.textContent="บันทึกท่านั่ง";
-        armAt=performance.now()+4000;AUTO.reset();return;
-      }
-      S.draft.sitRef=sitVal;S.draft.standRef=standVal;
-      audit("สอบเทียบกล้อง","ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
-      toast("สอบเทียบเรียบร้อย");
-      setStatus("green","สอบเทียบเรียบร้อย — ขั้นต่อไป ทดสอบลุกนั่ง 5 ครั้ง",false);
-      speak("สอบเทียบเรียบร้อย ขั้นตอนต่อไป ทดสอบลุกนั่ง ห้าครั้ง กรุณานั่งลงบนเก้าอี้");
-      setTimeout(function(){go("camtest")},2400);
-    }
+
+  function capture(kind){
+    if(cur==null){speak("ยังมองไม่เห็นตัวชัดพอ กรุณาขยับให้เห็นทั้งตัวก่อน");
+      setStatus("yellow","ยังมองไม่เห็นตัวชัดพอ — ยังบันทึกไม่ได้",false);return}
+    if(kind==="sit"){sitVal=cur;toast("บันทึกท่านั่งแล้ว");speak("บันทึกท่านั่งเรียบร้อยแล้ว")}
+    else{standVal=cur;toast("บันทึกท่ายืนแล้ว");speak("บันทึกท่ายืนเรียบร้อยแล้ว")}
+    cstep.textContent=fmtState();
+    setStatus("green",(kind==="sit"?"บันทึกท่านั่งเรียบร้อย":"บันทึกท่ายืนเรียบร้อย")+" · "+fmtState(),false);
+    if(sitVal!=null&&standVal!=null)finish();
   }
+  function finish(){
+    if(standVal-sitVal<0.045){
+      /* ค่าสองท่าใกล้กันเกินไป = น่าจะบันทึกท่าเดียวกันสองครั้ง หรือสลับกัน */
+      toast("ค่าท่านั่งกับท่ายืนต่างกันน้อยเกินไป");
+      setStatus("red","ค่าสองท่าต่างกันน้อยเกินไป — กรุณาบันทึกใหม่ทีละท่า",false);
+      speak("ค่าท่านั่งกับท่ายืนต่างกันน้อยเกินไป อาจบันทึกท่าเดียวกันสองครั้ง "+
+            "กรุณานั่งลงแล้วพูดว่า บันทึกท่านั่ง จากนั้นยืนขึ้นแล้วพูดว่า บันทึกท่ายืน");
+      sitVal=null;standVal=null;cstep.textContent=fmtState();return;
+    }
+    S.draft.sitRef=sitVal;S.draft.standRef=standVal;
+    audit("สอบเทียบกล้อง (ผู้ใช้เป็นผู้สั่งบันทึกทีละท่า)",
+      "ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
+    toast("สอบเทียบเรียบร้อย");
+    setStatus("green","สอบเทียบเรียบร้อย — ขั้นต่อไป ทดสอบลุกนั่ง 5 ครั้ง",false);
+    speak("สอบเทียบเรียบร้อยแล้ว ขั้นตอนต่อไป ทดสอบลุกนั่ง ห้าครั้ง กรุณานั่งลงบนเก้าอี้");
+    vcStop();
+    setTimeout(function(){go("test")},2600);
+  }
+  cap.addEventListener("click",function(){capture("sit")});
+  if(capStand)capStand.addEventListener("click",function(){capture("stand")});
+  vcStart(function(cmd){
+    if(cmd==="sit")capture("sit");
+    else if(cmd==="stand")capture("stand");
+    else if(cmd==="again"){sitVal=null;standVal=null;cstep.textContent=fmtState();
+      setStatus("yellow","ล้างค่าที่บันทึกไว้แล้ว — เริ่มบันทึกใหม่ได้",false)}
+    else if(cmd==="stop"){vcStop();stopCam();go("assess")}
+  });
+  cstep.textContent=fmtState();
+  speak("ขั้นตอนสอบเทียบ ระบบจะไม่บันทึกเอง ท่านเป็นผู้สั่ง "+
+        "เมื่อนั่งบนเก้าอี้เรียบร้อยแล้ว พูดว่า บันทึกท่านั่ง "+
+        "จากนั้นยืนขึ้นตรง ๆ แล้วพูดว่า บันทึกท่ายืน");
 }
 function setupTest(video,canvas,ctx){
   DET=new RepDetector({target:5});
