@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon-64.png">
-<title>CareSignal — แพลตฟอร์มประกันดูแลระยะยาวสำหรับสังคมสูงวัยไทย</title>
+<title>CareSignal — ระบบเฝ้าระวังความเสี่ยงและประสานการดูแลก่อนเกิดการเคลม</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans+Thai+Looped:wght@500;600;700&display=swap" rel="stylesheet">
@@ -128,62 +128,48 @@ table.dt tr:last-child td{border-bottom:0}
 <!-- ==================== หน้าเว็บสาธารณะ ==================== -->
 <div id="pg-site">
   <header class="hero"><div class="wrap">
-    <div class="kick">CareSignal · Long-Term Care InsurTech Platform</div>
-    <h1>ประกันดูแลระยะยาวที่ <em>จ่ายก่อนล้ม</em> ไม่ใช่หลังติดเตียง</h1>
-    <p class="lead">แพลตฟอร์มเดียวเชื่อมผู้สูงอายุ ครอบครัว Care Manager และบริษัทประกัน — ประเมินความเสี่ยงหกล้มด้วยเกณฑ์งานวิจัยไทย ผลดีลดเบี้ยได้ทันที ผลเสี่ยงส่งต่อทีมดูแลภายใน 72 ชั่วโมง</p>
-    <a class="btn" href="#calc">เช็กเบี้ยของฉันตอนนี้</a>
-    <button class="btn ghost" data-page="ins" style="margin-left:10px">ดูแดชบอร์ดสำหรับบริษัทประกัน</button>
+    <div class="kick">CareSignal · Pre-Claim Risk Monitoring &amp; Care Coordination</div>
+    <h1>เห็นสัญญาณ<em>ก่อน</em>ที่จะกลายเป็นการเคลม</h1>
+    <p class="lead">โครงสร้างพื้นฐานที่บริษัทประกันพ่วงไปกับกรมธรรม์ผู้สูงอายุ — คัดกรองสมรรถภาพต่อเนื่อง แปลงเป็นสัญญาณเสี่ยง 7 ประเภท เปิดเคสให้มีผู้รับผิดชอบ ประสานการส่งต่อ แล้ววัดผลว่าได้ผลจริงไหม · <b>ไม่คำนวณเบี้ย ไม่ตัดสินการเคลม</b></p>
+    <button class="btn" data-page="ins">ดูรายงานพอร์ตสำหรับบริษัทประกัน</button>
+    <a class="btn ghost" href="./CareSignal-Flow.html" style="margin-left:10px;text-decoration:none">ดูเส้นทางข้อมูลทั้งหมด</a>
     <div class="statrow">
-      <div class="stat"><div class="n">8 นาที</div><div class="l">ประเมินเองที่บ้าน ผ่านแอปมือถือ</div></div>
-      <div class="stat"><div class="n">−15%</div><div class="l">ส่วนลดเบี้ยสูงสุดจากผลประเมิน (ลดได้เท่านั้น ไม่มีบวก)</div></div>
-      <div class="stat"><div class="n">72 ชม.</div><div class="l">ผลเสี่ยงสูง ส่งต่อพยาบาลถึงบ้าน</div></div>
-      <div class="stat"><div class="n">4 แผน</div><div class="l">ผลประโยชน์ 10,000–40,000 บ./เดือน</div></div>
+      <div class="stat"><div class="n">8 นาที</div><div class="l">ประเมินเองที่บ้านผ่านมือถือ ไม่ต้องมีอุปกรณ์เสริม</div></div>
+      <div class="stat"><div class="n">7 สัญญาณ</div><div class="l">แปลงกฎ 24 ข้อเป็นงานที่ต้องเกิดขึ้นจริง</div></div>
+      <div class="stat"><div class="n">24 ชม.</div><div class="l">สัญญาณแดง ทีมดูแลต้องติดต่อให้ได้ภายใน</div></div>
+      <div class="stat"><div class="n">0 บาท</div><div class="l">ผู้ถือกรมธรรม์ไม่จ่ายเพิ่ม — บริษัทประกันจ่ายค่าแพลตฟอร์ม</div></div>
     </div>
   </div></header>
 
   <section><div class="wrap">
-    <h2 class="sec">ระบบทำงานอย่างไร</h2>
-    <p class="secsub">วงจรเดียวครบ: ป้องกัน → ประเมิน → คุ้มครอง → ดูแล ข้อมูลทุกขั้นบันทึกลงฐานข้อมูลกลางแบบเรียลไทม์</p>
+    <h2 class="sec">สายงาน 6 ขั้น</h2>
+    <p class="secsub">แต่ละขั้นต่อกันจริงในฐานข้อมูล ไม่ใช่แค่หน้าจอที่วางเรียงกัน</p>
     <div class="grid3">
-      <div class="card"><div class="stepnum">STEP 01 · แอปมือถือ</div><h3>ผู้สูงอายุประเมินเองที่บ้าน</h3><p>ลุกนั่ง 5 ครั้ง (FTSST), การทรงตัว, ประวัติหกล้ม, การใช้ยา และ ADL — จุดตัดคะแนนอ้างอิงงานวิจัยไทย ผลบันทึกอัตโนมัติ</p></div>
-      <div class="card"><div class="stepnum">STEP 02 · AI + ฐานข้อมูล</div><h3>แปลงสัญญาณเป็นเบี้ยที่เป็นธรรม</h3><p>ระบบจัดระดับเขียว/เหลือง/ส้ม/แดง ผลดีลดเบี้ย 8–15% ทันที ผลเสี่ยงเข้าคิว Care Manager — AI รวบรวมหลักฐานเท่านั้น มนุษย์เป็นผู้ตัดสินทุกกรณี</p></div>
-      <div class="card"><div class="stepnum">STEP 03 · เครือข่ายดูแล</div><h3>คุ้มครองเมื่อพึ่งพิง จ่ายไว โปร่งใส</h3><p>เมื่อเข้าเกณฑ์ภาวะพึ่งพิง (ADL) รับเงินดูแลรายเดือนสูงสุด 40,000 บาท พร้อมงบป้องกันรายปีสำหรับกายภาพและอุปกรณ์กันล้ม</p></div>
+      <div class="card"><div class="stepnum">STEP 01 · เก็บข้อมูลดิจิทัล</div><h3>คัดกรองที่บ้านด้วยมือถือ</h3><p>ประวัติหกล้มแบบละเอียด · ยาที่ใช้ (ถามวัตถุประสงค์ ไม่ต้องจำชื่อยา) · ลุกนั่ง 5 ครั้ง · ลุกเดิน 3 เมตร · กิจวัตรประจำวันด้วยบาร์เธลฉบับย่อ — วัดด้วยกล้อง ประมวลผลในเครื่อง ไม่อัปโหลดภาพ</p></div>
+      <div class="card"><div class="stepnum">STEP 02 · สัญญาณตามเวลา</div><h3>เทียบกับตัวเองและกับเกณฑ์</h3><p>กฎ 24 ข้อ สองชั้น — คัดกรองพื้นฐานใช้ได้ตั้งแต่ครั้งแรก แนวโน้มเทียบกับผลครั้งก่อนของคนคนนั้น แล้วแปลงเป็น<b>สัญญาณหลัก 7 ประเภท</b> ที่ผูกกับปลายทางการส่งต่อคนละแบบ</p></div>
+      <div class="card"><div class="stepnum">STEP 03 · เปิดเคสก่อนเคลม</div><h3>สัญญาณต้องสร้างงาน</h3><p>เหลืองขึ้นไป → <b>เปิดเคสอัตโนมัติที่ฐานข้อมูล</b> ข้ามไม่ได้แม้เข้าทางไหน · กำหนดเวลาติดต่อตามระดับ แดง 24 · ส้ม 48 · เหลือง 72 ชั่วโมง</p></div>
+      <div class="card"><div class="stepnum">STEP 04 · ประสานการดูแล</div><h3>ส่งต่อให้ถูกคน แล้วตามจนจบ</h3><p>ยาเสี่ยง → เภสัชกร · เดินช้าลง → นักกายภาพ · ล้มซ้ำ → แพทย์ · กิจวัตรลดลง → พยาบาล · ติดตามสถานะจากแนะนำ → รับทราบ → นัดหมาย → <b>ไปพบจริง</b> → บันทึกผลลัพธ์</p></div>
+      <div class="card"><div class="stepnum">STEP 05 · วัดผลลัพธ์</div><h3>ได้ผลจริงหรือแค่ดูดี</h3><p>ระดับดีขึ้น/แย่ลง · ทำตามนัดติดตามกี่ % · <b>ส่งต่อแล้วไปพบจริงกี่ %</b> · เหตุการณ์ที่รายงานเข้ามา (ล้ม เกือบล้ม เข้า รพ. กิจวัตรลดลง)</p></div>
+      <div class="card"><div class="stepnum">STEP 06 · ภาพรวมพอร์ต</div><h3>รายงานเชิงกลุ่มให้บริษัทประกัน</h3><p>ประชากร ความเสี่ยง การดูแล และผลลัพธ์ — เป็นค่ารวมทั้งพอร์ต ไม่มีข้อมูลรายบุคคล และ<b>ไม่มีตัวเลขเบี้ยหรือค่าสินไหม</b></p></div>
     </div>
   </div></section>
 
   <section id="calc" style="padding-top:20px"><div class="wrap">
-    <h2 class="sec">ตัวอย่างการตั้งราคาผลิตภัณฑ์ที่พ่วงโปรแกรม</h2>
-    <p class="secsub">แบบจำลองสาธิตสำหรับบริษัทประกันพันธมิตร — เบี้ยฐาน × เกณฑ์อายุ × เพศ − ส่วนลดจากผลประเมิน (ทางเดียว) · CareSignal ไม่ขายประกัน ตัวเลขนี้ไม่ใช่ข้อเสนอขาย</p>
-    <div class="calcpanel">
-      <div>
-        <div class="field"><label>อายุ: <span id="cAgeV" class="mono">62</span> ปี</label>
-          <input type="range" id="cAge" min="50" max="70" value="62"></div>
-        <div class="field"><label>เพศ</label><div class="seg" id="cSex">
-          <button data-v="f" aria-pressed="true">หญิง</button><button data-v="m" aria-pressed="false">ชาย</button></div></div>
-        <div class="field"><label>แผนความคุ้มครอง</label><div class="planrow" id="cPlan"></div></div>
-        <div class="field"><label>ผลประเมินล่าสุด (ถ้ามี)</label><div class="seg" id="cTier">
-          <button data-v="0" aria-pressed="true">ยังไม่ประเมิน</button>
-          <button data-v="4">เขียว −15%</button>
-          <button data-v="3">เหลือง −8%</button>
-          <button data-v="2">ส้ม/แดง −0%</button></div></div>
-        <div class="field"><label>งวดชำระ</label><div class="seg" id="cPay">
-          <button data-v="m" aria-pressed="true">รายเดือน</button><button data-v="y" aria-pressed="false">รายปี −8%</button></div></div>
-      </div>
-      <div class="quote">
-        <div class="kick" style="color:var(--ink3)">เบี้ยตามแบบจำลอง (สาธิต)</div>
-        <div class="big" id="qBig">—</div>
-        <span class="tag" id="qTag" hidden></span>
-        <div style="margin-top:16px">
-          <div class="rowline"><span class="k">แผน</span><span class="v" id="qPlan">—</span></div>
-          <div class="rowline"><span class="k">ผลประโยชน์เมื่อพึ่งพิง</span><span class="v" id="qBen">—</span></div>
-          <div class="rowline"><span class="k">งบป้องกันหกล้ม</span><span class="v" id="qPrev">—</span></div>
-          <div class="rowline"><span class="k">เกณฑ์อายุ</span><span class="v" id="qAgeM">—</span></div>
-          <div class="rowline"><span class="k">เกณฑ์เพศ</span><span class="v" id="qSexM">—</span></div>
-          <div class="rowline"><span class="k">ก่อนหักส่วนลด</span><span class="v" id="qGross">—</span></div>
-        </div>
-        <div class="notice">หลักการสำคัญ: ผลประเมิน<b>ลดเบี้ยได้เท่านั้น</b> ไม่เพิ่มเบี้ย ไม่ปฏิเสธความคุ้มครอง เพื่อป้องกัน adverse selection โดยไม่ลงโทษผู้มีความเสี่ยง</div>
-      </div>
-    </div>
+    <h2 class="sec">สัญญาณ 7 ประเภท และงานที่ตามมา</h2>
+    <p class="secsub">นี่คือจุดที่ทำให้ระบบต่างจากแบบสอบถาม — สีบอกความเร่งด่วน แต่<b>สัญญาณ</b>คือสิ่งที่บอกว่าต้องทำอะไรกับใคร</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>สัญญาณ</th><th>เกิดจาก</th><th>งานที่ระบบเปิดให้</th><th>ปลายทาง</th></tr></thead>
+      <tbody>
+        <tr><td><b>S1</b> หกล้มครั้งใหม่</td><td>พบการล้มใหม่ตั้งแต่ประเมินครั้งก่อน</td><td>ทบทวนสาเหตุและสำรวจจุดเสี่ยงในบ้าน</td><td>แพทย์</td></tr>
+        <tr><td><b>S2</b> หกล้มซ้ำหรือล้มแล้วบาดเจ็บ</td><td>ล้ม ≥2 ครั้ง/12 เดือน · บาดเจ็บต้องพบแพทย์ · หมดสติ · ลุกเองไม่ได้</td><td>หาสาเหตุ — ไม่ใช่เรื่องฝึกทรงตัวอย่างเดียว</td><td>แพทย์</td></tr>
+        <tr><td><b>S3</b> ความเสี่ยงจากยา</td><td>ยาหลายรายการ · กลุ่มเพิ่มความเสี่ยงหกล้ม · เพิ่งปรับยาแล้วมีอาการ</td><td>ทบทวนรายการยา — <b>ระบบไม่สั่งหยุดหรือปรับยาเอง</b></td><td>เภสัชกร</td></tr>
+        <tr><td><b>S4</b> กำลังขาและการทรงตัวถดถอย</td><td>ลุกนั่งช้าลงจากตัวเอง · ข้ามค่าตัดตามอายุ · ทรงตัวถดถอยเป็นท่า</td><td>โปรแกรมฝึกกำลังขาและการทรงตัว</td><td>นักกายภาพบำบัด</td></tr>
+        <tr><td><b>S5</b> ความคล่องตัวในการเดินลดลง</td><td>ลุกเดิน 3 เมตร ตั้งแต่ 12 วินาที</td><td>ประเมินการเดินและอุปกรณ์ช่วยเดิน</td><td>นักกายภาพบำบัด</td></tr>
+        <tr><td><b>S6</b> ทำกิจวัตรประจำวันได้น้อยลง</td><td>บาร์เธลลดลง หรือข้ามระดับการพึ่งพิง</td><td>ประเมินภาวะพึ่งพิงเชิงลึกกับครอบครัว</td><td>พยาบาล/ผู้จัดการดูแล</td></tr>
+        <tr><td><b>S7</b> ธงแดงด้านความปลอดภัย</td><td>Safety Gate หยุดการทดสอบ · รู้สึกไม่มั่นคง/กลัวล้ม</td><td>ให้บุคลากรประเมินก่อน ยังไม่ควรทดสอบเอง</td><td>แพทย์</td></tr>
+      </tbody>
+    </table></div>
+    <div class="notice" style="margin-top:16px"><b>กฎทั้ง 24 ข้อถูกแมปครบทุกข้อ</b> — ไม่มีกฎไหนที่ติดแล้วไม่เกิดงาน มีชุดทดสอบอัตโนมัติบังคับเงื่อนไขนี้ไว้ และตรวจว่าไม่มีกฎใดถูกแมปซ้ำสองสัญญาณ</div>
   </div></section>
 
   <section style="padding-top:8px"><div class="wrap">
@@ -192,23 +178,26 @@ table.dt tr:last-child td{border-bottom:0}
     <div class="grid3">
       <div class="card"><h3>FTSST — ลุกนั่ง 5 ครั้ง</h3><p>จุดตัดแยกช่วงอายุ 10.0 / 11.5 / 12.1 วินาที ตามการศึกษาในผู้สูงอายุไทย (Poncumhak 2014; Intaruk 2021)</p></div>
       <div class="card"><h3>แนวทางกรมการแพทย์</h3><p>โครงคำถามประวัติหกล้ม การใช้ยา และ ADL อิงแนวทางเวชปฏิบัติป้องกันและประเมินภาวะหกล้มในผู้สูงอายุ สถาบันเวชศาสตร์ผู้สูงอายุ</p></div>
-      <div class="card"><h3>Timed Up &amp; Go</h3><p>เกณฑ์เฝ้าระวังการเคลื่อนไหวอ้างอิง Shumway-Cook (2000) และรายงานสถานการณ์ผู้สูงอายุไทย มส.ผส.</p></div>
+      <div class="card"><h3>Timed Up &amp; Go</h3><p>เกณฑ์เฝ้าระวังการเคลื่อนไหวอ้างอิง Shumway-Cook (2000) และโปรโตคอล CDC STEADI — ตั้งแต่ 12 วินาทีขึ้นไปสัมพันธ์กับความเสี่ยงหกล้มสูงขึ้น</p></div>
     </div>
   </div></section>
-<section style="padding-top:0"><div class="wrap">
-  <div class="card" style="border:1.5px solid var(--accent)">
-    <h3 style="margin-bottom:8px;color:var(--accent2)">เงื่อนไขความคุ้มครอง — ตัวเลขเบี้ยข้างต้นมาพร้อมเงื่อนไขเหล่านี้</h3>
-    <p class="secsub" style="margin:0 0 14px">หลักการแบ่งระยะรอคอย: ภัยที่ผู้ซื้อเลือกเวลาเกิดไม่ได้ คุ้มครองทันที · ภัยที่รู้ตัวล่วงหน้าได้นานเท่าไร ยิ่งต้องรอนานเท่านั้น</p>
-    <table class="tbl"><thead><tr><th>สาเหตุของภาวะพึ่งพิง</th><th>ระยะรอคอย</th><th>เหตุผล</th></tr></thead><tbody>
-      <tr><td><b>อุบัติเหตุ</b> — หกล้ม สะโพกหัก อุบัติเหตุจราจร</td><td><span class="tag t4" style="margin:0">คุ้มครองทันที</span></td><td style="font-size:12.5px;color:var(--ink2)">เลือกเวลาเกิดไม่ได้ จึงไม่เกิดการเลือกซื้อเมื่อรู้ตัว</td></tr>
-      <tr><td><b>เจ็บป่วยเฉียบพลัน</b> — หลอดเลือดสมอง หัวใจ</td><td>180 วัน</td><td style="font-size:12.5px;color:var(--ink2)">รู้ตัวล่วงหน้าได้บ้างจากปัจจัยเสี่ยง แต่ไม่นาน</td></tr>
-      <tr><td><b>ภาวะเสื่อมถอยเรื้อรัง</b> — สมองเสื่อม พาร์กินสัน ข้อเสื่อม</td><td>730 วัน<br><span style="color:var(--c4);font-size:12.5px">สั้นลงได้ถึง 365 วัน</span></td><td style="font-size:12.5px;color:var(--ink2)">รู้ตัวล่วงหน้าได้เป็นปี จึงต้องรอนานที่สุด — แต่ผู้ที่ประเมินต่อเนื่องทุก 3 เดือนลดระยะรอคอยได้ครั้งละ 90 วัน</td></tr>
-    </tbody></table>
-    <div class="notice" style="margin-top:14px"><b>เงื่อนไขเพิ่มเติม:</b> ต้องอยู่ในภาวะพึ่งพิงต่อเนื่อง 90 วันก่อนเริ่มจ่ายผลประโยชน์ · จ่ายสูงสุด 60 งวด · ไม่คุ้มครองภาวะที่เกิดจากโรคหรือการบาดเจ็บที่เป็นมาก่อนวันเริ่มคุ้มครอง · การพิจารณาว่าเข้าเกณฑ์ภาวะพึ่งพิงตัดสินโดยทีมสหวิชาชีพที่ประเมินถึงบ้าน ไม่ใช่ผลจากแอปเพียงอย่างเดียว</div>
-    <div class="notice" style="margin-top:10px"><b>สถานะของส่วนลด:</b> ตัวเลขส่วนลดทั้งหมดเป็น <b>Wellness Reward</b> — สิทธิประโยชน์ส่งเสริมสุขภาพที่บริษัทประกันกำหนดหลังการสอบทานทางคณิตศาสตร์ประกันภัย ไม่ใช่อัตราเบี้ยที่ผ่านการรับรองแล้ว · รายละเอียดคำถามที่นักคณิตศาสตร์ประกันภัยต้องตอบ อยู่ในไฟล์โมเดลผลประกอบการ หัวข้อที่ 7</div><div class="notice" style="margin-top:10px;background:var(--accentb);border-color:rgba(245,158,11,.35)"><b>ทำไมระยะรอคอยจึงเป็นจุดขาย ไม่ใช่ข้อจำกัด</b><br>บริษัทที่ไม่มีข้อมูลสมรรถภาพย้อนหลังต้องตั้งระยะรอคอยยาวกับทุกคนเท่ากันเพื่อความปลอดภัย แต่ผู้ที่ส่งข้อมูลต่อเนื่องผ่าน CareSignal พิสูจน์ได้ว่าสมรรถภาพคงที่จริง บริษัทจึงกล้าลดระยะรอคอยให้ — <b>ข้อมูลที่คุณสร้างขึ้นเอง คือสิ่งที่ซื้อความคุ้มครองที่เร็วขึ้น</b></div>
-  </div>
-</div></section>
 
+  <section style="padding-top:0"><div class="wrap">
+    <div class="card" style="border:1.5px solid var(--accent)">
+      <h3 style="margin-bottom:8px;color:var(--accent2)">ขอบเขตของระบบ — สิ่งที่ CareSignal ไม่ทำ</h3>
+      <p class="secsub" style="margin:0 0 14px">ประกาศไว้ชัดเจน เพราะขอบเขตที่คลุมเครือคือที่มาของการอ้างเกินจริง</p>
+      <table class="tbl"><thead><tr><th>เรื่อง</th><th>ระบบทำไหม</th><th>ใครเป็นผู้ทำ</th></tr></thead><tbody>
+        <tr><td>คำนวณเบี้ยประกันหรือให้ส่วนลด</td><td><b style="color:var(--c1)">ไม่ทำ</b></td><td>บริษัทประกันผู้ออกกรมธรรม์</td></tr>
+        <tr><td>พิจารณารับประกันและกำหนดระยะรอคอย</td><td><b style="color:var(--c1)">ไม่ทำ</b></td><td>ฝ่ายรับประกันของบริษัท</td></tr>
+        <tr><td>ตัดสินการจ่ายสินไหม</td><td><b style="color:var(--c1)">ไม่ทำ</b></td><td>ฝ่ายสินไหมและทีมสหวิชาชีพ</td></tr>
+        <tr><td>วินิจฉัยโรค</td><td><b style="color:var(--c1)">ไม่ทำ</b></td><td>แพทย์</td></tr>
+        <tr><td>สั่งหยุด ลด หรือเพิ่มยา</td><td><b style="color:var(--c1)">ไม่ทำ</b></td><td>แพทย์และเภสัชกร</td></tr>
+        <tr><td>คัดกรองความเสี่ยงและจัดลำดับความเร่งด่วน</td><td><b style="color:var(--c4)">ทำ</b></td><td>ระบบ (อธิบายเหตุผลได้ทุกข้อ)</td></tr>
+        <tr><td>เปิดเคสและติดตามการส่งต่อ</td><td><b style="color:var(--c4)">ทำ</b></td><td>ระบบเปิด · บุคลากรเป็นผู้ตัดสินใจ</td></tr>
+      </tbody></table>
+      <div class="notice" style="margin-top:14px"><b>ผลตรวจไม่มีทางย้อนกลับมาทำร้ายผู้ใช้</b> — ไม่มีเส้นทางใดในระบบที่นำผลประเมินไปเพิ่มเบี้ย ปฏิเสธความคุ้มครอง หรือปฏิเสธการเคลม เพราะถ้าตอบตามจริงแล้วถูกลงโทษ ก็จะไม่มีใครกล้าประเมินตัวเอง และข้อมูลที่ไม่ตรงความจริงทำให้การป้องกันไร้ความหมาย</div>
+    </div>
+  </div></section>
 </div>
 
 <!-- ==================== Care Manager ==================== -->
@@ -243,7 +232,7 @@ table.dt tr:last-child td{border-bottom:0}
     <div class="card"><h3 style="margin-bottom:14px">การเชื่อมกรมธรรม์</h3><div id="insPlan"></div></div>
   </div>
   <div style="margin-top:16px" id="insTable"></div>
-  <div class="notice">ต้องการโมเดลผลประกอบการเต็มรูปแบบ (รายได้ 5 ปี, Loss Ratio, ความเสี่ยง, ผลตอบแทน)? เปิดไฟล์ <b>CareSignal-Insurer-Model.html</b> ที่มาพร้อมแพลตฟอร์มนี้ · <button class="btn lite" id="insSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต</button> <button class="btn lite" id="insClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="insRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
+  <div class="notice"><b>ระบบนี้ไม่คำนวณเบี้ยและไม่ตัดสินการเคลม</b> — รายงานทั้งหมดเป็นภาพรวมความเสี่ยง การดูแล และผลลัพธ์ของพอร์ต · <button class="btn lite" id="insSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต</button> <button class="btn lite" id="insClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="insRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
 </div></div></div>
 
 
@@ -274,7 +263,7 @@ table.dt tr:last-child td{border-bottom:0}
 
   <div class="card" style="border-left:4px solid var(--accent)">
     <h3>ประกาศชนิดของระบบ</h3>
-    <p style="margin:8px 0 0;color:var(--ink2);font-size:14px;line-height:1.75">CareSignal ประกอบด้วยสองส่วนที่ต้องแยกให้ชัด: <b style="color:var(--ink)">(1) AI Computer Vision</b> — โมเดล pose estimation ตรวจจับ 33 จุดบนร่างกายจากภาพกล้อง (MediaPipe PoseLandmarker — ระบบเลือกรุ่น<b>ละเอียดสูงสุด</b>ที่เครื่องรับไหวโดยอัตโนมัติ: heavy → full → lite) ส่วนนี้เป็น AI จริงและเป็น deep learning · การสั่งงานด้วยเสียงใช้ระบบรู้จำเสียงภาษาไทยของเบราว์เซอร์ ไม่ได้ส่งเสียงให้ CareSignal เก็บ · ออกแบบเป็น <b>guided command</b> ไม่ใช่ผู้ช่วยสนทนาอิสระ: รับเฉพาะคำสั่งสั้นจำนวนน้อย (บันทึกท่านั่ง · บันทึกท่ายืน · เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน) ตัดสินจากผลรู้จำเสียงขั้นสุดท้ายเท่านั้น และกรองเสียงของระบบเองไม่ให้กลายเป็นคำสั่ง เพราะงานทบทวนการรู้จำเสียงในผู้สูงอายุชี้ว่าการสนทนาอิสระผิดพลาดง่ายจากระดับเสียง สำเนียง และเสียงแวดล้อม · <b>ทุกคำสั่งมีปุ่มบนหน้าจอทดแทนเสมอ</b> · <b style="color:var(--ink)">(2) การทรงตัว 4 ท่า — AI ช่วย ไม่ตัดสิน</b> ระบบ<b>ไม่ใช้</b>ค่าความโคลงของร่างกายจากกล้องเป็นเกณฑ์ผ่าน/ไม่ผ่าน เพราะแนวทาง CDC STEADI ไม่ได้กำหนดให้วัดการแกว่ง (postural sway) แต่ใช้เกณฑ์ "ยืนในท่าที่กำหนดครบ 10 วินาทีโดยไม่ขยับเท้าและไม่ต้องจับพยุง" และการวัดการแกว่งให้เชื่อถือได้ในทางคลินิกมักต้องใช้ force plate หรือเซ็นเซอร์ติดตัว (IMU) ไม่ใช่กล้อง RGB ตัวเดียว · AI จึงทำ 3 อย่าง คือ ตรวจว่าเห็นตัวและเท้าครบ · ช่วยจัดท่าให้ตรงกับที่กำหนด · เฝ้าระวังความปลอดภัย (หลุดกรอบภาพ ทรุดตัว มีคนเข้ามาพยุง) แล้ว<b>ให้ผู้ทดสอบหรือผู้ดูแลเป็นผู้ยืนยันผล</b> · ค่าความโคลงยังถูกเก็บไว้เป็นข้อสังเกตเชิงสำรวจ แต่ไม่มีผลต่อคะแนนหรือระดับความเสี่ยงใด ๆ · <b style="color:var(--ink)">(3) Explainable Risk Engine</b> — เอนจินวิเคราะห์ที่ใช้กฎ 24 ข้อซึ่ง derive จากวรรณกรรมทางคลินิก (คัดกรองพื้นฐาน 14 ข้อ + แนวโน้ม 10 ข้อ) <b style="color:var(--ink)">ส่วนนี้ไม่ใช่ machine learning และไม่เรียนรู้จากข้อมูลผู้ใช้</b> เราไม่เรียกระบบทั้งหมดว่า "AI ทำนายภาวะพึ่งพิง" เพราะจะเป็นการอ้างเกินกว่าที่ระบบทำจริง และไม่มีการเรียนรู้จากข้อมูลผู้ใช้ในเวอร์ชันนี้ เราประกาศเช่นนี้เพราะผู้ใช้หนึ่งรายมีจุดข้อมูลเพียงไม่กี่จุด การอ้างว่าเป็น ML ที่ผ่านการ validate จึงยังไม่มีหลักฐานรองรับ</p>
+    <p style="margin:8px 0 0;color:var(--ink2);font-size:14px;line-height:1.75">CareSignal ประกอบด้วยสองส่วนที่ต้องแยกให้ชัด: <b style="color:var(--ink)">(1) AI Computer Vision</b> — โมเดล pose estimation ตรวจจับ 33 จุดบนร่างกายจากภาพกล้อง (MediaPipe PoseLandmarker — ระบบเลือกรุ่น<b>ละเอียดสูงสุด</b>ที่เครื่องรับไหวโดยอัตโนมัติ: heavy → full → lite) ส่วนนี้เป็น AI จริงและเป็น deep learning · การสั่งงานด้วยเสียงใช้ระบบรู้จำเสียงภาษาไทยของเบราว์เซอร์ ไม่ได้ส่งเสียงให้ CareSignal เก็บ · ออกแบบเป็น <b>guided command</b> ไม่ใช่ผู้ช่วยสนทนาอิสระ: รับเฉพาะคำสั่งสั้นจำนวนน้อย (บันทึกท่านั่ง · บันทึกท่ายืน · เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน) ตัดสินจากผลรู้จำเสียงขั้นสุดท้ายเท่านั้น และกรองเสียงของระบบเองไม่ให้กลายเป็นคำสั่ง เพราะงานทบทวนการรู้จำเสียงในผู้สูงอายุชี้ว่าการสนทนาอิสระผิดพลาดง่ายจากระดับเสียง สำเนียง และเสียงแวดล้อม · <b>ทุกคำสั่งมีปุ่มบนหน้าจอทดแทนเสมอ</b> · <b style="color:var(--ink)">(2) การทรงตัว 4 ท่า — AI ช่วย ไม่ตัดสิน</b> ระบบ<b>ไม่ใช้</b>ค่าความโคลงของร่างกายจากกล้องเป็นเกณฑ์ผ่าน/ไม่ผ่าน เพราะแนวทาง CDC STEADI ไม่ได้กำหนดให้วัดการแกว่ง (postural sway) แต่ใช้เกณฑ์ "ยืนในท่าที่กำหนดครบ 10 วินาทีโดยไม่ขยับเท้าและไม่ต้องจับพยุง" และการวัดการแกว่งให้เชื่อถือได้ในทางคลินิกมักต้องใช้ force plate หรือเซ็นเซอร์ติดตัว (IMU) ไม่ใช่กล้อง RGB ตัวเดียว · AI จึงทำ 3 อย่าง คือ ตรวจว่าเห็นตัวและเท้าครบ · ช่วยจัดท่าให้ตรงกับที่กำหนด · เฝ้าระวังความปลอดภัย (หลุดกรอบภาพ ทรุดตัว มีคนเข้ามาพยุง) แล้ว<b>ให้ผู้ทดสอบหรือผู้ดูแลเป็นผู้ยืนยันผล</b> · ค่าความโคลงยังถูกเก็บไว้เป็นข้อสังเกตเชิงสำรวจ แต่ไม่มีผลต่อคะแนนหรือระดับความเสี่ยงใด ๆ · <b style="color:var(--ink)">(3) Explainable Risk Engine</b> — เอนจินวิเคราะห์ที่ใช้กฎ 24 ข้อซึ่ง derive จากวรรณกรรมทางคลินิก (คัดกรองพื้นฐาน 14 ข้อ + แนวโน้ม 10 ข้อ) แล้วแปลงเป็นสัญญาณหลัก 7 ประเภทที่ผูกกับปลายทางการส่งต่อ <b style="color:var(--ink)">ส่วนนี้ไม่ใช่ machine learning และไม่เรียนรู้จากข้อมูลผู้ใช้</b> เราไม่เรียกระบบทั้งหมดว่า "AI ทำนายภาวะพึ่งพิง" เพราะจะเป็นการอ้างเกินกว่าที่ระบบทำจริง และไม่มีการเรียนรู้จากข้อมูลผู้ใช้ในเวอร์ชันนี้ เราประกาศเช่นนี้เพราะผู้ใช้หนึ่งรายมีจุดข้อมูลเพียงไม่กี่จุด การอ้างว่าเป็น ML ที่ผ่านการ validate จึงยังไม่มีหลักฐานรองรับ</p>
     <div class="notice" style="margin-top:14px">โรดแมปชั้น ML: จะเปิดใช้ก็ต่อเมื่อ (1) มีผู้ใช้ที่มีผลประเมิน ≥3 ครั้ง อย่างน้อย 500 ราย (2) ผ่านการ validate เทียบผลการประเมินโดยพยาบาล/นักกายภาพ (3) ผ่านการตรวจสอบอคติแยกกลุ่มตามเกณฑ์ด้านล่าง และ (4) ได้รับความเห็นชอบจากคณะกรรมการจริยธรรมการวิจัยในมนุษย์</div>
   </div>
 
@@ -287,7 +276,7 @@ table.dt tr:last-child td{border-bottom:0}
 
   <div class="card" style="margin-top:16px">
     <h3 style="margin-bottom:6px">การตรวจสอบอคติตามเพศและช่วงอายุ</h3>
-    <p class="secsub" style="margin:0 0 14px">คำนวณสดจากฐานข้อมูลกลาง ณ ขณะนี้ — ตรวจว่าสัดส่วนผู้ได้รับส่วนลดและผู้ถูกจัดเป็นความเสี่ยงสูง แตกต่างกันระหว่างกลุ่มเกินเกณฑ์หรือไม่</p>
+    <p class="secsub" style="margin:0 0 14px">คำนวณสดจากฐานข้อมูลกลาง ณ ขณะนี้ — ตรวจว่าสัดส่วนผู้ถูกจัดเป็นความเสี่ยงต่ำและความเสี่ยงสูง แตกต่างกันระหว่างกลุ่มเกินเกณฑ์หรือไม่ · ระบบไม่มีส่วนลดหรือเบี้ยให้ตรวจ จึงตรวจที่<b>การจัดระดับ</b> ซึ่งเป็นสิ่งที่ระบบตัดสินจริง</p>
     <div id="biasOut"></div>
   </div>
 
@@ -371,13 +360,13 @@ table.dt tr:last-child td{border-bottom:0}
 
 <footer class="footer"><div class="wrap">
   <b>CareSignal</b> — ต้นแบบแพลตฟอร์มเพื่อการแข่งขัน OIC InsurTech Award 2026 (Topic 2: สังคมผู้สูงอายุ)<br>
-  การเสนอขายประกันภัยจริงต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ. · ตัวเลขเบี้ยเป็นสมมติฐานสาธิตที่ประกาศชัดเจน · ระบบเคารพสิทธิ PDPA
+  CareSignal เป็นระบบเฝ้าระวังความเสี่ยงและประสานการดูแล ไม่ใช่ผลิตภัณฑ์ประกันภัย · ไม่คำนวณเบี้ย ไม่พิจารณารับประกัน และไม่ตัดสินการจ่ายสินไหม · การเสนอขายประกันภัยจริงต้องดำเนินการโดยบริษัทที่ได้รับใบอนุญาตจากสำนักงาน คปภ. · ระบบเคารพสิทธิ PDPA
 </div></footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แดชบอร์ดเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิก */</script>
-<script src="./cs-backend.js?v=202"></script>
+<script src="./cs-backend.js?v=210"></script>
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
@@ -457,7 +446,7 @@ var DB={
 /* ============================================================
    Responsible AI — Model Card, Bias Audit, Human-in-the-loop
    ============================================================ */
-var ENGINE={version:"2.0.0", rules:{
+var ENGINE={version:"2.1.0", rules:{
   R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ", logic:"ผลล่าสุดช้ากว่าค่าดีที่สุดของผู้ใช้เอง ≥2.3 วินาที หรือ ≥15%", src:"MCID ของ Five-Times Sit-to-Stand ≈2.3 วินาที (Meretta 2006; Goldberg 2012)"},
   R2:{nm:"ข้ามเกณฑ์เสี่ยงตามอายุ", logic:"ผลล่าสุดสูงกว่าค่าตัดของช่วงอายุ ขณะที่ครั้งก่อนยังไม่เกิน", src:"ค่าตัดประชากรไทย 10.0/11.5/12.1 วินาที (Poncumhak 2014; Intaruk 2021)"},
   R3:{nm:"มีเหตุหกล้มใหม่", logic:"คะแนนประวัติหกล้มลดลงจากการประเมินครั้งก่อน", src:"WHO Step Safely 2021 — ล้ม 1 ครั้งเพิ่มโอกาสล้มซ้ำใน 12 เดือน"},
@@ -475,12 +464,12 @@ var MC_SCOPE=[
   ["ผลลัพธ์","ระดับสัญญาณ 4 ระดับ, แนวโน้มความเสี่ยง, รอบประเมินซ้ำ, ระดับการส่งต่อ, แผนป้องกันเฉพาะบุคคล"],
   ["ไม่เหมาะกับ","ผู้ป่วยติดเตียง, ผู้ใช้รถเข็นถาวร, ผู้มีภาวะสมองเสื่อมระยะกลางขึ้นไป, ผู้ที่เพิ่งผ่าตัดข้อสะโพก/เข่า <3 เดือน"],
   ["สภาพแวดล้อมการวัด","ทำเองที่บ้านโดยไม่มีผู้เชี่ยวชาญกำกับ — ค่าที่ได้จึงมีความแปรปรวนสูงกว่าการวัดในคลินิก และนี่คือข้อจำกัดที่ต้องวัดในการนำร่อง"],
-  ["รุ่นเอนจิน","v2.0.0 · กฎ 24 ข้อ (R1–R10 แนวโน้ม + B1–B14 คัดกรองพื้นฐาน) · ไม่มีการเรียนรู้จากข้อมูลผู้ใช้"]
+  ["รุ่นเอนจิน","v2.1.0 · กฎ 24 ข้อ (R1–R10 แนวโน้ม + B1–B14 คัดกรองพื้นฐาน) → สัญญาณหลัก 7 ประเภท (S1–S7) · ไม่มีการเรียนรู้จากข้อมูลผู้ใช้"]
 ];
 var MC_NO=[
   ["ไม่วินิจฉัยโรค","ระบบไม่ระบุชื่อโรคและไม่แทนการตรวจโดยแพทย์"],
   ["ไม่สั่งยาหรือกำหนดขนาดยา","คำแนะนำเรื่องยาคือ “ไปทบทวนกับเภสัชกร” เท่านั้น"],
-  ["ไม่เพิ่มเบี้ยและไม่ปฏิเสธความคุ้มครอง","คะแนนใช้ลดเบี้ยได้เท่านั้น — กันไม่ให้ผู้ที่สุขภาพแย่ลงถูกลงโทษจากการประเมินตนเองอย่างซื่อสัตย์"],
+  ["ไม่ยุ่งกับเบี้ยและการรับประกัน","ระบบไม่มีฟังก์ชันคำนวณเบี้ย ให้ส่วนลด หรือพิจารณารับประกันอยู่เลย — ผลตรวจใช้เพื่อเฝ้าระวังและประสานการดูแลเท่านั้น กันไม่ให้ผู้ที่สุขภาพแย่ลงถูกลงโทษจากการประเมินตนเองอย่างซื่อสัตย์"],
   ["ไม่อนุมัติหรือปฏิเสธสินไหม","ระบบรวบรวมหลักฐานให้ครบ การตัดสินทุกกรณีเป็นของผู้เชี่ยวชาญมนุษย์"],
   ["ไม่ส่งต่อโดยอัตโนมัติ","ทุกคำแนะนำส่งต่อขึ้นคิวในสถานะ “รอยืนยัน” จนกว่าพยาบาลหรือ Care Manager จะกดยืนยัน"],
   ["ไม่เก็บและไม่ส่งภาพใบหน้า","การยืนยันตัวตนสร้างลายเซ็นเชิงสัดส่วนเป็นตัวเลข 6 ค่า เก็บในเครื่องผู้ใช้เท่านั้น ไม่อัปโหลดและไม่เก็บภาพ"],
@@ -488,10 +477,10 @@ var MC_NO=[
 ];
 var HITL=[
   ["ก่อนส่งต่อผู้ใช้เข้าระบบดูแล","พยาบาลหรือ Care Manager ตรวจสอบข้อมูลและยืนยัน — ระบบไม่ติดต่อผู้ใช้เองในกรณีเสี่ยงสูง","บังคับ"],
-  ["ก่อนใช้ผลประเมินคำนวณส่วนลดเบี้ย","ฝ่ายรับประกันตรวจความสมเหตุสมผลของข้อมูล และตรวจรูปแบบผิดปกติที่บ่งชี้การปลอมผล","บังคับ"],
+  ["ก่อนปิดเคสว่า “ดีขึ้น/คงที่”","พยาบาลหรือ Care Manager ยืนยันด้วยตนเองพร้อมบันทึกเหตุผล — ระบบไม่ปิดเคสเองแม้ตัวเลขจะดีขึ้น","บังคับ"],
   ["ก่อนพิจารณาสินไหมภาวะพึ่งพิง","ทีมสหวิชาชีพประเมินที่บ้าน — ผลจากแอปเป็นเพียงหลักฐานประกอบหนึ่งชิ้น","บังคับ"],
-  ["ก่อนปรับกฎหรือค่าตัดเกณฑ์ใด ๆ","นักคณิตศาสตร์ประกันภัยและที่ปรึกษาทางคลินิกลงนามร่วม พร้อมบันทึกเหตุผลใน audit log","บังคับ"],
-  ["ก่อนให้สิทธิ์ส่วนลดจากผลตรวจ","ผลที่ยืนยันตัวตนไม่ผ่านหรือไม่ได้ยืนยัน จะไม่ถูกนำไปคิดส่วนลด และฝ่ายรับประกันสุ่มตรวจซ้ำได้","บังคับ"],
+  ["ก่อนปรับกฎหรือค่าตัดเกณฑ์ใด ๆ","ที่ปรึกษาทางคลินิกลงนาม พร้อมบันทึกเหตุผลและรุ่นเอนจินใน audit log","บังคับ"],
+  ["ก่อนบันทึกว่าไปพบผู้เชี่ยวชาญแล้ว","ต้องมีบุคลากรเป็นผู้บันทึกผลการส่งต่อ ระบบไม่เดาเองจากการที่ผู้ใช้กลับมาประเมินซ้ำ","บังคับ"],
   ["เมื่อผู้ใช้โต้แย้งผลของระบบ","เปิดช่องอุทธรณ์ให้ผู้เชี่ยวชาญประเมินซ้ำด้วยมือ และผลของมนุษย์มีน้ำหนักเหนือระบบเสมอ","สิทธิของผู้ใช้"]
 ];
 function renderAI(){
@@ -524,7 +513,7 @@ async function renderBias(){
   var rows=Object.keys(groups).map(function(k){return groups[k]});
   var byDim={};
   rows.forEach(function(r){(byDim[r.dim]=byDim[r.dim]||[]).push(r)});
-  var html='<table class="tbl"><thead><tr><th>กลุ่ม</th><th>n</th><th>ได้รับส่วนลด</th><th>ถูกจัดเป็นเสี่ยงสูง</th><th>ผลตรวจ</th></tr></thead><tbody>';
+  var html='<table class="tbl"><thead><tr><th>กลุ่ม</th><th>n</th><th>จัดเป็นเสี่ยงต่ำ</th><th>จัดเป็นเสี่ยงสูง</th><th>ผลตรวจ</th></tr></thead><tbody>';
   Object.keys(byDim).forEach(function(dim){
     var g=byDim[dim];
     var rates=g.map(function(r){return r.disc/r.n});
@@ -749,44 +738,8 @@ document.addEventListener("click",function(e){
 /* ปิดประตูไว้ก่อนตั้งแต่โหลดหน้า — กันเนื้อหาแวบให้เห็นระหว่างรอตรวจสิทธิ์ */
 renderGate('cm');renderGate('ins');renderGate('staff');
 
-/* ===== เครื่องคำนวณเบี้ย ===== */
-var C={age:62,sex:"f",plan:"m",tier:0,pay:"m"};
-function segBind(id,key,fn){
-  document.getElementById(id).addEventListener("click",function(e){
-    var b=e.target.closest("button");if(!b)return;
-    C[key]=isNaN(+b.dataset.v)?b.dataset.v:+b.dataset.v;
-    if(key==="plan")C.plan=b.dataset.v;
-    this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});
-    (fn||calc)();
-  });
-}
-function buildPlans(){
-  document.getElementById("cPlan").innerHTML=CFG.plans.map(function(p){
-    return '<button data-v="'+p.id+'" aria-pressed="'+(p.id===C.plan)+'"><b>'+p.nm+'</b>'+fmt(p.benefit)+' บ./ด.</button>'}).join("");
-}
-function calc(){
-  var p=CFG.plans.find(function(x){return x.id===C.plan});
-  var am=CFG.ageMult(C.age),sm=CFG.sexMult[C.sex];
-  var gross=p.base*am*sm, d=CFG.discount[C.tier]||0;
-  var net=gross*(1-d), unit=" บ./เดือน";
-  var grossShow=gross;
-  if(C.pay==="y"){net=net*12*(1-CFG.yearlyOff);grossShow=gross*12;unit=" บ./ปี"}
-  document.getElementById("qBig").innerHTML=fmt(net)+'<small>'+unit+'</small>';
-  var tag=document.getElementById("qTag");
-  if(d>0){tag.hidden=false;tag.className="tag "+CFG.tiers[C.tier].b;tag.textContent="รวมส่วนลดผลประเมิน −"+(d*100)+"%"}else{tag.hidden=true}
-  document.getElementById("qPlan").textContent=p.nm;
-  document.getElementById("qBen").textContent=fmt(p.benefit)+" บ./เดือน";
-  document.getElementById("qPrev").textContent=fmt(p.prev)+" บ./ปี";
-  document.getElementById("qAgeM").textContent=CFG.ageBand(C.age)+" × "+am.toFixed(2);
-  document.getElementById("qSexM").textContent="× "+sm.toFixed(2);
-  document.getElementById("qGross").textContent=fmt(grossShow)+unit;
-}
-document.getElementById("cAge").addEventListener("input",function(){C.age=+this.value;document.getElementById("cAgeV").textContent=this.value;calc()});
-segBind("cSex","sex");segBind("cTier","tier");segBind("cPay","pay");
-document.getElementById("cPlan").addEventListener("click",function(e){
-  var b=e.target.closest("button");if(!b)return;C.plan=b.dataset.v;buildPlans();calc();
-});
-buildPlans();calc();
+/* เครื่องคำนวณเบี้ยถูกถอดออก — ระบบไม่ทำเรื่องราคาอีกต่อไป
+   ดูตารางขอบเขตในหน้าสาธารณะว่าอะไรเป็นหน้าที่ของบริษัทประกัน */
 
 /* ===== ข้อมูลสาธิต ===== */
 async function clearDemo(){
@@ -1062,7 +1015,15 @@ async function renderCloudINS(){
    ที่ต้องแยกเพราะถ้าเอา ROI ไปวางปนกับตัวเลขที่นับได้จริง คนอ่านจะเข้าใจว่า
    ระบบพิสูจน์ผลลัพธ์ทางการเงินแล้ว ซึ่งยังไม่จริง
    ============================================================ */
-var OUT_ASSUME={members:1000, fallRate:30, claimRate:12, claimCost:45000, effect:23, progCost:350};
+/* ============================================================
+   Portfolio Intelligence — รายงานเชิงกลุ่มสำหรับบริษัทประกัน
+   ------------------------------------------------------------
+   แสดง 5 กลุ่มตามสายงานจริง: ประชากร → ความเสี่ยง → การดูแล →
+   การส่งต่อ → ผลลัพธ์
+   ทุกตัวเลขนับจากฐานข้อมูลผ่าน view ที่คืนค่าแถวเดียว ไม่มี user_id
+   และไม่มีตัวเลขเบี้ย ส่วนลด หรือค่าสินไหม — ระบบนี้ไม่ทำเรื่องราคา
+   ช่องที่ยังไม่มีข้อมูลจริงประกาศว่า "รอเชื่อมข้อมูล" ไม่ใส่ตัวเลขสมมติ
+   ============================================================ */
 function pctOf(a,b){return b?Math.round(a/b*100):0}
 async function renderCloudOUT(){
   var el=document.getElementById("cloudOUT"); if(!el)return;
@@ -1070,11 +1031,9 @@ async function renderCloudOUT(){
   var o=await CSBackend.insurerOutcomes();
   if(!o){el.innerHTML="";return}
   var py=+o.person_years||0;
-  /* อัตราต่อ 100 คน-ปีจะเชื่อถือได้ต่อเมื่อมีฐานเวลามากพอ
-     ถ้าโปรแกรมเพิ่งเริ่ม (เช่น 0.03 คน-ปี) เหตุการณ์เดียวจะกลายเป็นอัตราหลักพัน
-     ซึ่งดูเป็นวิทยาศาสตร์แต่ไม่มีความหมาย จึงแสดงเป็นจำนวนครั้งดิบแทน */
-  var PY_MIN=5;
-  var rateOK=py>=PY_MIN;
+  /* อัตราต่อ 100 คน-ปีเชื่อถือได้ต่อเมื่อฐานเวลามากพอ — โปรแกรมที่เพิ่งเริ่ม
+     เหตุการณ์เดียวจะกลายเป็นอัตราหลักพัน ซึ่งดูเป็นวิทยาศาสตร์แต่ไม่มีความหมาย */
+  var PY_MIN=5, rateOK=py>=PY_MIN;
   var per100=function(n){return rateOK?(n/py*100).toFixed(1)+" ครั้ง":n+" ครั้ง"};
   var rateNote=rateOK?"ต่อ 100 คน-ปี":"จำนวนครั้งใน 12 เดือน · ฐานเวลายังน้อยเกินกว่าจะคิดเป็นอัตรา";
   var lv=[["stable","เขียว · คงที่","#0E9F6E"],["watch","เหลือง · เฝ้าสังเกต","#D9A21B"],
@@ -1085,101 +1044,71 @@ async function renderCloudOUT(){
     return '<div class="rowline"><span class="k">'+x[1]+'</span><span class="v">'+n+' ราย · '+pc+'%</span></div>'+
       '<div style="height:8px;background:var(--line2);border-radius:99px;margin:4px 0 10px"><div style="height:100%;width:'+pc+'%;background:'+x[2]+';border-radius:99px"></div></div>';
   }).join("");
+  var hd=function(t){return '<div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin:6px 0 8px">'+t+'</div>'};
 
   el.innerHTML=cloudPanel(
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'+
-      '<b style="font-size:15px">📊 ชั้นวัดผล — ผลลัพธ์ของโปรแกรมป้องกัน</b>'+
+      '<b style="font-size:15px">📊 รายงานพอร์ต — ความเสี่ยง การดูแล และผลลัพธ์</b>'+
       '<span style="background:#E3F6EF;color:#0E9F6E;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px">นับจริงจากฐานข้อมูล</span></div>'+
-    '<p style="font-size:12.5px;color:#5B6B84;margin:0 0 14px">ทุกตัวเลขในส่วนนี้เป็น<b>ค่ารวมของทั้งพอร์ต</b> ดึงผ่าน view ที่คืนค่าแถวเดียว '+
+    '<p style="font-size:12.5px;color:#5B6B84;margin:0 0 14px">ทุกตัวเลขเป็น<b>ค่ารวมของทั้งพอร์ต</b> ดึงผ่าน view ที่คืนค่าแถวเดียว '+
       'ไม่มี user_id ไม่มีรายบุคคล — ต่อให้ query ตรงก็ไล่กลับไปหาตัวบุคคลไม่ได้ · '+
+      '<b>ไม่มีตัวเลขเบี้ย ส่วนลด หรือค่าสินไหมในรายงานนี้</b> เพราะระบบไม่ทำเรื่องราคา · '+
       'ฐานเวลาในโปรแกรม '+py.toFixed(2)+' คน-ปี · '+
       '<button id="csReloadOut" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
 
-    '<div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin-bottom:8px">ก · ความครอบคลุมของโปรแกรม</div>'+
+    hd("ก · ประชากรในโปรแกรม")+
     '<div class="kpirow">'+
-      kpi("สมาชิกในโปรแกรม",o.n_members+" ราย","ยินยอมแชร์ข้อมูล "+o.n_assessments+" ครั้งประเมิน")+
-      kpi("ประเมินใน 30 วัน",pctOf(o.n_active_30d,o.n_members)+"%","สมาชิก "+o.n_active_30d+" / "+o.n_members+" ราย · รวม "+o.n_assessed_30d+" ครั้ง")+
-      kpi("ทำตามนัดติดตาม",pctOf(o.n_fu_done,o.n_fu_due)+"%",o.n_fu_done+" / "+o.n_fu_due+" นัดที่ถึงกำหนด · ค้าง "+o.n_fu_open)+
+      kpi("สมาชิกในโปรแกรม",o.n_members+" ราย","ยินยอมแชร์ข้อมูล · ประเมินรวม "+o.n_assessments+" ครั้ง")+
+      kpi("เคยประเมินอย่างน้อย 1 ครั้ง",pctOf(o.n_ever_assessed,o.n_members)+"%",o.n_ever_assessed+" / "+o.n_members+" ราย")+
+      kpi("ประเมินใน 30 วัน",pctOf(o.n_active_30d,o.n_members)+"%","สมาชิก "+o.n_active_30d+" ราย · รวม "+o.n_assessed_30d+" ครั้ง")+
       kpi("หยุดทดสอบเพื่อความปลอดภัย",o.n_not_tested+" ครั้ง","Safety Gate ทำงาน ไม่ปล่อยให้ทดสอบทั้งที่มีอาการ")+
     '</div>'+
 
-    '<div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin:6px 0 8px">ข · ผลลัพธ์ทางคลินิก</div>'+
+    hd("ข · การกระจายความเสี่ยง")+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="outgrid">'+
+      '<div>'+(tot?mixHTML:'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีผลประเมินในพอร์ต</p>')+'</div>'+
+      '<div>'+
+        '<div class="rowline"><span class="k">ระดับดีขึ้น</span><span class="v" style="color:#0E9F6E">'+o.n_improved+' ราย</span></div>'+
+        '<div class="rowline"><span class="k">ระดับแย่ลง</span><span class="v" style="color:#C7443E">'+o.n_worsened+' ราย</span></div>'+
+        '<div class="rowline"><span class="k">ผู้ที่มีผลเทียบได้</span><span class="v">'+o.n_comparable+' ราย</span></div>'+
+        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">เทียบผู้ใช้กับตัวเองในอดีต ไม่ใช่กับค่าเฉลี่ยของคนอื่น — ต้องมีผลอย่างน้อย 2 ครั้งจึงนับได้</p></div>'+
+    '</div>'+
+
+    hd("ค · การดูแลก่อนเกิดการเคลม")+
     '<div class="kpirow">'+
-      kpi("ระดับดีขึ้น",o.n_improved+" ราย",(o.n_comparable?pctOf(o.n_improved,o.n_comparable)+"% ของผู้ที่มีผลเทียบได้":"ยังไม่มีผู้ที่ประเมินซ้ำ"))+
-      kpi("ระดับแย่ลง",o.n_worsened+" ราย",(o.n_comparable?pctOf(o.n_worsened,o.n_comparable)+"% ของผู้ที่มีผลเทียบได้":"—"))+
-      kpi("หกล้มที่รายงาน",per100(o.ev_fall),rateNote+" · เกือบล้มอีก "+o.ev_near_fall+" ครั้ง")+
-      kpi("เข้าโรงพยาบาล",per100(o.ev_hospital),rateNote)+
+      kpi("เคสที่เปิดทั้งหมด",o.case_total+" เคส","เปิดอัตโนมัติเมื่อสัญญาณถึงระดับเหลืองขึ้นไป")+
+      kpi("ติดต่อได้ภายในกำหนด",pctOf(o.case_contacted_in_sla,o.case_contacted)+"%",o.case_contacted_in_sla+" / "+o.case_contacted+" เคสที่ติดต่อแล้ว")+
+      kpi("เคสที่ยังทำงานอยู่",o.case_working+" เคส","ใหม่ "+o.case_new+" · ปิดแล้ว "+o.case_closed+(o.case_overdue?" · เกินกำหนด "+o.case_overdue:""))+
+      kpi("ทำตามนัดติดตาม",pctOf(o.n_fu_done,o.n_fu_due)+"%",o.n_fu_done+" / "+o.n_fu_due+" นัดที่ถึงกำหนด · ค้าง "+o.n_fu_open)+
     '</div>'+
 
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="outgrid">'+
-      '<div><div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin-bottom:8px">ค · การกระจายความเสี่ยงล่าสุด</div>'+
-        (tot?mixHTML:'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีผลประเมินในพอร์ต</p>')+'</div>'+
-      '<div><div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin-bottom:8px">ง · การส่งต่อ (วัดว่าไปพบจริงไหม)</div>'+
-        '<div class="rowline"><span class="k">เคสที่ระบบส่งต่อ</span><span class="v">'+o.n_ref+' เคส</span></div>'+
-        '<div class="rowline"><span class="k">พยาบาลยืนยันแล้ว</span><span class="v">'+o.n_ref_confirmed+' เคส · '+pctOf(o.n_ref_confirmed,o.n_ref)+'%</span></div>'+
-        '<div class="rowline"><span class="k">ไปพบผู้เชี่ยวชาญจริง</span><span class="v"><b>'+o.n_ref_completed+' เคส · '+pctOf(o.n_ref_completed,o.n_ref_confirmed)+'%</b></span></div>'+
-        '<div class="rowline"><span class="k">แผนดูแลที่สร้างแล้ว</span><span class="v">'+o.n_plans+' แผน</span></div>'+
-        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">อัตรา "ไปพบจริง" คือตัวชี้วัดที่บอกว่าวงจรปิดสนิทหรือไม่ — ส่งต่อแล้วแต่ไม่มีใครไป เท่ากับยังไม่ได้ป้องกันอะไร</p></div>'+
+      '<div>'+hd("ง · การส่งต่อ — ไปถึงปลายทางจริงไหม")+
+        '<div class="rowline"><span class="k">ระบบแนะนำให้ส่งต่อ</span><span class="v">'+o.n_ref+' เคส</span></div>'+
+        '<div class="rowline"><span class="k">บุคลากรยืนยัน</span><span class="v">'+o.n_ref_confirmed+' · '+pctOf(o.n_ref_confirmed,o.n_ref)+'%</span></div>'+
+        '<div class="rowline"><span class="k">นัดหมายแล้ว</span><span class="v">'+o.n_ref_booked+' · '+pctOf(o.n_ref_booked,o.n_ref_confirmed)+'%</span></div>'+
+        '<div class="rowline"><span class="k"><b>ไปพบผู้เชี่ยวชาญจริง</b></span><span class="v"><b>'+o.n_ref_completed+' · '+pctOf(o.n_ref_completed,o.n_ref_confirmed)+'%</b></span></div>'+
+        '<div class="rowline"><span class="k">บันทึกผลลัพธ์แล้ว</span><span class="v">'+o.n_ref_outcome+'</span></div>'+
+        (o.n_ref_lost?'<div class="rowline"><span class="k">ปฏิเสธ / ติดต่อไม่ได้</span><span class="v" style="color:#C7443E">'+o.n_ref_lost+'</span></div>':'')+
+        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">อัตรา "ไปพบจริง" คือตัวชี้วัดที่บอกว่าวงจรปิดสนิทหรือไม่ — ส่งต่อแล้วไม่มีใครไป เท่ากับยังไม่ได้ป้องกันอะไร</p></div>'+
+      '<div>'+hd("จ · ผลลัพธ์ที่รายงานเข้ามา")+
+        '<div class="rowline"><span class="k">หกล้ม</span><span class="v">'+per100(o.ev_fall)+'</span></div>'+
+        '<div class="rowline"><span class="k">เกือบล้ม</span><span class="v">'+per100(o.ev_near_fall)+'</span></div>'+
+        '<div class="rowline"><span class="k">เข้าโรงพยาบาล/ห้องฉุกเฉิน</span><span class="v">'+per100(o.ev_hospital)+'</span></div>'+
+        '<div class="rowline"><span class="k">กิจวัตรประจำวันลดลง</span><span class="v">'+per100(o.ev_adl_drop)+'</span></div>'+
+        '<div class="rowline"><span class="k">มีการปรับยา</span><span class="v">'+per100(o.ev_med_change)+'</span></div>'+
+        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">'+esc(rateNote)+' · มาจากที่สมาชิกและครอบครัวรายงานเข้ามาเอง ไม่ใช่ข้อมูลเคลม</p></div>'+
     '</div>'+
 
-    /* ---------- ส่วนที่เป็นการจำลอง แยกกล่อง แยกสี ไม่ให้ปนกับข้างบน ---------- */
-    '<div style="border:1.5px dashed #E0A93C;background:#FFFBF0;border-radius:14px;padding:16px;margin-top:18px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
-        '<b style="font-size:14.5px;color:#8A5A00">🧮 แบบจำลองมูลค่าเชิงธุรกิจ</b>'+
-        '<span style="background:#FDE9C0;color:#8A5A00;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">ยังไม่ใช่ผลจริง — เป็นการคำนวณจากสมมติฐาน</span></div>'+
-      '<p style="font-size:12.5px;color:#7A5A20;margin:8px 0 12px">CareSignal <b>ยังไม่มีข้อมูลค่าสินไหมจริง</b> จึงคำนวณ ROI จากผลลัพธ์ที่วัดได้เองไม่ได้ '+
-        'กล่องนี้ให้ปรับสมมติฐานเพื่อดูว่า<b>ถ้า</b>โปรแกรมได้ผลตามงานวิจัย มูลค่าจะอยู่ราวเท่าไร '+
-        'ตัวเลขที่ออกมาใช้เพื่อการวางแผนนำร่องเท่านั้น ห้ามนำไปอ้างว่าเป็นผลลัพธ์ที่พิสูจน์แล้ว '+
-        'การพิสูจน์จริงต้องรอการนำร่องที่เชื่อมข้อมูลสินไหมและมีกลุ่มเปรียบเทียบ</p>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">'+
-        outField("oaMembers","จำนวนสมาชิกในโปรแกรม (ราย)",OUT_ASSUME.members,"1")+
-        outField("oaFall","ผู้สูงอายุที่ล้มอย่างน้อย 1 ครั้ง/ปี (%)",OUT_ASSUME.fallRate,"0.5")+
-        outField("oaClaim","สัดส่วนการล้มที่นำไปสู่การเคลม (%)",OUT_ASSUME.claimRate,"0.5")+
-        outField("oaCost","ค่าสินไหมเฉลี่ยต่อเคส (บาท)",OUT_ASSUME.claimCost,"1000")+
-        outField("oaEffect","ประสิทธิผลที่คาดหวัง — ลดอัตราการล้ม (%)",OUT_ASSUME.effect,"1")+
-        outField("oaProg","ต้นทุนโปรแกรมต่อคนต่อปี (บาท)",OUT_ASSUME.progCost,"10")+
-      '</div>'+
-      '<div id="outCalc" style="margin-top:14px"></div>'+
-      '<p style="font-size:11.5px;color:#7A5A20;margin:12px 0 0;line-height:1.7">'+
-        '<b>ที่มาของค่าตั้งต้น</b> · อัตราการล้ม 30% ต่อปีในผู้มีอายุ 65 ปีขึ้นไป — องค์การอนามัยโลก (ช่วงที่รายงานไว้คือ 28–35%) · '+
-        'ประสิทธิผล 23% — Sherrington และคณะ, Cochrane Database of Systematic Reviews 2019 '+
-        '(โปรแกรมออกกำลังกายลดอัตราการล้มในผู้สูงอายุที่อยู่ในชุมชนได้ราว 23%) · '+
-        'สัดส่วนการเคลมและค่าสินไหมเฉลี่ยเป็น<b>ตัวเลขสมมติสำหรับกรอกทดแทน</b> ต้องแทนที่ด้วยข้อมูลจริงของบริษัทก่อนใช้ตัดสินใจ</p>'+
-    '</div>');
+    /* ช่องที่ยังไม่มีข้อมูลจริง — ประกาศให้ชัด ไม่เติมตัวเลขสมมติ */
+    '<div style="border:1.5px dashed #C2CFE3;background:#F7FAFF;border-radius:14px;padding:16px;margin-top:18px">'+
+      '<b style="font-size:14px;color:#3A4A66">แนวโน้มค่าสินไหม — รอเชื่อมข้อมูลจริง</b>'+
+      '<p style="font-size:12.5px;color:#5B6B84;margin:8px 0 0">CareSignal ไม่มีข้อมูลการเคลมของบริษัทประกัน จึงยัง<b>คำนวณแนวโน้มค่าสินไหมไม่ได้</b> '+
+      'ช่องนี้จะเติมได้เมื่อบริษัทประกันเชื่อมข้อมูลเคลมเข้ากับรายงานนี้ในการนำร่อง โดยจับคู่ที่ระดับกลุ่มไม่ใช่รายบุคคล<br>'+
+      'ระบบเลือกแสดงว่า<b>"ยังไม่มีข้อมูล"</b> แทนการใส่ตัวเลขประมาณการ เพราะตัวเลขที่ดูน่าเชื่อแต่ไม่มีฐานข้อมูลรองรับ '+
+      'จะถูกเข้าใจผิดว่าเป็นผลที่พิสูจน์แล้ว</p></div>');
 
   var rl=el.querySelector("#csReloadOut"); if(rl)rl.addEventListener("click",renderCloudOUT);
-  el.querySelectorAll("[data-oa]").forEach(function(i){i.addEventListener("input",outCalc)});
-  outCalc();
-}
-function outField(id,label,val,step){
-  return '<label style="display:block"><span style="display:block;font-size:11.5px;color:#7A5A20;font-weight:600;margin-bottom:4px">'+label+'</span>'+
-    '<input id="'+id+'" data-oa="1" type="number" step="'+step+'" min="0" value="'+val+'" '+
-    'style="width:100%;padding:9px 11px;border:1.5px solid #E7D3A8;border-radius:9px;background:#fff;font-family:inherit;font-size:14px"></label>';
-}
-function outCalc(){
-  var g=function(id){var e=document.getElementById(id);return e?(+e.value||0):0};
-  var n=g("oaMembers"), fallPc=g("oaFall")/100, claimPc=g("oaClaim")/100,
-      cost=g("oaCost"), eff=g("oaEffect")/100, prog=g("oaProg");
-  var fallers=n*fallPc;                 /* คนที่คาดว่าจะล้มถ้าไม่มีโปรแกรม */
-  var avoided=fallers*eff;              /* ที่โปรแกรมช่วยไม่ให้ล้ม */
-  var claimsAvoided=avoided*claimPc;    /* ที่แปลงเป็นเคลมที่ไม่เกิด */
-  var saved=claimsAvoided*cost;
-  var progTotal=n*prog;
-  var net=saved-progTotal;
-  var roi=progTotal>0?(net/progTotal*100):0;
-  var box=document.getElementById("outCalc"); if(!box)return;
-  var row=function(k,v,strong){return '<div class="rowline"><span class="k">'+k+'</span><span class="v">'+(strong?"<b>"+v+"</b>":v)+'</span></div>'};
-  box.innerHTML=
-    row("คาดว่าจะมีผู้ล้มถ้าไม่มีโปรแกรม",fmt(fallers)+" ราย/ปี")+
-    row("ล้มที่คาดว่าป้องกันได้",fmt(avoided)+" ราย/ปี")+
-    row("เคลมที่ไม่เกิดขึ้น",fmt(claimsAvoided)+" เคส/ปี")+
-    row("ค่าสินไหมที่ประหยัดได้",fmt(saved)+" บาท/ปี")+
-    row("ต้นทุนโปรแกรมทั้งพอร์ต",fmt(progTotal)+" บาท/ปี")+
-    row("ประหยัดสุทธิ",fmt(net)+" บาท/ปี",true)+
-    row("ผลตอบแทนต่อทุกบาทที่ลงทุน",(progTotal>0?(saved/progTotal).toFixed(2)+" บาท (ROI "+Math.round(roi)+"%)":"—"),true)+
-    '<p style="font-size:11.5px;color:#7A5A20;margin:8px 0 0">คิดต่อคนต่อปี = ประหยัด '+
-      (n?fmt(saved/n):"0")+' บาท เทียบกับต้นทุน '+fmt(prog)+' บาท '+
-      '<b>ภายใต้สมมติฐานข้างต้นเท่านั้น</b></p>';
 }
 (async function(){
   try{

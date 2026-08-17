@@ -260,10 +260,69 @@ var CSBackend = (function () {
     var u = await currentUser(); if (!u) throw new Error("no session");
     var r = await sb.from("risk_signals").insert({
       user_id: u.id, assessment_id: assessmentId,
-      level: tr.level, flags: tr.flags || [], next_days: tr.nextDays,
+      level: tr.level, flags: tr.flags || [], signals: tr.signals || [],
+      next_days: tr.nextDays,
       engine_version: tr.engine || "unknown"
     }).select().single();
     if (r.error) throw r.error;
+    return r.data;
+  }
+
+  /* ============================================================
+     เคสก่อนการเคลม (pre-claim workflow)
+     ------------------------------------------------------------
+     เคสไม่ได้เปิดจากฝั่งหน้าจอ — ทริกเกอร์ในฐานข้อมูลเปิดให้เอง
+     ทุกครั้งที่บันทึกสัญญาณระดับเหลืองขึ้นไป จึงข้ามไม่ได้
+     ฟังก์ชันในนี้มีไว้ "อ่าน" และ "เลื่อนสถานะ" เท่านั้น
+     ============================================================ */
+  async function myCases(limit) {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("care_cases").select("*")
+      .eq("user_id", u.id).order("opened_at", { ascending: false }).limit(limit || 5);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function caseQueue(limit) {
+    if (!isCloud()) return [];
+    var r = await sb.from("care_cases")
+      .select("*, profiles!care_cases_user_id_fkey(pseudonym, display_name, phone, birth_year_be, sex)")
+      .not("status", "in", "(stable,closed)")
+      .order("opened_at", { ascending: true }).limit(limit || 100);
+    if (r.error) { console.warn(r.error); return []; }
+    await audit("case.queue", null, "เปิดดูคิวเคส " + (r.data || []).length + " เคส");
+    return r.data || [];
+  }
+  /* เลื่อนสถานะเคส — ทุกครั้งบันทึกว่าใครเป็นคนเลื่อน ลง audit log ที่ลบไม่ได้ */
+  async function updateCase(id, status, note) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var patch = { status: status, updated_at: new Date().toISOString(), assigned_to: u.id };
+    if (status === "contacted") patch.contacted_at = new Date().toISOString();
+    if (status === "stable" || status === "closed") {
+      patch.closed_at = new Date().toISOString();
+      if (note) patch.close_reason = note;
+    }
+    if (note) patch.note = note;
+    var r = await sb.from("care_cases").update(patch).eq("id", id).select().single();
+    if (r.error) throw r.error;
+    await audit("case.update", id, "เลื่อนสถานะเคสเป็น " + status + (note ? " · " + note : ""));
+    return r.data;
+  }
+  /* เลื่อนสถานะการส่งต่อ จนถึงบันทึกผลลัพธ์ — ตัวชี้วัดว่าไปถึงปลายทางจริง */
+  async function updateReferral(id, status, extra) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var now = new Date().toISOString();
+    var patch = { status: status };
+    if (status === "acknowledged") patch.acknowledged_at = now;
+    if (status === "booked") patch.booked_at = now;
+    if (status === "completed") { patch.completed_at = now; if (extra && extra.note) patch.completed_note = extra.note; }
+    if (status === "outcome_recorded") patch.outcome = (extra && extra.outcome) || { result: "recorded", recorded_at: now };
+    if (extra && extra.destination) patch.destination = extra.destination;
+    var r = await sb.from("referrals").update(patch).eq("id", id).select().single();
+    if (r.error) throw r.error;
+    await audit("referral.update", id, "การส่งต่อเปลี่ยนสถานะเป็น " + status);
     return r.data;
   }
 
@@ -272,6 +331,7 @@ var CSBackend = (function () {
     var u = await currentUser(); if (!u) throw new Error("no session");
     var r = await sb.from("referrals").insert({
       user_id: u.id, risk_signal_id: riskSignalId,
+      destination: (tr.signals && tr.signals[0] && tr.signals[0].dest) || null,
       level: tr.level, action: tr.referral.nm, sla: tr.referral.sla,
       reasons: (tr.flags || []).map(function (f) { return { id: f.id, text: f.text }; }),
       status: "pending"
@@ -718,6 +778,8 @@ var CSBackend = (function () {
     saveRiskSignal: saveRiskSignal, createReferral: createReferral,
     listReferralQueue: listReferralQueue, decideReferral: decideReferral,
     insurerPortfolio: insurerPortfolio, insurerOutcomes: insurerOutcomes,
+    myCases: myCases, caseQueue: caseQueue, updateCase: updateCase,
+    updateReferral: updateReferral,
     createInvite: createInvite, listMyCarers: listMyCarers, decideCarer: decideCarer,
     updateCarerPermissions: updateCarerPermissions, revokeCarer: revokeCarer,
     redeemInvite: redeemInvite, famMembers: famMembers, famAssessments: famAssessments,

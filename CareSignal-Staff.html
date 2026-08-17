@@ -104,7 +104,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=202"></script>
+<script src="./cs-backend.js?v=210"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -197,48 +197,99 @@ async function doLogin(){
   }
 }
 
-/* ---------- คิวเคส (Care Manager) ---------- */
+/* ============================================================
+   คิวเคส (Care Manager) — วงจรชีวิตเคสก่อนการเคลม
+   ------------------------------------------------------------
+   เคสไม่ได้เปิดจากหน้าจอนี้ — ทริกเกอร์ในฐานข้อมูลเปิดให้เองทุกครั้ง
+   ที่มีสัญญาณระดับเหลืองขึ้นไป หน้านี้จึงเป็น "ที่ทำงาน" ของเคส
+   ไม่ใช่ที่สร้างเคส และทุกการเลื่อนสถานะบันทึกชื่อผู้ทำใน audit log
+   ============================================================ */
+var CASE_STEPS=[
+  {k:"new",          nm:"เคสใหม่",           next:"reviewing",    btn:"รับเคสนี้"},
+  {k:"reviewing",    nm:"กำลังทบทวน",        next:"contacted",    btn:"ติดต่อได้แล้ว"},
+  {k:"contacted",    nm:"ติดต่อแล้ว",         next:"referred",     btn:"ส่งต่อผู้เชี่ยวชาญ"},
+  {k:"referred",     nm:"ส่งต่อแล้ว",         next:"intervention", btn:"เริ่มการดูแล"},
+  {k:"intervention", nm:"อยู่ระหว่างดูแล",    next:"follow_up_due",btn:"ถึงกำหนดติดตาม"},
+  {k:"follow_up_due",nm:"ถึงกำหนดติดตาม",    next:"stable",       btn:"ดีขึ้น/คงที่ — ปิดเคส"}
+];
+function caseStep(k){for(var i=0;i<CASE_STEPS.length;i++)if(CASE_STEPS[i].k===k)return CASE_STEPS[i];return null}
+var SIG_NM={S1:"หกล้มครั้งใหม่",S2:"หกล้มซ้ำ/บาดเจ็บ",S3:"ความเสี่ยงจากยา",
+            S4:"กำลังขาและการทรงตัวถดถอย",S5:"เดินช้าลง",S6:"กิจวัตรประจำวันลดลง",
+            S7:"ธงแดงด้านความปลอดภัย"};
+var DEST_NM={doctor:"แพทย์",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",
+             nurse:"พยาบาล/ผู้จัดการดูแล",family:"ครอบครัว",community:"เครือข่ายชุมชน"};
+
+function slaLeft(c){
+  var due=new Date(c.opened_at).getTime()+(c.sla_hours||72)*3600000;
+  var h=Math.round((due-Date.now())/3600000);
+  if(c.contacted_at)return {txt:"ติดต่อแล้ว",cls:"var(--c4)"};
+  if(h<0)          return {txt:"เกินกำหนด "+Math.abs(h)+" ชม.",cls:"var(--c1)"};
+  return {txt:"ต้องติดต่อภายใน "+h+" ชม.",cls:h<=12?"var(--c2)":"var(--ink2)"};
+}
+
 async function queueV(){
-  head("คิวเคสวันนี้","เรียงตามความเร่งด่วน — เคสจากสมาชิกที่วัดผ่านแอปและเข้าเกณฑ์ส่งต่อ");
+  head("คิวเคส","เคสเปิดอัตโนมัติเมื่อพบสัญญาณเสี่ยง — เรียงตามความเร่งด่วนและเวลาที่ค้าง");
   if(ST.role!=="care_manager"&&ST.role!=="admin"){
-    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะ Care Manager</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูคิวเคสรายบุคคลไม่ได้ ตามหลักแบ่งสิทธิ์ข้อมูล — ใช้แท็บ "พอร์ต" แทน</div>';
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะ Care Manager</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูเคสรายบุคคลไม่ได้ ตามหลักแบ่งสิทธิ์ข้อมูล — ใช้แท็บ "พอร์ต" แทน</div>';
     return;
   }
   V.innerHTML='<div class="empty">กำลังโหลดคิวเคส…</div>';
   var q=[];
-  try{q=await CSBackend.listReferralQueue()}catch(e){}
+  try{q=await CSBackend.caseQueue()}catch(e){}
   var order={urgent:0,decline:1,watch:2,stable:3};
-  var pending=q.filter(function(x){return x.status==="pending"})
-               .sort(function(a,b){return (a.level in order?order[a.level]:9)-(b.level in order?order[b.level]:9)});
-  var done=q.filter(function(x){return x.status!=="pending"}).slice(0,6);
+  q.sort(function(a,b){
+    var d=(a.level in order?order[a.level]:9)-(b.level in order?order[b.level]:9);
+    return d!==0?d:(new Date(a.opened_at)-new Date(b.opened_at));
+  });
+  var byStatus={};
+  q.forEach(function(c){byStatus[c.status]=(byStatus[c.status]||0)+1});
+
   var html='';
-  if(!pending.length)html+='<div class="card"><div class="empty">ไม่มีเคสรอตัดสิน 🎉<br><span style="font-size:12.5px">เมื่อสมาชิกวัดผ่านแอปและเข้าเกณฑ์ส่งต่อ เคสจะขึ้นที่นี่ทันที</span></div></div>';
-  pending.forEach(function(c){
-    var pr=c.profiles||{};
-    var flags=(c.flags||[]).map(function(f){return '<div class="flag"><b>'+esc(f.id||"")+'</b> '+esc(f.text||"")+'</div>'}).join("");
+  if(!q.length){
+    html+='<div class="card"><div class="empty">ไม่มีเคสค้าง 🎉<br><span style="font-size:12.5px">เมื่อสมาชิกประเมินแล้วพบสัญญาณระดับเหลืองขึ้นไป ระบบจะเปิดเคสที่นี่ทันที</span></div></div>';
+  }else{
+    html+='<div class="card"><h3>สรุปคิว '+q.length+' เคส</h3>'+
+      CASE_STEPS.map(function(st){
+        var n=byStatus[st.k]||0;
+        return n?'<div class="rowline"><span class="k">'+st.nm+'</span><span class="v">'+n+'</span></div>':'';
+      }).join("")+'</div>';
+  }
+  q.forEach(function(c){
+    var pr=c.profiles||{}, sl=slaLeft(c), step=caseStep(c.status);
+    var sigs=(c.signals||[]).map(function(f){
+      var nm=f.nm||SIG_NM[f.k]||f.text||f.id||"";
+      var dest=f.dest?' → '+(DEST_NM[f.dest]||f.dest):"";
+      return '<div class="flag"><b>'+esc(f.k||f.id||"")+'</b> '+esc(nm)+esc(dest)+
+             (f.act?'<br><span style="color:var(--ink3)">'+esc(f.act)+'</span>':'')+'</div>';
+    }).join("");
     html+='<div class="case"><div class="top">'+
       '<span class="pill" style="background:'+(LV_C[c.level]||"#5B77B4")+'">'+(LV_NM[c.level]||esc(c.level))+'</span>'+
       '<span class="who">'+esc(pr.pseudonym||"—")+' · '+esc(pr.display_name||"")+'</span>'+
-      '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(c.created_at)+'</span></div>'+
-      '<div style="font-size:13.5px">'+esc(c.action||c.recommendation||"ตรวจสอบและตัดสินการส่งต่อ")+(c.sla?' · <b>'+esc(c.sla)+'</b>':'')+'</div>'+
-      flags+
-      '<div class="btnrow"><button class="ok" data-ok="'+c.id+'">✓ ยืนยันส่งต่อ</button>'+
-      '<button class="no" data-no="'+c.id+'">ยังไม่ส่งต่อ</button></div></div>';
+      '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(c.opened_at)+'</span></div>'+
+      '<div class="rowline"><span class="k">สถานะ</span><span class="v">'+esc(step?step.nm:c.status)+'</span></div>'+
+      '<div class="rowline"><span class="k">กำหนดติดต่อ</span><span class="v" style="color:'+sl.cls+'">'+esc(sl.txt)+'</span></div>'+
+      (pr.phone?'<div class="rowline"><span class="k">โทร</span><span class="v"><a href="tel:'+esc(pr.phone)+'" style="color:var(--gold)">'+esc(pr.phone)+'</a></span></div>':'')+
+      sigs+
+      '<div class="btnrow">'+
+        (step&&step.next?'<button class="ok" data-adv="'+c.id+'" data-to="'+step.next+'">'+esc(step.btn)+'</button>':'')+
+        '<button class="no" data-close="'+c.id+'">ปิดเคส</button></div></div>';
   });
-  if(done.length){
-    html+='<div class="card"><h3>ตัดสินล่าสุด</h3>'+done.map(function(c){
-      var pr=c.profiles||{};
-      return '<div class="rowline"><span class="k">'+esc(pr.pseudonym||"—")+'</span><span class="v" style="color:'+(c.status==="approved"?"var(--c4)":"var(--ink3)")+'">'+(c.status==="approved"?"ส่งต่อแล้ว":"ไม่ส่งต่อ")+'</span></div>';
-    }).join("")+'</div>';
-  }
-  html+='<div class="notice">การตัดสินทุกครั้งบันทึกชื่อผู้ตัดสินและเวลาใน audit log · AI จัดลำดับและอธิบายเหตุผลเท่านั้น การส่งต่อจริงตัดสินโดยคุณ</div>';
+  html+='<div class="notice">เคสเปิดอัตโนมัติจากสัญญาณเสี่ยง — ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น <b>การตัดสินใจทางคลินิกและการส่งต่อทุกครั้งเป็นของคุณ</b> · ทุกการเลื่อนสถานะบันทึกชื่อผู้ทำและเวลาใน audit log ที่ลบไม่ได้ · ระบบนี้ไม่วินิจฉัยโรค ไม่สั่งปรับยา และไม่ตัดสินการจ่ายสินไหม</div>';
   V.innerHTML=html;
-  V.querySelectorAll("[data-ok],[data-no]").forEach(function(b){
+  V.querySelectorAll("[data-adv]").forEach(function(b){
     b.addEventListener("click",async function(){
-      var ok=b.hasAttribute("data-ok"), id=b.dataset.ok||b.dataset.no;
       b.disabled=true;
-      try{await CSBackend.decideReferral(id,ok);toast(ok?"ยืนยันส่งต่อแล้ว":"บันทึกว่ายังไม่ส่งต่อ");queueV()}
-      catch(e){toast("ตัดสินไม่สำเร็จ — ต้องเป็นบัญชี Care Manager");b.disabled=false}
+      try{await CSBackend.updateCase(b.dataset.adv,b.dataset.to);toast("อัปเดตสถานะเคสแล้ว");queueV()}
+      catch(e){toast("อัปเดตไม่สำเร็จ — ต้องเป็นบัญชี Care Manager");b.disabled=false}
+    });
+  });
+  V.querySelectorAll("[data-close]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      var why=prompt("ปิดเคสเพราะอะไร (บันทึกลง audit log)");
+      if(why===null)return;
+      b.disabled=true;
+      try{await CSBackend.updateCase(b.dataset.close,"closed",why||"ปิดโดยเจ้าหน้าที่");toast("ปิดเคสแล้ว");queueV()}
+      catch(e){toast("ปิดเคสไม่สำเร็จ");b.disabled=false}
     });
   });
 }
@@ -290,11 +341,13 @@ function outcomeCard(o){
     '<div class="rowline"><span class="k">ทำตามนัดติดตาม</span><span class="v">'+pc(o.n_fu_done,o.n_fu_due)+'% ('+o.n_fu_done+'/'+o.n_fu_due+')</span></div>'+
     '<div class="rowline"><span class="k">ส่งต่อแล้วไปพบจริง</span><span class="v">'+pc(o.n_ref_completed,o.n_ref_confirmed)+'% ('+o.n_ref_completed+'/'+o.n_ref_confirmed+')</span></div>'+
     '<div class="rowline"><span class="k">ระดับดีขึ้น / แย่ลง</span><span class="v">'+o.n_improved+' / '+o.n_worsened+' ราย</span></div>'+
+    '<div class="rowline"><span class="k">เคสที่เปิด / ยังทำงานอยู่</span><span class="v">'+o.case_total+' / '+o.case_working+'</span></div>'+
+    '<div class="rowline"><span class="k">ติดต่อได้ภายในกำหนด</span><span class="v">'+pc(o.case_contacted_in_sla,o.case_contacted)+'%'+(o.case_overdue?' · เกินกำหนด '+o.case_overdue:'')+'</span></div>'+
     '<div class="rowline"><span class="k">หกล้มที่รายงาน</span><span class="v">'+per100(o.ev_fall)+'</span></div>'+
     '<div class="rowline"><span class="k">เข้าโรงพยาบาล</span><span class="v">'+per100(o.ev_hospital)+'</span></div>'+
     '<p class="tiny">'+(rateOK?"":"ฐานเวลาในโปรแกรมยังน้อย ("+py.toFixed(2)+" คน-ปี) จึงแสดงเป็นจำนวนครั้งแทนอัตรา · ")+
     'ตัวเลขทั้งหมดนับจริงจากฐานข้อมูล เป็นค่ารวมของพอร์ต ไม่มีข้อมูลรายบุคคล · '+
-    'แบบจำลองมูลค่าทางการเงิน (ROI) อยู่บนเว็บพร้อมคำอธิบายสมมติฐาน</p></div>';
+    'รายงานนี้ไม่มีตัวเลขเบี้ยหรือค่าสินไหม — ระบบไม่ทำเรื่องราคาและไม่ตัดสินการเคลม</p></div>';
 }
 
 /* ---------- ฉัน ---------- */

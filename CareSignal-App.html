@@ -248,7 +248,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=202"></script>
+<script src="./cs-backend.js?v=210"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
 
@@ -1058,7 +1058,7 @@ function scoreDraft(dr,age){
    ชั้น ML จะเปิดใช้เมื่อมีข้อมูลนำร่องครบเกณฑ์และผ่านการ validate เท่านั้น
    ============================================================ */
 var ENGINE={
-  version:"2.0.0",
+  version:"2.1.0",
   kind:"rule-based-explainable",
   rules:{
     R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ",src:"MCID ของ Five-Times Sit-to-Stand ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
@@ -1094,6 +1094,80 @@ var ENGINE={
 function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
 
 /* ---- วิเคราะห์เส้นทางความเสี่ยงเฉพาะบุคคล ---- */
+/* ============================================================
+   ชั้นสัญญาณหลัก 7 ประเภท (S1–S7)
+   ------------------------------------------------------------
+   กฎ 24 ข้อยังอยู่ครบในฐานะ "หลักฐาน" ที่อธิบายได้ว่าทำไมถึงติด
+   แต่สิ่งที่ส่งต่อไปยังขั้นถัดไปของสายงานคือ "สัญญาณ" 7 ประเภทนี้
+   เพราะแต่ละสัญญาณผูกกับ "งานที่ต้องเกิดขึ้นจริง" คนละแบบ —
+   ล้มซ้ำต้องพบแพทย์ · ยาเสี่ยงต้องให้เภสัชกรทบทวน · เดินช้าลง
+   ต้องเข้าโปรแกรมฝึกกำลังขาและการทรงตัว
+
+   ถ้าไม่มีชั้นนี้ ระบบจะบอกได้แค่ "เหลือง/แดง" ซึ่งไม่พอให้ใคร
+   ลงมือทำอะไรได้ — และนั่นคือความต่างระหว่างแบบสอบถามกับ
+   ระบบประสานการดูแลก่อนเกิดการเคลม
+
+   ระบบนี้ไม่วินิจฉัยโรค ไม่สั่งหยุด/ลด/เพิ่มยา ไม่ตัดสินการเคลม
+   ทุกการตัดสินใจทางคลินิกเป็นของบุคลากรที่มีใบอนุญาต
+   ============================================================ */
+var SIGNAL_DEFS=[
+  {k:"S1", nm:"หกล้มครั้งใหม่", rules:["R3","B7"],
+   dest:"doctor",     act:"ทบทวนสาเหตุการล้มกับแพทย์ และสำรวจจุดเสี่ยงในบ้าน"},
+  {k:"S2", nm:"หกล้มซ้ำหรือล้มแล้วบาดเจ็บ", rules:["B1","B2","B3","B4"],
+   dest:"doctor",     act:"พบแพทย์เพื่อหาสาเหตุ — การล้มซ้ำและการหมดสติไม่ใช่เรื่องของการฝึกทรงตัวอย่างเดียว"},
+  {k:"S3", nm:"ความเสี่ยงจากยา", rules:["R5","B6","B12","B13","B14"],
+   dest:"pharmacist", act:"ให้เภสัชกรหรือแพทย์ทบทวนรายการยา — ระบบไม่สั่งหยุดหรือปรับยาเอง"},
+  {k:"S4", nm:"กำลังขาและการทรงตัวถดถอย", rules:["R1","R2","R4","R7","R8","B9","B11"],
+   dest:"physio",     act:"เข้าโปรแกรมฝึกกำลังขาและการทรงตัว (strength and balance)"},
+  {k:"S5", nm:"ความคล่องตัวในการเดินลดลง", rules:["R10","B10"],
+   dest:"physio",     act:"ประเมินการเดินและพิจารณาอุปกรณ์ช่วยเดินที่เหมาะสม"},
+  {k:"S6", nm:"ทำกิจวัตรประจำวันได้น้อยลง", rules:["R6","R9"],
+   dest:"nurse",      act:"ประเมินภาวะพึ่งพิงเชิงลึกและวางแผนการดูแลร่วมกับครอบครัว"},
+  {k:"S7", nm:"ธงแดงด้านความปลอดภัย", rules:["B5","B8"],
+   dest:"doctor",     act:"ให้บุคลากรประเมินก่อน ยังไม่ควรทดสอบสมรรถภาพด้วยตนเอง"}
+];
+/* แปลงกฎที่ติดทั้งหมด → สัญญาณหลักพร้อมความรุนแรงและงานที่ต้องทำ */
+function toSignals(flags){
+  var byRule={};
+  (flags||[]).forEach(function(f){ byRule[f.id]=f });
+  var out=[];
+  SIGNAL_DEFS.forEach(function(d){
+    var hit=d.rules.filter(function(r){return byRule[r]});
+    if(!hit.length)return;
+    var sev=0, why=[];
+    hit.forEach(function(r){ sev=Math.max(sev,byRule[r].sev||1); why.push(byRule[r].text) });
+    out.push({k:d.k, nm:d.nm, sev:sev, dest:d.dest, act:d.act, rules:hit, why:why});
+  });
+  out.sort(function(a,b){return b.sev-a.sev});
+  return out;
+}
+var DEST_NM={doctor:"แพทย์",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",
+             nurse:"พยาบาล/ผู้จัดการดูแล",family:"ครอบครัว",community:"เครือข่ายชุมชน"};
+/* วงจรชีวิตของเคสก่อนการเคลม — ต้องตรงกับ enum cs_case_status ในฐานข้อมูล */
+var CASE_FLOW=[
+  {k:"new",          nm:"เคสใหม่ ยังไม่มีผู้รับผิดชอบ"},
+  {k:"reviewing",    nm:"เจ้าหน้าที่รับเคสแล้ว กำลังทบทวน"},
+  {k:"contacted",    nm:"ติดต่อผู้เอาประกันหรือครอบครัวได้แล้ว"},
+  {k:"referred",     nm:"ส่งต่อผู้เชี่ยวชาญแล้ว"},
+  {k:"intervention", nm:"อยู่ระหว่างการดูแลแก้ไข"},
+  {k:"follow_up_due",nm:"ถึงกำหนดติดตามผล"},
+  {k:"stable",       nm:"ดีขึ้นหรือคงที่ — ปิดเคส"},
+  {k:"closed",       nm:"ปิดเคสด้วยเหตุอื่น"}
+];
+function caseNm(k){for(var i=0;i<CASE_FLOW.length;i++)if(CASE_FLOW[i].k===k)return CASE_FLOW[i].nm;return k}
+/* เส้นทางการส่งต่อ — ตามได้จนถึงผลลัพธ์ ไม่ใช่แค่ "แนะนำแล้วจบ" */
+var REF_FLOW=[
+  {k:"recommended",     nm:"ระบบแนะนำให้ส่งต่อ"},
+  {k:"approved",        nm:"บุคลากรยืนยันการส่งต่อ"},
+  {k:"acknowledged",    nm:"ผู้เอาประกันรับทราบแล้ว"},
+  {k:"booked",          nm:"นัดหมายเรียบร้อย"},
+  {k:"completed",       nm:"ไปพบผู้เชี่ยวชาญแล้ว"},
+  {k:"outcome_recorded",nm:"บันทึกผลลัพธ์แล้ว"},
+  {k:"declined",        nm:"ปฏิเสธการส่งต่อ"},
+  {k:"unreachable",     nm:"ติดต่อไม่ได้"}
+];
+function refNm(k){for(var i=0;i<REF_FLOW.length;i++)if(REF_FLOW[i].k===k)return REF_FLOW[i].nm;return k}
+
 function hasADLFlag(out){return out.flags.some(function(f){return f.id==="R6"})}
 function trajectory(){
   var A=S.data.assessments, p=S.data.profile;
@@ -1199,6 +1273,9 @@ function trajectory(){
   var ORD={stable:0,watch:1,decline:2,urgent:3}, NM=["stable","watch","decline","urgent"];
   out.level = NM[Math.max(ORD[byRules], ORD[bl.level])];   /* ใช้อันที่แย่กว่าเสมอ */
   out.byRules=byRules;
+  /* ชั้นสัญญาณ: สิ่งที่ส่งต่อไปเปิดเคสและกำหนดปลายทางการส่งต่อ */
+  out.signals=toSignals(out.flags);
+  out.opensCase=(out.level!=="stable");     /* เหลือง/ส้ม/แดง = ต้องมีคนรับผิดชอบ */
   out.nextDays=ENGINE.cadence[out.level];
   out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
   out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
@@ -2497,19 +2574,18 @@ function assessResultV(rec){
   rec=rec||S.data.assessments[S.data.assessments.length-1];
   var t=CFG.tiers[rec.tier], p=S.data.profile;
   head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at),"home");
-  var d=CFG.discount[rec.tier];
   V.innerHTML='<div class="anim">'+
   '<div class="hero"><p class="eyebrow">คะแนนรวม</p>'+
   '<span class="score">'+rec.score+'</span><span class="of"> / '+rec.max+'</span>'+
   '<div><span class="state" style="background:'+t.c+'">'+t.nm+'</span></div>'+
   '<p class="note">'+t.act+'</p></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
-  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+'<div class="rowline"><span class="k">ยืนยันตัวตน</span><span class="v" style="color:'+(rec.verified?'var(--c4)':'var(--ink3)')+'">'+(rec.verified?'ผ่าน · นับสิทธิประโยชน์ได้':'ไม่ได้ยืนยัน · ไม่นับสิทธิประโยชน์')+'</span></div>'+
+  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+'<div class="rowline"><span class="k">ยืนยันตัวตน</span><span class="v" style="color:'+(rec.verified?'var(--c4)':'var(--ink3)')+'">'+(rec.verified?'ผ่าน':'ไม่ได้ยืนยัน')+'</span></div>'+
   '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
   '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
   '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
   '<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+rec.parts.adl+' / 2</span></div></div>'+
-  (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ผลระดับนี้สะสมสิทธิประโยชน์ได้</h3><p class="sub" style="margin:0">ระบบรายงานระดับสีนี้ให้บริษัทประกันของท่านใช้พิจารณาสิทธิประโยชน์ปีต่ออายุ (แนะนำสูงสุด '+(d*100)+'%) — ดูรายละเอียดในหน้าสิทธิประโยชน์</p></div>':'')+
+  '<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ผลนี้ถูกนำไปทำอะไรต่อ</h3><p class="sub" style="margin:0">เมื่อพบสัญญาณเสี่ยง ระบบ<b>เปิดเคสให้มีผู้รับผิดชอบติดตาม</b>และประสานการส่งต่อไปยังผู้เชี่ยวชาญที่เหมาะกับสัญญาณนั้น · ผลประเมิน<b>ไม่ถูกใช้ปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม</b></p></div>'+
   (rec.tier<=2?'<div class="card" style="background:var(--c2b)"><h3 style="color:var(--c2)">เราส่งเรื่องให้ทีมดูแลแล้ว</h3><p class="sub" style="margin:0">ทีมดูแลได้รับเรื่องของคุณแล้ว '+t.act+'</p></div>':'')+
   (S.data.assessments.length>1?warnCard():'')+
   '<button class="cta" data-go="plan">ดูแผนป้องกันเฉพาะของฉัน</button>'+
@@ -4172,25 +4248,26 @@ var PARTNERS=["ทิพยประกันชีวิต (สาธิต)",
 /* ---------- ตัวอย่างสิทธิประโยชน์ที่บริษัทประกันนำไปพ่วงได้ ---------- */
 function termsCard(){return '<div class="card">'+termsBody()+'</div>'}
 function termsBody(){
-  var cw=chronicWait(), T=CFG.terms;
-  return '<p class="sub" style="margin:0 0 12px">ตัวอย่างวิธีที่บริษัทประกันนำผลจากโปรแกรมไปพ่วงกับกรมธรรม์ — <b>เงื่อนไขจริงเป็นของกรมธรรม์แต่ละฉบับ</b> ตัวเลขในนี้คือค่าแนะนำของแพลตฟอร์ม</p>'+
-  '<div class="rowline"><span class="k">ส่วนลดเบี้ยปีต่ออายุจากผลตรวจ</span><span class="v" style="color:var(--c4)">สูงสุด 15%</span></div>'+
-  '<div class="rowline"><span class="k">ประเมินต่อเนื่อง ลดระยะรอคอยกลุ่มเรื้อรัง</span><span class="v">'+T.chronicCutPerAssess+' วัน/ครั้ง</span></div>'+
-  (cw.cut>0?'<p class="sub" style="margin:8px 0 0;color:var(--c4)">ของท่านลดได้แล้ว '+cw.cut+' วัน จากการมีผลประเมินต่อเนื่อง '+cw.n+' ครั้ง (เพดาน '+T.chronicCutMax+' วัน)</p>'
-        :'<p class="sub" style="margin:8px 0 0">ประเมินต่อเนื่องทุก 3 เดือน ลดระยะรอคอยกลุ่มเรื้อรังได้ครั้งละ '+T.chronicCutPerAssess+' วัน สูงสุด '+T.chronicCutMax+' วัน</p>')+
-  '<div class="rowline" style="margin-top:6px"><span class="k">งบกิจกรรมป้องกัน (กายภาพ/ปรับบ้าน)</span><span class="v">ตามแผนของบริษัท</span></div>'+
-  '<div class="notice" style="margin:12px 0 0">ทุกข้อเป็น<b>การเพิ่มให้</b>เท่านั้น — ไม่มีข้อไหนที่ผลตรวจแย่แล้วเสียของเดิมที่มีอยู่ · การตัดสินใจใช้หรือไม่ใช้ข้อไหนเป็นของบริษัทประกันผู้ออกกรมธรรม์ และการอนุมัติสินไหมทุกครั้งตัดสินโดยคนจริง ไม่ใช่แอป</div>';
+  /* โปรแกรมนี้ทำหน้าที่ "เฝ้าระวังและประสานการดูแลก่อนเกิดการเคลม"
+     ไม่ใช่เครื่องคำนวณเบี้ยหรือส่วนลด — ตัวเลขราคาทุกอย่างเป็นเรื่องของ
+     กรมธรรม์และบริษัทประกันโดยตรง ไม่ผ่านระบบนี้ */
+  return '<p class="sub" style="margin:0 0 12px">สิ่งที่บริษัทประกันได้จากการพ่วงโปรแกรมนี้ คือ<b>การเห็นสัญญาณเสี่ยงล่วงหน้าและมีคนตามดูแลจริง</b>ก่อนที่จะกลายเป็นการเคลม</p>'+
+  '<div class="rowline"><span class="k">คัดกรองสมรรถภาพต่อเนื่อง</span><span class="v">ทุก 3 เดือน</span></div>'+
+  '<div class="rowline"><span class="k">สัญญาณเสี่ยงเปิดเคสอัตโนมัติ</span><span class="v" style="color:var(--c4)">เหลืองขึ้นไป</span></div>'+
+  '<div class="rowline"><span class="k">ทีมดูแลติดต่อภายใน</span><span class="v">24–72 ชม. ตามระดับ</span></div>'+
+  '<div class="rowline"><span class="k">ส่งต่อผู้เชี่ยวชาญและติดตามผล</span><span class="v">จนบันทึกผลลัพธ์</span></div>'+
+  '<div class="notice" style="margin:12px 0 0"><b>ระบบนี้ไม่ยุ่งกับราคาและการเคลม</b> — ไม่คำนวณเบี้ย ไม่ให้ส่วนลด ไม่พิจารณารับประกัน และไม่ตัดสินการจ่ายสินไหม · ไม่วินิจฉัยโรคและไม่สั่งหยุด ลด หรือเพิ่มยา · ทุกการตัดสินใจทางคลินิกเป็นของบุคลากรที่มีใบอนุญาต</div>';
 }
 
 /* ---------- คะแนนความสม่ำเสมอ ---------- */
 function loyaltyCard(){return '<div class="card">'+loyaltyBody()+'</div>'}
 function loyaltyBody(){
   var L=loyaltyPoints();
-  return (L.ok?'<div class="notice" style="margin:0 0 12px;background:var(--c4b);border-color:rgba(14,159,110,.3)"><b style="color:var(--c4)">ครบเกณฑ์แล้ว — ระบบรายงานให้บริษัทประกันของท่านแล้ว</b></div>':'')+
-  '<p class="sub" style="margin:0 0 10px">ยิ่งตรวจสม่ำเสมอ คะแนนยิ่งสะสม — บริษัทประกันใช้คะแนนนี้ให้รางวัล เช่น ส่วนลดปีต่ออายุหรือของรางวัลสุขภาพ</p>'+
+  return (L.ok?'<div class="notice" style="margin:0 0 12px;background:var(--c4b);border-color:rgba(14,159,110,.3)"><b style="color:var(--c4)">ครบเกณฑ์ติดตามต่อเนื่องแล้ว</b></div>':'')+
+  '<p class="sub" style="margin:0 0 10px">ยิ่งตรวจสม่ำเสมอ ระบบยิ่งจับ<b>การเปลี่ยนแปลงของท่านเอง</b>ได้เร็วขึ้น — สัญญาณส่วนใหญ่ต้องเทียบกับผลครั้งก่อน จึงต้องมีข้อมูลต่อเนื่อง</p>'+
   L.detail.map(function(d){return '<div class="rowline"><span class="k">'+esc(d[0])+'</span><span class="v" style="color:'+(d[1]==="0"?"var(--ink3)":"var(--c4)")+'">'+d[1]+'</span></div>'}).join("")+
   '<div class="rowline"><span class="k"><b>รวมได้</b></span><span class="v">'+L.pts+' / '+L.need+' คะแนน</span></div>'+
-  (L.ok?'':'<p class="sub" style="margin:10px 0 0">ทำให้ครบ '+L.need+' คะแนน ระบบจะรายงานสถานะ "สม่ำเสมอ" ให้บริษัทประกันของท่าน</p>')+
+  (L.ok?'':'<p class="sub" style="margin:10px 0 0">ทำให้ครบ '+L.need+' คะแนน ระบบจะนับว่าท่านอยู่ในกลุ่ม "ติดตามต่อเนื่อง" ซึ่งทำให้สัญญาณเตือนแม่นขึ้น</p>')+
   '</div>';
 }
 
@@ -4198,9 +4275,8 @@ function policyV(){
   var pol=S.data.policy;
   var last=S.data.assessments[S.data.assessments.length-1];
   var tier=last?last.tier:null;
-  head("สิทธิประโยชน์ของฉัน","โปรแกรมที่มากับกรมธรรม์","CareSignal ไม่ใช่บริษัทประกันและไม่ขายประกัน — โปรแกรมนี้คือสิทธิประโยชน์ที่บริษัทประกันมอบให้ผู้ถือกรมธรรม์","home");
+  head("โปรแกรมดูแลของฉัน","โปรแกรมที่มากับกรมธรรม์","CareSignal ไม่ใช่บริษัทประกันและไม่ขายประกัน — เป็นระบบเฝ้าระวังและประสานการดูแลที่บริษัทประกันพ่วงให้ผู้ถือกรมธรรม์ ไม่ยุ่งกับเบี้ยและการเคลม","home");
   if(pol&&pol.embedded){
-    var d=tier?CFG.discount[tier]:0;
     V.innerHTML='<div class="anim">'+
     '<div class="hero"><p class="eyebrow">'+esc(pol.insurer)+'</p>'+
     '<span class="score" style="font-size:30px">'+esc(pol.product||"กรมธรรม์ของท่าน")+'</span>'+
@@ -4208,14 +4284,15 @@ function policyV(){
     '<div class="card"><h3>สิ่งที่ท่านได้จากโปรแกรมนี้ (ฟรี)</h3>'+
     '<div class="rowline"><span class="k">ตรวจสมรรถภาพด้วยกล้องที่บ้าน</span><span class="v">ทุก 3 เดือน</span></div>'+
     '<div class="rowline"><span class="k">แผนป้องกันรายบุคคล + การติดตาม</span><span class="v">ตามระดับ</span></div>'+
-    '<div class="rowline"><span class="k">เสี่ยงสูง ทีมดูแลติดต่อภายใน</span><span class="v">72 ชม.</span></div></div>'+
-    '<div class="card"><h3>สิทธิประโยชน์ปีต่ออายุจากผลตรวจ</h3>'+
-    (tier?'<div class="rowline"><span class="k">ผลล่าสุดของท่าน</span><span class="v"><b class="tierpill '+CFG.tiers[tier].b+'">'+CFG.tiers[tier].nm.split(" — ")[0]+'</b></span></div>'+
-          '<div class="rowline"><span class="k">ส่วนลดปีต่ออายุที่แพลตฟอร์มแนะนำ</span><span class="v" style="color:'+(d>0?"var(--c4)":"var(--ink3)")+'">'+(d>0?("สูงสุด "+(d*100)+"%"):"ยังไม่เข้าเกณฑ์ (ไม่มีโทษ)")+'</span></div>'
-         :'<p class="sub" style="margin:0">ยังไม่มีผลประเมิน — ตรวจครั้งแรกเพื่อเริ่มสะสมสิทธิประโยชน์</p>')+
-    '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ทางเดียวเสมอ</b> — ผลแย่ลงไม่ทำให้เบี้ยขึ้น ไม่ลดความคุ้มครอง และไม่ถูกบอกเลิกกรมธรรม์ มีแต่ทีมดูแลติดต่อมาช่วยเร็วขึ้น</p></div>'+
-    '<details class="acc"><summary><span>คะแนนความสม่ำเสมอ<span class="sm">ตรวจครบเกณฑ์ รับรางวัลจากบริษัทประกัน</span></span></summary><div class="accin">'+loyaltyBody()+'</div></details>'+
-    '<details class="acc"><summary><span>บริษัทประกันพ่วงอะไรได้บ้าง<span class="sm">ตัวอย่างสิทธิประโยชน์ที่นำไปใช้</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
+    '<div class="rowline"><span class="k">เสี่ยงสูง ทีมดูแลติดต่อภายใน</span><span class="v">24–72 ชม.</span></div></div>'+
+    '<div class="card"><h3>สถานะการดูแลของท่าน</h3>'+
+    (tier?'<div class="rowline"><span class="k">ผลล่าสุดของท่าน</span><span class="v"><b class="tierpill '+CFG.tiers[tier].b+'">'+CFG.tiers[tier].nm.split(" — ")[0]+'</b></span></div>'
+         :'<p class="sub" style="margin:0 0 8px">ยังไม่มีผลประเมิน — ตรวจครั้งแรกเพื่อให้ระบบเริ่มเฝ้าระวังให้ท่าน</p>')+
+    '<div class="rowline"><span class="k">เมื่อพบสัญญาณเสี่ยง</span><span class="v" style="color:var(--c4)">เปิดเคสอัตโนมัติ</span></div>'+
+    '<div class="rowline"><span class="k">มีผู้รับผิดชอบติดตาม</span><span class="v">พยาบาล/ผู้จัดการดูแล</span></div>'+
+    '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ตอบตามจริงได้เต็มที่</b> — ผลตรวจไม่ถูกนำไปปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม สิ่งที่เกิดขึ้นเมื่อผลแย่ลงคือมีคนติดต่อมาช่วยเร็วขึ้นเท่านั้น</p></div>'+
+    '<details class="acc"><summary><span>ความสม่ำเสมอของการติดตาม<span class="sm">ทำไมต้องตรวจต่อเนื่อง</span></span></summary><div class="accin">'+loyaltyBody()+'</div></details>'+
+    '<details class="acc"><summary><span>บริษัทประกันได้อะไรจากการพ่วงโปรแกรม<span class="sm">เฝ้าระวังและประสานการดูแลก่อนเคลม</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
     '<div class="card"><h3>สิ่งที่รายงานให้บริษัทประกัน</h3>'+
     '<div class="rowline"><span class="k">ระดับสี (เขียว/เหลือง/ส้ม/แดง)</span><span class="v" style="color:var(--c4)">รายงาน</span></div>'+
     '<div class="rowline"><span class="k">จำนวนครั้งและความสม่ำเสมอ</span><span class="v" style="color:var(--c4)">รายงาน</span></div>'+
@@ -4224,7 +4301,7 @@ function policyV(){
     '<button class="ghostb" id="unlink" style="color:var(--c1)">ยกเลิกการเชื่อมกรมธรรม์นี้</button>'+
     '</div>';
     document.getElementById("unlink").addEventListener("click",async function(){
-      if(!confirm("ยกเลิกการเชื่อม? ระบบจะหยุดรายงานผลให้บริษัทประกันทันที และสิทธิประโยชน์จากโปรแกรมจะหยุดสะสม"))return;
+      if(!confirm("ยกเลิกการเชื่อม? ระบบจะหยุดรายงานผลให้บริษัทประกันทันที และทีมดูแลจะไม่ได้รับสัญญาณเสี่ยงของท่านอีก"))return;
       S.data.policy=null;
       audit("ยกเลิกเชื่อมกรมธรรม์","ผู้ใช้ถอนการเชื่อมกรมธรรม์ ระบบหยุดรายงานผลให้บริษัทประกัน");
       await saveAll(); toast("ยกเลิกการเชื่อมแล้ว"); render();
@@ -4234,14 +4311,14 @@ function policyV(){
   /* ---------- ยังไม่ได้เชื่อม — ฟอร์มเชื่อมกรมธรรม์ที่มีอยู่ ---------- */
   var dr=S.draft;
   V.innerHTML='<div class="anim senior">'+
-  '<div class="notice"><b>โปรแกรมนี้ไม่ขายประกัน</b> — หากท่านถือประกันสุขภาพ ประกันผู้สูงอายุ หรือประกันดูแลระยะยาวกับบริษัทพันธมิตรอยู่แล้ว เชื่อมกรมธรรม์เพื่อให้ผลตรวจสะสมเป็นสิทธิประโยชน์ · หากยังไม่มีประกัน ท่านยังใช้โปรแกรมป้องกันได้ครบทุกส่วน</div>'+
+  '<div class="notice"><b>โปรแกรมนี้ไม่ขายประกันและไม่ยุ่งกับเบี้ย</b> — หากท่านถือประกันสุขภาพ ประกันผู้สูงอายุ หรือประกันดูแลระยะยาวกับบริษัทพันธมิตรอยู่แล้ว เชื่อมกรมธรรม์เพื่อให้ทีมดูแลของบริษัทรับสัญญาณเสี่ยงและติดตามท่านได้ · หากยังไม่มีประกัน ท่านยังใช้โปรแกรมป้องกันได้ครบทุกส่วน</div>'+
   '<div class="card"><h3>เชื่อมกรมธรรม์ของท่าน</h3>'+
   '<div class="field"><label>บริษัทประกันของท่าน</label><select id="pIns" style="width:100%;box-sizing:border-box;font-size:17px;font-family:inherit;padding:13px;border:1.5px solid var(--line,#DFE7F2);border-radius:14px;background:#fff">'+
     PARTNERS.map(function(x){return '<option'+(dr.pIns===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div>'+
   '<div class="field"><label>เลขที่กรมธรรม์ (ดูจากหน้าตารางกรมธรรม์)</label><input id="pNo" value="'+esc(dr.pNo||"")+'" placeholder="เช่น LTC-12345678"></div>'+
   '<div class="field"><label>ประเภทกรมธรรม์</label><div class="seg" id="pProd">'+
     ['ดูแลระยะยาว','สุขภาพ','ผู้สูงอายุ'].map(function(x){return '<button data-v="'+x+'" aria-pressed="'+((dr.pProd||'ดูแลระยะยาว')===x)+'">'+x+'</button>'}).join("")+'</div></div>'+
-  '<label class="chk"><input type="checkbox" id="pConsent"><span>ข้าพเจ้ายินยอมให้รายงาน<b>ระดับสีและการเข้าร่วมโปรแกรม</b>ของข้าพเจ้าแก่บริษัทประกันข้างต้น เพื่อใช้พิจารณาสิทธิประโยชน์ (ถอนได้ทุกเมื่อ มีผลทันที)</span></label>'+
+  '<label class="chk"><input type="checkbox" id="pConsent"><span>ข้าพเจ้ายินยอมให้รายงาน<b>ระดับสีและการเข้าร่วมโปรแกรม</b>ของข้าพเจ้าแก่บริษัทประกันข้างต้น เพื่อให้ทีมดูแลติดตามและประสานการส่งต่อได้ (ถอนได้ทุกเมื่อ มีผลทันที) — ข้อมูลนี้ไม่ถูกใช้ปรับเบี้ยหรือพิจารณาการเคลม</span></label>'+
   '<button class="cta loop" id="pLink">เชื่อมกรมธรรม์</button></div>'+
   '<p class="hint" style="margin-top:12px">ต้นแบบสาธิต — ในระบบจริง บริษัทประกันจะตรวจสอบเลขกรมธรรม์กับฐานข้อมูลของบริษัทและออกรหัสเปิดใช้สิทธิ์ให้</p></div>';
   document.getElementById("pProd").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.draft.pProd=b.dataset.v;this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});});

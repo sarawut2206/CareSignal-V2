@@ -239,7 +239,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=202"></script>
+<script src="./cs-backend.js?v=210"></script>
 <script>
 "use strict";
 var LOGO='<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none">'+
@@ -588,7 +588,7 @@ function scoreOf(d,age){
 }
 
 var ENGINE={
-  version:"2.0.0-vision",
+  version:"2.1.0-vision",
   kind:"rule-based-explainable",
   rules:{
     R1:{nm:"เวลาลุกนั่งช้าลงอย่างมีนัยสำคัญ",src:"MCID ของ Five-Times Sit-to-Stand ≈ 2.3 วินาที (Meretta 2006; Goldberg 2012)"},
@@ -620,6 +620,80 @@ var ENGINE={
   levelNm:{stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"ต้องดูแลเร่งด่วน"},
   levelColor:{stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"}
 };
+
+/* ============================================================
+   ชั้นสัญญาณหลัก 7 ประเภท (S1–S7)
+   ------------------------------------------------------------
+   กฎ 24 ข้อยังอยู่ครบในฐานะ "หลักฐาน" ที่อธิบายได้ว่าทำไมถึงติด
+   แต่สิ่งที่ส่งต่อไปยังขั้นถัดไปของสายงานคือ "สัญญาณ" 7 ประเภทนี้
+   เพราะแต่ละสัญญาณผูกกับ "งานที่ต้องเกิดขึ้นจริง" คนละแบบ —
+   ล้มซ้ำต้องพบแพทย์ · ยาเสี่ยงต้องให้เภสัชกรทบทวน · เดินช้าลง
+   ต้องเข้าโปรแกรมฝึกกำลังขาและการทรงตัว
+
+   ถ้าไม่มีชั้นนี้ ระบบจะบอกได้แค่ "เหลือง/แดง" ซึ่งไม่พอให้ใคร
+   ลงมือทำอะไรได้ — และนั่นคือความต่างระหว่างแบบสอบถามกับ
+   ระบบประสานการดูแลก่อนเกิดการเคลม
+
+   ระบบนี้ไม่วินิจฉัยโรค ไม่สั่งหยุด/ลด/เพิ่มยา ไม่ตัดสินการเคลม
+   ทุกการตัดสินใจทางคลินิกเป็นของบุคลากรที่มีใบอนุญาต
+   ============================================================ */
+var SIGNAL_DEFS=[
+  {k:"S1", nm:"หกล้มครั้งใหม่", rules:["R3","B7"],
+   dest:"doctor",     act:"ทบทวนสาเหตุการล้มกับแพทย์ และสำรวจจุดเสี่ยงในบ้าน"},
+  {k:"S2", nm:"หกล้มซ้ำหรือล้มแล้วบาดเจ็บ", rules:["B1","B2","B3","B4"],
+   dest:"doctor",     act:"พบแพทย์เพื่อหาสาเหตุ — การล้มซ้ำและการหมดสติไม่ใช่เรื่องของการฝึกทรงตัวอย่างเดียว"},
+  {k:"S3", nm:"ความเสี่ยงจากยา", rules:["R5","B6","B12","B13","B14"],
+   dest:"pharmacist", act:"ให้เภสัชกรหรือแพทย์ทบทวนรายการยา — ระบบไม่สั่งหยุดหรือปรับยาเอง"},
+  {k:"S4", nm:"กำลังขาและการทรงตัวถดถอย", rules:["R1","R2","R4","R7","R8","B9","B11"],
+   dest:"physio",     act:"เข้าโปรแกรมฝึกกำลังขาและการทรงตัว (strength and balance)"},
+  {k:"S5", nm:"ความคล่องตัวในการเดินลดลง", rules:["R10","B10"],
+   dest:"physio",     act:"ประเมินการเดินและพิจารณาอุปกรณ์ช่วยเดินที่เหมาะสม"},
+  {k:"S6", nm:"ทำกิจวัตรประจำวันได้น้อยลง", rules:["R6","R9"],
+   dest:"nurse",      act:"ประเมินภาวะพึ่งพิงเชิงลึกและวางแผนการดูแลร่วมกับครอบครัว"},
+  {k:"S7", nm:"ธงแดงด้านความปลอดภัย", rules:["B5","B8"],
+   dest:"doctor",     act:"ให้บุคลากรประเมินก่อน ยังไม่ควรทดสอบสมรรถภาพด้วยตนเอง"}
+];
+/* แปลงกฎที่ติดทั้งหมด → สัญญาณหลักพร้อมความรุนแรงและงานที่ต้องทำ */
+function toSignals(flags){
+  var byRule={};
+  (flags||[]).forEach(function(f){ byRule[f.id]=f });
+  var out=[];
+  SIGNAL_DEFS.forEach(function(d){
+    var hit=d.rules.filter(function(r){return byRule[r]});
+    if(!hit.length)return;
+    var sev=0, why=[];
+    hit.forEach(function(r){ sev=Math.max(sev,byRule[r].sev||1); why.push(byRule[r].text) });
+    out.push({k:d.k, nm:d.nm, sev:sev, dest:d.dest, act:d.act, rules:hit, why:why});
+  });
+  out.sort(function(a,b){return b.sev-a.sev});
+  return out;
+}
+var DEST_NM={doctor:"แพทย์",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",
+             nurse:"พยาบาล/ผู้จัดการดูแล",family:"ครอบครัว",community:"เครือข่ายชุมชน"};
+/* วงจรชีวิตของเคสก่อนการเคลม — ต้องตรงกับ enum cs_case_status ในฐานข้อมูล */
+var CASE_FLOW=[
+  {k:"new",          nm:"เคสใหม่ ยังไม่มีผู้รับผิดชอบ"},
+  {k:"reviewing",    nm:"เจ้าหน้าที่รับเคสแล้ว กำลังทบทวน"},
+  {k:"contacted",    nm:"ติดต่อผู้เอาประกันหรือครอบครัวได้แล้ว"},
+  {k:"referred",     nm:"ส่งต่อผู้เชี่ยวชาญแล้ว"},
+  {k:"intervention", nm:"อยู่ระหว่างการดูแลแก้ไข"},
+  {k:"follow_up_due",nm:"ถึงกำหนดติดตามผล"},
+  {k:"stable",       nm:"ดีขึ้นหรือคงที่ — ปิดเคส"},
+  {k:"closed",       nm:"ปิดเคสด้วยเหตุอื่น"}
+];
+function caseNm(k){for(var i=0;i<CASE_FLOW.length;i++)if(CASE_FLOW[i].k===k)return CASE_FLOW[i].nm;return k}
+/* เส้นทางการส่งต่อ — ตามได้จนถึงผลลัพธ์ ไม่ใช่แค่ "แนะนำแล้วจบ" */
+var REF_FLOW=[
+  {k:"recommended",     nm:"ระบบแนะนำให้ส่งต่อ"},
+  {k:"approved",        nm:"บุคลากรยืนยันการส่งต่อ"},
+  {k:"acknowledged",    nm:"ผู้เอาประกันรับทราบแล้ว"},
+  {k:"booked",          nm:"นัดหมายเรียบร้อย"},
+  {k:"completed",       nm:"ไปพบผู้เชี่ยวชาญแล้ว"},
+  {k:"outcome_recorded",nm:"บันทึกผลลัพธ์แล้ว"},
+  {k:"declined",        nm:"ปฏิเสธการส่งต่อ"},
+  {k:"unreachable",     nm:"ติดต่อไม่ได้"}
+];
+function refNm(k){for(var i=0;i<REF_FLOW.length;i++)if(REF_FLOW[i].k===k)return REF_FLOW[i].nm;return k}
 
 function hasADLFlag(out){return out.flags.some(function(f){return f.id==="R6"})}
 function trajectory(){
@@ -726,6 +800,9 @@ function trajectory(){
   var ORD={stable:0,watch:1,decline:2,urgent:3}, NM=["stable","watch","decline","urgent"];
   out.level = NM[Math.max(ORD[byRules], ORD[bl.level])];   /* ใช้อันที่แย่กว่าเสมอ */
   out.byRules=byRules;
+  /* ชั้นสัญญาณ: สิ่งที่ส่งต่อไปเปิดเคสและกำหนดปลายทางการส่งต่อ */
+  out.signals=toSignals(out.flags);
+  out.opensCase=(out.level!=="stable");     /* เหลือง/ส้ม/แดง = ต้องมีคนรับผิดชอบ */
   out.nextDays=ENGINE.cadence[out.level];
   out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
   out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
@@ -1034,7 +1111,7 @@ function welcomeV(){
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ก่อนเริ่ม โปรดเตรียม</h3>'+
   '<p class="sub" style="margin:0">เก้าอี้มีพนักพิงวางชิดผนัง · พื้นที่ว่างด้านหน้าประมาณ 2 เมตร (พอสำหรับวางมือถือให้เห็นเต็มตัว) · วางมือถือให้เห็นตัวคุณตั้งแต่ศีรษะถึงเท้า · มีคนอยู่ใกล้ ๆ เผื่อต้องช่วยพยุง</p>'+
   '<p class="sub" style="margin:8px 0 0;font-size:13.5px;color:var(--ink3)">หน้านี้วัดเฉพาะ<b>ลุกนั่ง 5 ครั้ง</b>ซึ่งนั่งอยู่กับที่ จึงใช้พื้นที่ไม่มาก · ส่วนการทดสอบ<b>ลุกเดิน 3 เมตร</b>ในแอปสมาชิกต้องใช้พื้นที่ 4–5 เมตร</p></div>'+
-  '<div class="card"><h3>หลักคุ้มครองผู้ใช้</h3><p class="sub" style="margin:0">ผลประเมิน<b>เพิ่มสิทธิประโยชน์ของกรมธรรม์ที่พ่วงได้เท่านั้น</b> ไม่มีการเพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนน · AI คัดกรองเท่านั้น การส่งต่อและการพิจารณาสินไหมทุกกรณีตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์</p></div>'+
+  '<div class="card"><h3>หลักคุ้มครองผู้ใช้</h3><p class="sub" style="margin:0">ผลประเมินใช้เพื่อ<b>เฝ้าระวังและประสานการดูแลเท่านั้น</b> — ไม่ใช้ปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม · ระบบไม่วินิจฉัยโรคและไม่สั่งหยุด ลด หรือเพิ่มยา · AI คัดกรองเท่านั้น การส่งต่อทุกกรณีตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์</p></div>'+
   '<button class="cta" data-go="reg">เริ่มใช้งาน · สร้างบัญชี</button>'+
   '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button></div>';
 }
@@ -3454,7 +3531,7 @@ async function mrvV(){
     try{
       await CSBackend.grantConsent("medical_record_check","PDPA-1.0",{hospital:h,data:items,period:pd});
       var last=S.data.assessments[S.data.assessments.length-1];
-      await CSBackend.requestMedicalCheck({hospital:h,items:items,period:pd,purpose:"underwriting",
+      await CSBackend.requestMedicalCheck({hospital:h,items:items,period:pd,purpose:"care_coordination",
         assessmentId:last&&last.cloudId?last.cloudId:null});
       audit("ยื่นคำขอตรวจสอบเวชระเบียน","สถานพยาบาล "+h+" · "+items.join(", ")+" · ช่วง "+pd);
       toast("ยื่นคำขอแล้ว — เจ้าหน้าที่จะดำเนินการต่อ");
@@ -3559,7 +3636,7 @@ async function mydataV(){
 
 function resultV(rec){
   rec=rec||S.data.assessments[S.data.assessments.length-1];
-  var t=CFG.tiers[rec.tier], d=CFG.discount[rec.tier], p=S.data.profile;
+  var t=CFG.tiers[rec.tier], p=S.data.profile;
   head("ผลการประเมิน","บันทึกลงฐานข้อมูลแล้ว",thDate(rec.at)+" · "+(rec.method==="camera-pose"?"วัดด้วยกล้อง":"จับเวลาเอง"),"assess");
   var gapsRow = rec.gaps&&rec.gaps.length? '<div class="rowline"><span class="k">เวลาต่อครั้ง</span><span class="v">'+rec.gaps.join(" · ")+' วิ</span></div>':"";
   V.innerHTML='<div class="anim">'+
@@ -3586,7 +3663,7 @@ function resultV(rec){
   '<p class="sub" style="margin:10px 0 0"><b>สิ่งที่กล้องวัดเอง</b>เป็นข้อมูลที่ระบบสังเกตได้โดยตรง ส่วน<b>คำตอบ 4 ข้อ</b>ข้างบนเป็นข้อมูลที่ผู้ใช้กรอกเอง ระบบจึงไม่ถือเป็นข้อเท็จจริงจนกว่าจะตรวจสอบกับสถานพยาบาล</p>'+
   '<button class="ghostb" data-go="mrv" style="margin:12px 0 0">ขอตรวจสอบกับประวัติการรักษา</button></div>'+
   warnBlock()+
-  (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ผลระดับนี้สะสมสิทธิประโยชน์ได้</h3><p class="sub" style="margin:0">แพลตฟอร์มแนะนำส่วนลดเบี้ยปีต่ออายุสูงสุด <b>'+(d*100)+'%</b> ให้บริษัทประกันที่พ่วงโปรแกรม — ผลประเมินใช้เพิ่มสิทธิประโยชน์ได้เท่านั้น ไม่มีการเพิ่มเบี้ยจากคะแนนที่ลดลง</p></div>':'')+
+  '<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ผลนี้ถูกนำไปทำอะไรต่อ</h3><p class="sub" style="margin:0">เมื่อพบสัญญาณเสี่ยง ระบบ<b>เปิดเคสให้มีผู้รับผิดชอบติดตาม</b>และประสานการส่งต่อไปยังผู้เชี่ยวชาญที่เหมาะกับสัญญาณนั้น · ผลประเมิน<b>ไม่ถูกใช้ปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม</b></p></div>'+
   '<button class="cta" data-go="trend">ดูแนวโน้มย้อนหลัง</button>'+
   '<button class="ghostb" data-go="assess">กลับหน้าประเมิน</button></div>';
 }
@@ -3978,7 +4055,7 @@ async function insurerV(){
   var ref=pool.filter(function(r){return r.referred}).length;
   var fts=pool.filter(function(r){return r.ftsst});
   var avgFt=fts.length?fts.reduce(function(a,b){return a+b.ftsst},0)/fts.length:null;
-  var disc=pool.filter(function(r){return CFG.discount[r.tier]>0}).length;
+  var disc=pool.filter(function(r){return r.tier>=3}).length;   /* กลุ่มที่ผลอยู่ในเกณฑ์ดี */
   var mixRows=[4,3,2,1].map(function(k){var t=CFG.tiers[k];
     return '<div class="mixrow"><span class="lab">'+t.nm.split(" — ")[0]+'</span>'+
     '<span class="bar"><i style="width:'+(mix[k]/n*100)+'%;background:'+t.c+'"></i></span>'+
@@ -3994,13 +4071,13 @@ async function insurerV(){
   '<div class="card"><h3>ผลต่อการตั้งราคา</h3>'+
   '<div class="rowline"><span class="k">เข้าเกณฑ์สิทธิประโยชน์ปีต่ออายุ</span><span class="v">'+disc+' ราย ('+Math.round(disc/n*100)+'%)</span></div>'+
   '<div class="rowline"><span class="k">ยังไม่เข้าเกณฑ์ (ไม่มีโทษ)</span><span class="v">'+(n-disc)+' ราย</span></div>'+
-  '<p class="sub" style="margin:10px 0 0">ผลประเมิน<b>เพิ่มสิทธิประโยชน์ได้ทางเดียว</b> ไม่มีเส้นทางในระบบที่เพิ่มเบี้ยหรือปฏิเสธความคุ้มครองจากคะแนนที่แย่ลง — ออกแบบเพื่อไม่ลงโทษผู้ที่ประเมินตนเองอย่างซื่อสัตย์</p></div>'+
+  '<p class="sub" style="margin:10px 0 0"><b>ไม่มีเส้นทางใดในระบบ</b>ที่นำผลตรวจไปเพิ่มเบี้ย ปฏิเสธความคุ้มครอง หรือปฏิเสธการเคลม — ออกแบบเพื่อไม่ลงโทษผู้ที่ประเมินตนเองอย่างซื่อสัตย์ เพราะข้อมูลที่ตรงความจริงคือสิ่งเดียวที่ทำให้การป้องกันได้ผล</p></div>'+
   '<div class="card"><h3>รายการในพอร์ต</h3>'+
   pool.slice(0,12).map(function(r){var t=CFG.tiers[r.tier]||{nm:"—",b:""};
     return '<div class="rowline"><span class="k">'+esc(r.uid.slice(0,10))+' · '+esc(r.ageBand||"—")+' · '+(r.sex==="f"?"ญ":"ช")+'</span>'+
     '<span class="v"><span class="pill '+t.b+'">'+t.nm.split(" — ")[0]+'</span></span></div>'}).join("")+'</div>'+
   '<button class="ghostb" id="seed2">เติมข้อมูลสาธิต 10 ราย (สำหรับการนำเสนอ)</button>'+
-  '<div class="disc">ต้องการโมเดลต้นทุน-ผลตอบแทนของการพ่วงโปรแกรม (มุมมองบริษัทประกัน 5 ปี)? เปิดไฟล์ CareSignal-Insurer-Model.html ที่มาพร้อมชุดนี้</div></div>';
+  '<div class="disc">รายงานนี้เป็นภาพรวมความเสี่ยงและการดูแลของพอร์ต — ระบบไม่คำนวณเบี้ยและไม่ตัดสินการจ่ายสินไหม</div></div>';
   document.getElementById("seed2").addEventListener("click",async function(){await seed();toast("เติมข้อมูลสาธิตแล้ว");render()});
 }
 async function seed(){
