@@ -304,11 +304,9 @@ function dbLabel(){
 var CFG={
   ftsstCut:function(age){return age<60?10.0:(age<70?11.5:12.1);},
   ageBand:function(a){return a<55?"50–54":(a<60?"55–59":(a<66?"60–65":"66–70"));},
-  ageMult:function(a){return a<55?1.00:(a<60?1.35:(a<66?1.80:2.30));},
-  sexMult:{f:1.10,m:1.00},
-  plans:[{id:"s",nm:"เริ่มต้น",benefit:10000,base:590},{id:"m",nm:"มาตรฐาน",benefit:15000,base:890},
-         {id:"l",nm:"พรีเมียม",benefit:25000,base:1490},{id:"xl",nm:"สูงสุด",benefit:40000,base:2290}],
-  discount:{4:.15,3:.08,2:0,1:0},
+  /* ตัวคูณเบี้ย แผนความคุ้มครอง และส่วนลด ถูกถอดออกทั้งหมด
+     CareSignal เป็นแพลตฟอร์มประเมิน ติดตาม และประสานการดูแล
+     ไม่คิดเบี้ย ไม่ออกแบบผลิตภัณฑ์ และไม่ตัดสินการจ่ายสินไหม */
   tiers:{
     4:{nm:"เขียว — แข็งแรงดี",c:"var(--c4)",b:"t4",act:"ออกกำลังต่อเนื่อง ประเมินซ้ำทุก 3 เดือน"},
     3:{nm:"เหลือง — เฝ้าระวัง",c:"var(--c3)",b:"t3",act:"ฝึกทรงตัวสัปดาห์ละ 3 วัน ประเมินซ้ำทุก 2 เดือน"},
@@ -1283,6 +1281,8 @@ function safetyStopV(){
 
 function assessV(){
   var p=S.data.profile, last=S.data.assessments[S.data.assessments.length-1];
+  /* กันจอขาว: เข้าหน้านี้ได้โดยยังไม่มีโปรไฟล์ ถ้า session ค้างหรือกลับมาจากลิงก์เก่า */
+  if(!p){go("welcome");return}
   head("ประเมิน","สวัสดี คุณ"+esc(p.name),"อายุ "+p.age+" ปี · เกณฑ์เวลาของช่วงอายุนี้คือ "+CFG.ftsstCut(p.age).toFixed(1)+" วินาที");
   var lastCard="";
   if(last){

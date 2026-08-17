@@ -370,17 +370,9 @@ table.dt tr:last-child td{border-bottom:0}
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
-  plans:[
-    {id:"s", nm:"เริ่มต้น",  benefit:10000, prev:3000,  base:590},
-    {id:"m", nm:"มาตรฐาน", benefit:15000, prev:5000,  base:890, pop:true},
-    {id:"l", nm:"พรีเมียม", benefit:25000, prev:8000,  base:1490},
-    {id:"xl",nm:"สูงสุด",   benefit:40000, prev:12000, base:2290}
-  ],
-  ageMult:function(a){return a<55?1.00:(a<60?1.35:(a<66?1.80:2.30));},
+  /* แผนความคุ้มครอง ตัวคูณเบี้ย ส่วนลด และส่วนลดรายปี ถูกถอดออกทั้งหมด
+     ระบบนี้ไม่คำนวณเบี้ยและไม่ออกแบบผลิตภัณฑ์ประกัน */
   ageBand:function(a){return a<55?"50–54":(a<60?"55–59":(a<66?"60–65":"66–70"));},
-  sexMult:{f:1.10,m:1.00},
-  discount:{4:.15,3:.08,2:0,1:0,0:0},
-  yearlyOff:.08,
   tiers:{4:{nm:"เขียว",b:"t4",c:"var(--c4)"},3:{nm:"เหลือง",b:"t3",c:"var(--c3)"},2:{nm:"ส้ม",b:"t2",c:"var(--c2)"},1:{nm:"แดง",b:"t1",c:"var(--c1)"}}
 };
 function fmt(n){return Math.round(n).toLocaleString("th-TH")}
@@ -506,7 +498,7 @@ async function renderBias(){
       var key=g[0]+" · "+g[1];
       groups[key]=groups[key]||{dim:g[0],nm:g[1],n:0,disc:0,high:0};
       groups[key].n++;
-      if(CFG.discount[r.tier]>0)groups[key].disc++;
+      if(r.tier>=3)groups[key].disc++;      /* จัดเป็นความเสี่ยงต่ำ (เขียว/เหลือง) */
       if(r.tier<=2)groups[key].high++;
     });
   });
