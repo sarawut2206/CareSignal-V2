@@ -239,7 +239,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=212"></script>
+<script src="./cs-backend.js?v=213"></script>
 <script src="./cs-meds.js?v=1"></script>
 <script>
 "use strict";
@@ -579,11 +579,25 @@ function baselineRisk(d, age){
   return {level:level, reds:reds, yellows:yellows, flags:reds.concat(yellows)};
 }
 
+/* ============================================================
+   คะแนนสมรรถภาพ — 9 คะแนน (ไม่รวมการทรงตัว)
+   ------------------------------------------------------------
+   การทรงตัว 4 ท่าถูกถอดออกจากคะแนนหลักโดยตั้งใจ เพราะผลผ่าน/ไม่ผ่าน
+   มาจากการยืนยันของคน ไม่ใช่การวัดอัตโนมัติที่เทียบเคียงกันได้ทุกครั้ง
+   การเอาค่าที่คนตัดสินไปรวมกับค่าที่เครื่องจับเวลา ทำให้คะแนนรวม
+   ตีความยากและเปรียบเทียบข้ามครั้งไม่ได้จริง
+
+   ผลการทรงตัวยังถูกเก็บและแสดงในหน้าเคสเสมอ (parts.balance / balPassed)
+   และยังเปิดสัญญาณ S4 ได้ แต่ไม่คิดเป็นคะแนน — เป็น "ข้อมูลเสริม
+   ที่ผู้ดูแลยืนยัน" ตามที่ตกลงไว้
+   ค่าตัดระดับปรับตามฐานใหม่: 8/9 · 6/9 · 4/9 (สัดส่วนเดิมของฐาน 12)
+   ============================================================ */
 function scoreOf(d,age){
-  var parts={ftsst:ftsstPoints(d.ftsst,age), balance:d.balance||0, falls:d.falls==null?0:d.falls,
-              meds:d.meds==null?0:d.meds, adl:d.adl==null?0:d.adl};
-  var s=parts.ftsst+parts.balance+parts.falls+parts.meds+parts.adl;
-  return {score:s, max:12, tier:s>=10?4:s>=8?3:s>=5?2:1, parts:parts};
+  var parts={ftsst:ftsstPoints(d.ftsst,age), falls:d.falls==null?0:d.falls,
+              meds:d.meds==null?0:d.meds, adl:d.adl==null?0:d.adl,
+              balance:d.balance||0};   /* เก็บไว้แสดง แต่ไม่บวกเข้าคะแนน */
+  var s=parts.ftsst+parts.falls+parts.meds+parts.adl;
+  return {score:s, max:9, tier:s>=8?4:s>=6?3:s>=4?2:1, parts:parts, balanceInScore:false};
 }
 
 var ENGINE={
@@ -2499,9 +2513,13 @@ BalanceEngine.prototype.frame=function(lm){
       res.why="ขยับเท้าออกจากตำแหน่งเดิม";
     }
   }else{
-    /* มองไม่เห็นเท้า: ใช้การเลื่อนข้างของลำตัวแทนการตรวจก้าว (หน่วยลำตัว) */
-    if(this.refC&&Math.abs(this.c.x-this.refC.x)>0.6)this.badN++; else this.badN=0;
-    res.why="ตัวเลื่อนจากตำแหน่งเดิมมาก (น่าจะมีการก้าวขา)";
+    /* มองไม่เห็นเท้า — ไม่ตัดจบและไม่ตัดสินว่าไม่ผ่าน
+       เหตุผล: เกณฑ์ของ CDC คือ "ขยับเท้า" การเลื่อนของลำตัวไม่ใช่สิ่งเดียวกัน
+       ผู้สูงอายุแกว่งตัวเพื่อรักษาสมดุลได้โดยไม่ขยับเท้า ซึ่งยังนับว่าผ่าน
+       จึงบันทึกไว้เป็น "ธงคุณภาพภาพ" ให้คนตัดสินแทน ไม่ให้ระบบเดา */
+    this.badN=0;
+    res.noFeet=true;
+    res.why="กล้องมองไม่เห็นเท้าในช่วงนี้ — ให้ผู้ดูแลเป็นผู้ยืนยันผล";
   }
   if(this.badN>=10){res.fail=true;res.stepped=true;
     if(this.stepAt==null)this.stepAt=this.hn/30;}   /* วินาทีโดยประมาณที่เห็นการขยับเท้า */
@@ -4156,7 +4174,7 @@ function trendV(){
   trendSummaryHTML(A,S.data.profile.age)+
   '<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12) — ยิ่งสูงยิ่งดี</h3>'+
   '<p class="sub" style="margin:-2px 0 8px">พื้นเขียวคือช่วงคะแนนที่ถือว่าแข็งแรงดี (8 ขึ้นไป)</p>'+
-  lineChart({values:a.map(function(x){return x.score}),labels:xl,min:0,max:12,band:[8,12],
+  lineChart({values:a.map(function(x){return x.score}),labels:xl,min:0,max:9,band:[6,9],
              color:"#2563EB",aria:"กราฟเส้นคะแนนรวมย้อนหลัง"})+'</div>'+
   '<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที) — ยิ่งน้อยยิ่งดี</h3>'+
   '<p class="sub" style="margin:-2px 0 8px">เส้นประแดงคือเกณฑ์ '+cut.toFixed(1)+' วินาทีของช่วงอายุคุณ · จุดที่อยู่เหนือเส้นคือครั้งที่ช้ากว่าเกณฑ์</p>'+

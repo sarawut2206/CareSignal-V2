@@ -271,11 +271,12 @@ footer a{color:#93B4F5}
     </div>
     <div class="card">
       <h3>คะแนนรวมแปลงเป็นระดับ (tier)</h3>
-      <p class="small" style="margin:0 0 10px">ระดับนี้ใช้ตัดสินสิทธิประโยชน์ปีต่ออายุที่บริษัทประกันผู้พ่วงโปรแกรมมอบให้ และเป็นวัตถุดิบขั้นแรกของสีสถานะ</p>
-      <div class="rowline"><span class="k"><span class="pill p4">ระดับ 4</span> แข็งแรงมาก</span><span class="v">10–12 คะแนน</span></div>
-      <div class="rowline"><span class="k"><span class="pill p3">ระดับ 3</span> แข็งแรงดี</span><span class="v">8–9 คะแนน</span></div>
-      <div class="rowline"><span class="k"><span class="pill p2">ระดับ 2</span> ควรเฝ้าระวัง</span><span class="v">5–7 คะแนน</span></div>
-      <div class="rowline"><span class="k"><span class="pill p1">ระดับ 1</span> เสี่ยงสูง</span><span class="v">0–4 คะแนน</span></div>
+      <p class="small" style="margin:0 0 10px">ระดับนี้เป็น<b>วัตถุดิบขั้นแรกของสีสถานะ</b>เท่านั้น — ใช้เปิดสัญญาณเสี่ยง เปิดเคส และกำหนดว่าต้องติดตามภายในกี่วัน <b>ไม่ได้ใช้กำหนดสิทธิ์ ไม่ได้ใช้คิดเบี้ย และไม่ได้ใช้ตัดสินการจ่ายสินไหม</b></p>
+      <div class="rowline"><span class="k"><span class="pill p4">ระดับ 4</span> แข็งแรงมาก</span><span class="v">8–9 คะแนน</span></div>
+      <div class="rowline"><span class="k"><span class="pill p3">ระดับ 3</span> แข็งแรงดี</span><span class="v">6–7 คะแนน</span></div>
+      <div class="rowline"><span class="k"><span class="pill p2">ระดับ 2</span> ควรเฝ้าระวัง</span><span class="v">4–5 คะแนน</span></div>
+      <div class="rowline"><span class="k"><span class="pill p1">ระดับ 1</span> เสี่ยงสูง</span><span class="v">0–3 คะแนน</span></div>
+      <p class="small" style="margin:10px 0 0">ฐาน 9 คะแนน — <b>การทรงตัว 4 ท่าไม่รวมอยู่ในคะแนนนี้</b> เพราะผลผ่าน/ไม่ผ่านมาจากการยืนยันของผู้ดูแล ไม่ใช่การวัดอัตโนมัติ จึงเก็บไว้เป็นข้อมูลเสริมในหน้าเคสแทน</p>
     </div>
   </div>
 </div></section>
@@ -561,8 +562,8 @@ function calc(){
 
   var parts={ftsst:ftsstPoints(ft,age), balance:balancePoints(balPass),
              falls:fall, meds:med, adl:barthelAdl(bar)};
-  var score=parts.ftsst+parts.balance+parts.falls+parts.meds+parts.adl;
-  var tier=score>=10?4:score>=8?3:score>=5?2:1;
+  var score=parts.ftsst+parts.falls+parts.meds+parts.adl;   /* การทรงตัวไม่รวมในคะแนนหลัก */
+  var tier=score>=8?4:score>=6?3:score>=4?2:1;   /* ฐาน 9 คะแนน ไม่รวมการทรงตัว */
 
   /* ---- กฎ R1–R10 ---- */
   var flags=[];
@@ -625,7 +626,7 @@ function calc(){
   o.className="out "+L.cls;
   o.innerHTML='<div class="lbl">สถานะที่ระบบสรุปได้</div>'+
     '<div class="big">'+L.th+' · '+L.nm+'</div>'+
-    '<div style="font-size:15px;margin-top:8px">คะแนนรวม '+score+' / 12 · ระดับ '+tier+
+    '<div style="font-size:15px;margin-top:8px">คะแนนรวม '+score+' / 9 · ระดับ '+tier+
     ' · ความรุนแรงรวมจากกฎ '+sev+'</div>'+
     '<div style="font-size:15px;margin-top:6px"><b>นัดประเมินซ้ำใน '+L.days+' วัน · '+L.ref+'</b></div>';
 
@@ -642,7 +643,7 @@ function calc(){
     '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+parts.falls+' / 2</span></div>'+
     '<div class="rowline"><span class="k">จำนวนยา</span><span class="v">'+parts.meds+' / 1</span></div>'+
     '<div class="rowline"><span class="k">บาร์เธล '+bar+' / 20</span><span class="v">'+parts.adl+' / 2</span></div>'+
-    '<div class="rowline" style="border-top:2px solid var(--line);margin-top:6px;padding-top:12px"><span class="k"><b>คะแนนรวม</b></span><span class="v"><b>'+score+' / 12 → ระดับ '+tier+'</b></span></div>'+
+    '<div class="rowline" style="border-top:2px solid var(--line);margin-top:6px;padding-top:12px"><span class="k"><b>คะแนนรวม</b></span><span class="v"><b>'+score+' / 9 → ระดับ '+tier+'</b></span></div>'+
     '<h3 style="margin:20px 0 8px">กฎที่จุดติด'+(flags.length?" ("+flags.length+" ข้อ)":"")+'</h3>'+
     (flags.length
       ? flags.map(function(f){return '<div class="rowline"><span class="k"><b>'+f.id+'</b> · '+f.t+'</span><span class="v">+'+f.sev+'</span></div>'}).join("")

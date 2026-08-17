@@ -127,3 +127,16 @@ comment on type cs_case_status is
 --  case_total · case_new · case_working · case_closed · case_contacted ·
 --  case_contacted_in_sla · case_overdue · n_ref_booked · n_ref_outcome · n_ref_lost
 --  ทั้งหมดเป็นค่ารวมของพอร์ต ไม่มี user_id และไม่มีตัวเลขเบี้ย/ค่าสินไหม)
+
+-- ---------- เพิ่มภายหลัง: สถานะเคสให้ครบวงจรตามที่ตกลง ----------
+-- แยก "ตกลงแผนแล้ว" ออกจาก "ส่งต่อแล้ว" และแยก "นัดหมายแล้ว" ออกจาก
+-- "ไปพบแล้ว" เพราะสามอย่างนี้ล้มเหลวคนละแบบและต้องวัดแยกกัน:
+--   ตกลงแผนไม่ได้ = ปัญหาการสื่อสาร
+--   นัดไม่ได้      = ปัญหาการเข้าถึงบริการ
+--   นัดแล้วไม่ไป   = ปัญหาการเดินทางหรือแรงจูงใจ
+-- ถ้ารวมเป็นสถานะเดียว จะรู้แค่ว่า "ไม่สำเร็จ" แต่แก้ไม่ถูกจุด
+alter type cs_case_status add value if not exists 'care_plan_agreed'   after 'contacted';
+alter type cs_case_status add value if not exists 'appointment_booked' after 'referred';
+alter type cs_case_status add value if not exists 'service_completed'  after 'appointment_booked';
+-- วงจรเต็ม: new → reviewing → contacted → care_plan_agreed → referred
+--           → appointment_booked → service_completed → follow_up_due → stable/closed

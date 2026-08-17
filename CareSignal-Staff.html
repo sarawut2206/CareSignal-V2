@@ -117,7 +117,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=212"></script>
+<script src="./cs-backend.js?v=213"></script>
 <script src="./cs-meds.js?v=1"></script>
 <script>
 /* ============================================================
@@ -221,13 +221,21 @@ async function doLogin(){
    แดงก่อน → เกินกำหนดติดต่อ → ใกล้ครบกำหนด → ติดต่อไม่ได้ไว้ท้าย
    เหตุผลที่ไม่เรียงบนหน้าจอ: เจ้าหน้าที่หลายคนต้องเห็นลำดับเดียวกัน
    ============================================================ */
+/* วงจรชีวิตเคส 9 สถานะ — ตรงกับ enum cs_case_status ในฐานข้อมูล
+   แยก "ตกลงแผนแล้ว" ออกจาก "ส่งต่อแล้ว" และแยก "นัดหมายแล้ว" ออกจาก
+   "ไปพบแล้ว" เพราะสามอย่างนี้ล้มเหลวคนละแบบ และต้องวัดแยกกัน:
+   ตกลงแผนไม่ได้ = ปัญหาการสื่อสาร · นัดไม่ได้ = ปัญหาการเข้าถึงบริการ
+   · นัดแล้วไม่ไป = ปัญหาการเดินทาง/แรงจูงใจ */
 var CASE_STEPS=[
-  {k:"new",          nm:"เคสใหม่",           next:"reviewing",    btn:"รับเคสนี้"},
-  {k:"reviewing",    nm:"กำลังทบทวน",        next:"contacted",    btn:"ติดต่อได้แล้ว"},
-  {k:"contacted",    nm:"ติดต่อแล้ว",         next:"referred",     btn:"ส่งต่อผู้เชี่ยวชาญ"},
-  {k:"referred",     nm:"ส่งต่อแล้ว",         next:"intervention", btn:"เริ่มการดูแล"},
-  {k:"intervention", nm:"อยู่ระหว่างดูแล",    next:"follow_up_due",btn:"ถึงกำหนดติดตาม"},
-  {k:"follow_up_due",nm:"ถึงกำหนดติดตาม",    next:"stable",       btn:"ดีขึ้น/คงที่ — ปิดเคส"}
+  {k:"new",               nm:"เคสใหม่",            next:"reviewing",         btn:"รับเคสนี้"},
+  {k:"reviewing",         nm:"กำลังทบทวน",         next:"contacted",         btn:"ติดต่อได้แล้ว"},
+  {k:"contacted",         nm:"ติดต่อแล้ว",          next:"care_plan_agreed",  btn:"ตกลงแผนดูแลแล้ว"},
+  {k:"care_plan_agreed",  nm:"ตกลงแผนดูแลแล้ว",     next:"referred",          btn:"ส่งต่อผู้เชี่ยวชาญ"},
+  {k:"referred",          nm:"ส่งต่อแล้ว",          next:"appointment_booked",btn:"นัดหมายเรียบร้อย"},
+  {k:"appointment_booked",nm:"นัดหมายแล้ว",         next:"service_completed", btn:"ไปพบผู้เชี่ยวชาญแล้ว"},
+  {k:"service_completed", nm:"รับบริการแล้ว",       next:"follow_up_due",     btn:"ตั้งวันติดตามผล"},
+  {k:"follow_up_due",     nm:"ถึงกำหนดติดตาม",      next:"stable",            btn:"ดีขึ้น/คงที่ — ปิดเคส"},
+  {k:"intervention",      nm:"อยู่ระหว่างดูแล",     next:"follow_up_due",     btn:"ถึงกำหนดติดตาม"}
 ];
 /* บาง webview และ PWA บล็อก prompt() — ถ้าเรียกตรงแล้วโยน error
    ตัวจัดการเหตุการณ์ทั้งก้อนจะตายเงียบ ปุ่มจะกดไม่ติดโดยไม่มีคำอธิบาย
@@ -696,7 +704,20 @@ async function medsV(){
     var id=b.dataset.close, rec=b.dataset.rec, out=(V.querySelector('[data-out="'+id+'"]')||{}).value||"";
     if(rec!=="no_action"&&!out.trim()){toast("กรุณาเขียนข้อสรุปก่อนปิด");return}
     b.disabled=true;
-    try{await CSBackend.closeMedReview(id,out.trim()||null,rec);toast("ปิดการทบทวนแล้ว");medsV()}
+    try{
+      await CSBackend.closeMedReview(id,out.trim()||null,rec);
+      /* เชื่อมเข้าสายงานส่งต่อ: ถ้าเภสัชกรแนะนำให้พบแพทย์ ต้องเปิดการส่งต่อจริง
+         ไม่ใช่จบแค่บันทึกความเห็น มิฉะนั้นคำแนะนำจะไม่มีใครตามต่อ */
+      if(rec==="consult_doctor"){
+        var uid=b.closest(".case").querySelector(".medlist").dataset.uid;
+        try{
+          await CSBackend.createReferralFor(uid,null,"doctor",
+            "ทบทวนยาโดยแพทย์ตามความเห็นเภสัชกร"+(out.trim()?" · "+out.trim():""),"decline");
+          toast("ปิดการทบทวนและเปิดการส่งต่อไปแพทย์แล้ว");
+        }catch(e2){toast("ปิดการทบทวนแล้ว แต่เปิดการส่งต่อไม่สำเร็จ")}
+      }else toast("ปิดการทบทวนแล้ว");
+      medsV();
+    }
     catch(e){toast("ปิดไม่สำเร็จ");b.disabled=false}
   })});
 }

@@ -248,7 +248,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=212"></script>
+<script src="./cs-backend.js?v=213"></script>
 <script src="./cs-meds.js?v=1"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
@@ -1009,15 +1009,18 @@ function scoreDraft(dr,age){
   var pf = f==null?0 : f<=cut?4 : f<=cut+2?3 : f<=cut+4.5?2 : f<=60?1:0;
   parts.ftsst=pf; s+=pf;
   /* 2) ยืนทรงตัว — 0-3 */
-  parts.balance=dr.balance||0; s+=parts.balance;
+  /* การทรงตัวเก็บไว้แสดงและเปิดสัญญาณ แต่ไม่บวกเข้าคะแนนหลัก
+     เพราะผลผ่าน/ไม่ผ่านมาจากการยืนยันของคน ไม่ใช่การวัดอัตโนมัติ
+     การรวมค่าที่คนตัดสินเข้ากับค่าที่เครื่องจับเวลา ทำให้เทียบข้ามครั้งไม่ได้จริง */
+  parts.balance=dr.balance||0;
   /* 3) ประวัติหกล้ม 12 เดือน — 0-2 (ไม่ล้ม=2) */
   parts.falls=dr.falls==null?0:dr.falls; s+=parts.falls;
   /* 4) การใช้ยา ≥4 ชนิด — 0-1 */
   parts.meds=dr.meds==null?0:dr.meds; s+=parts.meds;
   /* 5) ทำกิจวัตรเองได้ (ADL อย่างย่อ) — 0-2 */
   parts.adl=dr.adl==null?0:dr.adl; s+=parts.adl;
-  var max=12;
-  var tier = s>=10?4 : s>=8?3 : s>=5?2 : 1;
+  var max=9;   /* ฐานคะแนนใหม่ ไม่รวมการทรงตัว */
+  var tier = s>=8?4 : s>=6?3 : s>=4?2 : 1;   /* ฐาน 9 คะแนน — การทรงตัวไม่รวมในคะแนนหลัก */
   return {score:s, max:max, tier:tier, parts:parts};
 }
 
@@ -1921,7 +1924,7 @@ function renderFamBody(){
     var rc=A.slice(-8), xl=rc.map(function(x){return thDate(x.at).replace(/ \d{2}$/,"")});
     h+=trendSummaryHTML(A,C.me.age||70);
     h+='<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12)</h3>'+
-      lineChart({values:rc.map(function(x){return x.score}),labels:xl,min:0,max:12,band:[8,12],color:"#2563EB",aria:"กราฟคะแนนรวม"})+'</div>';
+      lineChart({values:rc.map(function(x){return x.score}),labels:xl,min:0,max:9,band:[6,9],color:"#2563EB",aria:"กราฟคะแนนรวม"})+'</div>';
     if(perms.results){
       h+='<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที)</h3>'+
         lineChart({values:rc.map(function(x){return x.ftsst}),labels:xl,color:"#B45309",fmt:function(v){return v.toFixed(1)},aria:"กราฟลุกนั่ง"})+'</div>';
@@ -3429,9 +3432,13 @@ BalanceEngine.prototype.frame=function(lm){
       res.why="ขยับเท้าออกจากตำแหน่งเดิม";
     }
   }else{
-    /* มองไม่เห็นเท้า: ใช้การเลื่อนข้างของลำตัวแทนการตรวจก้าว (หน่วยลำตัว) */
-    if(this.refC&&Math.abs(this.c.x-this.refC.x)>0.6)this.badN++; else this.badN=0;
-    res.why="ตัวเลื่อนจากตำแหน่งเดิมมาก (น่าจะมีการก้าวขา)";
+    /* มองไม่เห็นเท้า — ไม่ตัดจบและไม่ตัดสินว่าไม่ผ่าน
+       เหตุผล: เกณฑ์ของ CDC คือ "ขยับเท้า" การเลื่อนของลำตัวไม่ใช่สิ่งเดียวกัน
+       ผู้สูงอายุแกว่งตัวเพื่อรักษาสมดุลได้โดยไม่ขยับเท้า ซึ่งยังนับว่าผ่าน
+       จึงบันทึกไว้เป็น "ธงคุณภาพภาพ" ให้คนตัดสินแทน ไม่ให้ระบบเดา */
+    this.badN=0;
+    res.noFeet=true;
+    res.why="กล้องมองไม่เห็นเท้าในช่วงนี้ — ให้ผู้ดูแลเป็นผู้ยืนยันผล";
   }
   if(this.badN>=10){res.fail=true;res.stepped=true;
     if(this.stepAt==null)this.stepAt=this.hn/30;}   /* วินาทีโดยประมาณที่เห็นการขยับเท้า */
@@ -4400,7 +4407,7 @@ function historyV(){
   trendSummaryHTML(a,S.data.profile.age)+
   (a.length>1?'<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12) — ยิ่งสูงยิ่งดี</h3>'+
     '<p class="sub" style="margin:-2px 0 8px">พื้นเขียวคือช่วงที่ถือว่าแข็งแรงดี (8 ขึ้นไป)</p>'+
-    lineChart({values:recent.map(function(x){return x.score}),labels:xlA,min:0,max:12,band:[8,12],
+    lineChart({values:recent.map(function(x){return x.score}),labels:xlA,min:0,max:9,band:[6,9],
                color:"#2563EB",aria:"กราฟเส้นคะแนนรวม"})+'</div>'+
     '<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที) — ยิ่งน้อยยิ่งดี</h3>'+
     '<p class="sub" style="margin:-2px 0 8px">เส้นประแดงคือเกณฑ์ '+cutA.toFixed(1)+' วินาทีของช่วงอายุคุณ</p>'+
