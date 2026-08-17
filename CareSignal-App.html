@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- ล็อก layout ไว้ที่ 430 หน่วยแล้วให้เบราว์เซอร์ขยายเต็มจอจริง — ขนาดตัวอักษรเป็นสัดส่วนเดียวกันทุกเครื่อง -->
 <meta name="viewport" content="width=430, viewport-fit=cover">
-<meta name="description" content="แอปสมาชิก CareSignal — วัดสมรรถภาพด้วยกล้อง ดูแนวโน้ม สมัครประกัน LTC ที่เบี้ยลดได้ทางเดียวตามผลตรวจ">
+<meta name="description" content="แอปสมาชิก CareSignal — โปรแกรมป้องกันการหกล้มและภาวะพึ่งพิงที่บริษัทประกันมอบให้พ่วงกับกรมธรรม์ วัดสมรรถภาพด้วยกล้อง ดูแนวโน้ม รับสิทธิประโยชน์ทางเดียว">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon-64.png">
-<title>CareSignal — แอปประเมินและประกันดูแลระยะยาว</title>
+<title>CareSignal — โปรแกรมป้องกันที่มากับกรมธรรม์ของท่าน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -248,7 +248,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=201"></script>
+<script src="./cs-backend.js?v=202"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
 
@@ -453,7 +453,7 @@ var CFG={
   ageMult:function(a){return a<55?1.00:(a<60?1.35:(a<66?1.80:2.30));},
   ageBand:function(a){return a<55?"50–54":(a<60?"55–59":(a<66?"60–65":"66–70"));},
   sexMult:{f:1.10,m:1.00},
-  discount:{4:.15,3:.08,2:0,1:0}, /* หลักการ: ผลประเมิน "ลด" เบี้ยได้เท่านั้น ไม่มีบวก ไม่มีปฏิเสธ */
+  discount:{4:.15,3:.08,2:0,1:0}, /* ระดับสิทธิประโยชน์ปีต่ออายุที่แพลตฟอร์มแนะนำให้บริษัทประกัน — ทางเดียว: เพิ่มได้ ไม่มีโทษ ไม่มีปฏิเสธ */
   yearlyOff:.08,
   /* --- เงื่อนไขความคุ้มครอง (อ้างอิงแนวปฏิบัติตลาดไทย เช่น ระยะรอคอยแบบชั้นของประกันสุขภาพ) --- */
   terms:{
@@ -508,6 +508,11 @@ async function loadAll(){
   /* อายุคำนวณใหม่ทุกครั้งที่เปิดแอป — ไม่ค้างอยู่ที่ค่าตอนสมัคร */
   if(S.data.profile&&S.data.profile.birthYear)
     S.data.profile.age=ageFrom(S.data.profile.birthYear,S.data.profile.birthMonth);
+  /* โยกข้อมูลรุ่นเก่า: กรมธรรม์ที่เคย "ซื้อ" ในเดโมเดิม แปลงเป็นการเชื่อมกรมธรรม์ */
+  if(S.data.policy&&!S.data.policy.embedded)
+    S.data.policy={embedded:true, insurer:"บริษัทประกันสาธิต", no:S.data.policy.no||"—",
+      product:S.data.policy.planName?("ประกันดูแลระยะยาว แผน"+S.data.policy.planName):"ประกันดูแลระยะยาว",
+      linked:S.data.policy.start||todayISO()};
   document.getElementById("dbchip").textContent=dbLabel();
 }
 async function saveAll(){
@@ -528,32 +533,19 @@ async function saveAll(){
       referred:(function(){try{var x=trajectory();return x?!!x.referral.need:false}catch(e){return false}})(),
       consentAt:S.data.consent?S.data.consent.at:null,
       engine:ENGINE.version,
-      plan:S.data.policy?S.data.policy.plan:null,
-      premium:S.data.policy?S.data.policy.premium:null,
+      plan:S.data.policy?"embedded":null,            /* เชื่อมกรมธรรม์แล้วหรือยัง */
+      insurer:S.data.policy?S.data.policy.insurer:null,
+      premium:null,                                   /* โมเดลพ่วง — แอปไม่รู้และไม่เก็บเบี้ย */
       updated:todayISO()
     });
   }
 }
 
 /* ============================================================
-   คำนวณเบี้ย — ตรรกะเดียวกับเว็บและโมเดลผู้ประกอบการ
-   ============================================================ */
-function premiumFor(planId,age,sex,tier,pay){
-  var p=CFG.plans.find(function(x){return x.id===planId});
-  var gross=p.base*CFG.ageMult(age)*CFG.sexMult[sex];
-  var d=tier?CFG.discount[tier]:0;
-  var net=gross*(1-d);
-  var loy=loyaltyBaht(planId);
-  net=Math.max(net-loy, gross*0.75);   /* เพดานรวมส่วนลดไม่เกิน 25% เพื่อคุมต้นทุน */
-  if(pay==="y"){net=net*12*(1-CFG.yearlyOff)}
-  return {plan:p, gross:Math.round(gross), net:Math.round(net), disc:d, loyalty:loy};
-}
-
-/* ============================================================
-   ส่วนลดต่อเนื่อง + ระยะรอคอยที่ลดได้จากการมีข้อมูลต่อเนื่อง
+   คะแนนความสม่ำเสมอ + ระยะรอคอยที่ลดได้จากการมีข้อมูลต่อเนื่อง
    ------------------------------------------------------------
-   หลักการที่ยืมมาจากตลาด: ประกาศส่วนลดเป็น "บาทต่อรอบ" ไม่ใช่ % ของเบี้ย
-   บริษัทจึงคำนวณเพดานต้นทุนล่วงหน้าได้แน่นอน และผู้ใช้เข้าใจทันทีว่าประหยัดกี่บาท
+   แพลตฟอร์มคำนวณ "คะแนน" ให้ ส่วนรางวัลจริง (เช่น ส่วนลดปีต่ออายุเป็นบาท)
+   บริษัทประกันผู้ออกกรมธรรม์เป็นผู้กำหนด — ตัวเลขใน CFG.loyalty คือค่าแนะนำ
    ============================================================ */
 function loyaltyPoints(){
   var A=(S.data.assessments||[]).filter(function(x){return x.verified===true});  /* นับเฉพาะครั้งที่ยืนยันตัวตนผ่าน */
@@ -1150,27 +1142,27 @@ function render(arg){
     ["portal","carerAuth","famLink","famHome","famView","assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"home",ai:"home",family:"family"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,pay:payV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL","กำลังเปิดระบบ…","");V.innerHTML=""}
 
 /* ---------- ลงทะเบียน ---------- */
 function welcomeV(){
-  head("CARESIGNAL · LTC PLATFORM","สัญญาณสุขภาพ ที่แปลงเป็นความคุ้มครอง","ประเมินความเสี่ยงหกล้มและภาวะพึ่งพิงด้วยตัวเองที่บ้าน ผลดีช่วยลดเบี้ยประกันดูแลระยะยาว");
+  head("CARESIGNAL","โปรแกรมป้องกันที่มากับกรมธรรม์ของท่าน","บริษัทประกันของท่านมอบโปรแกรมนี้ให้เป็นสิทธิประโยชน์ ใช้ประเมินความเสี่ยงหกล้มและภาวะพึ่งพิงเองที่บ้าน โดยไม่มีค่าใช้จ่าย");
   V.innerHTML='<div class="anim">'+
   '<div class="card senior"><h2 style="font-size:19px">แอปนี้ทำอะไรได้บ้าง</h2>'+
   '<div class="rowline"><span class="k">วัดความแข็งแรง 5 ด้าน</span><span class="v">8 นาที</span></div>'+
   '<div class="rowline"><span class="k">บันทึกผลทุกครั้งลงฐานข้อมูล</span><span class="v">ถาวร</span></div>'+
-  '<div class="rowline"><span class="k">ผลดี ลดเบี้ยได้สูงสุด</span><span class="v">15%</span></div>'+
+  '<div class="rowline"><span class="k">ผลดี รับสิทธิประโยชน์ปีต่ออายุ</span><span class="v">ทางเดียว</span></div>'+
   '<div class="rowline"><span class="k">ผลเสี่ยง ส่งต่อพยาบาล</span><span class="v">72 ชม.</span></div></div>'+
-  '<div class="notice">ข้อสัญญาที่เราให้ไว้กับคุณ: ผลตรวจใช้<b>ลดค่าเบี้ยได้อย่างเดียว</b> ไม่มีการขึ้นค่าเบี้ยหรือไม่รับประกันเพราะผลตรวจแย่ลง และการอนุมัติเงินทุกครั้งตัดสินโดยคนจริง ไม่ใช่คอมพิวเตอร์</div>'+
+  '<div class="notice">ข้อสัญญาที่เราให้ไว้กับคุณ: ผลตรวจใช้<b>เพิ่มสิทธิประโยชน์ได้อย่างเดียว</b> — ไม่มีการขึ้นเบี้ย ไม่ลดความคุ้มครอง และไม่บอกเลิกกรมธรรม์เพราะผลตรวจแย่ลง · CareSignal ไม่ใช่บริษัทประกันและไม่ขายประกัน การตัดสินใจเรื่องกรมธรรม์ทุกอย่างเป็นของบริษัทประกันผู้ออกกรมธรรม์ โดยมีคนจริงเป็นผู้ตัดสิน</div>'+
   '<button class="cta loop" data-go="register">เริ่มใช้งาน · สร้างบัญชี</button>'+
   '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button>'+
   '<button class="ghostb" data-go="portal">‹ กลับไปเลือกบทบาท</button></div>';
 }
 function registerV(){
-  head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้คำนวณเกณฑ์อายุและเบี้ยประกันของคุณ เก็บในฐานข้อมูลของคุณเอง","welcome");
+  head("สมัครสมาชิก","ข้อมูลพื้นฐาน","ใช้คำนวณเกณฑ์อายุสำหรับการประเมิน เก็บในฐานข้อมูลของคุณเอง","welcome");
   var d=S.draft;
   V.innerHTML='<div class="anim senior">'+
   '<div class="card">'+
@@ -1188,7 +1180,7 @@ function registerV(){
   '<div class="field"><label>เบอร์โทรของท่าน (ใช้เข้าสู่ระบบ)</label><input id="fPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
   '<div class="field"><label>ตั้งรหัส 4 หลัก</label><input id="fPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
   '<div class="card"><h3 style="font-size:15px;margin:0 0 10px">ความยินยอมตาม PDPA</h3>'+
-  '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนป้องกัน (2) คำนวณส่วนลดเบี้ย (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
+  '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนป้องกัน (2) รายงานระดับสัญญาณและการเข้าร่วมให้บริษัทประกันผู้ออกกรมธรรม์ใช้พิจารณาสิทธิประโยชน์ (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
   '<label class="chk"><input type="checkbox" id="fConsent"'+(d.consent?" checked":"")+'><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
   '<button class="cta loop" id="fGo">บันทึกและเริ่มใช้งาน</button>'+
   '<p class="hint" style="margin-top:12px">ข้อมูลสรุปแบบแฝงชื่อ (รหัสสุ่มแทนชื่อ ช่วงอายุ เพศ ระดับสัญญาณ) จะถูกส่งเข้าระบบกลางเพื่อให้ Care Manager ดูแลคุณได้ — ไม่ส่งชื่อจริง และปิดได้ในหน้า "ฉัน"</p></div>';
@@ -1208,7 +1200,7 @@ function registerV(){
     var age=ageFrom(yr,mo);
     S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, birthMonth:mo, age:age, sex:S.draft.sex,
       phone:ph||null, carerPhone:document.getElementById("fCarer").value.trim()||null, joined:todayISO()};
-    S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนป้องกัน","คำนวณส่วนลดเบี้ย","ส่งต่อทีมดูแล"]};
+    S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนป้องกัน","รายงานสิทธิประโยชน์ให้บริษัทประกัน","ส่งต่อทีมดูแล"]};
     audit("บันทึกความยินยอม","ผู้ใช้ให้ความยินยอมตามข้อตกลง PDPA-1.0 ครบทุกวัตถุประสงค์");
     await saveAll();
     S.draft={};
@@ -1874,17 +1866,17 @@ function homeV(){
   }
   var polPart;
   if(pol){
-    polPart='<div class="card"><h3>ประกันของฉัน</h3>'+
-      '<div class="bigrow"><div class="ic">🛡️</div><div class="tx"><b>แผน'+esc(pol.planName)+'</b>'+
-      '<span>ถ้าช่วยเหลือตัวเองไม่ได้ รับเดือนละ '+fmt(pol.benefit)+' บาท</span></div></div>'+
-      '<div class="bigrow"><div class="ic">💰</div><div class="tx"><b>จ่าย '+fmt(pol.premium)+' บาท ต่อ'+(pol.pay==="y"?"ปี":"เดือน")+'</b>'+
-      '<span>ชำระแล้ว '+S.data.payments.length+' งวด</span></div></div>'+
-      '<button class="ghostb" data-go="policy">ดูประกันและชำระเงิน</button></div>';
+    polPart='<div class="card"><h3>สิทธิประโยชน์จากกรมธรรม์</h3>'+
+      '<div class="bigrow"><div class="ic">🛡️</div><div class="tx"><b>เชื่อมกับ '+esc(pol.insurer||"บริษัทประกันของท่าน")+'</b>'+
+      '<span>กรมธรรม์เลขที่ '+esc(pol.no||"—")+'</span></div></div>'+
+      '<div class="bigrow"><div class="ic">🎁</div><div class="tx"><b>โปรแกรมนี้ฟรี — เป็นสิทธิประโยชน์ของกรมธรรม์</b>'+
+      '<span>ผลดีสะสมเป็นสิทธิประโยชน์ปีต่ออายุ (ทางเดียว ไม่มีโทษ)</span></div></div>'+
+      '<button class="ghostb" data-go="policy">ดูสิทธิประโยชน์ของฉัน</button></div>';
   }else{
-    polPart='<div class="card"><h3>ประกันของฉัน</h3>'+
-      '<div class="bigrow"><div class="ic">🛡️</div><div class="tx"><b>ยังไม่มีประกัน</b>'+
-      '<span>ตรวจร่างกายก่อน ผลดีช่วยให้จ่ายเบี้ยถูกลง</span></div></div>'+
-      '<button class="ghostb" data-go="policy">ดูแผนประกันและราคา</button></div>';
+    polPart='<div class="card"><h3>สิทธิประโยชน์จากกรมธรรม์</h3>'+
+      '<div class="bigrow"><div class="ic">🛡️</div><div class="tx"><b>ยังไม่ได้เชื่อมกรมธรรม์</b>'+
+      '<span>หากท่านมีประกันสุขภาพ/ผู้สูงอายุ/ดูแลระยะยาว เชื่อมเพื่อรับสิทธิประโยชน์จากผลตรวจ</span></div></div>'+
+      '<button class="ghostb" data-go="policy">เชื่อมกรมธรรม์ของฉัน</button></div>';
   }
   /* ตั้งค่าย้ายจากแถบล่างมาอยู่ที่นี่ เพราะแถบล่างเหลือ 3 ช่องใหญ่
      สำหรับงานที่ผู้สูงอายุใช้บ่อยจริง (หน้าแรก · ตรวจ · แนวโน้ม) */
@@ -2078,7 +2070,7 @@ function verifyNotice(){
   '<h3 style="color:var(--accent2)">ข้อควรทราบก่อนตอบ</h3>'+
   '<p class="sub" style="margin:0 0 10px">คำตอบข้อนี้ระบบบันทึกเป็น <b>"ผู้ใช้กรอกเอง"</b> และ<b>ยังไม่ถือเป็นข้อเท็จจริง</b> จนกว่าจะได้รับการยืนยัน · เมื่อสมัครประกันหรือเรียกสินไหม บริษัทจะ<b>ขอความยินยอมจากท่านเป็นรายครั้ง</b> เพื่อตรวจสอบกับประวัติการรักษาของสถานพยาบาลที่ท่านระบุ ในช่วงเวลาที่ท่านอนุญาตเท่านั้น</p>'+
   '<p class="sub" style="margin:0 0 10px">หากพบว่าข้อมูลไม่ตรงกับความจริงในสาระสำคัญ บริษัทอาจใช้สิทธิ์ตามกฎหมายในการปฏิเสธการจ่ายสินไหมหรือบอกล้างสัญญาได้ ตามประมวลกฎหมายแพ่งและพาณิชย์ว่าด้วยการปกปิดข้อความจริงในสัญญาประกันภัย</p>'+
-  '<p class="sub" style="margin:0;color:var(--c4)"><b>ตอบตามจริงไม่ทำให้เบี้ยแพงขึ้น</b> — ระบบนี้ใช้ผลตรวจลดเบี้ยได้ทางเดียว การตอบว่ามีความเสี่ยงทำให้ท่านได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
+  '<p class="sub" style="margin:0;color:var(--c4)"><b>ตอบตามจริงไม่มีผลเสียต่อกรมธรรม์ของท่าน</b> — ผลตรวจใช้เพิ่มสิทธิประโยชน์ได้ทางเดียว ไม่มีการขึ้นเบี้ยหรือลดความคุ้มครอง การตอบว่ามีความเสี่ยงทำให้ท่านได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
 }
 
 /* การ์ดแสดงสิ่งที่กล้องสังเกตได้ ก่อนให้ผู้ใช้ยืนยันด้วยตนเอง */
@@ -2241,7 +2233,7 @@ function assessQV(i){
       '<p class="sub" style="margin:0">การตอบตามความจริงมีผลต่อสิทธิ์ของคุณเอง เมื่อสมัครประกัน คุณจะให้ความยินยอมให้บริษัทตรวจสอบประวัติการรักษาและการใช้ยากับสถานพยาบาลและหน่วยงานสาธารณสุขที่เกี่ยวข้องได้ '+
       'หากพบว่าข้อมูลที่กรอกไม่ตรงกับความจริงในสาระสำคัญ บริษัทอาจใช้สิทธิ์ตามกฎหมายในการปฏิเสธการจ่ายสินไหมหรือบอกล้างสัญญาได้ '+
       'ตามประมวลกฎหมายแพ่งและพาณิชย์ว่าด้วยการปกปิดข้อความจริงในสัญญาประกันภัย</p>'+
-      '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ตอบตามจริงไม่ทำให้เบี้ยแพงขึ้น</b> — ระบบนี้ใช้ผลตรวจลดเบี้ยได้ทางเดียว การตอบว่ามีความเสี่ยงจะทำให้คุณได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
+      '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ตอบตามจริงไม่มีผลเสียต่อกรมธรรม์ของคุณ</b> — ผลตรวจใช้เพิ่มสิทธิประโยชน์ได้ทางเดียว ไม่มีการขึ้นเบี้ยหรือลดความคุ้มครอง การตอบว่ามีความเสี่ยงจะทำให้คุณได้รับการดูแลเร็วขึ้น ไม่ใช่ถูกลงโทษ</p></div>';
   }
   if(q.adl){
     /* ดัชนีบาร์เธลฉบับย่อ 5 ด้าน — กระชับ ตอบง่าย และมีงานวิจัยรองรับ
@@ -2347,17 +2339,17 @@ function assessResultV(rec){
   '<div><span class="state" style="background:'+t.c+'">'+t.nm+'</span></div>'+
   '<p class="note">'+t.act+'</p></div>'+
   '<div class="card"><h3>คะแนนรายด้าน</h3>'+
-  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+'<div class="rowline"><span class="k">ยืนยันตัวตน</span><span class="v" style="color:'+(rec.verified?'var(--c4)':'var(--ink3)')+'">'+(rec.verified?'ผ่าน · นำไปคิดส่วนลดได้':'ไม่ได้ยืนยัน · ไม่คิดส่วนลด')+'</span></div>'+
+  '<div class="rowline"><span class="k">ลุกนั่ง 5 ครั้ง '+(rec.ftsst?'('+rec.ftsst.toFixed(1)+' วิ)':'(ข้าม)')+'</span><span class="v">'+rec.parts.ftsst+' / 4</span></div>'+(rec.tug!=null?'<div class="rowline"><span class="k">ลุกเดิน 3 เมตร</span><span class="v" style="color:'+(rec.tug>=12?'var(--c2)':'var(--c4)')+'">'+rec.tug.toFixed(1)+' วิ</span></div>':'')+(rec.gaps&&rec.gaps.length?'<div class="rowline"><span class="k">เวลาลุกแต่ละครั้ง</span><span class="v">'+rec.gaps.join(' · ')+' วิ</span></div>':'')+(rec.method==='camera-pose'?'<div class="rowline"><span class="k">วิธีวัด</span><span class="v" style="color:var(--brand2)">กล้อง</span></div>':'')+'<div class="rowline"><span class="k">ยืนยันตัวตน</span><span class="v" style="color:'+(rec.verified?'var(--c4)':'var(--ink3)')+'">'+(rec.verified?'ผ่าน · นับสิทธิประโยชน์ได้':'ไม่ได้ยืนยัน · ไม่นับสิทธิประโยชน์')+'</span></div>'+
   '<div class="rowline"><span class="k">การทรงตัว</span><span class="v">'+rec.parts.balance+' / 3</span></div>'+
   '<div class="rowline"><span class="k">ประวัติหกล้ม</span><span class="v">'+rec.parts.falls+' / 2</span></div>'+
   '<div class="rowline"><span class="k">การใช้ยา</span><span class="v">'+rec.parts.meds+' / 1</span></div>'+
   '<div class="rowline"><span class="k">กิจวัตรประจำวัน</span><span class="v">'+rec.parts.adl+' / 2</span></div></div>'+
-  (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">คุณได้ส่วนลดแล้ว</h3><p class="sub" style="margin:0">ผลตรวจระดับนี้ช่วยลดค่าเบี้ยได้ <b>'+(d*100)+'%</b> — ระบบคิดให้อัตโนมัติในหน้าประกันของฉัน</p></div>':'')+
+  (d>0?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ผลระดับนี้สะสมสิทธิประโยชน์ได้</h3><p class="sub" style="margin:0">ระบบรายงานระดับสีนี้ให้บริษัทประกันของท่านใช้พิจารณาสิทธิประโยชน์ปีต่ออายุ (แนะนำสูงสุด '+(d*100)+'%) — ดูรายละเอียดในหน้าสิทธิประโยชน์</p></div>':'')+
   (rec.tier<=2?'<div class="card" style="background:var(--c2b)"><h3 style="color:var(--c2)">เราส่งเรื่องให้ทีมดูแลแล้ว</h3><p class="sub" style="margin:0">ทีมดูแลได้รับเรื่องของคุณแล้ว '+t.act+'</p></div>':'')+
   (S.data.assessments.length>1?warnCard():'')+
   '<button class="cta" data-go="plan">ดูแผนป้องกันเฉพาะของฉัน</button>'+
   '<button class="ghostb" data-go="home">กลับหน้าหลัก</button>'+
-  '<button class="ghostb" data-go="policy">ดูเบี้ยประกันของฉัน</button></div>';
+  '<button class="ghostb" data-go="policy">ดูสิทธิประโยชน์ของฉัน</button></div>';
 }
 
 var POSE=null, RAF=null, DET=null, MODEL_STATE="idle";
@@ -2404,7 +2396,7 @@ function faceEnrollV(){
   '<div class="bigrow"><div class="ic">🔢</div><div class="tx"><b>เก็บเป็นตัวเลข ไม่ใช่รูป</b><span>ระบบวัดสัดส่วนใบหน้าเป็นตัวเลข 6 ค่า แล้วลบภาพทิ้งทันที ไม่มีการเก็บรูปใด ๆ</span></div></div>'+
   '<div class="bigrow"><div class="ic">📵</div><div class="tx"><b>ไม่ออกจากเครื่องนี้</b><span>ตัวเลขชุดนี้เก็บในมือถือของคุณเท่านั้น ไม่ส่งขึ้นระบบ ไม่ส่งให้บริษัทประกัน</span></div></div>'+
   '<div class="bigrow"><div class="ic">⚖️</div><div class="tx"><b>เป็นข้อมูลอ่อนไหวตามกฎหมาย</b><span>ข้อมูลชีวมิติได้รับความคุ้มครองตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล มาตรา 26 จึงต้องขอความยินยอมแยกจากข้อตกลงทั่วไป</span></div></div>'+
-  '<div class="bigrow"><div class="ic">🙅</div><div class="tx"><b>ไม่ยินยอมก็ใช้งานได้</b><span>แต่ผลตรวจครั้งนั้นจะไม่นำไปคิดส่วนลด เพราะยืนยันไม่ได้ว่าใครเป็นผู้ทำ</span></div></div>'+
+  '<div class="bigrow"><div class="ic">🙅</div><div class="tx"><b>ไม่ยินยอมก็ใช้งานได้</b><span>แต่ผลตรวจครั้งนั้นจะไม่นับเป็นสิทธิประโยชน์ เพราะยืนยันไม่ได้ว่าใครเป็นผู้ทำ</span></div></div>'+
   '<p class="sub" style="margin:14px 0 0">ขอบเขตที่ระบบทำได้จริง: ตรวจว่า<b>เป็นคนเดิมตลอดการทดสอบ</b>เท่านั้น ไม่ใช่การพิสูจน์ตัวตนแบบธนาคาร การพิสูจน์ตัวตนจริงตอนเรียกสินไหมทำโดยเจ้าหน้าที่ที่ไปเยี่ยมบ้าน</p></div>'+
   (already?'<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ลงทะเบียนใบหน้าไว้แล้ว</h3><p class="sub" style="margin:0">ระบบจะตรวจอัตโนมัติระหว่างการทดสอบ</p></div>':'')+
   '<div class="stage" style="aspect-ratio:1/1"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
@@ -2413,10 +2405,10 @@ function faceEnrollV(){
   statusHTML()+
   '<label class="chk" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(S.data.consentFace?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
   '<button class="cta" id="fcSave" disabled>บันทึกใบหน้าและไปต่อ</button>'+
-  '<button class="ghostb" id="fcSkip">ไม่ยินยอม · ทำต่อโดยไม่คิดส่วนลด</button></div>';
+  '<button class="ghostb" id="fcSkip">ไม่ยินยอม · ทำต่อโดยไม่นับสิทธิประโยชน์</button></div>';
   document.getElementById("fcSkip").addEventListener("click",async function(){
     stopCam(); S.draft.identityVerified=false;
-    audit("ไม่ยินยอมยืนยันใบหน้า","ผู้ใช้เลือกทำการทดสอบโดยไม่ยืนยันตัวตน ผลครั้งนี้ไม่นำไปคิดส่วนลด");
+    audit("ไม่ยินยอมยืนยันใบหน้า","ผู้ใช้เลือกทำการทดสอบโดยไม่ยืนยันตัวตน ผลครั้งนี้ไม่นับเป็นสิทธิประโยชน์");
     go("calib");
   });
   startFacePipeline();
@@ -2429,13 +2421,13 @@ async function startFacePipeline(){
   var stream, cur=null;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:480},height:{ideal:480}},audio:false}); }
-  catch(e){ tag.textContent="เปิดกล้องไม่ได้"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นำไปคิดส่วนลด";
+  catch(e){ tag.textContent="เปิดกล้องไม่ได้"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นับเป็นสิทธิประโยชน์";
     setStatus("red","เปิดกล้องไม่ได้ — ข้ามขั้นนี้ได้"); return; }
   S.cam=stream; video.srcObject=stream; /* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
      ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
   await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
   try{ tag.textContent="กำลังโหลดตัวตรวจใบหน้า…"; await loadFaceModel(); }
-  catch(e){ tag.textContent="โหลดไม่สำเร็จ"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นำไปคิดส่วนลด"; return; }
+  catch(e){ tag.textContent="โหลดไม่สำเร็จ"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นับเป็นสิทธิประโยชน์"; return; }
   tag.textContent="พบใบหน้าแล้ว";
   function loop(){
     if(S.screen!=="faceEnroll")return;
@@ -2734,8 +2726,8 @@ function finishTest(elapsed){
   var ck=S.draft.identityChecks||0, fl=S.draft.identityFails||0;
   S.draft.identityVerified = (faceEnabled() && ck>=1 && fl<=1);
   audit("ผลการยืนยันตัวตนระหว่างทดสอบ", faceEnabled()
-    ? ("ตรวจใบหน้า "+ck+" ครั้ง ไม่ตรง "+fl+" ครั้ง → "+(S.draft.identityVerified?"ยืนยันผ่าน":"ยืนยันไม่ผ่าน ผลนี้ไม่นำไปคิดส่วนลด"))
-    : "ผู้ใช้ไม่ได้ลงทะเบียนใบหน้า ผลนี้ไม่นำไปคิดส่วนลด");
+    ? ("ตรวจใบหน้า "+ck+" ครั้ง ไม่ตรง "+fl+" ครั้ง → "+(S.draft.identityVerified?"ยืนยันผ่าน":"ยืนยันไม่ผ่าน ผลนี้ไม่นับเป็นสิทธิประโยชน์"))
+    : "ผู้ใช้ไม่ได้ลงทะเบียนใบหน้า ผลนี้ไม่นับเป็นสิทธิประโยชน์");
   audit("วัดด้วยกล้อง","ลุกนั่ง 5 ครั้งใน "+S.draft.ftsst.toFixed(1)+" วินาที · เวลาต่อครั้ง "+S.draft.gaps.join(", ")+" วินาที"+(cv!=null?" · ความแปรปรวน "+(cv*100).toFixed(0)+"%":""));
   speak("ครบห้าครั้ง เสร็จเรียบร้อย เก่งมากค่ะ ต่อไปเป็นการทดสอบลุกเดินสามเมตร");
   toast("วัดเสร็จแล้ว "+S.draft.ftsst.toFixed(1)+" วินาที");
@@ -3667,7 +3659,7 @@ function trendSummaryHTML(A,age){
 }
 
 function historyV(){
-  head("ผลย้อนหลัง","ผลตรวจทั้งหมดของคุณ","เก็บไว้ให้ครบทุกครั้ง ใช้ยืนยันส่วนลดและติดตามสุขภาพ","home");
+  head("ผลย้อนหลัง","ผลตรวจทั้งหมดของคุณ","เก็บไว้ให้ครบทุกครั้ง ใช้ยืนยันสิทธิประโยชน์และติดตามสุขภาพ","home");
   var a=S.data.assessments;
   if(!a.length){V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">ยังไม่มีผลตรวจ — เมื่อตรวจแล้วผลจะมาแสดงที่นี่</p></div><button class="cta loop" data-go="assessIntro">ประเมินครั้งแรก</button></div>';return}
   var recent=a.slice(-8);
@@ -3687,112 +3679,102 @@ function historyV(){
     return '<div class="hrow"><span class="dt">'+thDate(x.at)+'</span><span class="sc" style="color:'+t.c+'">'+x.score+'</span><span class="tierpill '+t.b+'">'+t.nm.split(" — ")[0]+'</span></div>'}).join("")+'</div></div>';
 }
 
-/* ---------- กรมธรรม์ ---------- */
+/* ============================================================
+   สิทธิประโยชน์จากกรมธรรม์ — โมเดลพ่วง (Insurance-Embedded)
+   ------------------------------------------------------------
+   CareSignal ไม่ใช่บริษัทประกันและไม่ขายประกัน
+   ผู้ใช้ "เชื่อม" กรมธรรม์ที่ถืออยู่กับบริษัทประกันพันธมิตร
+   แล้วโปรแกรมป้องกันทั้งหมดกลายเป็นสิทธิประโยชน์ของกรมธรรม์นั้น
+   ผลตรวจใช้เพิ่มสิทธิประโยชน์ได้ทางเดียว ไม่มีการขึ้นเบี้ย/ลดความคุ้มครอง
+   ============================================================ */
+var PARTNERS=["ทิพยประกันชีวิต (สาธิต)","ไทยสุขใจประกันภัย (สาธิต)","สยามวัยทองประกันชีวิต (สาธิต)"];
 
-/* ---------- กล่องเงื่อนไขความคุ้มครอง (ต้องแสดงก่อนสมัครทุกครั้ง) ---------- */
+/* ---------- ตัวอย่างสิทธิประโยชน์ที่บริษัทประกันนำไปพ่วงได้ ---------- */
 function termsCard(){return '<div class="card">'+termsBody()+'</div>'}
 function termsBody(){
   var cw=chronicWait(), T=CFG.terms;
-  return '<p class="sub" style="margin:0 0 12px">หลักง่าย ๆ: <b>สิ่งที่เกิดขึ้นโดยไม่ทันตั้งตัว คุ้มครองทันที</b> ส่วนโรคที่ค่อย ๆ เป็น ต้องรอระยะหนึ่งก่อน</p>'+
-  '<div class="rowline"><span class="k">อุบัติเหตุ (หกล้ม สะโพกหัก)</span><span class="v" style="color:var(--c4)">คุ้มครองทันที</span></div>'+
-  '<div class="rowline"><span class="k">เจ็บป่วยเฉียบพลัน (หลอดเลือดสมอง)</span><span class="v">'+T.waitAcute+' วัน</span></div>'+
-  '<div class="rowline"><span class="k">ภาวะเสื่อมถอยเรื้อรัง</span><span class="v">'+cw.days+' วัน</span></div>'+
-  (cw.cut>0?'<p class="sub" style="margin:8px 0 0;color:var(--c4)">ระยะรอคอยกลุ่มเรื้อรังของคุณสั้นลง '+cw.cut+' วันแล้ว จากการมีผลประเมินต่อเนื่อง '+cw.n+' ครั้ง (จากเดิม '+T.waitChronic+' วัน)</p>'
+  return '<p class="sub" style="margin:0 0 12px">ตัวอย่างวิธีที่บริษัทประกันนำผลจากโปรแกรมไปพ่วงกับกรมธรรม์ — <b>เงื่อนไขจริงเป็นของกรมธรรม์แต่ละฉบับ</b> ตัวเลขในนี้คือค่าแนะนำของแพลตฟอร์ม</p>'+
+  '<div class="rowline"><span class="k">ส่วนลดเบี้ยปีต่ออายุจากผลตรวจ</span><span class="v" style="color:var(--c4)">สูงสุด 15%</span></div>'+
+  '<div class="rowline"><span class="k">ประเมินต่อเนื่อง ลดระยะรอคอยกลุ่มเรื้อรัง</span><span class="v">'+T.chronicCutPerAssess+' วัน/ครั้ง</span></div>'+
+  (cw.cut>0?'<p class="sub" style="margin:8px 0 0;color:var(--c4)">ของท่านลดได้แล้ว '+cw.cut+' วัน จากการมีผลประเมินต่อเนื่อง '+cw.n+' ครั้ง (เพดาน '+T.chronicCutMax+' วัน)</p>'
         :'<p class="sub" style="margin:8px 0 0">ประเมินต่อเนื่องทุก 3 เดือน ลดระยะรอคอยกลุ่มเรื้อรังได้ครั้งละ '+T.chronicCutPerAssess+' วัน สูงสุด '+T.chronicCutMax+' วัน</p>')+
-  '<div class="rowline" style="margin-top:6px"><span class="k">ต้องช่วยตัวเองไม่ได้ติดต่อกัน</span><span class="v">'+T.elimination+' วัน</span></div>'+
-  '<div class="rowline"><span class="k">บริษัทจ่ายให้นานสุด</span><span class="v">'+T.capMonths+' งวด</span></div>'+
-  '<div class="notice" style="margin:12px 0 0">เมื่อสมัคร ถือว่าคุณยินยอมให้บริษัทตรวจสอบประวัติการรักษาและการใช้ยากับสถานพยาบาลและหน่วยงานสาธารณสุขที่เกี่ยวข้อง เพื่อยืนยันข้อมูลที่แจ้งไว้ · หากพบว่าข้อมูลไม่ตรงกับความจริงในสาระสำคัญ บริษัทอาจปฏิเสธการจ่ายสินไหมหรือบอกล้างสัญญาตามที่กฎหมายกำหนด</div>'+'<div class="notice" style="margin:10px 0 0">ไม่คุ้มครองโรคหรือการบาดเจ็บที่เป็นมาก่อนวันเริ่มคุ้มครอง · การตัดสินว่าเข้าเกณฑ์รับเงินหรือไม่ ทำโดยพยาบาลและทีมดูแลที่มาประเมินถึงบ้าน ไม่ใช่แอปตัดสินเอง</div>';
+  '<div class="rowline" style="margin-top:6px"><span class="k">งบกิจกรรมป้องกัน (กายภาพ/ปรับบ้าน)</span><span class="v">ตามแผนของบริษัท</span></div>'+
+  '<div class="notice" style="margin:12px 0 0">ทุกข้อเป็น<b>การเพิ่มให้</b>เท่านั้น — ไม่มีข้อไหนที่ผลตรวจแย่แล้วเสียของเดิมที่มีอยู่ · การตัดสินใจใช้หรือไม่ใช้ข้อไหนเป็นของบริษัทประกันผู้ออกกรมธรรม์ และการอนุมัติสินไหมทุกครั้งตัดสินโดยคนจริง ไม่ใช่แอป</div>';
 }
-/* ---------- การ์ดส่วนลดต่อเนื่อง ---------- */
-function loyaltyCard(planId){return '<div class="card">'+loyaltyBody(planId)+'</div>'}
-function loyaltyBody(planId){
-  var L=loyaltyPoints(), baht=CFG.loyalty[planId]||0;
-  return (L.ok?'<div class="notice" style="margin:0 0 12px;background:var(--c4b);border-color:rgba(14,159,110,.3)"><b style="color:var(--c4)">คุณกำลังได้ส่วนลดนี้อยู่</b></div>':'')+
-  '<p class="sub" style="margin:0 0 10px">ยิ่งตรวจสม่ำเสมอ ยิ่งจ่ายถูกลง โดยบอกเป็น<b>จำนวนบาท</b>ให้เห็นชัด ไม่ใช่เปอร์เซ็นต์</p>'+
+
+/* ---------- คะแนนความสม่ำเสมอ ---------- */
+function loyaltyCard(){return '<div class="card">'+loyaltyBody()+'</div>'}
+function loyaltyBody(){
+  var L=loyaltyPoints();
+  return (L.ok?'<div class="notice" style="margin:0 0 12px;background:var(--c4b);border-color:rgba(14,159,110,.3)"><b style="color:var(--c4)">ครบเกณฑ์แล้ว — ระบบรายงานให้บริษัทประกันของท่านแล้ว</b></div>':'')+
+  '<p class="sub" style="margin:0 0 10px">ยิ่งตรวจสม่ำเสมอ คะแนนยิ่งสะสม — บริษัทประกันใช้คะแนนนี้ให้รางวัล เช่น ส่วนลดปีต่ออายุหรือของรางวัลสุขภาพ</p>'+
   L.detail.map(function(d){return '<div class="rowline"><span class="k">'+esc(d[0])+'</span><span class="v" style="color:'+(d[1]==="0"?"var(--ink3)":"var(--c4)")+'">'+d[1]+'</span></div>'}).join("")+
   '<div class="rowline"><span class="k"><b>รวมได้</b></span><span class="v">'+L.pts+' / '+L.need+' คะแนน</span></div>'+
-  '<div class="rowline"><span class="k">ส่วนลดที่ได้</span><span class="v" style="color:'+(L.ok?"var(--c4)":"var(--ink3)")+'">'+(L.ok?"−"+fmt(baht)+" บ./เดือน":"ยังไม่ครบเกณฑ์")+'</span></div>'+
-  (L.ok?'':'<p class="sub" style="margin:10px 0 0">ทำให้ครบ '+L.need+' ข้อ จะได้ลดเดือนละ '+fmt(baht)+' บาททุกเดือน</p>')+
+  (L.ok?'':'<p class="sub" style="margin:10px 0 0">ทำให้ครบ '+L.need+' คะแนน ระบบจะรายงานสถานะ "สม่ำเสมอ" ให้บริษัทประกันของท่าน</p>')+
   '</div>';
 }
 
 function policyV(){
-  var p=S.data.profile, pol=S.data.policy;
+  var pol=S.data.policy;
   var last=S.data.assessments[S.data.assessments.length-1];
   var tier=last?last.tier:null;
-  head("ประกันของฉัน","ประกันดูแลยามช่วยตัวเองไม่ได้","ค่าเบี้ยคิดจากอายุ เพศ และผลตรวจล่าสุดของคุณ","home");
-  if(pol){
-    var paid=S.data.payments.length;
+  head("สิทธิประโยชน์ของฉัน","โปรแกรมที่มากับกรมธรรม์","CareSignal ไม่ใช่บริษัทประกันและไม่ขายประกัน — โปรแกรมนี้คือสิทธิประโยชน์ที่บริษัทประกันมอบให้ผู้ถือกรมธรรม์","home");
+  if(pol&&pol.embedded){
+    var d=tier?CFG.discount[tier]:0;
     V.innerHTML='<div class="anim">'+
-    '<div class="hero"><p class="eyebrow">เลขที่ประกัน '+esc(pol.no)+'</p>'+
-    '<span class="score" style="font-size:34px">'+esc(pol.planName)+'</span>'+
-    '<p class="note">ถ้าช่วยตัวเองไม่ได้ รับเดือนละ '+fmt(pol.benefit)+' บ./เดือน · งบป้องกัน '+fmt(pol.prev)+' บ./ปี<br>เริ่มคุ้มครอง '+thDate(pol.start)+'</p></div>'+
-    '<div class="card"><h3>เบี้ยประกัน</h3>'+
-    '<div class="rowline"><span class="k">ต้องจ่ายงวดนี้</span><span class="v">'+fmt(pol.premium)+' บ./'+(pol.pay==="y"?"ปี":"เดือน")+'</span></div>'+
-    '<div class="rowline"><span class="k">ส่วนลดจากผลตรวจ</span><span class="v">'+(pol.disc>0?("−"+(pol.disc*100)+"%"):"—")+'</span></div>'+
-    '<div class="rowline"><span class="k">ส่วนลดจากการตรวจสม่ำเสมอ</span><span class="v" style="color:'+(loyaltyBaht(pol.plan)>0?"var(--c4)":"var(--ink3)")+'">'+(loyaltyBaht(pol.plan)>0?("−"+fmt(loyaltyBaht(pol.plan))+" บ."):"ยังไม่ครบเกณฑ์")+'</span></div>'+
-    '<div class="rowline"><span class="k">จ่ายมาแล้ว</span><span class="v">'+paid+' งวด · '+fmt(S.data.payments.reduce(function(s,x){return s+x.amt},0))+' บ.</span></div>'+
-    '<button class="cta" id="payBtn" style="margin-top:12px">จ่ายเงินงวดนี้ '+fmt(pol.premium)+' บ.</button>'+
-    (tier&&CFG.discount[tier]!==pol.disc?'<button class="ghostb" id="reprice">ใช้ผลตรวจล่าสุดคิดค่าเบี้ยใหม่</button>':'')+
-    '</div>'+
-    '<details class="acc"><summary><span>ส่วนลดของฉัน<span class="sm">ดูว่าทำอะไรแล้วจ่ายถูกลง</span></span></summary><div class="accin">'+loyaltyBody(pol.plan)+'</div></details>'+
-    '<details class="acc"><summary><span>เงื่อนไขความคุ้มครอง<span class="sm">3 ข้อควรรู้ก่อนใช้สิทธิ์</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
-    (S.data.payments.length?'<div class="card"><h3>ประวัติการจ่ายเงิน</h3>'+S.data.payments.slice().reverse().slice(0,6).map(function(x){return '<div class="rowline"><span class="k">'+thDate(x.at)+' · '+esc(x.ref)+'</span><span class="v">'+fmt(x.amt)+' บ.</span></div>'}).join("")+'</div>':'')+
+    '<div class="hero"><p class="eyebrow">'+esc(pol.insurer)+'</p>'+
+    '<span class="score" style="font-size:30px">'+esc(pol.product||"กรมธรรม์ของท่าน")+'</span>'+
+    '<p class="note">เลขที่กรมธรรม์ '+esc(pol.no)+' · เชื่อมเมื่อ '+thDate(pol.linked)+'</p></div>'+
+    '<div class="card"><h3>สิ่งที่ท่านได้จากโปรแกรมนี้ (ฟรี)</h3>'+
+    '<div class="rowline"><span class="k">ตรวจสมรรถภาพด้วยกล้องที่บ้าน</span><span class="v">ทุก 3 เดือน</span></div>'+
+    '<div class="rowline"><span class="k">แผนป้องกันรายบุคคล + การติดตาม</span><span class="v">ตามระดับ</span></div>'+
+    '<div class="rowline"><span class="k">เสี่ยงสูง ทีมดูแลติดต่อภายใน</span><span class="v">72 ชม.</span></div></div>'+
+    '<div class="card"><h3>สิทธิประโยชน์ปีต่ออายุจากผลตรวจ</h3>'+
+    (tier?'<div class="rowline"><span class="k">ผลล่าสุดของท่าน</span><span class="v"><b class="tierpill '+CFG.tiers[tier].b+'">'+CFG.tiers[tier].nm.split(" — ")[0]+'</b></span></div>'+
+          '<div class="rowline"><span class="k">ส่วนลดปีต่ออายุที่แพลตฟอร์มแนะนำ</span><span class="v" style="color:'+(d>0?"var(--c4)":"var(--ink3)")+'">'+(d>0?("สูงสุด "+(d*100)+"%"):"ยังไม่เข้าเกณฑ์ (ไม่มีโทษ)")+'</span></div>'
+         :'<p class="sub" style="margin:0">ยังไม่มีผลประเมิน — ตรวจครั้งแรกเพื่อเริ่มสะสมสิทธิประโยชน์</p>')+
+    '<p class="sub" style="margin:10px 0 0;color:var(--c4)"><b>ทางเดียวเสมอ</b> — ผลแย่ลงไม่ทำให้เบี้ยขึ้น ไม่ลดความคุ้มครอง และไม่ถูกบอกเลิกกรมธรรม์ มีแต่ทีมดูแลติดต่อมาช่วยเร็วขึ้น</p></div>'+
+    '<details class="acc"><summary><span>คะแนนความสม่ำเสมอ<span class="sm">ตรวจครบเกณฑ์ รับรางวัลจากบริษัทประกัน</span></span></summary><div class="accin">'+loyaltyBody()+'</div></details>'+
+    '<details class="acc"><summary><span>บริษัทประกันพ่วงอะไรได้บ้าง<span class="sm">ตัวอย่างสิทธิประโยชน์ที่นำไปใช้</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
+    '<div class="card"><h3>สิ่งที่รายงานให้บริษัทประกัน</h3>'+
+    '<div class="rowline"><span class="k">ระดับสี (เขียว/เหลือง/ส้ม/แดง)</span><span class="v" style="color:var(--c4)">รายงาน</span></div>'+
+    '<div class="rowline"><span class="k">จำนวนครั้งและความสม่ำเสมอ</span><span class="v" style="color:var(--c4)">รายงาน</span></div>'+
+    '<div class="rowline"><span class="k">ค่าวัดละเอียด วิดีโอ คำตอบรายข้อ</span><span class="v" style="color:var(--c1)">ไม่รายงาน</span></div>'+
+    '<p class="sub" style="margin:10px 0 0">หลัก data minimization — บริษัทประกันได้เท่าที่จำเป็นต่อการให้สิทธิประโยชน์เท่านั้น</p></div>'+
+    '<button class="ghostb" id="unlink" style="color:var(--c1)">ยกเลิกการเชื่อมกรมธรรม์นี้</button>'+
     '</div>';
-    document.getElementById("payBtn").addEventListener("click",function(){go("pay")});
-    var rp=document.getElementById("reprice");
-    if(rp)rp.addEventListener("click",async function(){
-      var q=premiumFor(pol.plan,p.age,p.sex,tier,pol.pay);
-      if(q.net<=pol.premium){pol.premium=q.net;pol.disc=q.disc;await saveAll();toast("อัปเดตเบี้ยใหม่ "+fmt(q.net)+" บ. (ลด "+(q.disc*100)+"%)");render()}
-      else{toast("ผลล่าสุดไม่ทำให้เบี้ยเพิ่ม — คงเบี้ยเดิมไว้ตามหลักคุ้มครองผู้ใช้")}
+    document.getElementById("unlink").addEventListener("click",async function(){
+      if(!confirm("ยกเลิกการเชื่อม? ระบบจะหยุดรายงานผลให้บริษัทประกันทันที และสิทธิประโยชน์จากโปรแกรมจะหยุดสะสม"))return;
+      S.data.policy=null;
+      audit("ยกเลิกเชื่อมกรมธรรม์","ผู้ใช้ถอนการเชื่อมกรมธรรม์ ระบบหยุดรายงานผลให้บริษัทประกัน");
+      await saveAll(); toast("ยกเลิกการเชื่อมแล้ว"); render();
     });
     return;
   }
-  /* ยังไม่มีกรมธรรม์ — เลือกแผน */
-  var q=premiumFor(S.planSel,p.age,p.sex,tier,S.pay);
-  V.innerHTML='<div class="anim">'+
-  (tier?'<div class="notice">ใช้ผลประเมินล่าสุด: <b class="tierpill '+CFG.tiers[tier].b+'">'+CFG.tiers[tier].nm.split(" — ")[0]+'</b> '+(CFG.discount[tier]>0?"→ ลดเบี้ย "+(CFG.discount[tier]*100)+"%":"→ ยังไม่เข้าเกณฑ์ส่วนลด (ไม่มีการเพิ่มเบี้ย)")+'</div>'
-       :'<div class="notice">ยังไม่มีผลประเมิน — สมัครได้เลย หรือ<b>ประเมินก่อนเพื่อรับส่วนลดสูงสุด 15%</b></div>')+
-  '<div class="card"><h3>เลือกแผน</h3>'+
-  CFG.plans.map(function(x){var pr=premiumFor(x.id,p.age,p.sex,tier,"m");
-    return '<div class="planbox" role="button" tabindex="0" data-plan="'+x.id+'" aria-pressed="'+(x.id===S.planSel)+'">'+
-    '<span class="pr">'+fmt(pr.net)+' บ./ด.</span><div class="nm">'+x.nm+(x.pop?' ★':'')+'</div>'+
-    '<div class="bn">พึ่งพิงรับ '+fmt(x.benefit)+' บ./ด. · งบป้องกัน '+fmt(x.prev)+' บ./ปี</div></div>'}).join("")+
-  '<div class="seg" style="margin-top:6px" id="paySeg">'+
-    '<button data-v="m" aria-pressed="'+(S.pay==="m")+'">รายเดือน</button>'+
-    '<button data-v="y" aria-pressed="'+(S.pay==="y")+'">รายปี −8%</button></div></div>'+
-  '<div class="card" style="background:var(--surf2)"><h3>สรุปเบี้ยของคุณ</h3>'+
-  '<div class="bignum">'+fmt(q.net)+' <span style="font-size:15px;font-weight:500">บ./'+(S.pay==="y"?"ปี":"เดือน")+'</span></div>'+
-  '<div class="rowline"><span class="k">แผน '+q.plan.nm+' ฐาน</span><span class="v">'+fmt(q.plan.base)+' บ.</span></div>'+
-  '<div class="rowline"><span class="k">ช่วงอายุ '+CFG.ageBand(p.age)+'</span><span class="v">× '+CFG.ageMult(p.age).toFixed(2)+'</span></div>'+
-  '<div class="rowline"><span class="k">เพศ'+(p.sex==="f"?"หญิง":"ชาย")+'</span><span class="v">× '+CFG.sexMult[p.sex].toFixed(2)+'</span></div>'+
-  '<div class="rowline"><span class="k">ส่วนลดจากผลตรวจ</span><span class="v">'+(q.disc>0?"−"+(q.disc*100)+"%":"—")+'</span></div>'+
-  '<div class="rowline"><span class="k">ส่วนลดจากการตรวจสม่ำเสมอ</span><span class="v" style="color:'+(q.loyalty>0?"var(--c4)":"var(--ink3)")+'">'+(q.loyalty>0?"−"+fmt(q.loyalty)+" บ.":"ยังไม่ครบเกณฑ์")+'</span></div></div>'+
-  '<details class="acc"><summary><span>ส่วนลดของฉัน<span class="sm">ดูว่าทำอะไรแล้วจ่ายถูกลง</span></span></summary><div class="accin">'+loyaltyBody(S.planSel)+'</div></details>'+
-  '<details class="acc" open><summary><span>เงื่อนไขความคุ้มครอง<span class="sm">อ่านก่อนสมัคร</span></span></summary><div class="accin">'+termsBody()+'</div></details>'+
-  '<div class="notice" style="margin:0 0 10px">ส่วนลดในหน้านี้เป็น<b>สิทธิประโยชน์ส่งเสริมสุขภาพ</b> ที่บริษัทประกันเป็นผู้กำหนดและปรับได้ ไม่ใช่การลดอัตราเบี้ยฐานถาวร · อัตราจริงต้องผ่านการรับรองโดยนักคณิตศาสตร์ประกันภัยและอนุมัติจาก คปภ.</div>'+'<button class="cta loop" id="buy">สมัครแผน'+q.plan.nm+' · '+fmt(q.net)+' บ.</button>'+
-  '<p class="hint" style="margin-top:12px">ต้นแบบสาธิต — การสมัครจริงต้องผ่านบริษัทประกันที่ได้รับใบอนุญาตจาก คปภ.</p></div>';
-  V.querySelectorAll(".planbox").forEach(function(b){b.addEventListener("click",function(){S.planSel=b.dataset.plan;render()})});
-  document.getElementById("paySeg").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.pay=b.dataset.v;render()});
-  document.getElementById("buy").addEventListener("click",async function(){
-    var qq=premiumFor(S.planSel,p.age,p.sex,tier,S.pay);
-    S.data.policy={no:"CS-"+String(Date.now()).slice(-8), plan:S.planSel, planName:qq.plan.nm, benefit:qq.plan.benefit, prev:qq.plan.prev, premium:qq.net, disc:qq.disc, loyalty:qq.loyalty, pay:S.pay, start:todayISO(), consentMedCheck:todayISO(), terms:{waitAcute:CFG.terms.waitAcute, waitChronic:chronicWait().days, elimination:CFG.terms.elimination, capMonths:CFG.terms.capMonths}};
-    await saveAll();
-    toast("ออกเลขที่ประกัน "+S.data.policy.no+" แล้ว");
-    render();
-  });
-}
-function payV(){
-  var pol=S.data.policy;
-  head("ชำระเบี้ย","งวดนี้ "+fmt(pol.premium)+" บาท","เลือกช่องทาง (สาธิต — บันทึกลงฐานข้อมูลจริง)","policy");
+  /* ---------- ยังไม่ได้เชื่อม — ฟอร์มเชื่อมกรมธรรม์ที่มีอยู่ ---------- */
+  var dr=S.draft;
   V.innerHTML='<div class="anim senior">'+
-  ['พร้อมเพย์ / QR','บัตรเครดิต·เดบิต','หักบัญชีอัตโนมัติ'].map(function(m,i){return '<button class="pick" data-m="'+m+'">'+m+'</button>'}).join("")+'</div>';
-  V.querySelectorAll(".pick").forEach(function(b){b.addEventListener("click",async function(){
-    S.data.payments.push({at:todayISO(), amt:pol.premium, ref:b.dataset.m});
-    await saveAll();
-    toast("บันทึกการชำระ "+fmt(pol.premium)+" บ. ("+b.dataset.m+") สำเร็จ");
-    go("policy");
-  })});
+  '<div class="notice"><b>โปรแกรมนี้ไม่ขายประกัน</b> — หากท่านถือประกันสุขภาพ ประกันผู้สูงอายุ หรือประกันดูแลระยะยาวกับบริษัทพันธมิตรอยู่แล้ว เชื่อมกรมธรรม์เพื่อให้ผลตรวจสะสมเป็นสิทธิประโยชน์ · หากยังไม่มีประกัน ท่านยังใช้โปรแกรมป้องกันได้ครบทุกส่วน</div>'+
+  '<div class="card"><h3>เชื่อมกรมธรรม์ของท่าน</h3>'+
+  '<div class="field"><label>บริษัทประกันของท่าน</label><select id="pIns" style="width:100%;box-sizing:border-box;font-size:17px;font-family:inherit;padding:13px;border:1.5px solid var(--line,#DFE7F2);border-radius:14px;background:#fff">'+
+    PARTNERS.map(function(x){return '<option'+(dr.pIns===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div>'+
+  '<div class="field"><label>เลขที่กรมธรรม์ (ดูจากหน้าตารางกรมธรรม์)</label><input id="pNo" value="'+esc(dr.pNo||"")+'" placeholder="เช่น LTC-12345678"></div>'+
+  '<div class="field"><label>ประเภทกรมธรรม์</label><div class="seg" id="pProd">'+
+    ['ดูแลระยะยาว','สุขภาพ','ผู้สูงอายุ'].map(function(x){return '<button data-v="'+x+'" aria-pressed="'+((dr.pProd||'ดูแลระยะยาว')===x)+'">'+x+'</button>'}).join("")+'</div></div>'+
+  '<label class="chk"><input type="checkbox" id="pConsent"><span>ข้าพเจ้ายินยอมให้รายงาน<b>ระดับสีและการเข้าร่วมโปรแกรม</b>ของข้าพเจ้าแก่บริษัทประกันข้างต้น เพื่อใช้พิจารณาสิทธิประโยชน์ (ถอนได้ทุกเมื่อ มีผลทันที)</span></label>'+
+  '<button class="cta loop" id="pLink">เชื่อมกรมธรรม์</button></div>'+
+  '<p class="hint" style="margin-top:12px">ต้นแบบสาธิต — ในระบบจริง บริษัทประกันจะตรวจสอบเลขกรมธรรม์กับฐานข้อมูลของบริษัทและออกรหัสเปิดใช้สิทธิ์ให้</p></div>';
+  document.getElementById("pProd").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.draft.pProd=b.dataset.v;this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});});
+  document.getElementById("pLink").addEventListener("click",async function(){
+    var no=document.getElementById("pNo").value.trim();
+    if(!no){toast("กรุณากรอกเลขที่กรมธรรม์");return}
+    if(!document.getElementById("pConsent").checked){toast("กรุณาให้ความยินยอมก่อนเชื่อม");return}
+    S.data.policy={embedded:true, insurer:document.getElementById("pIns").value,
+      no:no, product:"ประกัน"+(S.draft.pProd||"ดูแลระยะยาว"), linked:todayISO()};
+    audit("เชื่อมกรมธรรม์","ผู้ใช้ยินยอมรายงานระดับสีและการเข้าร่วมให้ "+S.data.policy.insurer);
+    S.draft={};
+    await saveAll(); toast("เชื่อมกรมธรรม์แล้ว — ผลตรวจเริ่มสะสมสิทธิประโยชน์"); render();
+  });
 }
 
 /* ---------- ฉัน ---------- */
@@ -3815,12 +3797,12 @@ function aiV(){
   Object.keys(ENGINE.rules).map(function(k){var r=ENGINE.rules[k];
     return '<div class="pitem"><b>'+k+' · '+esc(r.nm)+'</b><span class="sc">ที่มา: '+esc(r.src)+'</span></div>'}).join("")+'</div>'+
   '<div class="card"><h3>สิ่งที่ระบบทำไม่ได้</h3>'+
-  '<p class="sub" style="margin:0">ระบบ<b>ไม่วินิจฉัยโรค ไม่สั่งยา ไม่อนุมัติสินไหม และไม่ปฏิเสธความคุ้มครอง</b> · ผลประเมินใช้<b>ลดเบี้ยได้เท่านั้น</b> ไม่มีการเพิ่มเบี้ยจากคะแนนที่แย่ลง · การส่งต่อทุกครั้งต้องมีพยาบาลหรือ Care Manager ที่เป็นมนุษย์ยืนยันก่อนเสมอ · การอนุมัติสินไหมทุกกรณีตัดสินโดยผู้เชี่ยวชาญมนุษย์ ระบบทำหน้าที่รวบรวมหลักฐานเท่านั้น</p></div>'+
+  '<p class="sub" style="margin:0">ระบบ<b>ไม่วินิจฉัยโรค ไม่สั่งยา ไม่อนุมัติสินไหม และไม่ปฏิเสธความคุ้มครอง</b> · ผลประเมินใช้<b>เพิ่มสิทธิประโยชน์ได้เท่านั้น</b> ไม่มีการเพิ่มเบี้ยหรือลดความคุ้มครองจากคะแนนที่แย่ลง · การส่งต่อทุกครั้งต้องมีพยาบาลหรือ Care Manager ที่เป็นมนุษย์ยืนยันก่อนเสมอ · การอนุมัติสินไหมทุกกรณีตัดสินโดยผู้เชี่ยวชาญมนุษย์ ระบบทำหน้าที่รวบรวมหลักฐานเท่านั้น</p></div>'+
   '<div class="card"><h3>ความยินยอม (PDPA)</h3>'+
   (c?'<div class="rowline"><span class="k">ให้ความยินยอมเมื่อ</span><span class="v">'+thDate(c.at)+'</span></div>'+
      '<div class="rowline"><span class="k">รุ่นข้อตกลง</span><span class="v">'+esc(c.version)+'</span></div>'
     :'<p class="sub">ยังไม่มีบันทึกความยินยอมในเครื่องนี้</p>')+
-  '<p class="sub" style="margin:10px 0 0">วัตถุประสงค์: ประเมินความเสี่ยง สร้างแผนป้องกัน คำนวณส่วนลดเบี้ย และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · คุณถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อในหน้า “ฉัน”</p></div>'+
+  '<p class="sub" style="margin:10px 0 0">วัตถุประสงค์: ประเมินความเสี่ยง สร้างแผนป้องกัน รายงานสิทธิประโยชน์ให้บริษัทประกันผู้ออกกรมธรรม์ และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · คุณถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อในหน้า “ฉัน”</p></div>'+
   '<div class="card"><h3>บันทึกการทำงานของระบบ (Audit log)</h3>'+
   (log.length?log.map(function(x){
     return '<div class="logline"><b>'+thDate(x.at)+' · '+esc(x.ev)+'</b><br>'+esc(x.detail)+'<br>ผู้ตรวจสอบ: '+esc(x.human)+'</div>'}).join("")

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="เว็บแพลตฟอร์ม CareSignal — เครื่องคำนวณเบี้ย LTC คิว Care Manager แดชบอร์ดบริษัทประกัน Model Card และแผนวัดผลนำร่อง">
+<meta name="description" content="เว็บแพลตฟอร์ม CareSignal — Insurance-Embedded Prevention Platform: คิว Care Manager แดชบอร์ดผลลัพธ์สำหรับบริษัทประกันที่พ่วงโปรแกรม Model Card และแผนวัดผลนำร่อง">
 <meta name="theme-color" content="#2563EB">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -152,8 +152,8 @@ table.dt tr:last-child td{border-bottom:0}
   </div></section>
 
   <section id="calc" style="padding-top:20px"><div class="wrap">
-    <h2 class="sec">คำนวณเบี้ยของคุณ</h2>
-    <p class="secsub">ตรรกะเดียวกับในแอปมือถือทุกบรรทัด — เบี้ยฐาน × เกณฑ์อายุ × เพศ − ส่วนลดผลประเมิน</p>
+    <h2 class="sec">ตัวอย่างการตั้งราคาผลิตภัณฑ์ที่พ่วงโปรแกรม</h2>
+    <p class="secsub">แบบจำลองสาธิตสำหรับบริษัทประกันพันธมิตร — เบี้ยฐาน × เกณฑ์อายุ × เพศ − ส่วนลดจากผลประเมิน (ทางเดียว) · CareSignal ไม่ขายประกัน ตัวเลขนี้ไม่ใช่ข้อเสนอขาย</p>
     <div class="calcpanel">
       <div>
         <div class="field"><label>อายุ: <span id="cAgeV" class="mono">62</span> ปี</label>
@@ -170,7 +170,7 @@ table.dt tr:last-child td{border-bottom:0}
           <button data-v="m" aria-pressed="true">รายเดือน</button><button data-v="y" aria-pressed="false">รายปี −8%</button></div></div>
       </div>
       <div class="quote">
-        <div class="kick" style="color:var(--ink3)">เบี้ยประกันของคุณ</div>
+        <div class="kick" style="color:var(--ink3)">เบี้ยตามแบบจำลอง (สาธิต)</div>
         <div class="big" id="qBig">—</div>
         <span class="tag" id="qTag" hidden></span>
         <div style="margin-top:16px">
@@ -233,14 +233,14 @@ table.dt tr:last-child td{border-bottom:0}
 <div id="pg-ins" hidden><div class="wrap portal">
   <div id="gate-ins"></div><div id="body-ins" hidden>
   <div class="kick">INSURER PORTFOLIO CONSOLE</div>
-  <h2 class="sec">ภาพรวมพอร์ตกรมธรรม์</h2>
-  <p class="secsub">สถานะพอร์ตจริงจากฐานข้อมูลกลาง: จำนวนสมาชิก การกระจายความเสี่ยง เบี้ยรับ และสัดส่วนที่เข้าโปรแกรมป้องกัน · เมื่อเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่จะเห็น <b>ชั้นวัดผล</b> ซึ่งรายงานผลลัพธ์ของโปรแกรมเป็นค่ารวมของทั้งพอร์ต</p>
+  <h2 class="sec">ภาพรวมโปรแกรมที่พ่วงกับพอร์ต</h2>
+  <p class="secsub">มุมมองของบริษัทประกันที่<b>พ่วง CareSignal กับกรมธรรม์ของตน</b>: จำนวนสมาชิกในโปรแกรม การกระจายความเสี่ยง การเปิดใช้สิทธิ์ และต้นทุนโปรแกรม · เมื่อเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่จะเห็น <b>ชั้นวัดผล</b> ซึ่งรายงานผลลัพธ์ของโปรแกรมเป็นค่ารวมของทั้งพอร์ต</p>
   <div id="cloudINS"></div>
   <div id="cloudOUT"></div>
   <div class="kpirow" id="insKpi"></div>
   <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px" id="insGrid">
     <div class="card"><h3 style="margin-bottom:14px">การกระจายระดับสัญญาณ (Risk Mix)</h3><div id="insMix"></div></div>
-    <div class="card"><h3 style="margin-bottom:14px">เบี้ยรับตามแผน</h3><div id="insPlan"></div></div>
+    <div class="card"><h3 style="margin-bottom:14px">การเชื่อมกรมธรรม์</h3><div id="insPlan"></div></div>
   </div>
   <div style="margin-top:16px" id="insTable"></div>
   <div class="notice">ต้องการโมเดลผลประกอบการเต็มรูปแบบ (รายได้ 5 ปี, Loss Ratio, ความเสี่ยง, ผลตอบแทน)? เปิดไฟล์ <b>CareSignal-Insurer-Model.html</b> ที่มาพร้อมแพลตฟอร์มนี้ · <button class="btn lite" id="insSeed" style="padding:8px 16px;font-size:13px">เติมข้อมูลสาธิต</button> <button class="btn lite" id="insClear" style="padding:8px 16px;font-size:13px;border-color:#E7B4B4;color:#B4342F">ลบข้อมูลสาธิต</button> <a class="btn lite" href="./CareSignal-Flow.html" style="padding:8px 16px;font-size:13px;text-decoration:none;display:inline-block">คู่มือ: ข้อมูลมาจากไหน · สีหมายถึงอะไร</a> <button class="btn lite" id="insRefresh" style="padding:8px 16px;font-size:13px">รีเฟรช</button></div>
@@ -377,7 +377,7 @@ table.dt tr:last-child td{border-bottom:0}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แดชบอร์ดเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิก */</script>
-<script src="./cs-backend.js?v=201"></script>
+<script src="./cs-backend.js?v=202"></script>
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
@@ -798,11 +798,11 @@ async function seed(){
   var names=["a","b","c","d","e","f","g","h","i","j","k","l"];
   var bands=["55–59","60–65","60–65","66–70","50–54","60–65","66–70","55–59","60–65","66–70","60–65","55–59"];
   var tiers=[4,4,3,2,4,3,1,4,3,2,4,3];
-  var plansArr=["m","s","m","l","m",null,"xl","m","s",null,"l","m"];
+  /* โมเดลพ่วง: บางรายเชื่อมกรมธรรม์กับบริษัทพันธมิตรแล้ว บางรายยังไม่เชื่อม */
+  var insArr=["ทิพยประกันชีวิต (สาธิต)","ไทยสุขใจประกันภัย (สาธิต)","ทิพยประกันชีวิต (สาธิต)","สยามวัยทองประกันชีวิต (สาธิต)","ไทยสุขใจประกันภัย (สาธิต)",null,"ทิพยประกันชีวิต (สาธิต)","สยามวัยทองประกันชีวิต (สาธิต)","ไทยสุขใจประกันภัย (สาธิต)",null,"ทิพยประกันชีวิต (สาธิต)","สยามวัยทองประกันชีวิต (สาธิต)"];
   for(var i=0;i<12;i++){
-    var pl=plansArr[i]?CFG.plans.find(function(x){return x.id===plansArr[i]}):null;
-    var prem=pl?Math.round(pl.base*1.8*(1-(CFG.discount[tiers[i]]||0))):null;
-    await DB.putPool({uid:"demo-"+names[i],ageBand:bands[i],sex:i%3===0?"m":"f",tier:tiers[i],score:tiers[i]===4?11:(tiers[i]===3?9:(tiers[i]===2?6:3)),lastAssess:new Date(Date.now()-i*86400000*3).toISOString(),firstAssess:new Date(Date.now()-(i*3+[120,95,60,150,40,80,110,30,70,140,55,100][i])*86400000).toISOString(),nAssess:[3,4,2,3,2,1,4,3,2,2,3,1][i],durSec:[352,410,298,505,332,376,540,318,405,488,344,362][i],level:["stable","stable","watch","decline","stable","watch","urgent","stable","watch","decline","stable","watch"][i],referred:[false,false,false,true,false,false,true,false,false,true,false,false][i],consentAt:new Date(Date.now()-i*86400000*5).toISOString(),demo:true,plan:plansArr[i],premium:prem,updated:new Date().toISOString()});
+    var prem=null;
+    await DB.putPool({uid:"demo-"+names[i],ageBand:bands[i],sex:i%3===0?"m":"f",tier:tiers[i],score:tiers[i]===4?11:(tiers[i]===3?9:(tiers[i]===2?6:3)),lastAssess:new Date(Date.now()-i*86400000*3).toISOString(),firstAssess:new Date(Date.now()-(i*3+[120,95,60,150,40,80,110,30,70,140,55,100][i])*86400000).toISOString(),nAssess:[3,4,2,3,2,1,4,3,2,2,3,1][i],durSec:[352,410,298,505,332,376,540,318,405,488,344,362][i],level:["stable","stable","watch","decline","stable","watch","urgent","stable","watch","decline","stable","watch"][i],referred:[false,false,false,true,false,false,true,false,false,true,false,false][i],consentAt:new Date(Date.now()-i*86400000*5).toISOString(),demo:true,plan:insArr[i]?"embedded":null,insurer:insArr[i],premium:null,updated:new Date().toISOString()});
   }
   toast("เติมข้อมูลสาธิต 12 รายลงฐานข้อมูลแล้ว");
 }
@@ -851,14 +851,15 @@ document.getElementById("insRefresh").addEventListener("click",renderINS);
 async function renderINS(){
   if(typeof renderCloudINS==="function")renderCloudINS();
   var pool=await DB.listPool();
-  var insured=pool.filter(function(x){return x.plan});
-  var gwpM=insured.reduce(function(s,x){return s+(x.premium||0)},0);
+  /* โมเดลพ่วง: x.plan = เชื่อมกรมธรรม์แล้ว (แอปรุ่นใหม่ส่ง "embedded" · ข้อมูลเก่าเป็นรหัสแผน) */
+  var linked=pool.filter(function(x){return x.plan});
+  var FEE=350;   /* ค่าแพลตฟอร์มต่อสมาชิกต่อปี — สมมติฐานสาธิต ตรงกับแบบจำลองมูลค่า */
   var assessed=pool.filter(function(x){return x.tier}).length;
   var engage=pool.length?Math.round(assessed/pool.length*100):0;
   document.getElementById("insKpi").innerHTML=
-    kpi("สมาชิกบนแพลตฟอร์ม",pool.length+" ราย","แชร์ข้อมูลจากแอป")+
-    kpi("ถือกรมธรรม์",insured.length+" กธ.","อัตราแปลง "+(pool.length?Math.round(insured.length/pool.length*100):0)+"%")+
-    kpi("เบี้ยรับ/เดือน",fmt(gwpM)+" บ.","≈ "+fmt(gwpM*12)+" บ./ปี")+
+    kpi("สมาชิกในโปรแกรม",pool.length+" ราย","ผู้ถือกรมธรรม์ที่ยินยอมแชร์ข้อมูล")+
+    kpi("เชื่อมกรมธรรม์แล้ว",linked.length+" ราย","อัตราเปิดใช้สิทธิ์ "+(pool.length?Math.round(linked.length/pool.length*100):0)+"%")+
+    kpi("ต้นทุนโปรแกรม/ปี",fmt(pool.length*FEE)+" บ.","สมมติฐานสาธิต "+FEE+" บ./คน/ปี — บริษัทเป็นผู้จ่าย ไม่ใช่สมาชิก")+
     kpi("เข้าโปรแกรมป้องกัน",engage+"%","ประเมินอย่างน้อย 1 ครั้ง");
   /* risk mix */
   var mix=[4,3,2,1].map(function(t){
@@ -868,15 +869,14 @@ async function renderINS(){
     '<div style="height:8px;background:var(--line2);border-radius:99px;margin:4px 0 10px"><div style="height:100%;width:'+pc+'%;background:'+CFG.tiers[t].c+';border-radius:99px"></div></div>';
   }).join("");
   document.getElementById("insMix").innerHTML=assessed?mix:'<p style="color:var(--ink2);font-size:13.5px;margin:0">ยังไม่มีผลประเมินในระบบ</p>';
-  var byPlan=CFG.plans.map(function(p){
-    var arr=insured.filter(function(x){return x.plan===p.id});
-    var s=arr.reduce(function(a,x){return a+(x.premium||0)},0);
-    return '<div class="rowline"><span class="k">'+p.nm+' ('+arr.length+' กธ.)</span><span class="v">'+fmt(s)+' บ./ด.</span></div>';
-  }).join("");
-  document.getElementById("insPlan").innerHTML=insured.length?byPlan:'<p style="color:var(--ink2);font-size:13.5px;margin:0">ยังไม่มีกรมธรรม์ในพอร์ต</p>';
-  document.getElementById("insTable").innerHTML=insured.length?'<table class="dt"><thead><tr><th>รหัสสมาชิก</th><th>ช่วงอายุ</th><th>แผน</th><th>เบี้ย/เดือน</th><th>ระดับสัญญาณ</th><th>อัปเดต</th></tr></thead><tbody>'+
-    insured.map(function(x){var p=CFG.plans.find(function(y){return y.id===x.plan});var t=x.tier?CFG.tiers[x.tier]:null;
-      return '<tr><td class="mono">'+esc(x.uid)+'</td><td>'+esc(x.ageBand)+'</td><td>'+(p?p.nm:x.plan)+'</td><td class="mono">'+fmt(x.premium||0)+'</td><td>'+(t?'<span class="tag '+t.b+'" style="margin:0">'+t.nm+'</span>':"—")+'</td><td>'+thDate(x.updated)+'</td></tr>'}).join("")+'</tbody></table>':"";
+  var byPlan='<div class="rowline"><span class="k">เชื่อมกรมธรรม์แล้ว</span><span class="v">'+linked.length+' ราย</span></div>'+
+    '<div class="rowline"><span class="k">ยังไม่เชื่อม (ใช้โปรแกรมได้ แต่ไม่สะสมสิทธิประโยชน์)</span><span class="v">'+(pool.length-linked.length)+' ราย</span></div>'+
+    '<div class="rowline"><span class="k">ระบบรายงานให้บริษัท</span><span class="v">ระดับสี + การเข้าร่วม เท่านั้น</span></div>'+
+    '<p style="font-size:12.5px;color:var(--ink2);margin:10px 0 0">CareSignal ไม่เก็บและไม่เห็นเบี้ยประกันของสมาชิก — เบี้ยเป็นเรื่องระหว่างสมาชิกกับบริษัทประกันโดยตรง แพลตฟอร์มคิดเฉพาะค่าบริการต่อสมาชิกกับบริษัท</p>';
+  document.getElementById("insPlan").innerHTML=pool.length?byPlan:'<p style="color:var(--ink2);font-size:13.5px;margin:0">ยังไม่มีสมาชิกในโปรแกรม</p>';
+  document.getElementById("insTable").innerHTML=linked.length?'<table class="dt"><thead><tr><th>รหัสสมาชิก</th><th>ช่วงอายุ</th><th>สถานะเชื่อม</th><th>ระดับสัญญาณ</th><th>อัปเดต</th></tr></thead><tbody>'+
+    linked.map(function(x){var t=x.tier?CFG.tiers[x.tier]:null;
+      return '<tr><td class="mono">'+esc(x.uid)+'</td><td>'+esc(x.ageBand)+'</td><td>'+esc(x.insurer||"เชื่อมแล้ว")+'</td><td>'+(t?'<span class="tag '+t.b+'" style="margin:0">'+t.nm+'</span>':"—")+'</td><td>'+thDate(x.updated)+'</td></tr>'}).join("")+'</tbody></table>':"";
 }
 /* ============================================================
    ระบบกลาง (Supabase) — โหมดเจ้าหน้าที่จริง
