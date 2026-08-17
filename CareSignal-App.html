@@ -332,11 +332,33 @@ var VOICE={on:(function(){try{return localStorage.getItem("cs:voice")!=="off"}ca
    ============================================================ */
 var VC={rec:null,on:false,handler:null,lastFire:0,
         supported:!!(window.SpeechRecognition||window.webkitSpeechRecognition)};
+/* คำสั่งที่รองรับ — จงใจให้สั้นและมีจำนวนน้อย
+   งานทบทวนการรู้จำเสียงในผู้สูงอายุชี้ว่าคำสั่งแบบสนทนาอิสระผิดพลาดง่าย
+   (ระดับเสียง สำเนียง ความชัด เสียงแวดล้อม) ระบบจึงใช้ guided workflow:
+   ระบบพูดนำ → ผู้ใช้ตอบด้วยคำสั้น ๆ → ระบบ "ตอบรับ" ให้ได้ยินทุกครั้ง
+   ทุกคำสั่งมีปุ่มบนหน้าจอทดแทนเสมอ ไม่มีอะไรที่ทำได้ด้วยเสียงอย่างเดียว
+   ลำดับในรายการนี้สำคัญ: ตรวจ "ไม่ผ่าน" ก่อน "ผ่าน" และ "ทำใหม่" ก่อน "เริ่ม" */
+var VC_CMDS=[
+  {k:"stop",  re:/หยุด|ยกเลิก|พอแล้ว|พอก่อน/,                 ack:"รับทราบ หยุดการทดสอบ"},
+  {k:"fail",  re:/ไม่ผ่าน|ไม่ได้|ทำไม่ได้|ล้ม|จับ/,              ack:"รับทราบ บันทึกว่าไม่ผ่าน"},
+  {k:"again", re:/ทำใหม่|ลองใหม่|เริ่มใหม่|อีกครั้ง/,             ack:"รับทราบ ทำท่านี้ใหม่"},
+  {k:"pass",  re:/ผ่าน|ทำได้|ได้แล้ว|ครบแล้ว/,                  ack:"รับทราบ บันทึกว่าผ่าน"},
+  {k:"next",  re:/ทำต่อ|ต่อไป|ถัดไป|ไปต่อ/,                    ack:"รับทราบ ไปขั้นตอนต่อไป"},
+  {k:"help",  re:/ช่วยเหลือ|ช่วยด้วย|ทำยังไง|คำสั่ง/,             ack:null},
+  {k:"done",  re:/จบ|เสร็จแล้ว|เรียบร้อย/,                      ack:"รับทราบ บันทึกผล"},
+  {k:"start", re:/เริ่ม|พร้อม|สตาร์ท|เอาเลย/,                    ack:"รับทราบ เริ่มจับเวลา"}
+];
+var VC_HELP="คำสั่งที่ใช้ได้คือ เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน · ช่วยเหลือ ทุกคำสั่งมีปุ่มบนหน้าจอด้วย";
 function vcParse(t){
   t=String(t||"").replace(/\s+/g,"");
-  if(/หยุด|ยกเลิก|พอแล้ว/.test(t))return "stop";
-  if(/เริ่ม|พร้อมแล้ว|สตาร์ท|เอาเลย/.test(t))return "start";
+  for(var i=0;i<VC_CMDS.length;i++)if(VC_CMDS[i].re.test(t))return VC_CMDS[i].k;
   return null;
+}
+/* ตอบรับให้ผู้ใช้รู้ว่าระบบได้ยินแล้ว — หัวใจของการคุยกับระบบให้รู้เรื่อง */
+function vcAck(cmd){
+  if(cmd==="help"){speak(VC_HELP);return}
+  for(var i=0;i<VC_CMDS.length;i++)
+    if(VC_CMDS[i].k===cmd&&VC_CMDS[i].ack){speak(VC_CMDS[i].ack);return}
 }
 function vcStart(handler){
   VC.handler=handler;
@@ -355,6 +377,8 @@ function vcStart(handler){
       var now=performance.now();
       if(now-VC.lastFire<1800)return;                 /* กันคำสั่งรัวซ้อน */
       VC.lastFire=now;
+      vcAck(cmd);                                     /* ตอบรับก่อนเสมอ */
+      if(cmd==="help")return;
       if(VC.handler)VC.handler(cmd);
     };
     VC.rec.onend=function(){ if(VC.on){try{VC.rec.start()}catch(e){}} };
@@ -370,7 +394,7 @@ function vcStop(){
   VC.on=false;VC.handler=null;
   if(VC.rec){try{VC.rec.stop()}catch(e){}VC.rec=null}
 }
-function vcHint(){return VC.supported?'พูดว่า "เริ่มทดสอบ" หรือกดปุ่ม':"กดปุ่มเริ่มเมื่อพร้อม"}
+function vcHint(){return VC.supported?'พูดว่า "เริ่ม" หรือกดปุ่ม':"กดปุ่มเริ่มเมื่อพร้อม"}
 
 function speak(text,opts){
   if(!VOICE.on||!text)return;
@@ -2437,7 +2461,8 @@ async function loadModel(statusEl){
     try{
       POSE=await mod.PoseLandmarker.createFromOptions(fileset,{
         baseOptions:{modelAssetPath:L.u,delegate:"GPU"},
-        runningMode:"VIDEO",numPoses:1,
+        runningMode:"VIDEO",numPoses:2,   /* ตัวที่สองไว้รู้ว่ามีคนเข้ามาพยุงไหม */
+
         minPoseDetectionConfidence:.6,minPosePresenceConfidence:.6,minTrackingConfidence:.6
       });
       POSE.modelLevel=L.k;
@@ -2451,10 +2476,12 @@ async function loadModel(statusEl){
 }
 /* เรียกตัวตรวจจับหนึ่งเฟรม พร้อมวัดเวลา — ช้าเกินก็จดให้รอบหน้าลดรุ่น */
 var POSE_PERF={n:0,sum:0,noted:false};
+var POSE_COUNT=0;          /* จำนวนคนที่กล้องเห็นในเฟรมล่าสุด */
 function detectPose(video){
   if(!POSE)return null;
   var t=performance.now(), r=null;
-  try{r=POSE.detectForVideo(video,t)}catch(e){return null}
+  try{r=POSE.detectForVideo(video,t)}catch(e){POSE_COUNT=0;return null}
+  POSE_COUNT=r&&r.landmarks?r.landmarks.length:0;
   POSE_PERF.n++;POSE_PERF.sum+=performance.now()-t;
   if(!POSE_PERF.noted&&POSE_PERF.n>=150&&POSE_PERF.sum/POSE_PERF.n>110){
     POSE_PERF.noted=true;
@@ -2909,6 +2936,10 @@ function BalanceEngine(stage){
   this.refC=null; this.refFeet=null; this.refLift=null;
   this.samples=[]; this.liftWarned=false; this.lastLm=null;
   this.stHist=[]; this.startStance=null;
+  /* ตัวนับคุณภาพ/ความปลอดภัยระหว่างจับเวลา — ใช้ "รายงาน" ให้คนตัดสิน
+     ไม่ได้เอาไปตัดสินผ่าน/ไม่ผ่านเอง */
+  this.hn=0; this.hFeet=0; this.dropN=0; this.dropped=false;
+  this.stepAt=null; this.lostFrames=0;
 }
 BalanceEngine.prototype._read=function(lm){
   if(!lm)return null;
@@ -2992,8 +3023,18 @@ BalanceEngine.prototype.frame=function(lm){
 
   /* ---- ระหว่างจับเวลา 10 วินาที ---- */
   this.samples.push({x:this.c.x,y:this.c.y});
+  this.hn++; if(r.feet)this.hFeet++;
   var res={seen:true, ready:true, fail:false, why:null,
-           sway:this.liveSway(), stepped:false, remind:null};
+           sway:this.liveSway(), stepped:false, dropped:false, remind:null};
+
+  /* ความปลอดภัย: ทรุดตัวหรือนั่งลง — ศูนย์กลางลำตัวต่ำลงเกินครึ่งช่วงลำตัว
+     ต่อเนื่อง ต้องหยุดจับเวลาทันทีและบอกให้ผู้ดูแลเข้าไปดู */
+  if(this.refC&&(this.c.y-this.refC.y)>0.55)this.dropN++; else this.dropN=0;
+  if(this.dropN>=8){
+    this.dropped=true;
+    res.fail=true; res.dropped=true; res.why="กล้องเห็นว่าท่านนั่งลงหรือทรุดตัว";
+    return res;
+  }
 
   if(r.feet&&this.refFeet){
     if(this.stage===3){
@@ -3015,7 +3056,8 @@ BalanceEngine.prototype.frame=function(lm){
     if(this.refC&&Math.abs(this.c.x-this.refC.x)>0.6)this.badN++; else this.badN=0;
     res.why="ตัวเลื่อนจากตำแหน่งเดิมมาก (น่าจะมีการก้าวขา)";
   }
-  if(this.badN>=10){res.fail=true;res.stepped=true}
+  if(this.badN>=10){res.fail=true;res.stepped=true;
+    if(this.stepAt==null)this.stepAt=this.hn/30;}   /* วินาทีโดยประมาณที่เห็นการขยับเท้า */
 
   /* ท่าขาเดียวแต่ยังไม่ยกเท้า: เตือนด้วยเสียงครั้งเดียว ไม่ตัดคะแนน */
   if(this.stage===3&&r.feet&&!this.liftWarned&&this.samples.length>50&&r.feet.lift<0.45){
@@ -3037,6 +3079,22 @@ BalanceEngine.prototype._sd=function(arr){
   var mx=0,my=0;arr.forEach(function(p){mx+=p.x;my+=p.y});mx/=arr.length;my/=arr.length;
   var v=0;arr.forEach(function(p){v+=(p.x-mx)*(p.x-mx)+(p.y-my)*(p.y-my)});
   return Math.sqrt(v/arr.length);
+};
+/* สรุปสิ่งที่ "กล้องสังเกตเห็น" ไว้ให้คนอ่านก่อนตัดสิน — ไม่ใช่คำตัดสิน */
+BalanceEngine.prototype.observe=function(){
+  var feetRatio=this.hn?this.hFeet/this.hn:0;
+  var obs=[], suggest="pass", conf="high";
+  if(this.dropped){obs.push("เห็นว่าท่านนั่งลงหรือทรุดตัวระหว่างทดสอบ");suggest="fail"}
+  if(this.stepAt!=null)obs.push("เห็นการขยับเท้าที่ประมาณวินาทีที่ "+this.stepAt.toFixed(0));
+  if(this.stepAt!=null&&suggest!=="fail")suggest="fail";
+  if(this.lostN>30){obs.push("ท่านหลุดออกนอกกรอบภาพบางช่วง");conf="low";suggest="unsure"}
+  if(feetRatio<0.5){
+    obs.push("กล้องมองไม่เห็นเท้าชัดเจนตลอดการทดสอบ");
+    conf="low"; if(suggest==="pass")suggest="unsure";
+  }
+  if(!obs.length)obs.push("ไม่พบการขยับเท้าและไม่พบการทรุดตัว");
+  return {obs:obs, suggest:suggest, confidence:conf,
+          feetSeen:Math.round(feetRatio*100), sway:this.finalSway()};
 };
 BalanceEngine.prototype.liveSway=function(){return this._sd(this.samples.slice(-90))};
 BalanceEngine.prototype.finalSway=function(){return this._sd(this.samples)};
@@ -3366,9 +3424,24 @@ function balanceV(){
   '<div class="track"><i id="btrk" style="width:0%"></i></div>'+
   '<div class="coach" id="coach">กำลังเปิดกล้อง…</div></div></div></div>'+
   statusHTML()+
-  '<button class="cta" id="bStart">เริ่มท่านี้ (แทนคำสั่งเสียงได้)</button>'+
+  '<div class="card" id="bConfirm" hidden style="border:2px solid var(--accent2,#F59E0B)">'+
+    '<h3 style="margin:0 0 6px" id="bcQ">ยืนครบ 10 วินาทีหรือไม่</h3>'+
+    '<p class="sub" style="margin:0 0 10px">เกณฑ์ CDC: ยืนในท่าที่กำหนดครบ 10 วินาที <b>โดยไม่ขยับเท้าและไม่ต้องจับพยุง</b></p>'+
+    '<div id="bObs" style="font-size:13px;line-height:1.7;background:var(--surf2);border-radius:10px;padding:10px 12px;margin-bottom:12px"></div>'+
+    '<button class="cta" id="bcPass" style="margin:0 0 8px">✓ ผ่าน — ยืนครบโดยไม่ขยับเท้า</button>'+
+    '<button class="ghostb" id="bcFail" style="margin:0 0 8px">✗ ไม่ผ่าน — ขยับเท้าหรือต้องจับพยุง</button>'+
+    '<button class="ghostb" id="bcHalt" style="margin:0;border-color:#DC2626;color:#DC2626">■ หยุดเพื่อความปลอดภัย</button>'+
+  '</div>'+
+  '<button class="cta" id="bStart">เริ่มท่านี้ (หรือพูดว่า "เริ่ม")</button>'+
   '<button class="ghostb" id="bRetry" hidden>ทำท่านี้ใหม่อีกครั้ง</button>'+
-  '<button class="ghostb" id="bStop">หยุดการทดสอบ · ตอบด้วยตนเอง</button></div>';
+  '<div style="display:flex;gap:8px;margin:8px 0">'+
+    '<button class="ghostb" id="bAgain" style="flex:1;margin:0">ทำใหม่</button>'+
+    '<button class="ghostb" id="bHelp" style="flex:1;margin:0">ช่วยเหลือ</button>'+
+  '</div>'+
+  '<button class="ghostb" id="bStop">หยุดการทดสอบ · ตอบด้วยตนเอง</button>'+
+  '<div class="disc">กล้องทำหน้าที่ช่วยจัดท่า ตรวจว่าเห็นตัวครบ และเฝ้าระวังความปลอดภัย '+
+  '<b>ผลผ่าน/ไม่ผ่านยืนยันโดยท่านหรือผู้ดูแลเสมอ</b> — ระบบไม่ใช้ค่าความโคลงจากกล้องตัดสินผล '+
+  'เพราะการวัดการแกว่งของร่างกายให้เชื่อถือได้ต้องใช้อุปกรณ์อย่าง force plate หรือเซ็นเซอร์ติดตัว</div></div>';
   document.getElementById("bStop").addEventListener("click",function(){
     stopCam();
     audit("หยุดการทดสอบทรงตัวกลางคัน","ผู้ใช้เลือกตอบด้วยตนเอง");
@@ -3382,7 +3455,9 @@ async function startBalancePipeline(){
   var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
   var tag=document.getElementById("tag"),coach=document.getElementById("coach"),
       secEl=document.getElementById("bsec"),swayEl=document.getElementById("bsway"),trk=document.getElementById("btrk"),
-      startBtn=document.getElementById("bStart"),retryBtn=document.getElementById("bRetry");
+      startBtn=document.getElementById("bStart"),retryBtn=document.getElementById("bRetry"),
+      confirmBox=document.getElementById("bConfirm"),obsBox=document.getElementById("bObs"),
+      bcQ=document.getElementById("bcQ");
   var stream;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:720},height:{ideal:1280}},audio:false})}
@@ -3396,7 +3471,7 @@ async function startBalancePipeline(){
 
   /* phase: setup → arming → holding → between → done */
   var stage=0, phase="intro", results=[], attempts=[0,0,0,0], armed=false;
-  var ENG=null, t0=0, cdTimer=null;
+  var ENG=null, t0=0, cdTimer=null, halfWarned=false, extraN=0, pending=null, askTimer=null;
 
   function chip(i,cls,txt){
     var el=document.getElementById("bc"+i); if(!el)return;
@@ -3406,7 +3481,8 @@ async function startBalancePipeline(){
 
   function announce(retry){
     var st=BAL_STAGES[stage];
-    phase="setup"; armed=false; ENG=new BalanceEngine(stage);
+    phase="setup"; armed=false; halfWarned=false; extraN=0; ENG=new BalanceEngine(stage);
+    confirmBox.hidden=true;
     secEl.textContent=BAL_SECONDS; trk.style.width="0%"; swayEl.textContent="—";
     startBtn.hidden=false; startBtn.disabled=false;
     startBtn.textContent="เริ่มท่าที่ "+(stage+1)+" (แทนคำสั่งเสียงได้)";
@@ -3415,7 +3491,7 @@ async function startBalancePipeline(){
     coach.innerHTML='<b>ท่าที่ '+(stage+1)+' · '+esc(st.nm)+'</b><br>'+esc(st.how);
     setStatus("yellow","ท่าที่ "+(stage+1)+" จาก 4 — "+st.nm,false);
     speak((retry?"ลองท่านี้ใหม่อีกครั้ง ":"ต่อไป ")+"ท่าที่ "+(stage+1)+" จาก 4 ท่า "+st.nm+" "+st.how+
-          " เมื่อจัดท่าเรียบร้อยแล้ว ยืนนิ่ง ๆ ระบบจะนับถอยหลังให้เอง");
+          " เมื่อพร้อม กรุณาพูดว่า เริ่ม");
   }
 
   function countdown(){
@@ -3434,68 +3510,143 @@ async function startBalancePipeline(){
     },1000);
   }
   function beginHold(){
-    phase="holding"; t0=performance.now();
+    phase="holding"; t0=performance.now(); halfWarned=false; extraN=0;
     ENG.beginHold();
     attempts[stage]++;
+    confirmBox.hidden=true;
     coach.innerHTML='<b>'+esc(BAL_STAGES[stage].nm)+'</b> — ยืนนิ่ง ๆ อย่าขยับเท้า';
-    setStatus("green","เริ่ม — ยืนนิ่ง 10 วินาที ลืมตาไว้",false);
-    speak("เริ่ม ยืนนิ่ง ๆ สิบวินาที");
+    setStatus("green","กำลังจับเวลา — ยืนนิ่ง 10 วินาที ลืมตาไว้",false);
+    speak("เริ่มจับเวลา ยืนนิ่ง ๆ สิบวินาที");
   }
 
+  /* ---------- จบการจับเวลา → ให้ "คน" ยืนยันผลเสมอ ----------
+     กล้องรายงานสิ่งที่สังเกตเห็น แต่ไม่ตัดสินแทน เพราะเกณฑ์ CDC คือ
+     "ยืนครบ 10 วินาทีโดยไม่ขยับเท้าและไม่ต้องจับพยุง" ซึ่งการจับพยุง
+     และการเสียสมดุลจริง คนที่อยู่ตรงนั้นเห็นชัดกว่ากล้องมือถือมาก */
   function endStage(held,reason){
     if(phase!=="holding")return;
-    phase="between"; clearCd();
-    var ok=held>=BAL_SECONDS-0.3;
-    results[stage]={held:Math.round(held*10)/10, sway:ENG.finalSway(),
-                    stage:BAL_STAGES[stage].nm, attempts:attempts[stage], reason:reason||null,
-                    footStance:ENG.startStance!=null?STANCE_NM[ENG.startStance]:null,
-                    footOk:ENG.startStance===stage};
-    chip(stage, ok?"ok":"bad");
-    startBtn.hidden=true;
+    phase="confirm"; clearCd();
+    var o=ENG.observe();
+    if(extraN>20)o.obs.push("เห็นคนมากกว่าหนึ่งคนในภาพ — หากมีการช่วยพยุงถือว่าไม่ผ่าน");
+    pending={held:Math.round(held*10)/10, reason:reason||null, o:o};
+    startBtn.hidden=true; retryBtn.hidden=true;
+    var full=held>=BAL_SECONDS-0.3;
 
-    if(ok){
-      setStatus("green","ท่าที่ "+(stage+1)+" ผ่าน — บันทึกเรียบร้อยแล้ว",false);
+    bcQ.textContent=full?("ยืนครบ "+BAL_SECONDS+" วินาทีหรือไม่")
+                        :("หยุดที่ "+held.toFixed(1)+" วินาที — บันทึกผลอย่างไร");
+    obsBox.innerHTML='<b>กล้องสังเกตเห็น</b> (ข้อมูลประกอบ ไม่ใช่คำตัดสิน)<br>· '+
+      o.obs.map(esc).join('<br>· ')+
+      '<br>· เห็นเท้าชัด '+o.feetSeen+'% ของเวลาทดสอบ'+
+      (o.sway!=null?'<br>· ความโคลงของลำตัว: '+esc(swayLabel(o.sway).nm)+' <i>(ข้อสังเกตเชิงสำรวจ ไม่ใช้ตัดสินผล)</i>':'');
+    confirmBox.hidden=false;
+
+    var q=full?("ยืนครบ "+BAL_SECONDS+" วินาที โดยไม่ขยับเท้าและไม่ต้องจับพยุง ใช่หรือไม่ ")
+              :("หยุดที่ "+held.toFixed(0)+" วินาที ");
+    var hint=o.suggest==="fail"?"กล้องเห็นการขยับเท้าหรือการทรุดตัว ":
+             (o.suggest==="unsure"?"กล้องมองเห็นไม่ชัดพอ จึงไม่สรุปแทนท่าน ":"");
+    setStatus(o.suggest==="fail"?"yellow":"green", "รอการยืนยันผล — พูดว่า ผ่าน หรือ ไม่ผ่าน", false);
+    coach.innerHTML='<b>กรุณายืนยันผล</b> — พูดว่า "ผ่าน" หรือ "ไม่ผ่าน" หรือกดปุ่ม';
+    speak(q+hint+"กรุณาพูดว่า ผ่าน หรือ ไม่ผ่าน หรือกดปุ่มบนหน้าจอ");
+
+    /* ถามซ้ำครั้งเดียวเมื่อเงียบไป 25 วินาที แล้วเปิดทางออกให้กดเอง
+       ไม่ตัดสินใจแทนโดยอัตโนมัติ และไม่ปล่อยให้ค้างตลอดไป */
+    if(askTimer)clearTimeout(askTimer);
+    askTimer=setTimeout(function(){
+      /* ต้องเช็คหน้าจอด้วย ไม่ใช่แค่ phase — ผู้ใช้อาจกด "หยุดการทดสอบ"
+         ออกไปหน้าคำถามแล้ว ถ้าเช็คแต่ phase เสียงจะไปพูดผิดหน้า */
+      if(S.screen!=="balance"||phase!=="confirm")return;
+      speak("ยังรอการยืนยันผลอยู่ กรุณาพูดว่า ผ่าน หรือ ไม่ผ่าน หรือกดปุ่มบนหน้าจอ");
+      coach.innerHTML='<b>ยังรอการยืนยัน</b> — หากไม่มีผู้ยืนยัน ให้กดปุ่มตามที่เกิดขึ้นจริง';
+    },25000);
+  }
+
+  /* ผลถูกบันทึกเมื่อคนกดหรือพูดยืนยันเท่านั้น */
+  function settle(pass){
+    if(phase!=="confirm"||!pending)return;
+    if(askTimer){clearTimeout(askTimer);askTimer=null}
+    phase="between"; confirmBox.hidden=true;
+    var o=pending.o;
+    results[stage]={held:pending.held, pass:!!pass,
+                    stage:BAL_STAGES[stage].nm, attempts:attempts[stage], reason:pending.reason,
+                    footStance:ENG.startStance!=null?STANCE_NM[ENG.startStance]:null,
+                    footOk:ENG.startStance===stage,
+                    aiObs:o.obs, aiSuggest:o.suggest, aiConfidence:o.confidence,
+                    feetSeenPct:o.feetSeen, decidedBy:"human",
+                    sway:o.sway};                      /* เก็บไว้เชิงสำรวจเท่านั้น */
+    chip(stage, pass?"ok":"bad");
+    pending=null;
+
+    if(pass){
+      setStatus("green","ท่าที่ "+(stage+1)+" ผ่าน — บันทึกแล้ว",false);
       coach.innerHTML='<b>ท่าที่ '+(stage+1)+' ผ่าน</b> — บันทึกเรียบร้อยแล้ว';
-      speak("ครบสิบวินาที ท่าที่ "+(stage+1)+" ผ่าน บันทึกเรียบร้อยแล้ว");
+      speak("บันทึกว่าผ่านแล้ว");
       stage++;
-      if(stage>=BAL_STAGES.length){setTimeout(function(){finishAll("ทำครบทุกท่า")},2600);return}
-      setTimeout(function(){ if(S.screen==="balance")announce(false) },2600);
+      if(stage>=BAL_STAGES.length){setTimeout(function(){finishAll("ทำครบทุกท่า")},2200);return}
+      setTimeout(function(){ if(S.screen==="balance")announce(false) },2200);
       return;
     }
-    setStatus("yellow","ท่าที่ "+(stage+1)+" ยืนได้ "+held.toFixed(1)+" วินาที",false);
-    coach.innerHTML='<b>ยืนได้ '+held.toFixed(1)+' วินาที</b> — '+esc(reason||"ยังไม่ครบ 10 วินาที");
-    speak("ยืนได้ "+held.toFixed(0)+" วินาที ยังไม่ครบสิบวินาที ถ้าคิดว่าทำได้ กดปุ่มทำท่านี้ใหม่ หรือรอสักครู่ระบบจะสรุปผลให้");
+    setStatus("yellow","ท่าที่ "+(stage+1)+" ไม่ผ่าน",false);
+    coach.innerHTML='<b>บันทึกว่าไม่ผ่าน</b> — พูดว่า "ทำใหม่" เพื่อลองอีกครั้ง หรือ "ทำต่อ" เพื่อสรุปผล';
+    speak("บันทึกว่าไม่ผ่านแล้ว ถ้าต้องการลองอีกครั้ง พูดว่า ทำใหม่ ถ้าจะสรุปผล พูดว่า ทำต่อ");
     if(attempts[stage]<2){
       retryBtn.hidden=false;
-      var wait=setTimeout(function(){ if(phase==="between")doFinishFail() },12000);
+      var wait=setTimeout(function(){ if(phase==="between")doFinishFail() },20000);
       retryBtn.onclick=function(){clearTimeout(wait);retryBtn.hidden=true;announce(true)};
+      pendingRetry=function(){clearTimeout(wait);retryBtn.hidden=true;announce(true)};
+      pendingNext=function(){clearTimeout(wait);doFinishFail()};
     }else{
-      setTimeout(doFinishFail,2600);
+      pendingRetry=null; pendingNext=doFinishFail;
+      setTimeout(doFinishFail,3000);
     }
     function doFinishFail(){
+      if(phase!=="between")return;
       for(var i=stage+1;i<BAL_STAGES.length;i++)chip(i,"",""+(i+1)+" ไม่ได้ทำ");
-      finishAll("หยุดที่ท่าที่ "+(stage+1)+" เพราะยืนไม่ครบ 10 วินาที");
+      finishAll("หยุดที่ท่าที่ "+(stage+1)+" เพราะยืนไม่ผ่านตามการยืนยันของผู้ทดสอบ");
     }
+  }
+  var pendingRetry=null, pendingNext=null;
+
+  /* หยุดเพื่อความปลอดภัย — จบทั้งชุดทันที ไม่ต้องทำท่าที่เหลือ */
+  function haltSafe(){
+    if(askTimer){clearTimeout(askTimer);askTimer=null}
+    clearCd(); confirmBox.hidden=true;
+    if(pending){
+      results[stage]={held:pending.held, pass:false, stage:BAL_STAGES[stage].nm,
+        attempts:attempts[stage], reason:"หยุดเพื่อความปลอดภัย",
+        aiObs:pending.o.obs, aiSuggest:pending.o.suggest, aiConfidence:pending.o.confidence,
+        feetSeenPct:pending.o.feetSeen, decidedBy:"human-safety", sway:pending.o.sway};
+      chip(stage,"bad"); pending=null;
+    }
+    for(var i=stage+1;i<BAL_STAGES.length;i++)chip(i,"",""+(i+1)+" ไม่ได้ทำ");
+    speak("รับทราบ หยุดการทดสอบเพื่อความปลอดภัย บันทึกไว้แล้ว");
+    finishAll("หยุดเพื่อความปลอดภัย");
   }
 
   function finishAll(reason){
     phase="done"; clearCd();
     var passed=0;
-    results.forEach(function(r){ if(r&&r.held>=BAL_SECONDS-0.3)passed++ });
+    results.forEach(function(r){ if(r&&r.pass)passed++ });   /* นับจากผลที่คนยืนยัน */
     var sc=balanceScore(passed);
     S.draft.balStages=results;
     S.draft.balPassed=passed;
     S.draft.balScoreHint=sc.score;
     S.draft.balLabel=sc.nm;
+    /* ค่าความโคลงเก็บไว้เชิงสำรวจเท่านั้น ไม่มีผลต่อคะแนนหรือระดับความเสี่ยง */
     var lastOk=results.filter(function(r){return r&&r.sway!=null}).pop();
     S.draft.swayValue=lastOk?lastOk.sway:null;
     S.draft.swayHeld=results.length?(results[results.length-1]||{}).held:null;
     S.draft.swayLabel=lastOk?swayLabel(lastOk.sway).nm:null;
+    S.draft.balConfirmedBy="human";
+    S.draft.balAiAgree=results.filter(function(r){
+      return r&&r.aiSuggest&&((r.aiSuggest==="pass")===!!r.pass)}).length;
     stopCam();
     audit("ทดสอบการทรงตัว 4 ท่า (CDC 4-Stage Balance Test)",
-      results.map(function(r,i){return r?((i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ"+(r.attempts>1?" (ลอง "+r.attempts+" ครั้ง)":"")):null})
+      results.map(function(r,i){return r?((i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ "+(r.pass?"ผ่าน":"ไม่ผ่าน")+
+        (r.aiSuggest&&(r.aiSuggest==="pass")!==!!r.pass?" (กล้องเห็นต่าง: "+r.aiSuggest+")":"")+
+        (r.attempts>1?" ลอง "+r.attempts+" ครั้ง":"")):null})
              .filter(Boolean).join(" · ")+
-      " · ผ่าน "+passed+"/4 ท่า · "+sc.nm+(reason?" · "+reason:""));
+      " · ผ่าน "+passed+"/4 ท่า · "+sc.nm+" · ผลยืนยันโดยผู้ทดสอบ/ผู้ดูแล กล้องทำหน้าที่ช่วยจัดท่าและเฝ้าระวังเท่านั้น"+
+      (reason?" · "+reason:""));
     setStatus(passed>=3?"green":(passed>=2?"yellow":"red"),
       "ทดสอบเสร็จสมบูรณ์ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
     coach.innerHTML='<b>ทดสอบเสร็จสมบูรณ์</b> — ยืนผ่าน '+passed+' จาก 4 ท่า';
@@ -3534,8 +3685,11 @@ async function startBalancePipeline(){
       var el=(performance.now()-t0)/1000;
       secEl.textContent=Math.max(0,BAL_SECONDS-el).toFixed(0);
       trk.style.width=Math.min(100,el/BAL_SECONDS*100)+"%";
-      if(h.sway!=null)swayEl.textContent=swayLabel(h.sway).nm;
+      if(h.sway!=null)swayEl.textContent="สังเกต: "+swayLabel(h.sway).nm;
+      if(POSE_COUNT>1)extraN++;
       if(h.remind)speak(h.remind);
+      if(!halfWarned&&el>=BAL_SECONDS/2){halfWarned=true;speak("เหลืออีก ห้า วินาที")}
+      if(h.dropped){speak("ระวัง กรุณาจับที่ยึดและให้ผู้ดูแลเข้าไปช่วย");endStage(Math.min(el,BAL_SECONDS),h.why);return}
       if(h.fail){endStage(Math.min(el,BAL_SECONDS),h.why);return}
       if(el>=BAL_SECONDS){endStage(BAL_SECONDS,null);return}
       if(!h.seen&&h.lost>30)coach.textContent="ขยับให้กล้องเห็นตัว…";
@@ -3544,17 +3698,39 @@ async function startBalancePipeline(){
   }
   loop();
 
-  startBtn.addEventListener("click",function(){ if(phase==="setup")countdown(); });
+  startBtn.addEventListener("click",function(){ if(phase==="setup")countdown() });
+  document.getElementById("bcPass").addEventListener("click",function(){settle(true)});
+  document.getElementById("bcFail").addEventListener("click",function(){settle(false)});
+  document.getElementById("bcHalt").addEventListener("click",haltSafe);
+  document.getElementById("bAgain").addEventListener("click",function(){
+    if(phase==="between"&&pendingRetry)pendingRetry();
+    else if(phase==="setup"||phase==="holding"){clearCd();announce(true)}
+  });
+  document.getElementById("bHelp").addEventListener("click",function(){speak(VC_HELP)});
+  /* คำสั่งเสียงครบชุด — ทุกคำมีปุ่มบนจอทดแทนได้เสมอ */
   vcStart(function(cmd){
-    if(cmd==="start"&&phase==="setup")countdown();
-    else if(cmd==="stop"){var b=document.getElementById("bStop");if(b)b.click()}
+    if(cmd==="start"&&phase==="setup"){countdown();return}
+    if(cmd==="pass"&&phase==="confirm"){settle(true);return}
+    if(cmd==="fail"&&phase==="confirm"){settle(false);return}
+    if(cmd==="done"&&phase==="confirm"){settle(pending&&pending.held>=BAL_SECONDS-0.3);return}
+    if(cmd==="again"){
+      if(phase==="between"&&pendingRetry){pendingRetry();return}
+      if(phase==="setup"||phase==="holding"){clearCd();announce(true);return}
+    }
+    if(cmd==="next"&&phase==="between"&&pendingNext){pendingNext();return}
+    if(cmd==="stop"){ if(phase==="confirm"||phase==="holding")haltSafe();
+                      else{var b=document.getElementById("bStop");if(b)b.click()} }
   });
 
   phase="intro";
   setStatus("yellow","ยืนห่างกล้อง 2–3 เมตร ให้เห็นทั้งตัว",false);
   coach.textContent="ยืนห่างกล้อง 2–3 เมตร หันข้างให้กล้อง ให้เห็นตั้งแต่ศีรษะถึงเท้า";
   speak("การทดสอบการทรงตัวมีสี่ท่า ท่าละสิบวินาที ลืมตาตลอด ไม่ต้องจับสิ่งใด "+
-        "ยืนห่างจากกล้องประมาณสองถึงสามเมตร ให้เห็นทั้งตัว และยืนหันข้างให้กล้อง เพื่อให้ระบบเห็นตำแหน่งเท้าชัดที่สุด ทุกท่าระบบจะรอคำสั่งจากท่าน พูดว่า เริ่มทดสอบ จึงจะเริ่มนับ");
+        "ควรมีผู้ดูแลยืนอยู่ข้าง ๆ เพื่อความปลอดภัย "+
+        "ยืนห่างจากกล้องประมาณสองถึงสามเมตร ให้เห็นทั้งตัว และยืนหันข้างให้กล้อง "+
+        "ระบบจะบอกท่าที่ต้องทำ แล้วรอให้ท่านพูดว่า เริ่ม จากนั้นจับเวลาให้ "+
+        "เมื่อครบสิบวินาที ท่านหรือผู้ดูแลเป็นผู้ยืนยันว่าผ่านหรือไม่ผ่าน "+
+        "พูดว่า ช่วยเหลือ เมื่อใดก็ได้ เพื่อฟังคำสั่งทั้งหมด");
   setTimeout(function(){ if(S.screen==="balance")announce(false) },6000);
 }
 
