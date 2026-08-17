@@ -64,7 +64,7 @@ p.secsub{color:var(--ink2);margin:0 0 30px;max-width:640px}
 .card p{margin:0;font-size:13.5px;color:var(--ink2)}
 .stepnum{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--brand);margin-bottom:10px}
 .calcpanel{background:var(--surf);border-radius:24px;box-shadow:var(--shx);padding:30px;display:grid;grid-template-columns:1fr 1fr;gap:34px}
-@media(max-width:860px){.calcpanel{grid-template-columns:1fr}}
+@media(max-width:860px){.calcpanel{grid-template-columns:1fr}.outgrid{grid-template-columns:1fr!important}#insGrid{grid-template-columns:1fr!important}}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
 .field input[type=range]{width:100%}
@@ -234,8 +234,9 @@ table.dt tr:last-child td{border-bottom:0}
   <div id="gate-ins"></div><div id="body-ins" hidden>
   <div class="kick">INSURER PORTFOLIO CONSOLE</div>
   <h2 class="sec">ภาพรวมพอร์ตกรมธรรม์</h2>
-  <p class="secsub">สถานะพอร์ตจริงจากฐานข้อมูลกลาง: จำนวนสมาชิก การกระจายความเสี่ยง เบี้ยรับ และสัดส่วนที่เข้าโปรแกรมป้องกัน</p>
+  <p class="secsub">สถานะพอร์ตจริงจากฐานข้อมูลกลาง: จำนวนสมาชิก การกระจายความเสี่ยง เบี้ยรับ และสัดส่วนที่เข้าโปรแกรมป้องกัน · เมื่อเข้าสู่ระบบด้วยบัญชีเจ้าหน้าที่จะเห็น <b>ชั้นวัดผล</b> ซึ่งรายงานผลลัพธ์ของโปรแกรมเป็นค่ารวมของทั้งพอร์ต</p>
   <div id="cloudINS"></div>
+  <div id="cloudOUT"></div>
   <div class="kpirow" id="insKpi"></div>
   <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px" id="insGrid">
     <div class="card"><h3 style="margin-bottom:14px">การกระจายระดับสัญญาณ (Risk Mix)</h3><div id="insMix"></div></div>
@@ -376,7 +377,7 @@ table.dt tr:last-child td{border-bottom:0}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แดชบอร์ดเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิก */</script>
-<script src="./cs-backend.js?v=200"></script>
+<script src="./cs-backend.js?v=201"></script>
 <script>
 /* ===== ค่ากลาง — ชุดเดียวกับแอปมือถือ ===== */
 var CFG={
@@ -1049,6 +1050,136 @@ async function renderCloudINS(){
   el.querySelector("#csLogout").addEventListener("click",async function(){await CSBackend.signOut();CLOUD.session=false;CLOUD.role=null;CLOUD.mfaOn=false;renderCloudCM();renderCloudINS()});
   var mf2=el.querySelector("#csMfaOn"); if(mf2)mf2.addEventListener("click",mfaEnrollFlow);
   var rl=el.querySelector("#csReloadIns"); if(rl)rl.addEventListener("click",renderCloudINS);
+  renderCloudOUT();
+}
+
+/* ============================================================
+   ชั้นวัดผล — Outcome & Insurance Value
+   ------------------------------------------------------------
+   แบ่งหน้าจอเป็นสองส่วนที่ห้ามปนกันเด็ดขาด
+     ส่วนบน  "วัดได้จริง"  — ทุกตัวเลขนับจากฐานข้อมูลผ่าน view รายงานกลุ่ม
+     ส่วนล่าง "แบบจำลอง"   — ตัวเลขทางการเงิน ยังไม่มีข้อมูลเคลมจริงมารองรับ
+   ที่ต้องแยกเพราะถ้าเอา ROI ไปวางปนกับตัวเลขที่นับได้จริง คนอ่านจะเข้าใจว่า
+   ระบบพิสูจน์ผลลัพธ์ทางการเงินแล้ว ซึ่งยังไม่จริง
+   ============================================================ */
+var OUT_ASSUME={members:1000, fallRate:30, claimRate:12, claimCost:45000, effect:23, progCost:350};
+function pctOf(a,b){return b?Math.round(a/b*100):0}
+async function renderCloudOUT(){
+  var el=document.getElementById("cloudOUT"); if(!el)return;
+  if(!CSBackend.isCloud()||!CLOUD.session){el.innerHTML="";return}
+  var o=await CSBackend.insurerOutcomes();
+  if(!o){el.innerHTML="";return}
+  var py=+o.person_years||0;
+  /* อัตราต่อ 100 คน-ปีจะเชื่อถือได้ต่อเมื่อมีฐานเวลามากพอ
+     ถ้าโปรแกรมเพิ่งเริ่ม (เช่น 0.03 คน-ปี) เหตุการณ์เดียวจะกลายเป็นอัตราหลักพัน
+     ซึ่งดูเป็นวิทยาศาสตร์แต่ไม่มีความหมาย จึงแสดงเป็นจำนวนครั้งดิบแทน */
+  var PY_MIN=5;
+  var rateOK=py>=PY_MIN;
+  var per100=function(n){return rateOK?(n/py*100).toFixed(1)+" ครั้ง":n+" ครั้ง"};
+  var rateNote=rateOK?"ต่อ 100 คน-ปี":"จำนวนครั้งใน 12 เดือน · ฐานเวลายังน้อยเกินกว่าจะคิดเป็นอัตรา";
+  var lv=[["stable","เขียว · คงที่","#0E9F6E"],["watch","เหลือง · เฝ้าสังเกต","#D9A21B"],
+          ["decline","ส้ม · ถดถอย","#E07A2F"],["urgent","แดง · เร่งด่วน","#C7443E"]];
+  var tot=o.lv_stable+o.lv_watch+o.lv_decline+o.lv_urgent;
+  var mixHTML=lv.map(function(x){
+    var n=o["lv_"+x[0]], pc=pctOf(n,tot);
+    return '<div class="rowline"><span class="k">'+x[1]+'</span><span class="v">'+n+' ราย · '+pc+'%</span></div>'+
+      '<div style="height:8px;background:var(--line2);border-radius:99px;margin:4px 0 10px"><div style="height:100%;width:'+pc+'%;background:'+x[2]+';border-radius:99px"></div></div>';
+  }).join("");
+
+  el.innerHTML=cloudPanel(
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'+
+      '<b style="font-size:15px">📊 ชั้นวัดผล — ผลลัพธ์ของโปรแกรมป้องกัน</b>'+
+      '<span style="background:#E3F6EF;color:#0E9F6E;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px">นับจริงจากฐานข้อมูล</span></div>'+
+    '<p style="font-size:12.5px;color:#5B6B84;margin:0 0 14px">ทุกตัวเลขในส่วนนี้เป็น<b>ค่ารวมของทั้งพอร์ต</b> ดึงผ่าน view ที่คืนค่าแถวเดียว '+
+      'ไม่มี user_id ไม่มีรายบุคคล — ต่อให้ query ตรงก็ไล่กลับไปหาตัวบุคคลไม่ได้ · '+
+      'ฐานเวลาในโปรแกรม '+py.toFixed(2)+' คน-ปี · '+
+      '<button id="csReloadOut" style="border:0;background:none;color:var(--brand,#2563EB);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600">รีเฟรช</button></p>'+
+
+    '<div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin-bottom:8px">ก · ความครอบคลุมของโปรแกรม</div>'+
+    '<div class="kpirow">'+
+      kpi("สมาชิกในโปรแกรม",o.n_members+" ราย","ยินยอมแชร์ข้อมูล "+o.n_assessments+" ครั้งประเมิน")+
+      kpi("ประเมินใน 30 วัน",pctOf(o.n_active_30d,o.n_members)+"%","สมาชิก "+o.n_active_30d+" / "+o.n_members+" ราย · รวม "+o.n_assessed_30d+" ครั้ง")+
+      kpi("ทำตามนัดติดตาม",pctOf(o.n_fu_done,o.n_fu_due)+"%",o.n_fu_done+" / "+o.n_fu_due+" นัดที่ถึงกำหนด · ค้าง "+o.n_fu_open)+
+      kpi("หยุดทดสอบเพื่อความปลอดภัย",o.n_not_tested+" ครั้ง","Safety Gate ทำงาน ไม่ปล่อยให้ทดสอบทั้งที่มีอาการ")+
+    '</div>'+
+
+    '<div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin:6px 0 8px">ข · ผลลัพธ์ทางคลินิก</div>'+
+    '<div class="kpirow">'+
+      kpi("ระดับดีขึ้น",o.n_improved+" ราย",(o.n_comparable?pctOf(o.n_improved,o.n_comparable)+"% ของผู้ที่มีผลเทียบได้":"ยังไม่มีผู้ที่ประเมินซ้ำ"))+
+      kpi("ระดับแย่ลง",o.n_worsened+" ราย",(o.n_comparable?pctOf(o.n_worsened,o.n_comparable)+"% ของผู้ที่มีผลเทียบได้":"—"))+
+      kpi("หกล้มที่รายงาน",per100(o.ev_fall),rateNote+" · เกือบล้มอีก "+o.ev_near_fall+" ครั้ง")+
+      kpi("เข้าโรงพยาบาล",per100(o.ev_hospital),rateNote)+
+    '</div>'+
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="outgrid">'+
+      '<div><div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin-bottom:8px">ค · การกระจายความเสี่ยงล่าสุด</div>'+
+        (tot?mixHTML:'<p style="font-size:13px;color:#5B6B84;margin:0">ยังไม่มีผลประเมินในพอร์ต</p>')+'</div>'+
+      '<div><div style="font-size:12px;font-weight:700;color:#5B6B84;letter-spacing:.06em;margin-bottom:8px">ง · การส่งต่อ (วัดว่าไปพบจริงไหม)</div>'+
+        '<div class="rowline"><span class="k">เคสที่ระบบส่งต่อ</span><span class="v">'+o.n_ref+' เคส</span></div>'+
+        '<div class="rowline"><span class="k">พยาบาลยืนยันแล้ว</span><span class="v">'+o.n_ref_confirmed+' เคส · '+pctOf(o.n_ref_confirmed,o.n_ref)+'%</span></div>'+
+        '<div class="rowline"><span class="k">ไปพบผู้เชี่ยวชาญจริง</span><span class="v"><b>'+o.n_ref_completed+' เคส · '+pctOf(o.n_ref_completed,o.n_ref_confirmed)+'%</b></span></div>'+
+        '<div class="rowline"><span class="k">แผนดูแลที่สร้างแล้ว</span><span class="v">'+o.n_plans+' แผน</span></div>'+
+        '<p style="font-size:12px;color:#5B6B84;margin:10px 0 0">อัตรา "ไปพบจริง" คือตัวชี้วัดที่บอกว่าวงจรปิดสนิทหรือไม่ — ส่งต่อแล้วแต่ไม่มีใครไป เท่ากับยังไม่ได้ป้องกันอะไร</p></div>'+
+    '</div>'+
+
+    /* ---------- ส่วนที่เป็นการจำลอง แยกกล่อง แยกสี ไม่ให้ปนกับข้างบน ---------- */
+    '<div style="border:1.5px dashed #E0A93C;background:#FFFBF0;border-radius:14px;padding:16px;margin-top:18px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<b style="font-size:14.5px;color:#8A5A00">🧮 แบบจำลองมูลค่าเชิงธุรกิจ</b>'+
+        '<span style="background:#FDE9C0;color:#8A5A00;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px">ยังไม่ใช่ผลจริง — เป็นการคำนวณจากสมมติฐาน</span></div>'+
+      '<p style="font-size:12.5px;color:#7A5A20;margin:8px 0 12px">CareSignal <b>ยังไม่มีข้อมูลค่าสินไหมจริง</b> จึงคำนวณ ROI จากผลลัพธ์ที่วัดได้เองไม่ได้ '+
+        'กล่องนี้ให้ปรับสมมติฐานเพื่อดูว่า<b>ถ้า</b>โปรแกรมได้ผลตามงานวิจัย มูลค่าจะอยู่ราวเท่าไร '+
+        'ตัวเลขที่ออกมาใช้เพื่อการวางแผนนำร่องเท่านั้น ห้ามนำไปอ้างว่าเป็นผลลัพธ์ที่พิสูจน์แล้ว '+
+        'การพิสูจน์จริงต้องรอการนำร่องที่เชื่อมข้อมูลสินไหมและมีกลุ่มเปรียบเทียบ</p>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">'+
+        outField("oaMembers","จำนวนสมาชิกในโปรแกรม (ราย)",OUT_ASSUME.members,"1")+
+        outField("oaFall","ผู้สูงอายุที่ล้มอย่างน้อย 1 ครั้ง/ปี (%)",OUT_ASSUME.fallRate,"0.5")+
+        outField("oaClaim","สัดส่วนการล้มที่นำไปสู่การเคลม (%)",OUT_ASSUME.claimRate,"0.5")+
+        outField("oaCost","ค่าสินไหมเฉลี่ยต่อเคส (บาท)",OUT_ASSUME.claimCost,"1000")+
+        outField("oaEffect","ประสิทธิผลที่คาดหวัง — ลดอัตราการล้ม (%)",OUT_ASSUME.effect,"1")+
+        outField("oaProg","ต้นทุนโปรแกรมต่อคนต่อปี (บาท)",OUT_ASSUME.progCost,"10")+
+      '</div>'+
+      '<div id="outCalc" style="margin-top:14px"></div>'+
+      '<p style="font-size:11.5px;color:#7A5A20;margin:12px 0 0;line-height:1.7">'+
+        '<b>ที่มาของค่าตั้งต้น</b> · อัตราการล้ม 30% ต่อปีในผู้มีอายุ 65 ปีขึ้นไป — องค์การอนามัยโลก (ช่วงที่รายงานไว้คือ 28–35%) · '+
+        'ประสิทธิผล 23% — Sherrington และคณะ, Cochrane Database of Systematic Reviews 2019 '+
+        '(โปรแกรมออกกำลังกายลดอัตราการล้มในผู้สูงอายุที่อยู่ในชุมชนได้ราว 23%) · '+
+        'สัดส่วนการเคลมและค่าสินไหมเฉลี่ยเป็น<b>ตัวเลขสมมติสำหรับกรอกทดแทน</b> ต้องแทนที่ด้วยข้อมูลจริงของบริษัทก่อนใช้ตัดสินใจ</p>'+
+    '</div>');
+
+  var rl=el.querySelector("#csReloadOut"); if(rl)rl.addEventListener("click",renderCloudOUT);
+  el.querySelectorAll("[data-oa]").forEach(function(i){i.addEventListener("input",outCalc)});
+  outCalc();
+}
+function outField(id,label,val,step){
+  return '<label style="display:block"><span style="display:block;font-size:11.5px;color:#7A5A20;font-weight:600;margin-bottom:4px">'+label+'</span>'+
+    '<input id="'+id+'" data-oa="1" type="number" step="'+step+'" min="0" value="'+val+'" '+
+    'style="width:100%;padding:9px 11px;border:1.5px solid #E7D3A8;border-radius:9px;background:#fff;font-family:inherit;font-size:14px"></label>';
+}
+function outCalc(){
+  var g=function(id){var e=document.getElementById(id);return e?(+e.value||0):0};
+  var n=g("oaMembers"), fallPc=g("oaFall")/100, claimPc=g("oaClaim")/100,
+      cost=g("oaCost"), eff=g("oaEffect")/100, prog=g("oaProg");
+  var fallers=n*fallPc;                 /* คนที่คาดว่าจะล้มถ้าไม่มีโปรแกรม */
+  var avoided=fallers*eff;              /* ที่โปรแกรมช่วยไม่ให้ล้ม */
+  var claimsAvoided=avoided*claimPc;    /* ที่แปลงเป็นเคลมที่ไม่เกิด */
+  var saved=claimsAvoided*cost;
+  var progTotal=n*prog;
+  var net=saved-progTotal;
+  var roi=progTotal>0?(net/progTotal*100):0;
+  var box=document.getElementById("outCalc"); if(!box)return;
+  var row=function(k,v,strong){return '<div class="rowline"><span class="k">'+k+'</span><span class="v">'+(strong?"<b>"+v+"</b>":v)+'</span></div>'};
+  box.innerHTML=
+    row("คาดว่าจะมีผู้ล้มถ้าไม่มีโปรแกรม",fmt(fallers)+" ราย/ปี")+
+    row("ล้มที่คาดว่าป้องกันได้",fmt(avoided)+" ราย/ปี")+
+    row("เคลมที่ไม่เกิดขึ้น",fmt(claimsAvoided)+" เคส/ปี")+
+    row("ค่าสินไหมที่ประหยัดได้",fmt(saved)+" บาท/ปี")+
+    row("ต้นทุนโปรแกรมทั้งพอร์ต",fmt(progTotal)+" บาท/ปี")+
+    row("ประหยัดสุทธิ",fmt(net)+" บาท/ปี",true)+
+    row("ผลตอบแทนต่อทุกบาทที่ลงทุน",(progTotal>0?(saved/progTotal).toFixed(2)+" บาท (ROI "+Math.round(roi)+"%)":"—"),true)+
+    '<p style="font-size:11.5px;color:#7A5A20;margin:8px 0 0">คิดต่อคนต่อปี = ประหยัด '+
+      (n?fmt(saved/n):"0")+' บาท เทียบกับต้นทุน '+fmt(prog)+' บาท '+
+      '<b>ภายใต้สมมติฐานข้างต้นเท่านั้น</b></p>';
 }
 (async function(){
   try{

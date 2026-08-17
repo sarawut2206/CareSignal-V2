@@ -76,6 +76,7 @@ h3{font-size:15.5px;margin:0 0 10px;color:#fff}
 .empty{text-align:center;color:var(--ink3);font-size:14px;padding:28px 10px}
 .notice{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:13px;padding:13px 15px;font-size:13px;color:var(--ink2);margin-bottom:14px}
 .notice b{color:#fff}
+.tiny{font-size:11.5px;color:var(--ink2);line-height:1.65;margin:10px 0 0}
 .warnbox{background:rgba(240,82,76,.16);border:1px solid rgba(240,82,76,.5);border-radius:13px;padding:13px 15px;font-size:13.5px;color:#FFD9D7;margin-bottom:14px}
 .warnbox b{color:#fff}
 .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:#fff;color:#12295F;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center;box-shadow:0 10px 30px rgba(0,10,40,.4)}
@@ -103,7 +104,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=200"></script>
+<script src="./cs-backend.js?v=201"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -250,9 +251,11 @@ async function portV(){
     return;
   }
   V.innerHTML='<div class="empty">กำลังโหลดพอร์ต…</div>';
-  var rows=[];
+  var rows=[], oc=null;
   try{rows=await CSBackend.insurerPortfolio()}catch(e){}
-  if(!rows.length){V.innerHTML='<div class="card"><div class="empty">ยังไม่มีสมาชิกที่เปิดการแชร์ข้อมูลในพอร์ต</div></div>';return}
+  try{oc=await CSBackend.insurerOutcomes()}catch(e){}
+  var outHTML=oc?outcomeCard(oc):"";
+  if(!rows.length){V.innerHTML=outHTML+'<div class="card"><div class="empty">ยังไม่มีสมาชิกที่เปิดการแชร์ข้อมูลในพอร์ต</div></div>';return}
   var mix={stable:0,watch:0,decline:0,urgent:0,none:0};
   rows.forEach(function(r){mix[r.risk_level||"none"]=(mix[r.risk_level||"none"]||0)+1});
   var n=rows.length;
@@ -271,7 +274,27 @@ async function portV(){
         '<td><span class="pill" style="background:'+(LV_C[r.risk_level]||"#5B77B4")+'">'+(LV_NM[r.risk_level]||"—")+'</span></td></tr>';
     }).join("")+'</tbody></table></div></div>'+
     '<div class="notice">ข้อมูลแฝงชื่อยังเป็นข้อมูลส่วนบุคคลตาม PDPA · ทุกการเปิดดูพอร์ตถูกบันทึกใน audit log</div>';
-  V.innerHTML=html;
+  V.innerHTML=outHTML+html;
+}
+
+/* ---------- ชั้นวัดผล — รายงานเชิงกลุ่ม ----------
+   บนมือถือเอาเฉพาะตัวเลขที่นับได้จริง ไม่ใส่แบบจำลอง ROI
+   เพราะการจำลองต้องมีคำอธิบายกำกับยาว ซึ่งอ่านบนจอเล็กแล้วคนจะข้าม
+   แล้วเข้าใจว่าเป็นผลจริง — ไปดูบนเว็บที่มีพื้นที่อธิบายครบแทน */
+function outcomeCard(o){
+  var py=+o.person_years||0, rateOK=py>=5;   /* ฐานเวลาน้อยเกินไป อัตราจะเพี้ยน */
+  var per100=function(n){return rateOK?(n/py*100).toFixed(1)+" / 100 คน-ปี":n+" ครั้ง"};
+  var pc=function(a,b){return b?Math.round(a/b*100):0};
+  return '<div class="card"><h3>ผลลัพธ์ของโปรแกรม (ทั้งพอร์ต)</h3>'+
+    '<div class="rowline"><span class="k">ประเมินใน 30 วัน</span><span class="v">'+pc(o.n_active_30d,o.n_members)+'% ('+o.n_active_30d+'/'+o.n_members+' ราย)</span></div>'+
+    '<div class="rowline"><span class="k">ทำตามนัดติดตาม</span><span class="v">'+pc(o.n_fu_done,o.n_fu_due)+'% ('+o.n_fu_done+'/'+o.n_fu_due+')</span></div>'+
+    '<div class="rowline"><span class="k">ส่งต่อแล้วไปพบจริง</span><span class="v">'+pc(o.n_ref_completed,o.n_ref_confirmed)+'% ('+o.n_ref_completed+'/'+o.n_ref_confirmed+')</span></div>'+
+    '<div class="rowline"><span class="k">ระดับดีขึ้น / แย่ลง</span><span class="v">'+o.n_improved+' / '+o.n_worsened+' ราย</span></div>'+
+    '<div class="rowline"><span class="k">หกล้มที่รายงาน</span><span class="v">'+per100(o.ev_fall)+'</span></div>'+
+    '<div class="rowline"><span class="k">เข้าโรงพยาบาล</span><span class="v">'+per100(o.ev_hospital)+'</span></div>'+
+    '<p class="tiny">'+(rateOK?"":"ฐานเวลาในโปรแกรมยังน้อย ("+py.toFixed(2)+" คน-ปี) จึงแสดงเป็นจำนวนครั้งแทนอัตรา · ")+
+    'ตัวเลขทั้งหมดนับจริงจากฐานข้อมูล เป็นค่ารวมของพอร์ต ไม่มีข้อมูลรายบุคคล · '+
+    'แบบจำลองมูลค่าทางการเงิน (ROI) อยู่บนเว็บพร้อมคำอธิบายสมมติฐาน</p></div>';
 }
 
 /* ---------- ฉัน ---------- */

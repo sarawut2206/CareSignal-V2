@@ -318,6 +318,17 @@ var CSBackend = (function () {
     return r.data || [];
   }
 
+  /* ชั้นวัดผล — รายงานเชิงกลุ่มแถวเดียว ไม่มีข้อมูลรายบุคคลเลย
+     ตัวเลขทุกตัวในนี้นับจริงจากฐานข้อมูล ไม่มีการประมาณการทางการเงินปนมา */
+  async function insurerOutcomes() {
+    if (!isCloud()) return null;
+    var r = await sb.from("insurer_outcomes").select("*").limit(1);
+    if (r.error) { console.warn(r.error); return null; }
+    var row = (r.data || [])[0] || null;
+    if (row) await audit("outcomes.view", null, "เปิดดูรายงานผลลัพธ์เชิงกลุ่ม");
+    return row;
+  }
+
   /* ============================================================
      Audit log — เขียนได้อย่างเดียว แก้/ลบไม่ได้แม้แต่ admin
      ============================================================ */
@@ -706,7 +717,7 @@ var CSBackend = (function () {
     saveAssessment: saveAssessment, listAssessments: listAssessments,
     saveRiskSignal: saveRiskSignal, createReferral: createReferral,
     listReferralQueue: listReferralQueue, decideReferral: decideReferral,
-    insurerPortfolio: insurerPortfolio,
+    insurerPortfolio: insurerPortfolio, insurerOutcomes: insurerOutcomes,
     createInvite: createInvite, listMyCarers: listMyCarers, decideCarer: decideCarer,
     updateCarerPermissions: updateCarerPermissions, revokeCarer: revokeCarer,
     redeemInvite: redeemInvite, famMembers: famMembers, famAssessments: famAssessments,
