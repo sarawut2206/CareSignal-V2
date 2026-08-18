@@ -91,6 +91,21 @@ h3{font-size:15.5px;margin:0 0 10px;color:#fff}
   font-size:11.5px;font-weight:700;color:#fff}
 .prioact{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.5}
 .grp{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.05em;margin:16px 0 6px}
+/* ---------- การ์ดงานหนึ่งชิ้น ----------
+   แถวหนึ่ง = งานหนึ่งชิ้นที่ต้องลงมือทำ ไม่ใช่รายชื่อคน
+   เจ้าหน้าที่เปิดหน้าเดียวแล้วรู้ว่าวันนี้ต้องทำอะไรบ้าง */
+.work{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);
+  border-radius:13px;padding:13px 15px;margin-bottom:10px;background:var(--surf2)}
+.work .wm{flex:1;min-width:0}
+.work .wt{font-weight:600;font-size:14.5px;color:#fff;margin-bottom:3px}
+.work .ww{font-size:12.5px;color:var(--ink2)}
+.work .wd{text-align:right;white-space:nowrap;font-size:12px}
+.work .wd b{display:block;font-family:var(--mono);font-size:13px}
+.work[data-late="1"]{border-color:rgba(240,82,76,.55);background:rgba(240,82,76,.10)}
+.work .claim{border:0;border-radius:10px;background:var(--gold);color:var(--goldink);
+  font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;margin-top:7px}
+.newtag{display:inline-block;font-size:10.5px;font-weight:700;background:var(--gold);
+  color:var(--goldink);padding:1px 7px;border-radius:99px;margin-left:6px}
 .warnbox{background:rgba(240,82,76,.16);border:1px solid rgba(240,82,76,.5);border-radius:13px;padding:13px 15px;font-size:13.5px;color:#FFD9D7;margin-bottom:14px}
 .warnbox b{color:#fff}
 .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:#fff;color:#12295F;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center;box-shadow:0 10px 30px rgba(0,10,40,.4)}
@@ -179,6 +194,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
   <div class="hd" id="hd"><div class="kick">STAFF CONSOLE</div><h1 id="hdT">แอปเจ้าหน้าที่</h1><p id="hdP">คิวเคสและพอร์ตความเสี่ยง — เฉพาะบัญชีที่ได้รับสิทธิ์</p></div>
   <nav class="side" id="side" hidden aria-label="เมนูหลัก">
     <div class="sgrp">งานประจำวัน</div>
+    <button data-go="mine"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg><span>งานของฉัน</span><span class="cnt" data-cnt="mine" hidden></span></button>
     <button data-go="queue"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><span>คิวงาน</span><span class="cnt" data-cnt="queue" hidden></span></button>
     <button data-go="refer"><svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="M13 7l5 5-5 5"/><circle cx="20" cy="12" r="1.6"/></svg><span>ติดตามการส่งต่อ</span><span class="cnt" data-cnt="refer" hidden></span></button>
     <button data-go="meds"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/><path d="M12 12v4"/></svg><span>ทบทวนยา</span><span class="cnt" data-cnt="meds" hidden></span></button>
@@ -186,12 +202,15 @@ td.num{font-family:var(--mono);white-space:nowrap}
     <button data-go="port"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span>พอร์ตความเสี่ยง</span><span class="cnt" data-cnt="port" hidden></span></button>
     <button data-go="reports"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg><span>รายงาน</span><span class="cnt" data-cnt="reports" hidden></span></button>
     <button data-go="audit"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><span>บันทึกตรวจสอบ</span><span class="cnt" data-cnt="audit" hidden></span></button>
+    <div class="sgrp">ระบบ</div>
+    <button data-go="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c1-3 3.2-4.6 6.5-4.6S14.5 17 15.5 20"/><circle cx="17.5" cy="9" r="2.4"/><path d="M16 20c.4-1.9 1.4-3 2.8-3.5"/></svg><span>จัดการผู้ใช้</span></button>
     <div class="sgrp">บัญชี</div>
     <button data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg><span>บัญชีของฉัน</span><span class="cnt" data-cnt="me" hidden></span></button>
   </nav>
   <div class="view" id="view"></div>
   <div class="tabs" id="tabs" hidden>
-    <button data-go="queue" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>คิวเคส</b></button>
+    <button data-go="mine" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg><b>งานของฉัน</b></button>
+    <button data-go="queue"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>คิวเคส</b></button>
     <button data-go="refer"><svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="M13 7l5 5-5 5"/><circle cx="20" cy="12" r="1.6"/></svg><b>ส่งต่อ</b></button>
     <button data-go="meds"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/><path d="M12 12v4"/></svg><b>ทบทวนยา</b></button>
     <button data-go="port"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>พอร์ต</b></button>
@@ -201,7 +220,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=213"></script>
+<script src="./cs-backend.js?v=214"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 /* ============================================================
@@ -217,7 +236,13 @@ var V=document.getElementById("view"), TABS=document.getElementById("tabs");
 var ST={screen:"login", role:null, email:null, name:null};
 var LV_NM={stable:"คงที่",watch:"เฝ้าสังเกต",decline:"ถดถอย",urgent:"เร่งด่วน"};
 var LV_C ={stable:"var(--c4)",watch:"var(--c3)",decline:"var(--c2)",urgent:"var(--c1)"};
-var ROLE_NM={care_manager:"Care Manager / พยาบาล",insurer:"เจ้าหน้าที่บริษัทประกัน",admin:"ผู้ดูแลระบบ"};
+var ROLE_NM={care_manager:"Care Manager / ผู้ประสานงาน",insurer:"เจ้าหน้าที่บริษัทประกัน",
+  admin:"ผู้ดูแลระบบ",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",doctor:"แพทย์",nurse:"พยาบาล"};
+/* วิชาชีพที่รับเคสส่งต่อ — เห็นเฉพาะรายการที่ส่งมาถึงวิชาชีพตน (บังคับด้วย RLS)
+   ต่างจากผู้ประสานงานซึ่งเห็นทั้งพอร์ตเพราะต้องจัดสรรงาน */
+var CLINICIANS=["pharmacist","physio","doctor","nurse"];
+function isClinician(){ return CLINICIANS.indexOf(ST.role)>=0 }
+function isCoordinator(){ return ST.role==="care_manager"||ST.role==="admin" }
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on")},2800)}
@@ -277,7 +302,8 @@ async function doLogin(){
       try{await CSBackend.signOut()}catch(e1){}
       toast("พบ session ซ้อนจากแท็บอื่น — ปิดแท็บอื่นแล้วลองใหม่");loginV();return;
     }
-    if(["care_manager","insurer","admin"].indexOf(pr.role)<0){
+    /* บทบาทที่เข้าคอนโซลได้ — รวมวิชาชีพที่รับเคสส่งต่อ */
+    if(["care_manager","insurer","admin","pharmacist","physio","doctor","nurse"].indexOf(pr.role)<0){
       try{await CSBackend.signOut()}catch(e2){}
       head("เข้าสู่ระบบเจ้าหน้าที่","บัญชีนี้ยังไม่ได้รับสิทธิ์");
       V.innerHTML='<div class="warnbox"><b>บัญชีนี้ไม่ใช่บัญชีเจ้าหน้าที่</b><br>'+esc(em)+' มีบทบาท '+esc(pr.role||"ยังไม่กำหนด")+' — แจ้งผู้ดูแลระบบให้กำหนดบทบาท care_manager หรือ insurer ก่อน</div>'+
@@ -288,7 +314,7 @@ async function doLogin(){
     ST.role=pr.role; ST.email=em; ST.name=pr.display_name||em;
     chip(); TABS.hidden=false;
     toast("เข้าสู่ระบบแล้ว · "+(ROLE_NM[ST.role]||ST.role)+(vf.length?" · ผ่าน MFA":""));
-    go(ST.role==="insurer"?"port":"queue");
+    go(ST.role==="insurer"?"port":"mine");
   }catch(e){
     toast("เข้าสู่ระบบไม่สำเร็จ: "+(e.message||""));
     b.disabled=false; b.textContent="เข้าสู่ระบบ";
@@ -902,14 +928,183 @@ function dayTxt(d){
   return Math.round(d)+" วัน";
 }
 
+
+/* ============================================================
+   งานของฉัน — หน้าแรกของทุกบทบาทที่ทำงานกับเคส
+   ------------------------------------------------------------
+   เดิมทุกคนที่เป็น care_manager เปิดมาเจอคิวรวมเหมือนกันหมด
+   ต้องกวาดสายตาหาว่าอันไหนเป็นของตัวเอง
+   หน้านี้ดึงจาก view my_work ซึ่งกรองด้วย auth.uid() ที่ฐานข้อมูล
+   ไม่ได้กรองที่หน้าจอ — เปลี่ยนโค้ดหน้าเว็บก็ไม่ทำให้เห็นงานคนอื่น
+   ============================================================ */
+async function mineV(){
+  var rn=ROLE_NM[ST.role]||ST.role;
+  head("งานของฉัน", isClinician()
+    ? "เคสที่ส่งต่อมาถึง"+rn+" — เห็นเฉพาะรายการที่ส่งมาถึงวิชาชีพของท่าน"
+    : "เคสที่ท่านรับผิดชอบ และเคสที่ยังไม่มีผู้รับผิดชอบ");
+  if(ST.role==="insurer"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะทีมดูแล</b><br>บัญชีบริษัทประกันดูภาพรวมระดับกลุ่มได้ที่หน้าพอร์ต</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var rows=[]; try{ rows=await CSBackend.myWork() }catch(e){}
+
+  if(!rows.length){
+    V.innerHTML='<div class="card"><div class="empty">ไม่มีงานค้างในความรับผิดชอบของท่าน 🎉</div></div>'+
+      '<div class="notice">'+(isClinician()
+        ? 'เมื่อผู้ประสานงานส่งเคสมาถึง<b>'+esc(rn)+'</b> รายการจะขึ้นที่นี่ทันที ท่านกด <b>รับเคส</b> เพื่อบันทึกว่าท่านเป็นผู้ดำเนินการ'
+        : 'เคสจะขึ้นที่นี่เมื่อระบบพบสัญญาณเสี่ยง — ดูเคสทั้งพอร์ตได้ที่เมนู <b>คิวงาน</b>')+
+      '</div>';
+    return;
+  }
+
+  var now=Date.now();
+  var late  = rows.filter(function(r){return r.overdue});
+  var today = rows.filter(function(r){return !r.overdue && r.due_at && new Date(r.due_at)-now < 864e5});
+  var later = rows.filter(function(r){return !r.overdue && !(r.due_at && new Date(r.due_at)-now < 864e5)});
+  var mine  = rows.filter(function(r){return !r.unclaimed});
+  var free  = rows.filter(function(r){return r.unclaimed});
+
+  function dueTxt(r){
+    if(!r.due_at) return {t:"ไม่กำหนด",c:"var(--ink3)"};
+    var h=(new Date(r.due_at)-now)/36e5;
+    /* Math.round ต้องครอบตัวเลข ไม่ใช่ครอบข้อความที่ต่อแล้ว มิฉะนั้นได้ NaN */
+    if(h<0){ var a=-h;
+      return {t:"เกิน "+(a>=24?Math.round(a/24)+" วัน":Math.round(a)+" ชม."),c:"var(--c1)"} }
+    if(h<24) return {t:"เหลือ "+Math.round(h)+" ชม.",c:"var(--c2)"};
+    return {t:"เหลือ "+Math.round(h/24)+" วัน",c:"var(--ink2)"};
+  }
+  function card(r){
+    var d=dueTxt(r), pr=PRIO[r.level]||PRIO.watch;
+    return '<div class="work" data-late="'+(r.overdue?1:0)+'" data-open="'+esc(r.kind)+':'+esc(r.ref_id)+'">'+
+      '<div class="wm">'+
+        '<div class="wt">'+esc(r.task||"ทบทวนและดำเนินการ")+
+          (r.unclaimed?'<span class="newtag">ยังไม่มีผู้รับ</span>':'')+'</div>'+
+        '<div class="ww">'+pr.ic+' '+esc(pr.nm)+' · '+esc(r.pseudonym||"—")+
+          (r.display_name?' · '+esc(r.display_name):'')+
+          ' · '+(r.kind==="referral"?"รายการส่งต่อ":"เคส")+'</div>'+
+        (r.unclaimed&&r.kind==="referral"
+          ? '<button class="claim" data-claim="'+esc(r.ref_id)+'">รับเคสนี้</button>' : '')+
+      '</div>'+
+      '<div class="wd"><b style="color:'+d.c+'">'+esc(d.t)+'</b>'+
+        '<span style="color:var(--ink3)">'+esc(thDate(r.due_at).split(" ")[0])+'</span></div>'+
+    '</div>';
+  }
+
+  var html='<div class="pipe">'+
+    '<div class="pn" data-alert="'+(late.length?1:0)+'"><div class="pl">เกินกำหนด</div>'+
+      '<div class="pv">'+late.length+'</div><div class="pt">ต้องจัดการก่อน</div></div>'+
+    '<div class="pn"><div class="pl">ครบกำหนดวันนี้</div>'+
+      '<div class="pv">'+today.length+'</div><div class="pt">ภายใน 24 ชม.</div></div>'+
+    '<div class="pn"><div class="pl">ที่ท่านรับไว้</div>'+
+      '<div class="pv">'+mine.length+'</div><div class="pt">อยู่ในมือท่าน</div></div>'+
+    '<div class="pn"><div class="pl">ยังไม่มีผู้รับ</div>'+
+      '<div class="pv">'+free.length+'</div><div class="pt">รอคนรับไปทำ</div></div></div>';
+
+  [["⚠️ เกินกำหนด",late],["📅 ครบกำหนดวันนี้",today],["🗓 กำหนดถัดไป",later]].forEach(function(g){
+    if(!g[1].length) return;
+    html+='<div class="grp">'+g[0]+' ('+g[1].length+')</div>'+g[1].map(card).join("");
+  });
+  html+='<p class="tiny">รายการนี้กรองที่ฐานข้อมูลด้วยบัญชีที่ล็อกอิน — '+
+    'ท่านเห็นเฉพาะงานในความรับผิดชอบของท่าน ไม่ใช่การซ่อนไว้ที่หน้าจอ</p>';
+  V.innerHTML=html;
+
+  /* กดรับเคส */
+  V.querySelectorAll("[data-claim]").forEach(function(b){
+    b.addEventListener("click",async function(e){
+      e.stopPropagation();
+      b.disabled=true; b.textContent="กำลังรับ…";
+      try{ await CSBackend.claimReferral(b.dataset.claim); toast("รับเคสแล้ว"); mineV() }
+      catch(err){ toast("รับเคสไม่สำเร็จ: "+(err.message||err)); b.disabled=false; b.textContent="รับเคสนี้" }
+    });
+  });
+  /* กดที่การ์ดเพื่อเปิดรายละเอียด (เฉพาะเคส — รายการส่งต่อดูที่หน้าติดตามการส่งต่อ) */
+  V.querySelectorAll("[data-open]").forEach(function(el){
+    el.addEventListener("click",function(){
+      var v=el.dataset.open.split(":");
+      if(v[0]==="case") caseDetailV(v[1]); else go("refer");
+    });
+  });
+}
+
+
+/* ============================================================
+   จัดการผู้ใช้ — เฉพาะผู้ดูแลระบบ
+   ------------------------------------------------------------
+   ใช้กำหนดว่าบัญชีไหนเป็นวิชาชีพใด ซึ่งเป็นตัวกำหนดว่าคนนั้น
+   จะเห็นเคสส่งต่อของวิชาชีพไหน
+   การเปลี่ยนบทบาทถูกล็อกด้วย trigger ที่ฐานข้อมูล (guard_role_change)
+   บัญชีที่ไม่ใช่ admin เปลี่ยนไม่ได้แม้แก้โค้ดหน้าเว็บ
+   ============================================================ */
+var ASSIGNABLE=["care_manager","pharmacist","physio","doctor","nurse","insurer","admin"];
+async function usersV(){
+  head("จัดการผู้ใช้","กำหนดบทบาทของบัญชีเจ้าหน้าที่ — บทบาทเป็นตัวกำหนดว่าใครเห็นงานส่วนไหน");
+  if(ST.role!=="admin"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะผู้ดูแลระบบ</b><br>'+
+      'บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เปลี่ยนบทบาทผู้ใช้ไม่ได้ — '+
+      'ข้อจำกัดนี้บังคับที่ฐานข้อมูล ไม่ใช่แค่ซ่อนหน้าจอ</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var rows=[]; try{ rows=await CSBackend.listStaff() }catch(e){}
+
+  var html='<div class="notice"><b>วิธีเพิ่มบัญชีใหม่</b> — ให้เจ้าตัวสมัครเองที่หน้าเข้าสู่ระบบของคอนโซลนี้ '+
+    'แล้วกลับมาที่หน้านี้เพื่อกำหนดบทบาท · ระบบไม่ตั้งรหัสผ่านแทนผู้ใช้<br>'+
+    '<span class="tiny" style="display:block;margin-top:6px">บทบาทวิชาชีพ (เภสัชกร นักกายภาพ แพทย์ พยาบาล) '+
+    'จะเห็นเฉพาะรายการส่งต่อที่ระบุปลายทางเป็นวิชาชีพนั้น ไม่เห็นเคสทั้งพอร์ต</span></div>';
+
+  if(!rows.length){
+    html+='<div class="card"><div class="empty">ยังไม่มีบัญชีเจ้าหน้าที่</div></div>';
+  }else{
+    html+='<div class="card wide"><div class="tblwrap"><table class="tbl"><thead><tr>'+
+      '<th>ชื่อ</th><th>รหัส</th><th>บทบาทปัจจุบัน</th><th>เห็นอะไร</th><th>เปลี่ยนเป็น</th>'+
+      '</tr></thead><tbody>';
+    rows.forEach(function(u){
+      var scope = u.role==="insurer" ? "ภาพรวมระดับกลุ่มเท่านั้น"
+                : (CLINICIANS.indexOf(u.role)>=0) ? "เฉพาะเคสที่ส่งถึง"+esc(ROLE_NM[u.role]||u.role)
+                : "เคสทั้งพอร์ต (ผู้ประสานงาน)";
+      html+='<tr><td>'+esc(u.display_name||"—")+'</td>'+
+        '<td style="font-family:var(--mono);font-size:11.5px">'+esc(u.pseudonym||u.id.slice(0,8))+'</td>'+
+        '<td>'+esc(ROLE_NM[u.role]||u.role)+'</td>'+
+        '<td style="font-size:12px;color:var(--ink2)">'+scope+'</td>'+
+        '<td><select data-uid="'+esc(u.id)+'" style="font-family:inherit;font-size:12.5px;padding:6px 8px;'+
+          'border-radius:9px;background:rgba(0,14,50,.5);color:#fff;border:1px solid var(--line)">'+
+          ASSIGNABLE.map(function(r){
+            return '<option value="'+r+'"'+(r===u.role?" selected":"")+'>'+esc(ROLE_NM[r]||r)+'</option>'
+          }).join("")+'</select></td></tr>';
+    });
+    html+='</tbody></table></div>'+
+      '<p class="tiny">ทุกการเปลี่ยนบทบาทถูกบันทึกในหน้าบันทึกตรวจสอบพร้อมชื่อผู้ทำ</p></div>';
+  }
+  V.innerHTML=html;
+
+  V.querySelectorAll("select[data-uid]").forEach(function(sel){
+    var was=sel.value;
+    sel.addEventListener("change",async function(){
+      var to=sel.value;
+      if(!confirm("เปลี่ยนบทบาทเป็น "+(ROLE_NM[to]||to)+" ?\nผู้ใช้รายนี้จะเห็นข้อมูลชุดใหม่ทันทีที่เข้าสู่ระบบครั้งถัดไป")){
+        sel.value=was; return;
+      }
+      sel.disabled=true;
+      try{ await CSBackend.setRole(sel.dataset.uid,to); toast("เปลี่ยนบทบาทแล้ว"); was=to }
+      catch(e){ toast("เปลี่ยนไม่สำเร็จ: "+(e.message||e)); sel.value=was }
+      sel.disabled=false;
+    });
+  });
+}
+
 async function referV(){
-  head("ติดตามการส่งต่อ","ส่งต่อแล้วได้รับบริการจริงหรือยัง — ดูว่าเคสค้างอยู่ขั้นไหนและนานเท่าใด");
+  head("ติดตามการส่งต่อ", isClinician()
+    ? "รายการที่ส่งมาถึง"+esc(ROLE_NM[ST.role]||ST.role)+" — ค้างอยู่ขั้นไหนและนานเท่าใด"
+    : "ส่งต่อแล้วได้รับบริการจริงหรือยัง — ดูว่าเคสค้างอยู่ขั้นไหนและนานเท่าใด");
   if(ST.role==="insurer"){
     V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะทีมดูแล</b><br>บัญชีบริษัทประกันดูได้เฉพาะข้อมูลระดับกลุ่มที่หน้าพอร์ต</div>';
     return;
   }
   V.innerHTML='<div class="empty">กำลังโหลด…</div>';
-  var rows=[]; try{ rows=await CSBackend.listReferralQueue() }catch(e){}
+  /* วิชาชีพเรียกชุดเดียวกัน แต่ RLS ส่งกลับมาเฉพาะรายการที่ส่งถึงวิชาชีพตน
+     จึงไม่ต้องกรองซ้ำที่หน้าจอ และแก้โค้ดหน้าเว็บก็ไม่ทำให้เห็นของคนอื่น */
+  var rows=[]; try{ rows=await (isClinician()?CSBackend.myReferrals():CSBackend.listReferralQueue()) }catch(e){}
   if(!rows.length){
     V.innerHTML='<div class="card"><div class="empty">ยังไม่มีรายการส่งต่อ</div></div>'+
       '<div class="notice">ระบบเปิดรายการส่งต่อเมื่อ Care Manager กดส่งจากหน้าเคส หรือเมื่อเภสัชกรสรุปว่าควรให้แพทย์ทบทวน</div>';
@@ -1087,14 +1282,15 @@ async function auditV(){
     html+='<tr><td style="white-space:nowrap">'+thDate(r.created_at)+'</td>'+
       '<td>'+esc(ACT_NM[r.action]||r.action||"—")+'</td>'+
       '<td style="font-family:var(--mono);font-size:11.5px">'+esc((r.actor_id||"—").slice(0,8))+'</td>'+
-      '<td style="font-family:var(--mono);font-size:11.5px">'+esc((r.target_id||r.subject_id||"—").slice(0,8))+'</td></tr>';
+      '<td style="font-family:var(--mono);font-size:11.5px">'+esc((r.subject_id||"—").slice(0,8))+'</td></tr>';
   });
   html+='</tbody></table></div><p class="tiny">แสดง '+rows.length+' รายการล่าสุด · '+
     'รหัสผู้ใช้แสดงเพียง 8 ตัวแรกเพื่อให้ตรวจสอบได้โดยไม่เปิดเผยรหัสเต็มบนหน้าจอ</p></div>';
   V.innerHTML=html;
 }
 
-var FN={login:loginV,queue:queueV,refer:referV,meds:medsV,port:portV,reports:reportsV,audit:auditV,me:meV};
+var FN={login:loginV,mine:mineV,queue:queueV,refer:referV,meds:medsV,port:portV,
+        reports:reportsV,audit:auditV,users:usersV,me:meV};
 var SIDE=document.getElementById("side");
 function go(sc){
   ST.screen=sc;(FN[sc]||loginV)();
@@ -1108,11 +1304,24 @@ function go(sc){
 });
 /* บัญชีบริษัทประกันเห็นเฉพาะภาพรวมระดับกลุ่ม — ซ่อนเมนูรายบุคคลไว้ตั้งแต่แรก
    ไม่ใช่แค่กันตอนกดเข้า เพื่อไม่ให้เข้าใจผิดว่ามีสิทธิ์ */
-var INSURER_HIDE=["queue","refer","meds","reports","audit"];
+var NAV_BY_ROLE={
+  /* ผู้ประสานงานเห็นทั้งพอร์ตเพราะต้องจัดสรรงานและติดตามภาพรวม */
+  care_manager:["mine","queue","refer","meds","port","reports","audit","me"],
+  admin:       ["mine","queue","refer","meds","port","reports","audit","users","me"],
+  /* บริษัทประกันเห็นเฉพาะภาพรวมระดับกลุ่ม ไม่มีเมนูรายบุคคลเลย */
+  insurer:     ["port","me"],
+  /* วิชาชีพเห็นเฉพาะงานที่ส่งมาถึงตน ไม่มีคิวรวมทั้งพอร์ต
+     เภสัชกรได้หน้าทบทวนยาเพิ่ม เพราะเป็นเครื่องมือของวิชาชีพนั้นโดยตรง */
+  pharmacist:  ["mine","refer","meds","me"],
+  physio:      ["mine","refer","me"],
+  doctor:      ["mine","refer","me"],
+  nurse:       ["mine","refer","me"]
+};
 function navForRole(){
+  var allow=NAV_BY_ROLE[ST.role]||["mine","me"];
   [TABS,SIDE].forEach(function(nav){
     nav.querySelectorAll("[data-go]").forEach(function(b){
-      b.hidden = ST.role==="insurer" && INSURER_HIDE.indexOf(b.dataset.go)>=0;
+      b.hidden = allow.indexOf(b.dataset.go)<0;
     });
   });
   SIDE.querySelectorAll(".sgrp").forEach(function(g){
@@ -1126,11 +1335,14 @@ function navForRole(){
 async function navCounts(){
   if(ST.role==="insurer") return;
   var n={};
-  try{ var c=await CSBackend.caseQueue();
-       n.queue=c.filter(function(x){return ["stable","closed"].indexOf(x.status)<0}).length }catch(e){}
-  try{ n.meds=(await CSBackend.medReviewQueue()).length }catch(e){}
-  try{ n.refer=(await CSBackend.listReferralQueue()).filter(function(r){
-         return ["outcome_recorded","declined"].indexOf(r.status)<0 }).length }catch(e){}
+  try{ n.mine=(await CSBackend.myWork()).length }catch(e){}
+  if(isCoordinator()){
+    try{ var c=await CSBackend.caseQueue();
+         n.queue=c.filter(function(x){return ["stable","closed"].indexOf(x.status)<0}).length }catch(e){}
+    try{ n.meds=(await CSBackend.medReviewQueue()).length }catch(e){}
+  }
+  try{ n.refer=(await (isClinician()?CSBackend.myReferrals():CSBackend.listReferralQueue()))
+         .filter(function(r){return ["outcome_recorded","declined"].indexOf(r.status)<0}).length }catch(e){}
   Object.keys(n).forEach(function(k){
     var el=SIDE.querySelector('[data-cnt="'+k+'"]');
     if(el&&n[k]>0){ el.textContent=n[k]; el.hidden=false }
@@ -1146,7 +1358,7 @@ async function navCounts(){
     var u=await CSBackend.currentUser();
     if(u){
       var p=await CSBackend.loadProfile();
-      if(p&&p.id===u.id&&["care_manager","insurer","admin"].indexOf(p.role)>=0){
+      if(p&&p.id===u.id&&["care_manager","insurer","admin","pharmacist","physio","doctor","nurse"].indexOf(p.role)>=0){
         ST.role=p.role;ST.email=u.email;ST.name=p.display_name||u.email;
         chip();TABS.hidden=false;SIDE.hidden=false;navForRole();navCounts();
         go(ST.role==="insurer"?"port":"queue");

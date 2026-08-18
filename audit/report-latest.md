@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-18 04:52 |
+| วันที่ตรวจ | 2026-08-18 05:45 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 73 |
+| PASS | 80 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -39,12 +39,12 @@
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:885 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
 | F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2745 · CareSignal-Vision.html:3177 · CareSignal-App.html:1953 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1170 · CareSignal-Vision.html:712 · CareSignal-App.html:973 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:313 · supabase/09_insurtech.sql:20 |
-| F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/01_schema.sql:22 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:339 · supabase/09_insurtech.sql:20 |
+| F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
-| F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · cs-backend.js:589 |
+| F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |
 | F-11 | Insurer dashboard — aggregate / de-identified เท่านั้น | PASS | supabase/08_outcomes.sql:16 · supabase/11_dashboards.sql:215 · supabase/11_dashboards.sql:16 |
-| F-12 | Case ownership — บันทึกว่าใครรับผิดชอบเคส | PASS | supabase/09_insurtech.sql:48 · supabase/11_dashboards.sql:72 · cs-backend.js:300 |
+| F-12 | Case ownership — บันทึกว่าใครรับผิดชอบเคส | PASS | supabase/09_insurtech.sql:48 · supabase/11_dashboards.sql:72 · supabase/12_roles.sql:27 |
 
 ## ชั้นที่ 2 — Workflow แบบ End-to-End
 
@@ -61,7 +61,7 @@
 | W-09 | บันทึกผลการตรวจโดยผู้เชี่ยวชาญ | PASS | ตรวจพบในซอร์ส |
 | W-10 | สร้างงานติดตาม (follow-up) | PASS | ตรวจพบในซอร์ส |
 | W-12 | มี audit log ทุกขั้นตอนสำคัญ | PASS | ตรวจพบในซอร์ส |
-| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:348 · RLS cases_staff: true |
+| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:394 · RLS cases_staff: true |
 | W-13 | สถานะใน UI ต้องมีอยู่จริงในฐานข้อมูล | PASS | UI: new,reviewing,contacted,care_plan_agreed,referred,appointment_booked,service_completed,follow_up_due,intervention · DB: new,reviewing,contacted,re · สถานะที่มีใน DB แต่ UI ไม่ใช้: stable |
 
 ## ชั้นที่ 3 — ขอบเขตของระบบ
@@ -136,8 +136,15 @@
 | X-17 | มีหน้ารายงานที่คำนวณจากข้อมูลจริง ไม่ใช่ตัวเลขที่ตั้งไว้ | PASS | reportsV ดึงจาก caseQueue/listReferralQueue/medReviewQueue |
 | X-18 | รายงานไม่แอบอ้างตัวเลขที่ยังไม่มีข้อมูลรองรับ | PASS | ประกาศรายการที่ยังทำไม่ได้ไว้ท้ายหน้ารายงาน |
 | X-19 | มีหน้าดูบันทึกตรวจสอบว่าใครทำอะไรกับข้อมูลของใคร | PASS | auditV อ่านจาก audit_logs และต่อสายไว้ในเมนูจริง |
-| X-20 | บัญชีบริษัทประกันถูกซ่อนเมนูรายบุคคลตั้งแต่แรก ไม่ใช่กันตอนกด | PASS | navForRole ซ่อนปุ่มทั้งแถบเมนูข้างและแท็บล่าง |
+| X-20 | บัญชีบริษัทประกันถูกซ่อนเมนูรายบุคคลตั้งแต่แรก ไม่ใช่กันตอนกด | PASS | เมนูบริษัทประกัน: "port","me" |
 | X-21 | คอนโซลไม่มีโมดูลการเงิน (ขัดกับขอบเขตที่ประกาศไว้) | PASS | ไม่พบโมดูลการเงิน (ข้อความปฏิเสธไม่นับ) |
+| X-22 | มีบทบาทวิชาชีพให้ปลายทางส่งต่อมีบัญชีจริง | PASS | cs_role มี pharmacist/physio/doctor/nurse |
+| X-23 | วิชาชีพเห็นเฉพาะรายการที่ส่งถึงวิชาชีพตน (บังคับด้วย RLS) | PASS | referrals_select เทียบ destination กับ cs_my_destination() |
+| X-24 | หน้า "งานของฉัน" กรองที่ฐานข้อมูล ไม่ใช่ที่หน้าจอ | PASS | view my_work มี auth.uid() ในเงื่อนไขของตัวเอง |
+| X-25 | เมนูของแต่ละบทบาทประกาศไว้ชัด ไม่ใช่ซ่อนทีละปุ่ม | PASS | NAV_BY_ROLE กำหนดเมนูครบทุกบทบาท |
+| X-26 | วิชาชีพไม่มีเมนูคิวเคสทั้งพอร์ต | PASS | เมนูเภสัชกร: "mine","refer","meds","me" |
+| X-27 | กดรับเคสข้ามวิชาชีพไม่ได้ | PASS | claim_referral ตรวจ destination ก่อนอนุญาต |
+| X-28 | เปลี่ยนบทบาทผู้ใช้ได้เฉพาะผู้ดูแลระบบ | PASS | trigger guard_role_change ที่ฐานข้อมูล |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

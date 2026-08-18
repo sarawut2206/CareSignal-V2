@@ -599,9 +599,14 @@ function layer7() {
                 && /audit:\s*auditV/.test(staff),
                ev: "auditV อ่านจาก audit_logs และต่อสายไว้ในเมนูจริง" })],
     ["X-20", "บัญชีบริษัทประกันถูกซ่อนเมนูรายบุคคลตั้งแต่แรก ไม่ใช่กันตอนกด",
-      () => ({ ok: /var INSURER_HIDE=\[[^\]]*"queue"[^\]]*"refer"[^\]]*"meds"/.test(staff)
-                && /function navForRole/.test(staff),
-               ev: "navForRole ซ่อนปุ่มทั้งแถบเมนูข้างและแท็บล่าง" })],
+      () => {
+        /* เมนูของบริษัทประกันต้องไม่มีหน้าที่แสดงข้อมูลรายบุคคลเลย */
+        const m = staff.match(/insurer:\s*\[([^\]]*)\]/);
+        const banned = ["queue", "refer", "meds", "mine", "reports", "audit", "users"];
+        const ok = !!m && /function navForRole/.test(staff)
+                && !banned.some(k => m[1].indexOf('"' + k + '"') >= 0);
+        return { ok, ev: m ? "เมนูบริษัทประกัน: " + m[1].replace(/\s+/g, "") : "ไม่พบ insurer ใน NAV_BY_ROLE" };
+      }],
     ["X-21", "คอนโซลไม่มีโมดูลการเงิน (ขัดกับขอบเขตที่ประกาศไว้)",
       () => {
         /* ข้อความที่ "ปฏิเสธ" ว่าไม่มีโมดูลการเงิน เป็นสิ่งที่ต้องการ ไม่ใช่ข้อผิดพลาด
@@ -624,6 +629,45 @@ function layer7() {
     if (!r.ok) finding("MEDIUM", id, "โครงคอนโซลไม่ตรงแผน: " + name,
       "หน้าจอเจ้าหน้าที่ยังไม่ครบตามโครงระบบงานที่ออกแบบไว้", r.ev,
       "เพิ่มส่วนที่ขาดในคอนโซลเจ้าหน้าที่");
+  }
+
+  /* ---- แต่ละบทบาทเห็นเฉพาะงานของตน ---- */
+  const sqlAll = SQL.map(read).join("\n");
+  const roleChecks = [
+    ["X-22", "มีบทบาทวิชาชีพให้ปลายทางส่งต่อมีบัญชีจริง",
+      () => ({ ok: /add value if not exists 'pharmacist'/.test(sqlAll)
+                && /add value if not exists 'physio'/.test(sqlAll),
+               ev: "cs_role มี pharmacist/physio/doctor/nurse" })],
+    ["X-23", "วิชาชีพเห็นเฉพาะรายการที่ส่งถึงวิชาชีพตน (บังคับด้วย RLS)",
+      () => ({ ok: /create policy referrals_select[\s\S]{0,400}cs_my_destination\(\)/.test(sqlAll),
+               ev: "referrals_select เทียบ destination กับ cs_my_destination()" })],
+    ["X-24", "หน้า \"งานของฉัน\" กรองที่ฐานข้อมูล ไม่ใช่ที่หน้าจอ",
+      () => ({ ok: /create (or replace )?view public\.my_work[\s\S]{0,1500}auth\.uid\(\)/.test(sqlAll)
+                && /from\("my_work"\)/.test(read("cs-backend.js") || ""),
+               ev: "view my_work มี auth.uid() ในเงื่อนไขของตัวเอง" })],
+    ["X-25", "เมนูของแต่ละบทบาทประกาศไว้ชัด ไม่ใช่ซ่อนทีละปุ่ม",
+      () => ({ ok: /var NAV_BY_ROLE=\{[\s\S]{0,700}pharmacist:/.test(staff),
+               ev: "NAV_BY_ROLE กำหนดเมนูครบทุกบทบาท" })],
+    ["X-26", "วิชาชีพไม่มีเมนูคิวเคสทั้งพอร์ต",
+      () => {
+        const m = staff.match(/pharmacist:\s*\[([^\]]*)\]/);
+        const ok = !!m && !/["']queue["']/.test(m[1]) && !/["']port["']/.test(m[1]);
+        return { ok, ev: m ? "เมนูเภสัชกร: " + m[1].replace(/\s+/g, "") : "ไม่พบ" };
+      }],
+    ["X-27", "กดรับเคสข้ามวิชาชีพไม่ได้",
+      () => ({ ok: /function public\.claim_referral[\s\S]{0,900}cs_my_destination\(\)/.test(sqlAll)
+                && /ไม่ได้ส่งมาถึงคุณ/.test(sqlAll),
+               ev: "claim_referral ตรวจ destination ก่อนอนุญาต" })],
+    ["X-28", "เปลี่ยนบทบาทผู้ใช้ได้เฉพาะผู้ดูแลระบบ",
+      () => ({ ok: /guard_role_change/.test(sqlAll) || /ไม่มีสิทธิ์เปลี่ยนบทบาทผู้ใช้/.test(sqlAll),
+               ev: "trigger guard_role_change ที่ฐานข้อมูล" })],
+  ];
+  for (const [id, name, fn] of roleChecks) {
+    const r = fn();
+    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
+    if (!r.ok) finding("HIGH", id, "การแบ่งงานตามบทบาทไม่ครบ: " + name,
+      "ถ้าแต่ละบทบาทไม่ถูกจำกัดให้เห็นเฉพาะงานของตน ข้อมูลสุขภาพจะรั่วข้ามวิชาชีพ",
+      r.ev, "เพิ่มการจำกัดที่ฐานข้อมูล ไม่ใช่เฉพาะที่หน้าจอ");
   }
 
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */

@@ -317,6 +317,52 @@ var CSBackend = (function () {
      เพื่อไม่ต้องยิงหลายคำสั่งบนมือถือที่สัญญาณไม่ดี
      view นี้เปิดเฉพาะ care_manager/admin — บริษัทประกันอ่านไม่ได้
      ============================================================ */
+  /* ---------- งานของฉัน ----------
+     view my_work กรองด้วย auth.uid() ในตัวมันเอง ไม่ได้พึ่งการกรองที่หน้าจอ
+     ผู้ประสานงานได้เคสที่ตนรับผิดชอบ (หรือยังไม่มีใครรับ)
+     วิชาชีพได้เฉพาะรายการส่งต่อที่มาถึงวิชาชีพตน */
+  async function myWork() {
+    if (!isCloud()) return [];
+    var r = await sb.from("my_work").select("*").order("due_at", { ascending: true }).limit(200);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  /* กดรับเคสส่งต่อ — บันทึกว่าใครรับไปทำ ที่ฐานข้อมูล ไม่ใช่แค่ในหน้าจอ */
+  async function claimReferral(id) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("claim_referral", { rid: id });
+    if (r.error) throw r.error;
+    return true;
+  }
+  /* รายการส่งต่อที่ส่งมาถึงฉัน — RLS จำกัดให้เห็นเฉพาะของวิชาชีพตนอยู่แล้ว */
+  async function myReferrals() {
+    if (!isCloud()) return [];
+    var r = await sb.from("referrals")
+      .select("*, profiles!referrals_user_id_fkey(pseudonym, display_name, birth_year_be, sex)")
+      .order("created_at", { ascending: false }).limit(200);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+
+  /* ---------- จัดการผู้ใช้ (เฉพาะ admin) ----------
+     การเปลี่ยนบทบาทถูกล็อกด้วย trigger guard_role_change ที่ฐานข้อมูล
+     บัญชีที่ไม่ใช่ admin จะถูกปฏิเสธแม้แก้โค้ดหน้าเว็บ */
+  async function listStaff() {
+    if (!isCloud()) return [];
+    var r = await sb.from("profiles")
+      .select("id, role, display_name, pseudonym, created_at")
+      .neq("role", "user").order("role", { ascending: true });
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function setRole(id, role) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.from("profiles").update({ role: role }).eq("id", id).select().single();
+    if (r.error) throw r.error;
+    await audit("set_role", id, "เปลี่ยนบทบาทเป็น " + role);
+    return r.data;
+  }
+
   async function cmWorklist() {
     if (!isCloud()) return [];
     var r = await sb.from("cm_worklist").select("*").order("priority", { ascending: true }).limit(200);
@@ -975,6 +1021,8 @@ var CSBackend = (function () {
     myCases: myCases, caseQueue: caseQueue, updateCase: updateCase,
     updateReferral: updateReferral,
     cmWorklist: cmWorklist, logContact: logContact, caseDetail: caseDetail,
+    myWork: myWork, claimReferral: claimReferral, myReferrals: myReferrals,
+    listStaff: listStaff, setRole: setRole,
     createReferralFor: createReferralFor,
     insurerFunnel: insurerFunnel, insurerStrata: insurerStrata, insurerSignals: insurerSignals,
     listMeds: listMeds, saveMed: saveMed, retireMed: retireMed,
