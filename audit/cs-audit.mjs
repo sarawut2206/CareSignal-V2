@@ -1,0 +1,639 @@
+/* ============================================================
+   CareSignal — AI-assisted Requirements, Workflow and
+   Prototype Compliance Auditor
+   ------------------------------------------------------------
+   บทบาท: ตรวจว่า "โปรแกรมตรงกับแผนงานหรือไม่"
+   ไม่ใช่ผู้รับรองทางคลินิก และไม่ใช่ผู้ยืนยันว่าระบบพร้อมใช้จริง
+
+   หลักที่ยึด 4 ข้อ
+   1. ตัวตรวจอยู่ "นอก" ระบบหลัก — อ่านอย่างเดียว ไม่แก้ ไม่เปลี่ยน
+      ระดับความเสี่ยง ไม่แตะฐานข้อมูล
+   2. ทุกข้อสรุปต้องมีหลักฐานชี้ได้ (ไฟล์ + รูปแบบที่ค้นเจอ หรือ
+      ผลรันเอนจินจริง) — ห้ามสรุปจากความจำ
+   3. สิ่งที่ตรวจด้วยการอ่านโค้ดไม่ได้ ต้องรายงานว่า
+      "ไม่สามารถตรวจยืนยันได้" ห้ามนับเป็นผ่าน
+   4. ห้ามสรุปว่าผ่าน clinical validation โดยเด็ดขาด
+      เพราะยังไม่มีผลการศึกษาในระบบนี้
+
+   วิธีรัน:  node audit/cs-audit.mjs
+   ผลลัพธ์:  audit/report-latest.md  และสรุปบนหน้าจอ
+   ============================================================ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const cache = new Map();
+const read = (f) => {
+  if (!cache.has(f)) {
+    const p = path.join(ROOT, f);
+    cache.set(f, fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null);
+  }
+  return cache.get(f);
+};
+const lineOf = (f, re) => {
+  const s = read(f); if (!s) return null;
+  const m = s.match(re); if (!m) return null;
+  return s.slice(0, m.index).split("\n").length;
+};
+/* หาว่ารูปแบบนี้อยู่ในไฟล์ไหนบ้าง คืนหลักฐานเป็น file:line */
+function findIn(files, re) {
+  const hits = [];
+  for (const f of files) {
+    const ln = lineOf(f, re);
+    if (ln) hits.push(`${f}:${ln}`);
+  }
+  return hits;
+}
+
+const APPS   = ["CareSignal-App.html", "CareSignal-Vision.html"];
+const STAFF  = ["CareSignal-Staff.html"];
+const WEBS   = ["CareSignal-Web.html", "index.html", "CareSignal-Flow.html",
+                "CareSignal-Portfolio-Dashboard.html"];
+const BACK   = ["cs-backend.js", "cs-meds.js"];
+const SQL    = fs.readdirSync(path.join(ROOT, "supabase"))
+                 .filter(f => f.endsWith(".sql")).map(f => "supabase/" + f);
+const ALL    = [...APPS, ...STAFF, ...WEBS, ...BACK, ...SQL];
+
+/* ---------- โครงผลลัพธ์ ---------- */
+const F = [];   /* findings */
+const R = [];   /* requirement rows */
+const SEV = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+function req(layer, id, requirement, status, evidence, note = "") {
+  R.push({ layer, id, requirement, status, evidence, note });
+}
+function finding(sev, id, title, detail, evidence, fix) {
+  F.push({ sev, id, title, detail, evidence, fix });
+}
+
+/* ============================================================
+   ชั้นที่ 1 — ความครบถ้วนของฟีเจอร์ (requirement traceability)
+   ============================================================ */
+function layer1() {
+  const items = [
+    ["F-01", "Consent — มีหน้าขอความยินยอมและบันทึกเวลา",
+      () => {
+        const ui = findIn(APPS, /ยินยอม/);
+        const store = findIn(BACK, /grantConsent/);
+        const ts = findIn(SQL, /create table[\s\S]{0,200}consents[\s\S]{0,400}granted_at|consents[\s\S]{0,300}created_at/);
+        return { ok: ui.length && store.length, ev: [...ui, ...store, ...ts].slice(0, 3) };
+      }],
+    ["F-02", "Falls history — บันทึกย้อนหลัง 12 เดือน",
+      () => {
+        const ui = findIn(APPS, /12 เดือน/);
+        const col = findIn(SQL, /falls_detail/);
+        return { ok: ui.length && col.length, ev: [...ui, ...col].slice(0, 3) };
+      }],
+    ["F-03", "Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร",
+      () => {
+        const ocr = findIn(APPS, /ocrLoad/);
+        const confirm = findIn(APPS, /confirmBox/);
+        const queue = findIn(BACK, /medReviewQueue/);
+        return { ok: ocr.length && confirm.length && queue.length,
+                 ev: [...ocr, ...confirm, ...queue].slice(0, 3) };
+      }],
+    ["F-04", "FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล",
+      () => {
+        const gate = findIn(APPS, /safetyVerdict|SAFETY_Q/);
+        const cols = findIn(SQL, /ftsst_seconds/);
+        const tug = findIn(SQL, /tug_seconds/);
+        return { ok: gate.length && cols.length && tug.length,
+                 ev: [...gate, ...cols, ...tug].slice(0, 3) };
+      }],
+    ["F-05", "Barthel ADL — คำนวณและแสดงแนวโน้ม",
+      () => {
+        const calc = findIn(APPS, /BARTHEL/);
+        const trend = findIn(APPS, /lineChart|trendSummary/);
+        return { ok: calc.length && trend.length, ev: [...calc, ...trend].slice(0, 3) };
+      }],
+    ["F-06", "Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ",
+      () => {
+        const eng = findIn(APPS, /function trajectory/);
+        const rules = findIn(APPS, /baselineRisk/);
+        const sig = findIn(APPS, /SIGNAL_DEFS/);
+        return { ok: eng.length && rules.length && sig.length,
+                 ev: [...eng, ...rules, ...sig].slice(0, 3) };
+      }],
+    ["F-07", "Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด",
+      () => {
+        const ui = findIn(STAFF, /CASE_STEPS/);
+        const db = findIn(SQL, /cs_case_status/);
+        return { ok: ui.length && db.length, ev: [...ui, ...db].slice(0, 3) };
+      }],
+    ["F-08", "Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ",
+      () => {
+        const who = findIn(SQL, /decided_by/);
+        const st = findIn(SQL, /cs_referral_status/);
+        const upd = findIn(BACK, /updateReferral/);
+        return { ok: who.length && st.length && upd.length,
+                 ev: [...who, ...st, ...upd].slice(0, 3) };
+      }],
+    ["F-09", "Follow-up — มี due date และการเตือนเมื่อเกินกำหนด",
+      () => {
+        const due = findIn(SQL, /due_at/);
+        const over = findIn(STAFF, /overdue/);
+        return { ok: due.length && over.length, ev: [...due, ...over].slice(0, 3) };
+      }],
+    ["F-10", "Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด",
+      () => {
+        const tbl = findIn(SQL, /audit_logs/);
+        const fn = findIn(BACK, /async function audit\(/);
+        const immutable = findIn(SQL, /audit[\s\S]{0,600}(no update|ห้ามแก้|แก้ไม่ได้)/i);
+        return { ok: tbl.length && fn.length, ev: [...tbl, ...fn, ...immutable].slice(0, 3) };
+      }],
+    ["F-11", "Insurer dashboard — aggregate / de-identified เท่านั้น",
+      () => {
+        const view = findIn(SQL, /insurer_outcomes/);
+        const supp = findIn(SQL, /cs_min_cell/);
+        /* ต้องไม่มีคอลัมน์คลินิกรายคนใน view ของบริษัทประกัน */
+        const sql = SQL.map(read).join("\n");
+        const block = sql.split("create or replace view public.insurer_portfolio").pop() || "";
+        const leak = /ftsst_seconds|tug_seconds|\bscore\b/.test(block.slice(0, 1200));
+        return { ok: view.length && supp.length && !leak,
+                 ev: [...view, ...supp].slice(0, 3),
+                 note: leak ? "พบคอลัมน์คลินิกรายคนใน insurer_portfolio" : "" };
+      }],
+    ["F-12", "Case ownership — บันทึกว่าใครรับผิดชอบเคส",
+      () => {
+        const col = findIn(SQL, /assigned_to/);
+        const set = findIn(BACK, /assigned_to:\s*u\.id/);
+        return { ok: col.length && set.length, ev: [...col, ...set].slice(0, 3) };
+      }],
+  ];
+  for (const [id, name, fn] of items) {
+    const r = fn();
+    const status = r.ok ? "PASS" : (r.ev.length ? "PARTIAL" : "MISSING");
+    req(1, id, name, status, r.ev.join(" · "), r.note || "");
+    if (status !== "PASS") {
+      finding(r.ev.length ? "MEDIUM" : "HIGH", id, "ฟีเจอร์ไม่ครบ: " + name,
+        r.note || "ตรวจไม่พบหลักฐานครบทุกส่วนของข้อกำหนดนี้",
+        r.ev.join(" · ") || "(ไม่พบหลักฐาน)",
+        "เพิ่มส่วนที่ขาด หรือแก้ข้อกำหนดให้ตรงกับสิ่งที่ระบบทำจริง");
+    }
+  }
+}
+
+/* ============================================================
+   ชั้นที่ 2 — Workflow แบบ End-to-End
+   ตรวจว่า "เคสเดินได้จริงตั้งแต่ต้นจนจบ" ไม่ใช่แค่มีปุ่ม
+   ============================================================ */
+function layer2() {
+  const staff = read("CareSignal-Staff.html") || "";
+  const back  = read("cs-backend.js") || "";
+  const sql   = SQL.map(read).join("\n");
+
+  const steps = [
+    ["W-01", "ระบบรับข้อมูลครบ (safety gate → falls → meds → FTSST → TUG → ADL)",
+      /safety_gate/.test(sql) && /falls_detail/.test(sql) && /meds_detail/.test(sql)],
+    ["W-02", "สร้าง Red signal จากเอนจิน", /out\.level\s*=/.test(read("CareSignal-Vision.html") || "")],
+    ["W-03", "เปิดเคสให้ Care Manager อัตโนมัติ", /open_case_on_signal/.test(sql)],
+    ["W-04", "แสดงเหตุผลของระดับ (อธิบายได้)", /why/.test(staff) && /SIGNAL_DEFS/.test(read("CareSignal-Vision.html") || "")],
+    ["W-05", "มีผู้รับผิดชอบเคส", /assigned_to/.test(sql)],
+    ["W-06", "มีวันครบกำหนดติดต่อ (SLA)", /sla_hours/.test(sql) && /due_at/.test(sql)],
+    ["W-07", "ส่งต่อเภสัชกร/แพทย์ได้", /createReferralFor/.test(back) && /destination/.test(sql)],
+    ["W-08", "แจ้งครอบครัวตาม consent", /notify_family|family_notifications/.test(sql)],
+    ["W-09", "บันทึกผลการตรวจโดยผู้เชี่ยวชาญ", /closeMedReview/.test(back) && /outcome/.test(sql)],
+    ["W-10", "สร้างงานติดตาม (follow-up)", /follow_ups/.test(sql) && /scheduleFollowUps/.test(back)],
+    ["W-11", "ปิดเคสต้องมีคนกด ไม่ปิดอัตโนมัติ", null],  /* ตรวจแยกด้านล่าง */
+    ["W-12", "มี audit log ทุกขั้นตอนสำคัญ",
+      /case\.update/.test(back) && /contact\.log/.test(back) && /referral\.update/.test(back)],
+  ];
+
+  for (const [id, name, ok] of steps) {
+    if (ok === null) continue;
+    req(2, id, name, ok ? "PASS" : "MISSING", ok ? "ตรวจพบในซอร์ส" : "(ไม่พบ)");
+    if (!ok) finding("HIGH", id, "สายงานขาดตอน: " + name,
+      "ขั้นตอนนี้จำเป็นต่อการเดินเคสจนจบ แต่ตรวจไม่พบในระบบ",
+      "(ไม่พบ)", "เพิ่มขั้นตอนนี้ หรือระบุในแผนว่าจงใจไม่ทำในรุ่นนี้");
+  }
+
+  /* W-11: ช่องโหว่ที่ผู้ใช้ระบุว่าสำคัญ — ปิดเคสอัตโนมัติโดยไม่ผ่านคน */
+  const autoCloseTrigger = /update\s+care_cases[\s\S]{0,300}status\s*=\s*'(stable|closed)'/i.test(sql);
+  const closers = [];
+  for (const m of back.matchAll(/status\s*[:=]\s*["'](stable|closed)["']/g)) {
+    const ln = back.slice(0, m.index).split("\n").length;
+    closers.push(`cs-backend.js:${ln}`);
+  }
+  /* ทุกจุดที่ปิดเคสต้องอยู่ในฟังก์ชันที่ต้องมี session ของเจ้าหน้าที่ */
+  const guarded = /async function updateCase[\s\S]{0,260}currentUser\(\)/.test(back)
+               && /async function logContact[\s\S]{0,260}currentUser\(\)/.test(back);
+  const rlsGuard = /create policy cases_staff[\s\S]{0,160}cs_is_staff\(\)/.test(sql);
+  const ok11 = !autoCloseTrigger && guarded && rlsGuard;
+  req(2, "W-11", "ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ",
+      ok11 ? "PASS" : "VIOLATION",
+      `จุดที่เปลี่ยนเป็น stable/closed: ${closers.join(" · ") || "(ไม่พบ)"} · RLS cases_staff: ${rlsGuard}`);
+  if (!ok11) finding("CRITICAL", "W-11", "เคสถูกปิดได้โดยไม่ผ่านการตัดสินของคน",
+    autoCloseTrigger ? "พบทริกเกอร์ในฐานข้อมูลที่ตั้งสถานะเป็น stable/closed เอง"
+                     : "จุดปิดเคสไม่ได้บังคับว่าต้องมี session ของเจ้าหน้าที่ หรือ RLS ไม่ได้จำกัดบทบาท",
+    closers.join(" · "), "บังคับให้ทุกการปิดเคสมาจากการกระทำของเจ้าหน้าที่ และตรวจสิทธิ์ที่ฐานข้อมูล");
+
+  /* ลำดับสถานะต้องตรงกันระหว่าง UI กับฐานข้อมูล */
+  /* ต้องอ่านเฉพาะบล็อก CASE_STEPS — ในไฟล์เดียวกันมี CONTACT_RESULTS
+     ที่ใช้รูปแบบ {k:"...",nm:...} เหมือนกัน ถ้าไม่แยกจะปนกันจนรายงานเท็จ */
+  const stepBlock = (staff.match(/var CASE_STEPS=\[([\s\S]*?)\];/) || [])[1] || "";
+  const uiSteps = [...stepBlock.matchAll(/\{k:"([a-z_]+)"/g)].map(m => m[1]);
+  /* ค่า enum มาจากสองที่: create type ตอนแรก และ alter type ... add value ที่เพิ่มภายหลัง */
+  const enumBlock = (sql.match(/create type cs_case_status as enum \(([\s\S]*?)\);/) || [])[1] || "";
+  const dbSteps = [
+    ...[...enumBlock.matchAll(/'([a-z_]+)'/g)].map(m => m[1]),
+    ...[...sql.matchAll(/alter type cs_case_status add value if not exists '([a-z_]+)'/g)].map(m => m[1]),
+  ];
+  const extraInDb = dbSteps.filter(s => !uiSteps.includes(s) && s !== "closed");
+  const extraInUi = uiSteps.filter(s => !dbSteps.includes(s));
+  const sync = extraInUi.length === 0;
+  req(2, "W-13", "สถานะใน UI ต้องมีอยู่จริงในฐานข้อมูล",
+      sync ? "PASS" : "VIOLATION",
+      `UI: ${uiSteps.join(",")} · DB: ${dbSteps.join(",")}`,
+      extraInDb.length ? "สถานะที่มีใน DB แต่ UI ไม่ใช้: " + extraInDb.join(",") : "");
+  if (!sync) finding("HIGH", "W-13", "UI ใช้สถานะที่ฐานข้อมูลไม่รู้จัก",
+    "การบันทึกจะล้มเหลวตอนรันจริง", extraInUi.join(","), "เพิ่มค่าใน enum หรือแก้ UI");
+}
+
+/* ============================================================
+   ชั้นที่ 3 — ตรวจว่าโปรแกรมทำเกินขอบเขตหรือไม่
+   ============================================================ */
+function layer3() {
+  /* รูปแบบที่ "ห้ามมี" — เขียนให้จับพฤติกรรมจริง ไม่ใช่จับคำในประโยคปฏิเสธ */
+  const banned = [
+    ["S-01", "CRITICAL", "ระบบวินิจฉัยโรค",
+      /(?:คุณ|ท่าน|ผู้ป่วย)(?:เป็น|มีภาวะ|ป่วยเป็น)(?:โรค)/, ALL],
+    ["S-02", "CRITICAL", "ระบบยืนยันว่าจะหกล้มแน่นอน",
+      /จะหกล้มแน่|หกล้มแน่นอน|ทำนายว่าจะล้ม/, ALL],
+    ["S-03", "CRITICAL", "ระบบสั่งหยุดยา",
+      /(?:ให้|กรุณา|ควร|จง)หยุดยา(?!เอง)/, ALL],
+    ["S-04", "CRITICAL", "ระบบสั่งปรับขนาดยาเอง",
+      /(?:ให้|ควร)(?:ลด|เพิ่ม)ขนาดยา/, ALL],
+    ["S-05", "CRITICAL", "ระบบอนุมัติหรือปฏิเสธเคลม",
+      /(?:อนุมัติ|ปฏิเสธ)(?:การ)?(?:เคลม|สินไหม)(?!.{0,40}ไม่)/, ALL],
+    ["S-06", "CRITICAL", "ระบบคำนวณเบี้ยจากความเสี่ยง",
+      /ageMult\s*:|sexMult\s*:|premium\s*=\s*[a-z0-9]/i, ALL],
+    ["S-07", "HIGH", "ระบบให้ส่วนลดหรือปรับสิทธิประโยชน์",
+      /discount\s*:\s*\{|ส่วนลดปีต่ออายุ\s*(?:สูงสุด|=)/, ALL],
+    ["S-08", "HIGH", "ระบบกำหนดหรือปรับระยะรอคอย",
+      /waitChronic|waitAcute|chronicCutPerAssess/, ALL],
+    ["S-09", "CRITICAL", "เปิดเผยข้อมูลสุขภาพรายคนให้บริษัทประกันเกินความยินยอม",
+      null, null],   /* ตรวจแยก */
+    ["S-10", "CRITICAL", "AI ตัดสิน balance pass/fail เองโดยไม่ผ่านคน",
+      null, null],   /* ตรวจแยก */
+  ];
+
+  for (const [id, sev, name, re, files] of banned) {
+    if (!re) continue;
+    const hits = [];
+    for (const f of files) {
+      const s = read(f); if (!s) continue;
+      for (const m of s.matchAll(new RegExp(re.source, "g"))) {
+        const before = s.slice(Math.max(0, m.index - 110), m.index).replace(/\s+/g, " ");
+        const after  = s.slice(m.index, m.index + 110).replace(/\s+/g, " ");
+        /* ข้าม 3 กรณีที่ไม่ใช่การละเมิด:
+           1. ประโยคปฏิเสธ ("ระบบไม่อนุมัติสินไหม")
+           2. ประโยคที่ระบุว่าคนเป็นผู้ตัดสิน ("การอนุมัติสินไหมตัดสินโดยผู้เชี่ยวชาญ")
+           3. คอมเมนต์ที่อธิบายว่าถอดออกแล้ว */
+        if (/ไม่|ห้าม|เลิก|ถอด|ตัด(?!สิน)|ออกแล้ว|removed|no longer/i.test(before)) continue;
+        if (/ตัดสินโดย|เป็นของ|ทำโดย|เป็นหน้าที่ของ|ผู้เชี่ยวชาญ|บริษัทประกัน|แพทย์/.test(after)) continue;
+        const ln = s.slice(0, m.index).split("\n").length;
+        hits.push(`${f}:${ln} «${m[0]}»`);
+      }
+    }
+    req(3, id, "ต้องไม่มี: " + name, hits.length ? "VIOLATION" : "PASS",
+        hits.slice(0, 3).join(" · ") || "ไม่พบ");
+    if (hits.length) finding(sev, id, "ทำเกินขอบเขต: " + name,
+      "พบรูปแบบที่บ่งชี้ว่าระบบทำสิ่งที่ประกาศไว้ว่าไม่ทำ",
+      hits.slice(0, 5).join(" · "), "ลบพฤติกรรมนี้ หรือแก้คำประกาศขอบเขตให้ตรงความจริง");
+  }
+
+  /* S-09 — บริษัทประกันต้องไม่เห็นค่าคลินิกรายคน */
+  const sql = SQL.map(read).join("\n");
+  const pf = sql.split("create or replace view public.insurer_portfolio").pop() || "";
+  const head = pf.slice(0, 1400);
+  const leaks = ["ftsst_seconds", "tug_seconds", "score", "display_name", "phone", "meds_detail"]
+    .filter(c => new RegExp("\\b" + c + "\\b").test(head));
+  req(3, "S-09", "ต้องไม่มี: เปิดเผยข้อมูลรายคนให้บริษัทประกันเกินจำเป็น",
+      leaks.length ? "VIOLATION" : "PASS",
+      leaks.length ? "พบใน insurer_portfolio: " + leaks.join(",") : "insurer_portfolio ไม่มีคอลัมน์คลินิก/ระบุตัวตน");
+  if (leaks.length) finding("CRITICAL", "S-09", "บริษัทประกันเห็นข้อมูลรายคนเกินจำเป็น",
+    "คอลัมน์เหล่านี้เป็นข้อมูลสุขภาพหรือระบุตัวบุคคล", leaks.join(","),
+    "ถอดคอลัมน์ออกจาก view หรือย้ายไปมุมมองของทีมดูแลเท่านั้น");
+
+  /* S-10 — balance ต้องให้คนยืนยัน และต้องไม่อยู่ในคะแนนหลัก */
+  const vis = read("CareSignal-Vision.html") || "";
+  const app = read("CareSignal-App.html") || "";
+  const humanConfirm = /bcPass/.test(vis) && /bcPass/.test(app);
+  const notInScore = !/parts\.ftsst\s*\+\s*parts\.balance/.test(vis.replace(/\s/g, " "))
+                  && !/s\+=parts\.balance/.test(app.replace(/\s/g, ""));
+  const noTorsoFail = !/ตัวเลื่อนจากตำแหน่งเดิมมาก/.test(vis) && !/ตัวเลื่อนจากตำแหน่งเดิมมาก/.test(app);
+  const ok10 = humanConfirm && notInScore && noTorsoFail;
+  req(3, "S-10", "ต้องไม่มี: AI ตัดสิน balance pass/fail เอง",
+      ok10 ? "PASS" : "VIOLATION",
+      `ปุ่มยืนยันโดยคน: ${humanConfirm} · ไม่อยู่ในคะแนนหลัก: ${notInScore} · ไม่ใช้ลำตัวตัดสิน: ${noTorsoFail}`);
+  if (!ok10) finding("CRITICAL", "S-10", "AI ตัดสินผลการทรงตัวเองทั้งที่ยังไม่ผ่าน validation",
+    "ต้องให้ผู้ดูแลเป็นผู้ยืนยัน และผลนี้ต้องไม่เข้าคะแนนหลัก",
+    `human=${humanConfirm} score=${notInScore} torso=${noTorsoFail}`,
+    "คืนการตัดสินให้คน และถอดออกจากคะแนนหลัก");
+}
+
+/* ============================================================
+   ชั้นที่ 4 — Rules Engine (รันเอนจินจริง เทียบ expected vs actual)
+   ============================================================ */
+function grab(src, marker) {
+  const i = src.indexOf(marker);
+  if (i < 0) throw new Error("ไม่พบ " + marker);
+  let d = 0, started = false;
+  for (let j = i; j < src.length; j++) {
+    const c = src[j];
+    if (c === "{" || c === "[" || c === "(") { d++; started = true; }
+    else if (c === "}" || c === "]" || c === ")") {
+      d--;
+      if (started && d === 0) {
+        if (marker.includes("function") && c === ")") continue;
+        return src.slice(i, j + 1) + ";";
+      }
+    }
+  }
+  throw new Error("วงเล็บไม่ปิด: " + marker);
+}
+function loadEngine() {
+  const src = read("CareSignal-Vision.html");
+  const code = [
+    "var S={data:{assessments:[],profile:null},draft:{}};",
+    "function daysBetween(a,b){return Math.max(0,Math.round((new Date(b)-new Date(a))/864e5))}",
+    "function nowISO(){return new Date().toISOString()}",
+    grab(src, "var CFG={"), grab(src, "var ENGINE={"), grab(src, "var BAL_STAGES="),
+    grab(src, "function ftsstPoints("), grab(src, "function scoreOf("),
+    grab(src, "var FRID_GROUPS="), grab(src, "function fridScore("),
+    grab(src, "function baselineRisk("), grab(src, "var SIGNAL_DEFS="),
+    grab(src, "function toSignals("), grab(src, "function hasADLFlag("),
+    grab(src, "function trajectory("),
+  ].join("\n");
+  return new Function(code +
+    "\nreturn {trajectory, scoreOf, setA:a=>S.data.assessments=a, setP:p=>S.data.profile=p};")();
+}
+
+function layer4() {
+  let E;
+  try { E = loadEngine(); }
+  catch (e) {
+    req(4, "E-00", "โหลดเอนจินเพื่อทดสอบ", "UNVERIFIABLE", "-", "โหลดไม่สำเร็จ: " + e.message);
+    finding("HIGH", "E-00", "ตรวจเอนจินไม่ได้", e.message, "-", "แก้โครงสร้างให้ดึงมาทดสอบได้");
+    return;
+  }
+  /* tier ต้องคำนวณจากคะแนนจริง ไม่ใช่ตั้งค่าตายตัว
+     เอนจินใช้ last.tier ตัดสินระดับด้วย ถ้า mock ตั้ง tier ไม่ตรงคะแนน
+     ผลที่ได้จะสะท้อนข้อมูลทดสอบที่ผิด ไม่ใช่พฤติกรรมของเอนจิน */
+  const tierOf = (s) => (s >= 8 ? 4 : s >= 6 ? 3 : s >= 4 ? 2 : 1);
+  const mk = (o) => {
+    const pf = o.pf ?? 3, pfa = o.pfa ?? 2, pm = o.pm ?? 1, pa = o.pa ?? 2;
+    const sc = o.score ?? (pf + pfa + pm + pa);
+    return {
+    at: o.at || "2026-08-01", score: sc, max: 9, tier: o.tier ?? tierOf(sc),
+    ftsst: o.ftsst ?? 11, tug: o.tug ?? null, tugDistanceOk: o.tug ? true : null,
+    balPassed: o.bal ?? 3, barthelTotal: o.bar ?? 20, cv: o.cv ?? 0.1,
+    parts: { ftsst: pf, balance: o.pb ?? 2, falls: pfa, meds: pm, adl: pa },
+    fallsDetail: o.falls || { count: 0 }, medsDetail: o.meds || {},
+    steadi: o.steadi || {}, notTested: o.notTested || false,
+  };};
+  /* กรณีทดสอบ: input → expected (มาจากกฎที่ประกาศไว้ ไม่ใช่จากผลที่ระบบให้) */
+  const cases = [
+    ["E-01", "ไม่เคยหกล้ม ผลคงที่ → เขียว", 70,
+      [mk({}), mk({ at: "2026-08-20" })], (r) => r.level === "stable"],
+    ["E-02", "หกล้ม 1 ครั้ง ไม่มีสัญญาณอื่น → อย่างน้อยเฝ้าสังเกต", 70,
+      [mk({ falls: { count: 1 } })], (r) => ["watch", "decline", "urgent"].includes(r.level)],
+    ["E-03", "หกล้ม 2 ครั้งใน 12 เดือน → เร่งด่วน (ตั้งแต่ครั้งแรก)", 70,
+      [mk({ falls: { count: 2 } })], (r) => r.level === "urgent"],
+    ["E-04", "ล้มแล้วลุกเองไม่ได้ → เร่งด่วน", 70,
+      [mk({ falls: { count: 1, getup: 3 } })], (r) => r.level === "urgent"],
+    ["E-05", "TUG ≥ 12 วินาที → เปิดสัญญาณการเดิน (S5)", 70,
+      [mk({ tug: 14 })], (r) => r.signals.some(s => s.k === "S5")],
+    ["E-06", "ยากลุ่มเสี่ยงสูง 2 กลุ่ม + ทรงตัวบกพร่อง → S3 ส่งเภสัชกร", 70,
+      [mk({ meds: { count: 2, purposes: ["sleep", "anx"] }, pb: 1 })],
+      (r) => r.signals.some(s => s.k === "S3" && s.dest === "pharmacist")],
+    ["E-07", "Safety gate หยุดทดสอบ → S7 ธงแดงความปลอดภัย", 70,
+      [mk({ notTested: true })], (r) => r.signals.some(s => s.k === "S7") && r.level === "urgent"],
+    ["E-08", "ADL ลดลงจากครั้งก่อน → S6 ส่งพยาบาล", 70,
+      [mk({ pa: 2 }), mk({ at: "2026-08-20", pa: 1 })],
+      (r) => r.signals.some(s => s.k === "S6" && s.dest === "nurse")],
+    ["E-09", "ทุกระดับที่ไม่ใช่เขียว ต้องเปิดเคส", 70,
+      [mk({ falls: { count: 2 } })], (r) => r.opensCase === true],
+    ["E-10", "การทรงตัวไม่มีผลต่อคะแนนรวม", 70, null,
+      () => E.scoreOf({ ftsst: 10, balance: 0, falls: 2, meds: 1, adl: 2 }, 70).score
+         === E.scoreOf({ ftsst: 10, balance: 3, falls: 2, meds: 1, adl: 2 }, 70).score],
+  ];
+
+  for (const [id, name, age, hist, expect] of cases) {
+    let actual = null, pass = false, detail = "";
+    try {
+      if (hist) {
+        E.setP({ age }); E.setA(hist);
+        actual = E.trajectory();
+        pass = expect(actual);
+        detail = `level=${actual.level} signals=[${actual.signals.map(s => s.k).join(",")}] rules=[${actual.flags.map(f => f.id).join(",")}]`;
+      } else {
+        pass = expect();
+        detail = "score(balance=0) === score(balance=3)";
+      }
+    } catch (e) { detail = "error: " + e.message; }
+    req(4, id, name, pass ? "PASS" : "VIOLATION", detail);
+    if (!pass) finding("HIGH", id, "เอนจินให้ผลไม่ตรงกฎที่ประกาศ: " + name,
+      "ผลจริงต่างจากที่กฎกำหนดไว้", detail,
+      "แก้กฎในเอนจิน หรือแก้ข้อกำหนดให้ตรงกับพฤติกรรมที่ต้องการ");
+  }
+}
+
+/* ============================================================
+   ชั้นที่ 5 — สิทธิ์และข้อมูลส่วนบุคคล
+   ============================================================ */
+function layer5() {
+  const sql = SQL.map(read).join("\n");
+  const back = read("cs-backend.js") || "";
+
+  const checks = [
+    ["P-01", "ทุกตารางข้อมูลส่วนบุคคลเปิด RLS",
+      () => {
+        const tables = ["profiles", "assessments", "risk_signals", "referrals", "care_cases",
+                        "medications", "med_reviews", "contact_log", "care_events", "care_plans", "follow_ups"];
+        /* ไฟล์จริงจัดคอลัมน์ด้วยช่องว่างหลายตัว เช่น
+           "alter table public.profiles      enable row level security;"
+           regex เดิมบังคับช่องว่างเดียว จึงรายงานเท็จว่าไม่มี RLS */
+        const missing = tables.filter(t =>
+          !new RegExp(`alter table\\s+public\\.${t}\\s+enable row level security`).test(sql));
+        return { ok: !missing.length, ev: missing.length ? "ขาด: " + missing.join(",") : `ครบ ${tables.length} ตาราง` };
+      }],
+    ["P-02", "บริษัทประกันเข้าไม่ถึงคิวงานรายเคส",
+      () => {
+        const ok = /create or replace view public\.cm_worklist[\s\S]{0,3000}cs_is_staff\(\)/.test(sql)
+                && /cs_is_staff[\s\S]{0,200}care_manager','admin'/.test(sql);
+        return { ok, ev: "cm_worklist มี cs_is_staff() และ cs_is_staff ไม่รวม insurer" };
+      }],
+    ["P-03", "ครอบครัวเห็นข้อมูลเฉพาะที่ได้รับอนุญาตรายข้อ",
+      () => {
+        const ok = /permissions->>'meds'/.test(sql) && /permissions->>'status'/.test(sql)
+                && /l\.status='approved'/.test(sql);
+        return { ok, ev: "policy ตรวจ permissions รายคีย์ + ต้อง approved" };
+      }],
+    ["P-04", "รูปซองยาเก็บใน bucket ส่วนตัว path ผูกกับเจ้าของ",
+      () => {
+        const ok = /'med-photos'[\s\S]{0,200}false/.test(sql)
+                && /storage\.foldername\(name\)\)\[1\] = auth\.uid\(\)::text/.test(sql);
+        return { ok, ev: "bucket private + path ขึ้นต้นด้วย user_id" };
+      }],
+    ["P-05", "การแยกกลุ่มระดับพอร์ตกดตัวเลขเมื่อกลุ่มเล็ก",
+      () => {
+        const ok = /cs_min_cell\(\)/.test(sql) && /suppressed/.test(sql);
+        return { ok, ev: "insurer_strata ใช้ cs_min_cell() และมีธง suppressed" };
+      }],
+    ["P-06", "ทุกการเปิดดูข้อมูลผู้อื่นเขียน audit log",
+      () => {
+        const acts = ["portfolio.view", "case.open", "worklist.view", "case.queue"];
+        const found = acts.filter(a => back.includes(a));
+        return { ok: found.length >= 3, ev: "พบ: " + found.join(",") };
+      }],
+    ["P-07", "ความยินยอมถอนได้และมีบันทึกเวลา",
+      () => {
+        const ok = /revokeConsent|withdrawConsent/.test(back) || /granted:\s*false/.test(back);
+        return { ok, ev: ok ? "พบเส้นทางถอนความยินยอม" : "ไม่พบ" };
+      }],
+  ];
+  for (const [id, name, fn] of checks) {
+    const r = fn();
+    req(5, id, name, r.ok ? "PASS" : "VIOLATION", r.ev);
+    if (!r.ok) finding("CRITICAL", id, "ช่องโหว่ด้านสิทธิ์ข้อมูล: " + name,
+      "อาจทำให้ข้อมูลไปถึงคนที่ไม่ควรเห็น", r.ev, "แก้ policy หรือ view ให้ปิดช่องนี้");
+  }
+}
+
+/* ============================================================
+   ชั้นที่ 6 — สิ่งที่ "ตรวจด้วยการอ่านโค้ดไม่ได้"
+   ต้องประกาศตรง ๆ ห้ามนับเป็นผ่าน
+   ============================================================ */
+function layer6() {
+  const unverifiable = [
+    ["U-01", "ความแม่นยำของ OCR กับฉลากยาไทยของจริง",
+      "ทดสอบกับภาพสังเคราะห์เท่านั้น ยังไม่มีชุดภาพฉลากจริงที่มีเฉลย"],
+    ["U-02", "ความแม่นยำของการตรวจจับท่าทางเทียบผู้เชี่ยวชาญ",
+      "ยังไม่มีการวัดคู่ขนานกับนักกายภาพบำบัด"],
+    ["U-03", "ความถูกต้องของการจัดระดับความเสี่ยงในทางคลินิก",
+      "กฎมาจากวรรณกรรม แต่ยังไม่ได้ validate กับผลลัพธ์จริงในประชากรไทย"],
+    ["U-04", "ประสิทธิผลในการลดการหกล้มหรือลดการเคลม",
+      "ยังไม่มีข้อมูลนำร่องและไม่มีกลุ่มเปรียบเทียบ"],
+    ["U-05", "ความปลอดภัยของการให้ผู้สูงอายุทดสอบเองที่บ้าน",
+      "มี Safety Gate แต่ยังไม่มีข้อมูลเหตุการณ์ไม่พึงประสงค์จากการใช้จริง"],
+    ["U-06", "ความทนทานของระบบรู้จำเสียงกับสำเนียงและเสียงรบกวนจริง",
+      "ทดสอบด้วยข้อความจำลอง ยังไม่มีการทดสอบภาคสนาม"],
+  ];
+  for (const [id, name, why] of unverifiable) {
+    req(6, id, name, "UNVERIFIABLE", "-", why);
+  }
+}
+
+/* ============================================================
+   สรุปผลและออกรายงาน
+   ============================================================ */
+function verdict() {
+  const crit = F.filter(f => f.sev === "CRITICAL").length;
+  const high = F.filter(f => f.sev === "HIGH").length;
+  if (crit) return "FAIL";
+  if (high) return "CONDITIONAL PASS";
+  return F.length ? "CONDITIONAL PASS" : "PASS";
+}
+
+function report() {
+  const now = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const v = verdict();
+  const byLayer = (n) => R.filter(r => r.layer === n);
+  const LN = { 1: "ความครบถ้วนของฟีเจอร์", 2: "Workflow แบบ End-to-End",
+               3: "ขอบเขตของระบบ", 4: "Rules Engine (รันจริง)",
+               5: "สิทธิ์และข้อมูลส่วนบุคคล", 6: "สิ่งที่ตรวจยืนยันไม่ได้" };
+  const cnt = (s) => R.filter(r => r.status === s).length;
+
+  let md = `# CareSignal — รายงานการตรวจสอบความสอดคล้อง
+
+| | |
+|---|---|
+| วันที่ตรวจ | ${now} |
+| เวอร์ชันที่ตรวจ | ${(read("CareSignal-Vision.html") || "").match(/version:"([^"]+)"/)?.[1] || "—"} |
+| ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
+| ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
+| **ผลรวม** | **${v}** |
+
+> ตัวตรวจนี้ตรวจ "ความสอดคล้องระหว่างโปรแกรมกับแผนงาน" เท่านั้น
+> **ไม่ใช่การรับรองทางคลินิก และไม่ใช่การยืนยันว่าระบบพร้อมใช้งานจริง**
+> ข้อที่ตรวจด้วยการอ่านโค้ดไม่ได้ ถูกรายงานเป็น UNVERIFIABLE ไม่นับเป็นผ่าน
+
+## สรุปตัวเลข
+
+| สถานะ | จำนวน |
+|---|---:|
+| PASS | ${cnt("PASS")} |
+| PARTIAL | ${cnt("PARTIAL")} |
+| MISSING | ${cnt("MISSING")} |
+| VIOLATION | ${cnt("VIOLATION")} |
+| UNVERIFIABLE | ${cnt("UNVERIFIABLE")} |
+
+| ความรุนแรงของสิ่งที่พบ | จำนวน |
+|---|---:|
+| Critical | ${F.filter(f => f.sev === "CRITICAL").length} |
+| High | ${F.filter(f => f.sev === "HIGH").length} |
+| Medium | ${F.filter(f => f.sev === "MEDIUM").length} |
+| Low | ${F.filter(f => f.sev === "LOW").length} |
+`;
+
+  for (const n of [1, 2, 3, 4, 5, 6]) {
+    const rows = byLayer(n); if (!rows.length) continue;
+    md += `\n## ชั้นที่ ${n} — ${LN[n]}\n\n| รหัส | ข้อกำหนด | สถานะ | หลักฐาน |\n|---|---|---|---|\n`;
+    for (const r of rows) {
+      md += `| ${r.id} | ${r.requirement} | ${r.status} | ${(r.evidence || "-").slice(0, 150)}${r.note ? " · " + r.note : ""} |\n`;
+    }
+  }
+
+  md += `\n## สิ่งที่พบและข้อเสนอแก้ไข\n\n`;
+  if (!F.length) md += `ไม่พบข้อขัดแย้งกับแผนงานในรอบนี้\n`;
+  else {
+    F.sort((a, b) => SEV[a.sev] - SEV[b.sev]);
+    for (const f of F) {
+      md += `### [${f.sev}] ${f.id} — ${f.title}\n\n`;
+      md += `- **ปัญหา:** ${f.detail}\n- **หลักฐาน:** ${f.evidence}\n- **ข้อเสนอแก้ไข:** ${f.fix}\n\n`;
+    }
+  }
+
+  md += `\n## เกณฑ์การตัดสิน\n
+- **FAIL** — พบ Critical อย่างน้อย 1 ข้อ
+- **CONDITIONAL PASS** — ไม่มี Critical แต่มี High/Medium หรือมีข้อที่ยืนยันไม่ได้ในจุดสำคัญ
+- **PASS** — ไม่พบข้อขัดแย้งเลย
+
+## ข้อจำกัดของการตรวจนี้ (ประกาศไว้ให้ชัด)
+
+1. ตรวจจากซอร์สโค้ดและสคีมา **ไม่ได้ตรวจระบบที่กำลังรันจริงกับผู้ใช้จริง**
+2. **ไม่ได้ตรวจความถูกต้องทางคลินิก** ของเกณฑ์ที่ใช้ — ตรวจเพียงว่าระบบทำตามเกณฑ์ที่ประกาศไว้
+3. การไม่พบรูปแบบต้องห้าม **ไม่ได้แปลว่าไม่มีทางเกิดขึ้นได้** เพียงแปลว่าไม่พบด้วยวิธีที่ใช้
+4. ผลนี้**ใช้แทนการตรวจโดยผู้เชี่ยวชาญไม่ได้** และไม่ใช่หลักฐานว่าผ่าน clinical validation
+`;
+  return md;
+}
+
+/* ---------- รัน ---------- */
+layer1(); layer2(); layer3(); layer4(); layer5(); layer6();
+const md = report();
+fs.mkdirSync(path.join(ROOT, "audit"), { recursive: true });
+fs.writeFileSync(path.join(ROOT, "audit", "report-latest.md"), md, "utf8");
+
+const v = verdict();
+console.log("=".repeat(64));
+console.log("CareSignal Compliance Audit —", v);
+console.log("=".repeat(64));
+for (const n of [1, 2, 3, 4, 5, 6]) {
+  const rows = R.filter(r => r.layer === n);
+  const bad = rows.filter(r => r.status !== "PASS" && r.status !== "UNVERIFIABLE");
+  console.log(`ชั้น ${n}: ${rows.filter(r => r.status === "PASS").length}/${rows.length} ผ่าน` +
+              (bad.length ? `  ← ${bad.map(b => b.id + ":" + b.status).join(", ")}` : ""));
+}
+console.log("-".repeat(64));
+if (F.length) {
+  F.sort((a, b) => SEV[a.sev] - SEV[b.sev]);
+  for (const f of F) console.log(`[${f.sev}] ${f.id} ${f.title}\n         ${f.evidence}`);
+} else console.log("ไม่พบข้อขัดแย้งกับแผนงาน");
+console.log("-".repeat(64));
+console.log("ยืนยันไม่ได้ (ต้องทดสอบภาคสนาม):",
+  R.filter(r => r.status === "UNVERIFIABLE").length, "ข้อ");
+console.log("รายงานเต็ม: audit/report-latest.md");
+process.exit(v === "FAIL" ? 1 : 0);
