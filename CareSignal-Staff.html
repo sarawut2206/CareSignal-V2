@@ -785,11 +785,9 @@ function meV(){
     '<div class="rowline"><span class="k">อีเมล</span><span class="v" style="font-size:11.5px">'+esc(ST.email||"—")+'</span></div>'+
     '<div class="rowline"><span class="k">บทบาท</span><span class="v">'+esc(ROLE_NM[ST.role]||ST.role||"—")+'</span></div></div>'+
     '<div class="card"><h3>เครื่องมือเพิ่มเติม (บนเว็บ)</h3>'+
-    '<p class="sub">แดชบอร์ดจอใหญ่ การเปิดใช้ MFA และการตรวจสอบกับเวชระเบียน อยู่ที่แดชบอร์ดบนเว็บ</p>'+
-    '<button class="ghostb" id="openWeb">เปิดแดชบอร์ดบนเว็บ</button></div>'+
+    '<p class="sub">เปิดคอนโซลนี้บนคอมพิวเตอร์เพื่อใช้แถบเมนูข้างและตารางเต็มจอ — ไม่ต้องไปหน้าอื่น</p></div>'+
     '<button class="cta" id="out" style="background:rgba(240,82,76,.9);color:#fff">ออกจากระบบ</button>'+
     '<p class="sub" style="text-align:center">CareSignal Staff · เอนจิน 1.4.1 · ต้นแบบเพื่อการประกวด OIC InsurTech Award 2026</p>';
-  document.getElementById("openWeb").addEventListener("click",function(){location.href="./CareSignal-Web.html#"+(ST.role==="insurer"?"ins":"cm")});
   document.getElementById("out").addEventListener("click",async function(){
     try{await CSBackend.signOut()}catch(e){}
     ST.role=null;ST.email=null;ST.name=null;chip();

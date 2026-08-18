@@ -49,8 +49,8 @@ function findIn(files, re) {
 
 const APPS   = ["CareSignal-App.html", "CareSignal-Vision.html"];
 const STAFF  = ["CareSignal-Staff.html"];
-const WEBS   = ["CareSignal-Web.html", "index.html", "CareSignal-Flow.html",
-                "CareSignal-Portfolio-Dashboard.html"];
+/* Web.html และ Flow.html เหลือเป็นหน้าเปลี่ยนเส้นทาง — เนื้อหารวมอยู่ใน index.html แล้ว */
+const WEBS   = ["index.html", "CareSignal-Portfolio-Dashboard.html"];
 const BACK   = ["cs-backend.js", "cs-meds.js"];
 const SQL    = fs.readdirSync(path.join(ROOT, "supabase"))
                  .filter(f => f.endsWith(".sql")).map(f => "supabase/" + f);
