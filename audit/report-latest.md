@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-18 03:16 |
+| วันที่ตรวจ | 2026-08-18 04:52 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 65 |
+| PASS | 73 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -39,7 +39,7 @@
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:885 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
 | F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2745 · CareSignal-Vision.html:3177 · CareSignal-App.html:1953 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1170 · CareSignal-Vision.html:712 · CareSignal-App.html:973 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:243 · supabase/09_insurtech.sql:20 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:313 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/01_schema.sql:22 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · cs-backend.js:589 |
@@ -130,6 +130,14 @@
 | X-07 | ป้ายความสำคัญบอกด้วยว่าต้องทำภายในเมื่อไร | PASS | บรรทัด .prioact ใต้ป้ายทุกใบ |
 | X-08 | แบบประเมินมีแถบบอกความคืบหน้า | PASS | head() รับพารามิเตอร์ prog และหน้าคำถามส่งค่าให้ |
 | X-09 | แถบเส้นทางอ่านได้ด้วยเครื่องอ่านหน้าจอ | PASS | role=list + aria-label บอกสถานะแต่ละขั้น |
+| X-14 | จอกว้างใช้แถบเมนูข้าง ไม่บีบเป็นคอลัมน์แคบ | PASS | โครง grid + nav.side ที่ 1040px ขึ้นไป |
+| X-15 | มีหน้าติดตามการส่งต่อจนถึงผลลัพธ์ ไม่จบที่ "ส่งต่อแล้ว" | PASS | REF_PIPE 6 ขั้น + คำนวณเวลาที่ค้างในแต่ละขั้น |
+| X-16 | หน้าส่งต่อชี้จุดติดขัดได้ (ค้างนานเกินกำหนด) | PASS | REF_LIMIT ต่อขั้น + ทำเครื่องหมายรายการที่ค้างเกิน |
+| X-17 | มีหน้ารายงานที่คำนวณจากข้อมูลจริง ไม่ใช่ตัวเลขที่ตั้งไว้ | PASS | reportsV ดึงจาก caseQueue/listReferralQueue/medReviewQueue |
+| X-18 | รายงานไม่แอบอ้างตัวเลขที่ยังไม่มีข้อมูลรองรับ | PASS | ประกาศรายการที่ยังทำไม่ได้ไว้ท้ายหน้ารายงาน |
+| X-19 | มีหน้าดูบันทึกตรวจสอบว่าใครทำอะไรกับข้อมูลของใคร | PASS | auditV อ่านจาก audit_logs และต่อสายไว้ในเมนูจริง |
+| X-20 | บัญชีบริษัทประกันถูกซ่อนเมนูรายบุคคลตั้งแต่แรก ไม่ใช่กันตอนกด | PASS | navForRole ซ่อนปุ่มทั้งแถบเมนูข้างและแท็บล่าง |
+| X-21 | คอนโซลไม่มีโมดูลการเงิน (ขัดกับขอบเขตที่ประกาศไว้) | PASS | ไม่พบโมดูลการเงิน (ข้อความปฏิเสธไม่นับ) |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

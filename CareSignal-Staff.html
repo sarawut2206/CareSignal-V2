@@ -112,6 +112,63 @@ td.num{font-family:var(--mono);white-space:nowrap}
   font-family:inherit;font-size:13px;padding:9px;border-radius:11px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--gold);color:var(--goldink);border-color:var(--gold);font-weight:600}
 .spark{display:block;width:100%;height:44px;margin:2px 0 6px}
+/* ============================================================
+   โครงจอกว้าง — เจ้าหน้าที่ทำงานบนคอมพิวเตอร์เป็นหลัก
+   ------------------------------------------------------------
+   เดิมคอนโซลถูกบีบไว้ที่ 520px เหมือนแอปมือถือ พอเปิดบนจอคอม
+   จะเหลือแถบแคบกลางจอ ดูไม่เป็นระบบงานจริง
+   ตั้งแต่ 1040px ขึ้นไปจึงเปลี่ยนเป็นแถบเมนูข้าง + พื้นที่ทำงานกว้าง
+   แบบโปรแกรมบริหารคลินิก ส่วนบนมือถือยังเป็นแท็บล่างเหมือนเดิม
+   ============================================================ */
+.side{display:none}
+@media(min-width:1040px){
+  .phone{max-width:1400px;display:grid;
+    grid-template-columns:236px minmax(0,1fr);
+    grid-template-areas:"bar bar" "side hd" "side view";
+    grid-template-rows:auto auto 1fr;align-items:start}
+  .bar{grid-area:bar;padding:12px 24px}
+  .hd{grid-area:hd;padding:20px 28px 10px}
+  .view{grid-area:view;padding:6px 28px 40px}
+  .tabs{display:none}
+  .side{grid-area:side;display:block;position:sticky;top:0;align-self:stretch;
+    background:rgba(0,12,45,.30);border-right:1px solid var(--line2);
+    padding:20px 12px;min-height:calc(100dvh - 52px)}
+  .side[hidden]{display:none}
+  .side .sgrp{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--ink3);font-weight:600;margin:16px 10px 6px}
+  .side .sgrp:first-child{margin-top:0}
+  .side button{display:flex;align-items:center;gap:10px;width:100%;border:0;cursor:pointer;
+    background:none;font-family:inherit;font-size:14px;color:var(--ink2);
+    padding:10px 12px;border-radius:11px;text-align:left;margin-bottom:2px}
+  .side button:hover{background:rgba(255,255,255,.07);color:#fff}
+  .side button[aria-selected="true"]{background:var(--gold);color:var(--goldink);font-weight:700}
+  .side button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;
+    stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .side .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;
+    background:rgba(255,255,255,.14);padding:1px 7px;border-radius:99px}
+  .side button[aria-selected="true"] .cnt{background:rgba(0,0,0,.2)}
+  /* การ์ดเรียงหลายคอลัมน์บนจอกว้าง ไม่ยืดเป็นแถบยาวอ่านยาก */
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:0 16px;align-items:start}
+  .wide{grid-column:1/-1}
+}
+/* ---------- ตารางแบบระบบงาน ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:600;color:var(--ink3);font-size:10.5px;
+  letter-spacing:.05em;text-transform:uppercase;padding:8px 7px;border-bottom:1px solid var(--line)}
+.tbl td{padding:9px 7px;border-bottom:1px solid var(--line2);vertical-align:top}
+.tbl th:first-child,.tbl td:first-child{padding-left:0}
+.tbl th:last-child,.tbl td:last-child{padding-right:0}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .num{font-family:var(--mono);text-align:right;white-space:nowrap}
+.tblwrap{overflow-x:auto;margin:0 -4px}
+/* ---------- ท่อสถานะการส่งต่อ ---------- */
+.pipe{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+.pipe .pn{flex:1 0 118px;background:var(--surf2);border:1px solid var(--line);
+  border-radius:12px;padding:11px 12px;text-align:left}
+.pipe .pn .pl{font-size:11.5px;color:var(--ink2);line-height:1.35;min-height:31px}
+.pipe .pn .pv{font-family:var(--mono);font-size:21px;font-weight:700;color:#fff;margin-top:4px}
+.pipe .pn .pt{font-size:10.5px;color:var(--ink3);margin-top:2px}
+.pipe .pn[data-alert="1"]{border-color:rgba(240,82,76,.6);background:rgba(240,82,76,.12)}
 .chip2{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.12);color:var(--ink2);margin:0 4px 4px 0}
 .linkbtn{border:0;background:none;color:var(--gold);font-family:inherit;font-size:12.5px;cursor:pointer;padding:0}
 </style>
@@ -120,9 +177,22 @@ td.num{font-family:var(--mono);white-space:nowrap}
 <div class="phone">
   <div class="bar"><b>Care<i>Signal</i> Staff</b><span class="chip" id="chip">ยังไม่เข้าสู่ระบบ</span></div>
   <div class="hd" id="hd"><div class="kick">STAFF CONSOLE</div><h1 id="hdT">แอปเจ้าหน้าที่</h1><p id="hdP">คิวเคสและพอร์ตความเสี่ยง — เฉพาะบัญชีที่ได้รับสิทธิ์</p></div>
+  <nav class="side" id="side" hidden aria-label="เมนูหลัก">
+    <div class="sgrp">งานประจำวัน</div>
+    <button data-go="queue"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><span>คิวงาน</span><span class="cnt" data-cnt="queue" hidden></span></button>
+    <button data-go="refer"><svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="M13 7l5 5-5 5"/><circle cx="20" cy="12" r="1.6"/></svg><span>ติดตามการส่งต่อ</span><span class="cnt" data-cnt="refer" hidden></span></button>
+    <button data-go="meds"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/><path d="M12 12v4"/></svg><span>ทบทวนยา</span><span class="cnt" data-cnt="meds" hidden></span></button>
+    <div class="sgrp">ภาพรวมและรายงาน</div>
+    <button data-go="port"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span>พอร์ตความเสี่ยง</span><span class="cnt" data-cnt="port" hidden></span></button>
+    <button data-go="reports"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg><span>รายงาน</span><span class="cnt" data-cnt="reports" hidden></span></button>
+    <button data-go="audit"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><span>บันทึกตรวจสอบ</span><span class="cnt" data-cnt="audit" hidden></span></button>
+    <div class="sgrp">บัญชี</div>
+    <button data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg><span>บัญชีของฉัน</span><span class="cnt" data-cnt="me" hidden></span></button>
+  </nav>
   <div class="view" id="view"></div>
   <div class="tabs" id="tabs" hidden>
     <button data-go="queue" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-7-3-7 3z"/></svg><b>คิวเคส</b></button>
+    <button data-go="refer"><svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="M13 7l5 5-5 5"/><circle cx="20" cy="12" r="1.6"/></svg><b>ส่งต่อ</b></button>
     <button data-go="meds"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="10" rx="2"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/><path d="M12 12v4"/></svg><b>ทบทวนยา</b></button>
     <button data-go="port"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><b>พอร์ต</b></button>
     <button data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg><b>ฉัน</b></button>
@@ -796,13 +866,276 @@ async function medsV(){
   })});
 }
 
-var FN={login:loginV,queue:queueV,meds:medsV,port:portV,me:meV};
+
+/* ============================================================
+   ติดตามการส่งต่อ (Referral Tracker)
+   ------------------------------------------------------------
+   สถานะ "ส่งต่อแล้ว" อย่างเดียวพิสูจน์อะไรไม่ได้ — ต้องรู้ว่าปลายทาง
+   รับเคสหรือยัง นัดหมายหรือยัง ได้รับบริการจริงหรือไม่ และค้างอยู่ขั้นไหนนานเท่าใด
+   หน้านี้จึงแสดงเป็นท่อสถานะพร้อมเวลาเฉลี่ยที่ค้างในแต่ละขั้น
+   เพื่อชี้จุดติดขัดว่าอยู่ตรงไหนของกระบวนการ
+   ============================================================ */
+var REF_PIPE=[
+  {k:"pending",         nm:"ส่งคำขอแล้ว",        t:"รอปลายทางรับเคส",   at:"created_at"},
+  {k:"acknowledged",    nm:"ปลายทางรับเคส",      t:"รอพิจารณา",         at:"acknowledged_at"},
+  {k:"approved",        nm:"อนุมัติแล้ว",         t:"รอนัดหมาย",         at:"decided_at"},
+  {k:"booked",          nm:"นัดหมายแล้ว",         t:"รอถึงวันนัด",        at:"booked_at"},
+  {k:"completed",       nm:"รับบริการแล้ว",       t:"รอบันทึกผล",        at:"completed_at"},
+  {k:"outcome_recorded",nm:"บันทึกผลแล้ว",        t:"ปิดครบวงจร",        at:"completed_at"}
+];
+var REF_END={declined:"ปลายทางปฏิเสธ", unreachable:"ติดต่อไม่ได้"};
+var DEST_NM={doctor:"แพทย์",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",
+             nurse:"พยาบาล",family:"ครอบครัว",community:"ทีมชุมชน"};
+/* ขีดเวลาที่ถือว่าค้างนานเกินไปในแต่ละขั้น (วัน) — ใช้ชี้จุดติดขัด ไม่ใช่เกณฑ์ทางคลินิก */
+var REF_LIMIT={pending:2, acknowledged:3, approved:7, booked:30, completed:7};
+
+function daysSince(iso){ if(!iso) return null; return (Date.now()-new Date(iso))/864e5 }
+/* เวลาที่อยู่ในขั้นปัจจุบัน นับจาก timestamp ล่าสุดที่มีของขั้นนั้น */
+function timeInStage(r){
+  var st=REF_PIPE.filter(function(p){return p.k===r.status})[0];
+  if(!st) return null;
+  return daysSince(r[st.at]||r.created_at);
+}
+function dayTxt(d){
+  if(d===null||d===undefined) return "—";
+  if(d<1) return Math.max(1,Math.round(d*24))+" ชม.";
+  return Math.round(d)+" วัน";
+}
+
+async function referV(){
+  head("ติดตามการส่งต่อ","ส่งต่อแล้วได้รับบริการจริงหรือยัง — ดูว่าเคสค้างอยู่ขั้นไหนและนานเท่าใด");
+  if(ST.role==="insurer"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะทีมดูแล</b><br>บัญชีบริษัทประกันดูได้เฉพาะข้อมูลระดับกลุ่มที่หน้าพอร์ต</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var rows=[]; try{ rows=await CSBackend.listReferralQueue() }catch(e){}
+  if(!rows.length){
+    V.innerHTML='<div class="card"><div class="empty">ยังไม่มีรายการส่งต่อ</div></div>'+
+      '<div class="notice">ระบบเปิดรายการส่งต่อเมื่อ Care Manager กดส่งจากหน้าเคส หรือเมื่อเภสัชกรสรุปว่าควรให้แพทย์ทบทวน</div>';
+    return;
+  }
+
+  /* ---- ท่อสถานะ: จำนวนคงค้าง + เวลาเฉลี่ยที่ค้างในขั้นนั้น ---- */
+  var pipe='<div class="pipe">';
+  REF_PIPE.forEach(function(p){
+    var inStage=rows.filter(function(r){return r.status===p.k});
+    var waits=inStage.map(timeInStage).filter(function(d){return d!==null});
+    var avg=waits.length?waits.reduce(function(a,b){return a+b},0)/waits.length:null;
+    var late=inStage.filter(function(r){
+      var d=timeInStage(r); return REF_LIMIT[p.k]&&d!==null&&d>REF_LIMIT[p.k] }).length;
+    pipe+='<div class="pn" data-alert="'+(late?1:0)+'">'+
+      '<div class="pl">'+esc(p.nm)+'</div>'+
+      '<div class="pv">'+inStage.length+'</div>'+
+      '<div class="pt">'+(avg!==null?"ค้างเฉลี่ย "+dayTxt(avg):esc(p.t))+
+        (late?' · <b style="color:var(--c1)">เกินกำหนด '+late+'</b>':'')+'</div></div>';
+  });
+  pipe+='</div>';
+
+  /* ---- แยกตามปลายทาง ---- */
+  var byDest={};
+  rows.forEach(function(r){
+    var d=r.destination||r.referral_type||"อื่น ๆ";
+    byDest[d]=byDest[d]||{n:0,done:0,wait:[]};
+    byDest[d].n++;
+    if(r.status==="completed"||r.status==="outcome_recorded") byDest[d].done++;
+    var t=timeInStage(r); if(t!==null) byDest[d].wait.push(t);
+  });
+  var destHTML='<div class="card"><h3>แยกตามปลายทางที่ส่งต่อ</h3><div class="tblwrap"><table class="tbl">'+
+    '<thead><tr><th>ปลายทาง</th><th class="num">ทั้งหมด</th><th class="num">รับบริการแล้ว</th>'+
+    '<th class="num">อัตราสำเร็จ</th><th class="num">ค้างเฉลี่ย</th></tr></thead><tbody>';
+  Object.keys(byDest).forEach(function(d){
+    var v=byDest[d], avg=v.wait.length?v.wait.reduce(function(a,b){return a+b},0)/v.wait.length:null;
+    destHTML+='<tr><td>'+esc(DEST_NM[d]||d)+'</td><td class="num">'+v.n+'</td>'+
+      '<td class="num">'+v.done+'</td><td class="num">'+Math.round(v.done/v.n*100)+'%</td>'+
+      '<td class="num">'+dayTxt(avg)+'</td></tr>';
+  });
+  destHTML+='</tbody></table></div>'+
+    '<p class="tiny">อัตราสำเร็จนับเฉพาะรายการที่บันทึกว่าได้รับบริการแล้ว · ตัวเลขจากข้อมูลที่บันทึกในระบบจริง ไม่ได้จำลอง</p></div>';
+
+  /* ---- ตารางรายการที่ยังไม่ปิด เรียงตามค้างนานสุด ---- */
+  var open=rows.filter(function(r){return ["outcome_recorded","declined"].indexOf(r.status)<0});
+  open.sort(function(a,b){return (timeInStage(b)||0)-(timeInStage(a)||0)});
+  var listHTML='<div class="card wide"><h3>รายการที่ยังไม่ปิด ('+open.length+')</h3>';
+  if(!open.length){ listHTML+='<div class="empty">ปิดครบทุกรายการ</div>'; }
+  else{
+    listHTML+='<div class="tblwrap"><table class="tbl"><thead><tr>'+
+      '<th>ผู้เอาประกัน</th><th>ปลายทาง</th><th>ขั้นปัจจุบัน</th>'+
+      '<th class="num">ค้างมาแล้ว</th><th>งานถัดไป</th></tr></thead><tbody>';
+    open.forEach(function(r){
+      var pr=r.profiles||{}, st=REF_PIPE.filter(function(p){return p.k===r.status})[0];
+      var d=timeInStage(r), lim=REF_LIMIT[r.status];
+      var over=lim&&d!==null&&d>lim;
+      listHTML+='<tr><td>'+esc(pr.pseudonym||"—")+'<br><span style="color:var(--ink3);font-size:11.5px">'+esc(pr.display_name||"")+'</span></td>'+
+        '<td>'+esc(DEST_NM[r.destination||r.referral_type]||r.destination||r.referral_type||"—")+'</td>'+
+        '<td>'+esc(st?st.nm:(REF_END[r.status]||r.status))+'</td>'+
+        '<td class="num"'+(over?' style="color:var(--c1);font-weight:700"':'')+'>'+dayTxt(d)+(over?' ⚠':'')+'</td>'+
+        '<td>'+esc(st?st.t:"—")+'</td></tr>';
+    });
+    listHTML+='</tbody></table></div>';
+    listHTML+='<p class="tiny">⚠ = ค้างนานกว่าที่ตั้งไว้สำหรับขั้นนั้น ('+
+      Object.keys(REF_LIMIT).map(function(k){
+        var p=REF_PIPE.filter(function(x){return x.k===k})[0];
+        return (p?p.nm:k)+" "+REF_LIMIT[k]+" วัน" }).join(" · ")+
+      ') — เป็นเกณฑ์บริหารงาน ไม่ใช่เกณฑ์ทางคลินิก</p>';
+  }
+  listHTML+='</div>';
+
+  V.innerHTML=pipe+'<div class="cols">'+destHTML+listHTML+'</div>';
+}
+
+/* ============================================================
+   รายงาน — สรุปที่พิมพ์หรือส่งต่อได้
+   ------------------------------------------------------------
+   คำนวณจากข้อมูลจริงในระบบ ณ เวลาที่กด ไม่ใช่ตัวเลขที่ตั้งไว้
+   รายงานใดที่ยังไม่มีข้อมูลพอ จะบอกตรง ๆ ว่ายังไม่มีข้อมูล
+   ============================================================ */
+async function reportsV(){
+  head("รายงาน","สรุปจากข้อมูลจริงในระบบ ณ เวลาที่เปิดหน้านี้");
+  if(ST.role==="insurer"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะทีมดูแล</b><br>รายงานระดับกลุ่มสำหรับบริษัทประกันอยู่ที่หน้าพอร์ต</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังรวบรวม…</div>';
+  var cases=[], refs=[], meds=[];
+  try{ cases=await CSBackend.caseQueue() }catch(e){}
+  try{ refs =await CSBackend.listReferralQueue() }catch(e){}
+  try{ meds =await CSBackend.medReviewQueue() }catch(e){}
+
+  var now=Date.now();
+  var open=cases.filter(function(c){return ["stable","closed"].indexOf(c.status)<0});
+  var overdue=open.filter(function(c){return c.due_at&&new Date(c.due_at)<now});
+  var byLevel={};
+  open.forEach(function(c){ byLevel[c.level]=(byLevel[c.level]||0)+1 });
+  var refDone=refs.filter(function(r){return ["completed","outcome_recorded"].indexOf(r.status)>=0}).length;
+
+  function tbl(title, rows, note){
+    var h='<div class="card"><h3>'+esc(title)+'</h3>';
+    if(!rows.length){ h+='<div class="empty" style="padding:14px">ยังไม่มีข้อมูลในรายงานนี้</div>'; }
+    else{
+      h+='<div class="tblwrap"><table class="tbl"><tbody>';
+      rows.forEach(function(r){ h+='<tr><td>'+esc(r[0])+'</td><td class="num">'+esc(String(r[1]))+'</td></tr>' });
+      h+='</tbody></table></div>';
+    }
+    if(note) h+='<p class="tiny">'+note+'</p>';
+    return h+'</div>';
+  }
+
+  var html='<div class="notice"><b>รายงานเหล่านี้เป็นรายงานการบริหารเคส</b> ไม่ใช่รายงานทางการเงินหรือการเคลม — '+
+    'CareSignal ไม่คิดเบี้ย ไม่ออกใบเสร็จ และไม่มีส่วนในการพิจารณาสินไหม</div><div class="cols">';
+
+  html+=tbl("สถานะเคสที่เปิดอยู่", [
+    ["เคสเปิดอยู่ทั้งหมด", open.length],
+    ["ต้องทบทวนด่วน", byLevel.urgent||0],
+    ["ต้องทบทวน", byLevel.decline||0],
+    ["เฝ้าสังเกต", byLevel.watch||0],
+    ["เกินกำหนดตามที่ตั้งไว้", overdue.length]
+  ], "นับจากตาราง care_cases ที่ยังไม่อยู่ในสถานะปิด");
+
+  html+=tbl("เคสแยกตามขั้นของวงจร",
+    STAGES.map(function(g){
+      return [g.ic+" "+g.nm, open.filter(function(c){return stageOf(c.status).k===g.k}).length];
+    }), "ตรงกับการจัดกลุ่มในหน้าคิวงาน");
+
+  html+=tbl("การส่งต่อ", [
+    ["รายการส่งต่อทั้งหมด", refs.length],
+    ["ได้รับบริการแล้ว", refDone],
+    ["อัตราสำเร็จ", refs.length?Math.round(refDone/refs.length*100)+"%":"—"],
+    ["ยังไม่ปิด", refs.filter(function(r){return ["outcome_recorded","declined"].indexOf(r.status)<0}).length]
+  ], "รายละเอียดรายขั้นดูที่หน้าติดตามการส่งต่อ");
+
+  html+=tbl("การทบทวนยา", [
+    ["คำขอทบทวนที่ค้าง", meds.length],
+    ["พบยากลุ่มเสี่ยงสูง", meds.filter(function(m){return (m.summary||{}).high>0}).length],
+    ["มียาที่ระบบยังไม่รู้จัก", meds.filter(function(m){return (m.summary||{}).unknown>0}).length]
+  ], "ยาที่ระบบยังไม่รู้จักคือยานอกฐาน 155 ตัวยา ไม่ได้แปลว่ายานั้นมีปัญหา");
+
+  html+='</div><div class="notice" style="margin-top:4px">รายงานที่ยังทำไม่ได้ในตอนนี้ '+
+    '(ผลลัพธ์ก่อน–หลังการดูแล · อัตราการหกล้มซ้ำ · เวลาเฉลี่ยจากสัญญาณถึงการติดต่อครั้งแรก) '+
+    'ต้องรอข้อมูลจากการใช้งานจริงในระยะนำร่อง — ระบบจะไม่แสดงตัวเลขที่ยังไม่มีข้อมูลรองรับ</div>';
+  V.innerHTML=html;
+}
+
+/* ============================================================
+   บันทึกตรวจสอบ (Audit Log)
+   ------------------------------------------------------------
+   ตรวจย้อนได้ว่าใครเปิดดูหรือแก้ข้อมูลของใครเมื่อใด
+   เป็นหลักฐานว่าการเข้าถึงข้อมูลสุขภาพมีการควบคุมจริง
+   ============================================================ */
+var ACT_NM={
+  view_profile:"เปิดดูโปรไฟล์", update_case:"แก้สถานะเคส", log_contact:"บันทึกการติดต่อ",
+  create_referral:"เปิดรายการส่งต่อ", decide_referral:"ตัดสินการส่งต่อ",
+  pharmacist_fix:"เภสัชกรแก้การจัดกลุ่มยา", close_med_review:"ปิดคำขอทบทวนยา",
+  grant_consent:"ให้ความยินยอม", revoke_consent:"ถอนความยินยอม",
+  delete_all_my_data:"ลบข้อมูลทั้งหมดของตนเอง", save_assessment:"บันทึกผลประเมิน"
+};
+async function auditV(){
+  head("บันทึกตรวจสอบ","ใครทำอะไรกับข้อมูลของใครเมื่อใด — แก้ไขย้อนหลังไม่ได้");
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var rows=[]; try{ rows=await CSBackend.listAudit(100) }catch(e){}
+  if(!rows.length){
+    V.innerHTML='<div class="card"><div class="empty">ยังไม่มีบันทึก หรือบัญชีของคุณไม่มีสิทธิ์ดูบันทึกของผู้อื่น</div></div>'+
+      '<div class="notice">สิทธิ์การอ่านบันทึกตรวจสอบถูกจำกัดด้วย Row Level Security ที่ฐานข้อมูล — '+
+      'สมาชิกเห็นเฉพาะรายการที่เกี่ยวกับตนเอง</div>';
+    return;
+  }
+  var html='<div class="notice"><b>บันทึกนี้เพิ่มได้อย่างเดียว แก้หรือลบไม่ได้</b> — '+
+    'ทุกครั้งที่มีการเปิดดูหรือแก้ข้อมูลส่วนบุคคล ระบบเขียนบันทึกที่ฐานข้อมูลโดยอัตโนมัติ</div>'+
+    '<div class="card wide"><div class="tblwrap"><table class="tbl"><thead><tr>'+
+    '<th>เวลา</th><th>การกระทำ</th><th>ผู้ทำ</th><th>เป้าหมาย</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    html+='<tr><td style="white-space:nowrap">'+thDate(r.created_at)+'</td>'+
+      '<td>'+esc(ACT_NM[r.action]||r.action||"—")+'</td>'+
+      '<td style="font-family:var(--mono);font-size:11.5px">'+esc((r.actor_id||"—").slice(0,8))+'</td>'+
+      '<td style="font-family:var(--mono);font-size:11.5px">'+esc((r.target_id||r.subject_id||"—").slice(0,8))+'</td></tr>';
+  });
+  html+='</tbody></table></div><p class="tiny">แสดง '+rows.length+' รายการล่าสุด · '+
+    'รหัสผู้ใช้แสดงเพียง 8 ตัวแรกเพื่อให้ตรวจสอบได้โดยไม่เปิดเผยรหัสเต็มบนหน้าจอ</p></div>';
+  V.innerHTML=html;
+}
+
+var FN={login:loginV,queue:queueV,refer:referV,meds:medsV,port:portV,reports:reportsV,audit:auditV,me:meV};
+var SIDE=document.getElementById("side");
 function go(sc){
   ST.screen=sc;(FN[sc]||loginV)();
-  TABS.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===sc)});
+  [TABS,SIDE].forEach(function(nav){
+    nav.querySelectorAll("[data-go]").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===sc)});
+  });
   window.scrollTo(0,0);
 }
-TABS.addEventListener("click",function(e){var b=e.target.closest("[data-go]");if(b)go(b.dataset.go)});
+[TABS,SIDE].forEach(function(nav){
+  nav.addEventListener("click",function(e){var b=e.target.closest("[data-go]");if(b)go(b.dataset.go)});
+});
+/* บัญชีบริษัทประกันเห็นเฉพาะภาพรวมระดับกลุ่ม — ซ่อนเมนูรายบุคคลไว้ตั้งแต่แรก
+   ไม่ใช่แค่กันตอนกดเข้า เพื่อไม่ให้เข้าใจผิดว่ามีสิทธิ์ */
+var INSURER_HIDE=["queue","refer","meds","reports","audit"];
+function navForRole(){
+  [TABS,SIDE].forEach(function(nav){
+    nav.querySelectorAll("[data-go]").forEach(function(b){
+      b.hidden = ST.role==="insurer" && INSURER_HIDE.indexOf(b.dataset.go)>=0;
+    });
+  });
+  SIDE.querySelectorAll(".sgrp").forEach(function(g){
+    /* ซ่อนหัวข้อกลุ่มที่ไม่มีปุ่มเหลืออยู่ */
+    var vis=0, n=g.nextElementSibling;
+    while(n&&n.tagName==="BUTTON"){ if(!n.hidden) vis++; n=n.nextElementSibling }
+    g.hidden = vis===0;
+  });
+}
+/* ตัวเลขงานค้างข้างเมนู — เจ้าหน้าที่เห็นภาระงานโดยไม่ต้องกดเข้าไปดู */
+async function navCounts(){
+  if(ST.role==="insurer") return;
+  var n={};
+  try{ var c=await CSBackend.caseQueue();
+       n.queue=c.filter(function(x){return ["stable","closed"].indexOf(x.status)<0}).length }catch(e){}
+  try{ n.meds=(await CSBackend.medReviewQueue()).length }catch(e){}
+  try{ n.refer=(await CSBackend.listReferralQueue()).filter(function(r){
+         return ["outcome_recorded","declined"].indexOf(r.status)<0 }).length }catch(e){}
+  Object.keys(n).forEach(function(k){
+    var el=SIDE.querySelector('[data-cnt="'+k+'"]');
+    if(el&&n[k]>0){ el.textContent=n[k]; el.hidden=false }
+  });
+}
 
 /* ---------- บูต ---------- */
 (async function(){
@@ -815,7 +1148,7 @@ TABS.addEventListener("click",function(e){var b=e.target.closest("[data-go]");if
       var p=await CSBackend.loadProfile();
       if(p&&p.id===u.id&&["care_manager","insurer","admin"].indexOf(p.role)>=0){
         ST.role=p.role;ST.email=u.email;ST.name=p.display_name||u.email;
-        chip();TABS.hidden=false;
+        chip();TABS.hidden=false;SIDE.hidden=false;navForRole();navCounts();
         go(ST.role==="insurer"?"port":"queue");
       }else{try{await CSBackend.signOut()}catch(e){}}
     }

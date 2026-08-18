@@ -22,6 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const LF = String.fromCharCode(10);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cache = new Map();
 const read = (f) => {
@@ -571,6 +572,58 @@ function layer7() {
     if (!r.ok) finding("MEDIUM", id, "UI ไม่ตรงโครง STEADI: " + name,
       "หน้าจอยังไม่พาผู้ใช้ผ่านวงจรครบตามที่ออกแบบไว้", r.ev,
       "เพิ่มส่วนที่ขาดในหน้าจอที่เกี่ยวข้อง");
+  }
+
+  /* ---- โครงคอนโซลแบบระบบงาน: จอกว้างต้องเป็นแถบเมนูข้าง ไม่ใช่แอปมือถือยืด ---- */
+  const consoleChecks = [
+    ["X-14", "จอกว้างใช้แถบเมนูข้าง ไม่บีบเป็นคอลัมน์แคบ",
+      () => ({ ok: /@media\(min-width:1040px\)[\s\S]{0,900}grid-template-areas/.test(staff)
+                && /<nav class="side"/.test(staff),
+               ev: "โครง grid + nav.side ที่ 1040px ขึ้นไป" })],
+    ["X-15", "มีหน้าติดตามการส่งต่อจนถึงผลลัพธ์ ไม่จบที่ \"ส่งต่อแล้ว\"",
+      () => ({ ok: /var REF_PIPE=/.test(staff) && /outcome_recorded/.test(staff)
+                && /timeInStage\(/.test(staff),
+               ev: "REF_PIPE 6 ขั้น + คำนวณเวลาที่ค้างในแต่ละขั้น" })],
+    ["X-16", "หน้าส่งต่อชี้จุดติดขัดได้ (ค้างนานเกินกำหนด)",
+      () => ({ ok: /var REF_LIMIT=/.test(staff) && /เกินกำหนด/.test(staff),
+               ev: "REF_LIMIT ต่อขั้น + ทำเครื่องหมายรายการที่ค้างเกิน" })],
+    ["X-17", "มีหน้ารายงานที่คำนวณจากข้อมูลจริง ไม่ใช่ตัวเลขที่ตั้งไว้",
+      () => ({ ok: /async function reportsV\s*\(/.test(staff)
+                && /ยังไม่มีข้อมูลในรายงานนี้/.test(staff),
+               ev: "reportsV ดึงจาก caseQueue/listReferralQueue/medReviewQueue" })],
+    ["X-18", "รายงานไม่แอบอ้างตัวเลขที่ยังไม่มีข้อมูลรองรับ",
+      () => ({ ok: /ระบบจะไม่แสดงตัวเลขที่ยังไม่มีข้อมูลรองรับ/.test(staff),
+               ev: "ประกาศรายการที่ยังทำไม่ได้ไว้ท้ายหน้ารายงาน" })],
+    ["X-19", "มีหน้าดูบันทึกตรวจสอบว่าใครทำอะไรกับข้อมูลของใคร",
+      () => ({ ok: /async function auditV\s*\(/.test(staff) && /listAudit/.test(staff)
+                && /audit:\s*auditV/.test(staff),
+               ev: "auditV อ่านจาก audit_logs และต่อสายไว้ในเมนูจริง" })],
+    ["X-20", "บัญชีบริษัทประกันถูกซ่อนเมนูรายบุคคลตั้งแต่แรก ไม่ใช่กันตอนกด",
+      () => ({ ok: /var INSURER_HIDE=\[[^\]]*"queue"[^\]]*"refer"[^\]]*"meds"/.test(staff)
+                && /function navForRole/.test(staff),
+               ev: "navForRole ซ่อนปุ่มทั้งแถบเมนูข้างและแท็บล่าง" })],
+    ["X-21", "คอนโซลไม่มีโมดูลการเงิน (ขัดกับขอบเขตที่ประกาศไว้)",
+      () => {
+        /* ข้อความที่ "ปฏิเสธ" ว่าไม่มีโมดูลการเงิน เป็นสิ่งที่ต้องการ ไม่ใช่ข้อผิดพลาด
+           จึงต้องอ่านคำนำหน้าก่อนตัดสิน เช่น "ไม่ออกใบเสร็จ" ต้องไม่ถูกนับเป็นการละเมิด */
+        const re = /ใบเสร็จ|ภาษีมูลค่าเพิ่ม|คอมมิชชั่|คอมมิชชั|ยอดขาย|มัดจำ|คืนเงิน|คูปอง|ตัดสต็อค/g;
+        const hits = [];
+        for (const m of staff.matchAll(re)) {
+          const before = staff.slice(Math.max(0, m.index - 60), m.index);
+          if (/ไม่|ไม่มี|ห้าม|ปราศจาก/.test(before)) continue;
+          const ln = staff.slice(0, m.index).split(LF).length;
+          hits.push(`CareSignal-Staff.html:${ln} «${m[0]}»`);
+        }
+        return { ok: !hits.length,
+                 ev: hits.length ? hits.slice(0, 3).join(" · ") : "ไม่พบโมดูลการเงิน (ข้อความปฏิเสธไม่นับ)" };
+      }],
+  ];
+  for (const [id, name, fn] of consoleChecks) {
+    const r = fn();
+    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
+    if (!r.ok) finding("MEDIUM", id, "โครงคอนโซลไม่ตรงแผน: " + name,
+      "หน้าจอเจ้าหน้าที่ยังไม่ครบตามโครงระบบงานที่ออกแบบไว้", r.ev,
+      "เพิ่มส่วนที่ขาดในคอนโซลเจ้าหน้าที่");
   }
 
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
