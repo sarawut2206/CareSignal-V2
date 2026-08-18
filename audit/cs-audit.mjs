@@ -527,6 +527,77 @@ function layer6() {
 }
 
 /* ============================================================
+   ชั้นที่ 7 — กฎ UI/UX ตามโครง CDC STEADI
+   ------------------------------------------------------------
+   ตรวจว่าหน้าจอพาผู้ใช้ผ่านวงจร คัดกรอง → ประเมิน → แผนดูแล → ติดตาม
+   และไม่ถอยกลับไปเป็นหน้าจอที่โชว์แต่คะแนนหรือสี
+   ============================================================ */
+function layer7() {
+  const app   = read("CareSignal-App.html") || "";
+  const staff = read("CareSignal-Staff.html") || "";
+  const uiAll = [...APPS, ...STAFF, ...WEBS];
+
+  const checks = [
+    ["X-01", "แอปสมาชิกแสดงเส้นทางการดูแลทั้ง 4 ขั้น ไม่ใช่แค่ผลตรวจ",
+      () => ({ ok: /var STEADI=/.test(app) && /journeyHTML\(\)/.test(app),
+               ev: "STEADI + journeyHTML ในหน้าแรก" })],
+    ["X-02", "หน้าแรกบอก \"ขั้นตอนถัดไป\" ที่กดทำต่อได้ทันที",
+      () => ({ ok: /ขั้นตอนถัดไป/.test(app) && /j\.next\.go/.test(app),
+               ev: "การ์ดขั้นตอนถัดไปมีปุ่มพาไปทำงานต่อ" })],
+    ["X-03", "คิวงานเจ้าหน้าที่จัดกลุ่มตามขั้นของวงจร",
+      () => ({ ok: /var STAGES=/.test(staff) && /stageOf\(/.test(staff),
+               ev: "STAGES 4 กลุ่ม + จัดกลุ่มในคิว" })],
+    ["X-04", "หน้าเคสมีแถบบอกว่าอยู่ขั้นไหนของวงจร",
+      () => ({ ok: /stageBar\(/.test(staff), ev: "stageBar ในหน้ารายละเอียดเคส" })],
+    ["X-05", "หน้าเคสตอบ 3 คำถามทันที: พบอะไร · ใครทำอะไร · ภายในเมื่อไร",
+      () => ({ ok: /พบอะไร/.test(staff) && /ใครต้องทำอะไร/.test(staff) && /ภายในเมื่อไร/.test(staff),
+               ev: "การ์ดสรุปบนสุดของหน้าเคส" })],
+    ["X-06", "ป้ายความสำคัญมีไอคอนและข้อความ ไม่ใช้สีลำพัง",
+      () => ({ ok: /var PRIO=\{[\s\S]{0,400}ic:/.test(staff) && /prioPill\(/.test(staff),
+               ev: "PRIO มี ic + nm + act และใช้ผ่าน prioPill()" })],
+    ["X-07", "ป้ายความสำคัญบอกด้วยว่าต้องทำภายในเมื่อไร",
+      () => ({ ok: /prioact/.test(staff) && /ภายใน 24 ชั่วโมง/.test(staff),
+               ev: "บรรทัด .prioact ใต้ป้ายทุกใบ" })],
+    ["X-08", "แบบประเมินมีแถบบอกความคืบหน้า",
+      () => ({ ok: /role="progressbar"/.test(app) && /\[i\+1,QS\.length\]/.test(app),
+               ev: "head() รับพารามิเตอร์ prog และหน้าคำถามส่งค่าให้" })],
+    ["X-09", "แถบเส้นทางอ่านได้ด้วยเครื่องอ่านหน้าจอ",
+      () => ({ ok: /role="list"[\s\S]{0,120}เส้นทางการดูแล/.test(app) && /aria-label/.test(app),
+               ev: "role=list + aria-label บอกสถานะแต่ละขั้น" })],
+  ];
+  for (const [id, name, fn] of checks) {
+    const r = fn();
+    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
+    if (!r.ok) finding("MEDIUM", id, "UI ไม่ตรงโครง STEADI: " + name,
+      "หน้าจอยังไม่พาผู้ใช้ผ่านวงจรครบตามที่ออกแบบไว้", r.ev,
+      "เพิ่มส่วนที่ขาดในหน้าจอที่เกี่ยวข้อง");
+  }
+
+  /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
+  const banned = [
+    ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],
+    ["X-11", "ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม", /(?:เสี่ยง|โอกาส)หกล้ม\s*\d+\s*%/],
+    ["X-12", "ห้ามอ้างว่า AI วินิจฉัย", /AI\s*(?:วินิจฉัย|ตรวจพบว่าเป็นโรค)/],
+    ["X-13", "ห้ามสั่งให้หยุดยาเอง", /(?:ควร|ให้|กรุณา)หยุดยา(?!เอง)/],
+  ];
+  for (const [id, name, re] of banned) {
+    const hits = [];
+    for (const f of uiAll) {
+      const t = read(f); if (!t) continue;
+      for (const m of t.matchAll(new RegExp(re.source, "gi"))) {
+        const before = t.slice(Math.max(0, m.index - 100), m.index).replace(/\s+/g, " ");
+        if (/ไม่|ห้าม|เลิก|ถอด/.test(before)) continue;
+        hits.push(`${f}:${t.slice(0, m.index).split("\n").length} «${m[0]}»`);
+      }
+    }
+    req(7, id, name, hits.length ? "VIOLATION" : "PASS", hits.slice(0, 2).join(" · ") || "ไม่พบ");
+    if (hits.length) finding("HIGH", id, "ภาษาที่อาจทำให้เข้าใจผิด: " + name,
+      "ถ้อยคำนี้ทำให้ผู้ใช้เข้าใจว่าระบบวินิจฉัยหรือทำนายผล ทั้งที่ระบบสร้างสัญญาณเพื่อการติดตามเท่านั้น",
+      hits.slice(0, 3).join(" · "), "เปลี่ยนเป็นภาษาที่บอกสิ่งที่พบและสิ่งที่ต้องทำต่อ");
+  }
+}
+
+/* ============================================================
    สรุปผลและออกรายงาน
    ============================================================ */
 function verdict() {
@@ -543,7 +614,8 @@ function report() {
   const byLayer = (n) => R.filter(r => r.layer === n);
   const LN = { 1: "ความครบถ้วนของฟีเจอร์", 2: "Workflow แบบ End-to-End",
                3: "ขอบเขตของระบบ", 4: "Rules Engine (รันจริง)",
-               5: "สิทธิ์และข้อมูลส่วนบุคคล", 6: "สิ่งที่ตรวจยืนยันไม่ได้" };
+               5: "สิทธิ์และข้อมูลส่วนบุคคล", 6: "สิ่งที่ตรวจยืนยันไม่ได้",
+               7: "UI/UX ตามโครง CDC STEADI" };
   const cnt = (s) => R.filter(r => r.status === s).length;
 
   let md = `# CareSignal — รายงานการตรวจสอบความสอดคล้อง
@@ -578,7 +650,7 @@ function report() {
 | Low | ${F.filter(f => f.sev === "LOW").length} |
 `;
 
-  for (const n of [1, 2, 3, 4, 5, 6]) {
+  for (const n of [1, 2, 3, 4, 5, 6, 7]) {
     const rows = byLayer(n); if (!rows.length) continue;
     md += `\n## ชั้นที่ ${n} — ${LN[n]}\n\n| รหัส | ข้อกำหนด | สถานะ | หลักฐาน |\n|---|---|---|---|\n`;
     for (const r of rows) {
@@ -612,7 +684,7 @@ function report() {
 }
 
 /* ---------- รัน ---------- */
-layer1(); layer2(); layer3(); layer4(); layer5(); layer6();
+layer1(); layer2(); layer3(); layer4(); layer5(); layer6(); layer7();
 const md = report();
 fs.mkdirSync(path.join(ROOT, "audit"), { recursive: true });
 fs.writeFileSync(path.join(ROOT, "audit", "report-latest.md"), md, "utf8");
@@ -621,7 +693,7 @@ const v = verdict();
 console.log("=".repeat(64));
 console.log("CareSignal Compliance Audit —", v);
 console.log("=".repeat(64));
-for (const n of [1, 2, 3, 4, 5, 6]) {
+for (const n of [1, 2, 3, 4, 5, 6, 7]) {
   const rows = R.filter(r => r.layer === n);
   const bad = rows.filter(r => r.status !== "PASS" && r.status !== "UNVERIFIABLE");
   console.log(`ชั้น ${n}: ${rows.filter(r => r.status === "PASS").length}/${rows.length} ผ่าน` +

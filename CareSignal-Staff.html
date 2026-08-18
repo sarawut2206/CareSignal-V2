@@ -77,6 +77,20 @@ h3{font-size:15.5px;margin:0 0 10px;color:#fff}
 .notice{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:13px;padding:13px 15px;font-size:13px;color:var(--ink2);margin-bottom:14px}
 .notice b{color:#fff}
 .tiny{font-size:11.5px;color:var(--ink2);line-height:1.65;margin:10px 0 0}
+/* ---------- แถบขั้นตอนตาม STEADI ----------
+   บอกว่าเคสอยู่ช่วงไหนของวงจร ทบทวน → ติดต่อ/วางแผน → ส่งต่อ → ติดตาม
+   เจ้าหน้าที่จะได้รู้ทันทีว่า "งานถัดไปเป็นงานประเภทไหน" ไม่ต้องอ่านสถานะดิบ */
+.stagebar{display:flex;gap:4px;margin:8px 0 10px}
+.stg{flex:1;text-align:center;font-size:11px;padding:6px 3px;border-radius:9px;
+  background:rgba(255,255,255,.06);color:var(--ink3);border:1px solid var(--line2);line-height:1.3}
+.stg[data-on="1"]{background:var(--gold);color:var(--goldink);font-weight:700;border-color:var(--gold)}
+.stg[data-on="done"]{background:rgba(34,181,127,.18);color:var(--c4);border-color:rgba(34,181,127,.4)}
+/* ป้ายความสำคัญ: ต้องมีไอคอน + ข้อความ + การกระทำเสมอ ไม่ใช้สีลำพัง
+   เพราะผู้ใช้ที่แยกสีได้ยากจะอ่านไม่ออกว่าเคสไหนด่วน */
+.prio{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;
+  font-size:11.5px;font-weight:700;color:#fff}
+.prioact{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.5}
+.grp{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.05em;margin:16px 0 6px}
 .warnbox{background:rgba(240,82,76,.16);border:1px solid rgba(240,82,76,.5);border-radius:13px;padding:13px 15px;font-size:13.5px;color:#FFD9D7;margin-bottom:14px}
 .warnbox b{color:#fff}
 .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:#fff;color:#12295F;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center;box-shadow:0 10px 30px rgba(0,10,40,.4)}
@@ -246,6 +260,37 @@ function ask(msg,required){
   if(v===null&&required)return null;
   return v||"";
 }
+/* จับสถานะดิบ 9 แบบเข้ากลุ่มงาน 4 กลุ่มตามวงจร STEADI
+   เจ้าหน้าที่คิดเป็น "ประเภทงาน" ไม่ได้คิดเป็นชื่อสถานะ */
+var STAGES=[
+  {k:"review", nm:"ทบทวนสัญญาณ",  ic:"🔎", of:["new","reviewing"]},
+  {k:"plan",   nm:"ติดต่อ/วางแผน", ic:"📞", of:["contacted","care_plan_agreed"]},
+  {k:"refer",  nm:"ส่งต่อ",        ic:"➡️", of:["referred","appointment_booked","service_completed"]},
+  {k:"follow", nm:"ติดตามผล",      ic:"🔁", of:["follow_up_due","intervention"]}
+];
+function stageOf(status){
+  for(var i=0;i<STAGES.length;i++)if(STAGES[i].of.indexOf(status)>=0)return STAGES[i];
+  return {k:"closed",nm:"ปิดแล้ว",ic:"✓"};
+}
+function stageBar(status){
+  var cur=stageOf(status), idx=STAGES.findIndex(function(x){return x.k===cur.k});
+  return '<div class="stagebar" role="list" aria-label="ขั้นตอนของเคส">'+
+    STAGES.map(function(x,i){
+      var on = i===idx ? "1" : (idx>i ? "done" : "0");
+      return '<div class="stg" data-on="'+on+'" role="listitem">'+x.ic+'<br>'+esc(x.nm)+'</div>';
+    }).join("")+'</div>';
+}
+/* ป้ายความสำคัญ — สีมาพร้อมไอคอน ข้อความ และเวลาที่ต้องทำเสมอ */
+var PRIO={
+  urgent:{ic:"🔴",nm:"ต้องทบทวนด่วน",act:"ทีมดูแลต้องติดต่อภายใน 24 ชั่วโมง"},
+  decline:{ic:"🟠",nm:"ต้องทบทวน",   act:"ทีมดูแลต้องติดต่อภายใน 48 ชั่วโมง"},
+  watch:{ic:"🟡",nm:"เฝ้าสังเกต",    act:"ติดต่อและวางแผนภายใน 72 ชั่วโมง"},
+  stable:{ic:"🟢",nm:"ติดตามตามรอบ", act:"ไม่ต้องดำเนินการเร่งด่วน"}
+};
+function prioPill(level){
+  var p=PRIO[level]||PRIO.watch;
+  return '<span class="prio" style="background:'+(LV_C[level]||"#5B77B4")+'">'+p.ic+' '+esc(p.nm)+'</span>';
+}
 function caseStep(k){for(var i=0;i<CASE_STEPS.length;i++)if(CASE_STEPS[i].k===k)return CASE_STEPS[i];return null}
 var SIG_NM={S1:"หกล้มครั้งใหม่",S2:"หกล้มซ้ำ/บาดเจ็บ",S3:"ความเสี่ยงจากยา",
             S4:"กำลังขาและการทรงตัวถดถอย",S5:"เดินช้าลง",S6:"กิจวัตรประจำวันลดลง",
@@ -327,20 +372,35 @@ function renderQueue(){
   if(WL.filter==="ref")      list=list.filter(function(c){return c.ref_open>0});
   if(WL.filter==="med")      list=list.filter(function(c){return c.med_review_open>0});
   if(WL.filter==="unreach")  list=list.filter(function(c){return c.unreachable});
+  /* เรียงตามขั้นตอนก่อน แล้วค่อยตามลำดับความสำคัญที่ฐานข้อมูลคำนวณไว้ */
+  var ORDER=STAGES.map(function(x){return x.k}).concat(["closed"]);
+  list.sort(function(a,b){
+    var d=ORDER.indexOf(stageOf(a.status).k)-ORDER.indexOf(stageOf(b.status).k);
+    return d!==0?d:(a.priority-b.priority);
+  });
 
   if(!list.length){
     html+='<div class="card"><div class="empty">'+(rows.length?"ไม่มีเคสในกลุ่มนี้":"ไม่มีเคสค้าง 🎉<br><span style=\"font-size:12.5px\">เมื่อสมาชิกประเมินแล้วพบสัญญาณระดับเหลืองขึ้นไป ระบบจะเปิดเคสที่นี่ทันที</span>")+'</div></div>';
   }
+  /* จัดกลุ่มตามขั้นตอนของวงจร แทนการเรียงยาวเป็นแถวเดียว
+     เจ้าหน้าที่ทำงานเป็นชุด ๆ ได้ เช่น โทรทั้งกลุ่มติดต่อ แล้วค่อยไปกลุ่มส่งต่อ */
+  var curGroup=null;
   list.forEach(function(c){
-    var sl=slaText(c), step=caseStep(c.status);
+    var sl=slaText(c), step=caseStep(c.status), stg=stageOf(c.status);
+    if(stg.k!==curGroup){
+      curGroup=stg.k;
+      var n=list.filter(function(x){return stageOf(x.status).k===stg.k}).length;
+      html+='<div class="grp">'+stg.ic+' '+esc(stg.nm)+' ('+n+')</div>';
+    }
     var sigs=(c.signals||[]).slice(0,3).map(function(f){
       return '<span class="chip2">'+esc(f.k||f.id||"")+' '+esc(f.nm||SIG_NM[f.k]||f.text||"")+'</span>';
     }).join("");
     html+='<div class="case"><div class="top">'+
-      '<span class="pill" style="background:'+(LV_C[c.level]||"#5B77B4")+'">'+(LV_NM[c.level]||esc(c.level))+'</span>'+
+      prioPill(c.level)+
       '<span class="who">'+esc(c.pseudonym||"—")+' · '+esc(c.display_name||"")+(c.age?" · "+c.age+" ปี":"")+'</span>'+
       '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(c.opened_at)+'</span></div>'+
-      (sigs?'<div style="margin:2px 0 6px">'+sigs+'</div>':'')+
+      '<div class="prioact">'+esc((PRIO[c.level]||PRIO.watch).act)+'</div>'+
+      (sigs?'<div style="margin:6px 0">'+sigs+'</div>':'')+
       '<div class="rowline"><span class="k">งานถัดไป</span><span class="v" style="font-family:inherit;font-weight:600;text-align:right">'+esc(nextAction(c))+'</span></div>'+
       '<div class="rowline"><span class="k">กำหนด</span><span class="v" style="color:'+sl.cls+'">'+esc(sl.txt)+'</span></div>'+
       '<div class="rowline"><span class="k">สถานะ</span><span class="v" style="font-family:inherit;font-weight:500">'+esc(step?step.nm:c.status)+'</span></div>'+
@@ -426,8 +486,22 @@ async function caseDetailV(caseId,userId){
       '</span><span class="v" style="color:'+col+';font-family:inherit;font-size:12.5px">'+esc(g?g.nm:"ยังไม่จัดกลุ่ม")+'</span></div>';
   }).join("");
 
+  /* สามคำถามที่หน้าเคสต้องตอบทันที: พบอะไร · ใครต้องทำอะไร · ภายในเมื่อไร
+     วางไว้บนสุดก่อนรายละเอียดทั้งหมด เพื่อไม่ต้องเลื่อนหาว่าต้องทำอะไร */
+  var pr=PRIO[c.level]||PRIO.watch;
+  var topSig=(c.signals||[])[0];
   V.innerHTML=
     '<button class="ghostb" id="back" style="margin:0 0 12px">← กลับคิวงาน</button>'+
+    stageBar(c.status)+
+    '<div class="card" style="border:1.5px solid '+(LV_C[c.level]||"#5B77B4")+'">'+
+      '<div style="margin-bottom:8px">'+prioPill(c.level)+'</div>'+
+      '<div class="rowline"><span class="k">พบอะไร</span><span class="v" style="font-family:inherit;font-weight:600;text-align:right">'+
+        esc(topSig?(topSig.nm||SIG_NM[topSig.k]||"มีสัญญาณเสี่ยง"):"มีสัญญาณเสี่ยง")+
+        ((c.signals||[]).length>1?' และอีก '+((c.signals||[]).length-1)+' สัญญาณ':'')+'</span></div>'+
+      '<div class="rowline"><span class="k">ใครต้องทำอะไร</span><span class="v" style="font-family:inherit;font-weight:600;text-align:right">'+esc(nextAction(c))+'</span></div>'+
+      '<div class="rowline"><span class="k">ภายในเมื่อไร</span><span class="v" style="color:'+sl.cls+'">'+esc(sl.txt)+'</span></div>'+
+      '<p class="tiny">ระบบนี้สร้าง<b>สัญญาณเพื่อการติดตาม</b> ไม่ใช่การวินิจฉัยโรค · ไม่สั่งปรับยา · ไม่ใช้ตัดสินสิทธิ์หรือผลการเคลม</p>'+
+    '</div>'+
     (anyFlag?'<div class="warnbox"><b>ธงความปลอดภัย</b><br>'+
       flags.filter(function(f){return f[1]}).map(function(f){return "• "+esc(f[0])}).join("<br>")+
       '<div class="btnrow" style="flex-wrap:wrap;margin-top:10px">'+

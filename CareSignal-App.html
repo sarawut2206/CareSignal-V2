@@ -214,7 +214,27 @@ body.camfs .hudtop{display:none}
   font-size:16px !important;line-height:1.25;font-weight:600;color:var(--ink2);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
   padding:10px 4px !important;transition:transform .12s,background .18s}
-.tabs button b,.tabs .tab b{font-size:16px !important;font-weight:700;display:block}
+.tabs button b,
+/* ---------- แถบเส้นทางการดูแลตาม STEADI ----------
+   ผู้สูงอายุหลายท่านไม่รู้ว่า "ตรวจแล้วยังไงต่อ" การเห็นเส้นทางทั้งเส้น
+   พร้อมจุดที่ตัวเองอยู่ ช่วยให้รู้ว่าเหลืออีกกี่ขั้นและขั้นถัดไปคืออะไร
+   ใช้ทั้งไอคอน ตัวหนังสือ และสี ไม่พึ่งสีอย่างเดียว
+   เพราะผู้สูงอายุจำนวนมากแยกสีเขียว-เหลืองได้ยาก */
+.prog{height:8px;background:rgba(255,255,255,.28);border-radius:99px;overflow:hidden;margin:12px 0 2px}
+.prog i{display:block;height:100%;background:#FCD34D;border-radius:99px;transition:width .3s}
+.journey{display:flex;gap:6px;margin:0 0 14px}
+.jstep{flex:1;background:var(--surf);border:2px solid var(--line);border-radius:14px;
+  padding:10px 6px;text-align:center;position:relative}
+.jstep .ji{font-size:22px;line-height:1}
+.jstep .jn{font-size:12.5px;font-weight:600;color:var(--ink2);margin-top:3px;line-height:1.25}
+.jstep[data-st="done"]{border-color:var(--c4);background:var(--c4b)}
+.jstep[data-st="done"] .jn{color:var(--c4)}
+.jstep[data-st="now"]{border-color:var(--brand);background:#EEF4FF;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.jstep[data-st="now"] .jn{color:var(--brand2);font-weight:700}
+.jstep[data-st="wait"]{opacity:.55}
+.jnext{background:var(--surf2);border-radius:14px;padding:13px 15px;margin:0 0 14px;font-size:15px}
+.jnext b{display:block;font-size:16.5px;margin-bottom:3px}
+.tabs .tab b{font-size:16px !important;font-weight:700;display:block}
 .tabs button svg,.tabs .tab svg{width:32px !important;height:32px !important;stroke-width:1.9;margin:0 !important}
 .tabs button:active,.tabs .tab:active{transform:scale(.96)}
 .tabs button[aria-selected="true"],.tabs .tab[aria-selected="true"]{
@@ -1304,9 +1324,17 @@ function audit(ev,detail,human){
    เรนเดอร์
    ============================================================ */
 var V=document.getElementById("view"), B=document.getElementById("barIn"), T=document.getElementById("tabs");
-function head(kick,h,p,back){
+function head(kick,h,p,back,prog){
+  /* prog = [ขั้นที่, ทั้งหมด] — ผู้สูงอายุที่ตอบคำถามยาว ๆ ต้องเห็นว่าเหลืออีกเท่าไร
+     ไม่งั้นจะเลิกกลางคัน เพราะไม่รู้ว่าจะจบเมื่อไร */
+  var bar="";
+  if(prog&&prog[1]){
+    var pc=Math.round(prog[0]/prog[1]*100);
+    bar='<div class="prog" role="progressbar" aria-valuenow="'+prog[0]+'" aria-valuemin="0" aria-valuemax="'+prog[1]+'"'+
+        ' aria-label="ขั้นตอนที่ '+prog[0]+' จาก '+prog[1]+'"><i style="width:'+pc+'%"></i></div>';
+  }
   B.innerHTML=(back?'<button class="backb" data-go="'+back+'">‹ ย้อนกลับ</button>':'<div class="brandrow">'+LOGO+'<span style="font-weight:700;font-size:15px;letter-spacing:-.01em">Care<span style="color:#FCD34D">Signal</span></span></div>')+
-  '<div class="kick">'+kick+'</div><h1>'+h+'</h1>'+(p?'<p>'+p+'</p>':'');
+  '<div class="kick">'+kick+'</div><h1>'+h+'</h1>'+(p?'<p>'+p+'</p>':'')+bar;
 }
 function go(sc,arg){
   /* ปิดกล้องและตัวจับเวลาทุกครั้งที่เปลี่ยนหน้า — กันกล้องค้างเปิดหลังกดยกเลิก */
@@ -2053,6 +2081,53 @@ function portalV(){
 }
 
 /* ---------- หน้าหลัก ---------- */
+/* ============================================================
+   เส้นทางการดูแลตาม CDC STEADI — คัดกรอง → ประเมิน → แผนดูแล → ติดตาม
+   ------------------------------------------------------------
+   เดิมหน้าแรกบอกแค่ "ผลตรวจล่าสุด" ซึ่งตอบไม่ได้ว่าตรวจแล้วยังไงต่อ
+   แถบนี้บอกสามอย่างที่ผู้ใช้ต้องรู้: อยู่ขั้นไหน · เหลืออะไร · ทำอะไรต่อ
+   สถานะแต่ละขั้นดูจากข้อมูลจริงของผู้ใช้ ไม่ใช่ค่าที่ตั้งไว้ตายตัว
+   ============================================================ */
+var STEADI=[
+  {k:"screen",  ic:"📋", nm:"คัดกรอง"},
+  {k:"assess",  ic:"📏", nm:"ประเมิน"},
+  {k:"plan",    ic:"📝", nm:"แผนดูแล"},
+  {k:"follow",  ic:"🔁", nm:"ติดตาม"}
+];
+function steadiState(){
+  var A=S.data.assessments||[], last=A[A.length-1];
+  var hasPlan=!!(S.data.plan||(last&&last.level&&last.level!=="stable"));
+  var fu=(S.data.followUps||[]).filter(function(f){return f.status!=="done"});
+  var st={screen:"wait",assess:"wait",plan:"wait",follow:"wait"}, now="screen", next=null;
+  if(!A.length){
+    now="screen";
+    next={t:"เริ่มด้วยการตอบคำถาม 3 ข้อ",d:"ใช้เวลาไม่ถึง 1 นาที ระบบจะบอกว่าต้องตรวจอะไรต่อ",go:"assessIntro",btn:"เริ่มคัดกรอง"};
+  }else{
+    st.screen="done"; st.assess="done"; now="plan";
+    if(hasPlan){
+      st.plan="done"; now="follow";
+      next=fu.length
+        ? {t:"มีนัดติดตาม "+fu.length+" รายการ",d:"ทีมดูแลจะติดต่อกลับ หรือกดดูแผนของท่านได้",go:"carePlan",btn:"ดูแผนดูแล"}
+        : {t:"ถึงเวลาตรวจซ้ำเพื่อดูแนวโน้ม",d:"การตรวจต่อเนื่องทำให้ระบบเห็นการเปลี่ยนแปลงของท่านได้เร็วขึ้น",go:"assessIntro",btn:"ตรวจอีกครั้ง"};
+    }else{
+      next={t:"ผลของท่านอยู่ในเกณฑ์ดูแลตนเองตามปกติ",d:"ตรวจซ้ำทุก 3 เดือนเพื่อให้เห็นแนวโน้ม",go:"assessIntro",btn:"ตรวจอีกครั้ง"};
+    }
+  }
+  st[now]="now";
+  return {st:st, now:now, next:next};
+}
+function journeyHTML(){
+  var j=steadiState();
+  return '<div class="journey" role="list" aria-label="เส้นทางการดูแล">'+
+    STEADI.map(function(x){
+      var s=j.st[x.k];
+      var lbl=s==="done"?"ทำแล้ว":s==="now"?"ขั้นตอนปัจจุบัน":"ยังไม่ถึง";
+      return '<div class="jstep" data-st="'+s+'" role="listitem" aria-label="'+esc(x.nm)+' — '+lbl+'">'+
+        '<div class="ji">'+(s==="done"?"✓":x.ic)+'</div><div class="jn">'+esc(x.nm)+'</div></div>';
+    }).join("")+'</div>'+
+    (j.next?'<div class="jnext"><b>ขั้นตอนถัดไป: '+esc(j.next.t)+'</b>'+esc(j.next.d)+
+      '<button class="cta" data-go="'+j.next.go+'" style="margin-top:10px">'+esc(j.next.btn)+'</button></div>':'');
+}
 function homeV(){
   var p=S.data.profile;
   /* กันจอขาว: เข้าหน้านี้ได้โดยยังไม่มีโปรไฟล์ ถ้า session ค้างหรือกลับมาจากลิงก์เก่า */
@@ -2108,7 +2183,8 @@ function homeV(){
     '<div class="card"><h3>อื่น ๆ</h3>'+
     '<button class="ghostb" data-go="me" style="font-size:17px;min-height:56px">⚙️ ตั้งค่าและความเป็นส่วนตัว</button>'+
     '<button class="ghostb" data-go="ai" style="font-size:17px;min-height:56px">🔍 ระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>';
-  V.innerHTML='<div class="anim">'+hero+fontBarHTML()+mainBtn+warnPart+polPart+
+  /* แถบเส้นทาง STEADI วางไว้ใต้ผลตรวจ เพื่อตอบว่า "ตรวจแล้วยังไงต่อ" */
+  V.innerHTML='<div class="anim">'+hero+journeyHTML()+fontBarHTML()+mainBtn+warnPart+polPart+
   (A.length>1?'<button class="ghostb" data-go="history" style="font-size:17px;min-height:56px">📈 ดูกราฟแนวโน้มย้อนหลัง ('+A.length+' ครั้ง)</button>':'')+
   morePart+
   '</div>';
@@ -2298,7 +2374,7 @@ function verifyNotice(){
 /* การ์ดแสดงสิ่งที่กล้องสังเกตได้ ก่อนให้ผู้ใช้ยืนยันด้วยตนเอง */
 function renderFallsQ(i){
   head("คำถามที่ "+(i+1)+" จาก "+QS.length,"ประวัติการหกล้ม",
-       "ตอบตามความจริง — รายละเอียดช่วยให้ระบบแยกได้ว่าเป็นเรื่องการทรงตัวหรือเรื่องอื่น","assessIntro");
+       "ตอบตามความจริง — รายละเอียดช่วยให้ระบบแยกได้ว่าเป็นเรื่องการทรงตัวหรือเรื่องอื่น","assessIntro",[i+1,QS.length]);
   if(!S.draft.fallsDetail)S.draft.fallsDetail={};
   var f=S.draft.fallsDetail;
   V.innerHTML='<div class="anim">'+
@@ -2406,7 +2482,7 @@ function shrinkImage(file,maxW){
 
 function renderMedsQ(i){
   head("คำถามที่ "+(i+1)+" จาก "+QS.length,"ยาที่ใช้ประจำ",
-       "ถ่ายรูปซองยาให้ระบบอ่านชื่อยา แล้วท่านกดยืนยัน — ระบบไม่ตัดสินเอง และไม่สั่งปรับยา","assessIntro");
+       "ถ่ายรูปซองยาให้ระบบอ่านชื่อยา แล้วท่านกดยืนยัน — ระบบไม่ตัดสินเอง และไม่สั่งปรับยา","assessIntro",[i+1,QS.length]);
   if(!S.draft.medsDetail)S.draft.medsDetail={purposes:[],changed:[],symptoms:[],items:[]};
   var m=S.draft.medsDetail; if(!m.items)m.items=[];
 
@@ -2639,7 +2715,7 @@ function assessQV(i){
   i=i||0;var q=QS[i];
   if(q.fallsDetail){ renderFallsQ(i); return }
   if(q.medsDetail){ renderMedsQ(i); return }
-  head("คำถามที่ "+(i+1)+" จาก "+QS.length,q.q,"","assessIntro");
+  head("คำถามที่ "+(i+1)+" จาก "+QS.length,q.q,"","assessIntro",[i+1,QS.length]);
   var extra="";
   if(q.k==="balance"&&S.draft.balPassed!=null){
     extra='<div class="card" style="margin-top:14px;background:var(--surf2)"><h3>ผลจากกล้องเมื่อสักครู่</h3>'+

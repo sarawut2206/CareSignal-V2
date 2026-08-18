@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-18 02:16 |
+| วันที่ตรวจ | 2026-08-18 03:16 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 52 |
+| PASS | 65 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -33,13 +33,13 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:726 · CareSignal-Vision.html:1144 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:889 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2370 · CareSignal-Vision.html:3303 · CareSignal-App.html:2511 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:865 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2669 · CareSignal-Vision.html:3177 · CareSignal-App.html:1925 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1150 · CareSignal-Vision.html:712 · CareSignal-App.html:953 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:229 · supabase/09_insurtech.sql:20 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:746 · CareSignal-Vision.html:1144 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:909 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2446 · CareSignal-Vision.html:3303 · CareSignal-App.html:2587 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:885 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2745 · CareSignal-Vision.html:3177 · CareSignal-App.html:1953 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1170 · CareSignal-Vision.html:712 · CareSignal-App.html:973 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:243 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/01_schema.sql:22 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · cs-backend.js:589 |
@@ -116,6 +116,24 @@
 | U-04 | ประสิทธิผลในการลดการหกล้มหรือลดการเคลม | UNVERIFIABLE | - · ยังไม่มีข้อมูลนำร่องและไม่มีกลุ่มเปรียบเทียบ |
 | U-05 | ความปลอดภัยของการให้ผู้สูงอายุทดสอบเองที่บ้าน | UNVERIFIABLE | - · มี Safety Gate แต่ยังไม่มีข้อมูลเหตุการณ์ไม่พึงประสงค์จากการใช้จริง |
 | U-06 | ความทนทานของระบบรู้จำเสียงกับสำเนียงและเสียงรบกวนจริง | UNVERIFIABLE | - · ทดสอบด้วยข้อความจำลอง ยังไม่มีการทดสอบภาคสนาม |
+
+## ชั้นที่ 7 — UI/UX ตามโครง CDC STEADI
+
+| รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
+|---|---|---|---|
+| X-01 | แอปสมาชิกแสดงเส้นทางการดูแลทั้ง 4 ขั้น ไม่ใช่แค่ผลตรวจ | PASS | STEADI + journeyHTML ในหน้าแรก |
+| X-02 | หน้าแรกบอก "ขั้นตอนถัดไป" ที่กดทำต่อได้ทันที | PASS | การ์ดขั้นตอนถัดไปมีปุ่มพาไปทำงานต่อ |
+| X-03 | คิวงานเจ้าหน้าที่จัดกลุ่มตามขั้นของวงจร | PASS | STAGES 4 กลุ่ม + จัดกลุ่มในคิว |
+| X-04 | หน้าเคสมีแถบบอกว่าอยู่ขั้นไหนของวงจร | PASS | stageBar ในหน้ารายละเอียดเคส |
+| X-05 | หน้าเคสตอบ 3 คำถามทันที: พบอะไร · ใครทำอะไร · ภายในเมื่อไร | PASS | การ์ดสรุปบนสุดของหน้าเคส |
+| X-06 | ป้ายความสำคัญมีไอคอนและข้อความ ไม่ใช้สีลำพัง | PASS | PRIO มี ic + nm + act และใช้ผ่าน prioPill() |
+| X-07 | ป้ายความสำคัญบอกด้วยว่าต้องทำภายในเมื่อไร | PASS | บรรทัด .prioact ใต้ป้ายทุกใบ |
+| X-08 | แบบประเมินมีแถบบอกความคืบหน้า | PASS | head() รับพารามิเตอร์ prog และหน้าคำถามส่งค่าให้ |
+| X-09 | แถบเส้นทางอ่านได้ด้วยเครื่องอ่านหน้าจอ | PASS | role=list + aria-label บอกสถานะแต่ละขั้น |
+| X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
+| X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
+| X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |
+| X-13 | ห้ามสั่งให้หยุดยาเอง | PASS | ไม่พบ |
 
 ## สิ่งที่พบและข้อเสนอแก้ไข
 
