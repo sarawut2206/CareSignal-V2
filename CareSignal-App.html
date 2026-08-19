@@ -228,6 +228,11 @@ body.camfs .hudtop{display:none}
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
   padding:10px 4px !important;transition:transform .12s,background .18s}
 .tabs button b,
+.tabs .tab b{font-size:16px !important;font-weight:700;display:block}
+
+/* บล็อกด้านล่างเคยถูกแทรกคั่นกลางรายการ selector ของแท็บล่าง
+   ทำให้กฎกลายเป็น ".tabs button b, .prog{height:8px;overflow:hidden}"
+   ป้ายแท็บจึงถูกตัดเหลือ 8px และมีพื้นขาวทับจนอ่านไม่ออก */
 /* ---------- แถบเส้นทางการดูแลตาม STEADI ----------
    ผู้สูงอายุหลายท่านไม่รู้ว่า "ตรวจแล้วยังไงต่อ" การเห็นเส้นทางทั้งเส้น
    พร้อมจุดที่ตัวเองอยู่ ช่วยให้รู้ว่าเหลืออีกกี่ขั้นและขั้นถัดไปคืออะไร
@@ -265,7 +270,6 @@ body.camfs .hudtop{display:none}
 .jstep[data-st="wait"]{opacity:.55}
 .jnext{background:var(--surf2);border-radius:14px;padding:13px 15px;margin:0 0 14px;font-size:15px}
 .jnext b{display:block;font-size:16.5px;margin-bottom:3px}
-.tabs .tab b{font-size:16px !important;font-weight:700;display:block}
 .tabs button svg,.tabs .tab svg{width:32px !important;height:32px !important;stroke-width:1.9;margin:0 !important}
 .tabs button:active,.tabs .tab:active{transform:scale(.96)}
 .tabs button[aria-selected="true"],.tabs .tab[aria-selected="true"]{

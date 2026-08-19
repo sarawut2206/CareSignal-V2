@@ -865,6 +865,33 @@ function layer7() {
       r.ev, "เพิ่มส่วนที่ขาด");
   }
 
+  /* ---- CSS ที่ถูกแทรกผิดจนกฎรวมร่างกัน ---- */
+  {
+    /* เคยเกิดจริง: แทรกบล็อกใหม่ก่อน ".tabs .tab b{" ซึ่งเป็นบรรทัดที่สอง
+       ของรายการ selector — กฎกลายเป็น ".tabs button b, .prog{height:8px;
+       overflow:hidden}" ป้ายแท็บล่างจึงถูกตัดเหลือ 8px และมีพื้นขาวทับ
+       ตรวจทุกไฟล์: บรรทัดที่จบด้วยจุลภาคต้องตามด้วย selector เท่านั้น */
+    const hits = [];
+    for (const f of [...APPS, ...STAFF, ...WEBS]) {
+      const src = read(f); if (!src) continue;
+      const m = src.match(/<style>([\s\S]*?)<\/style>/);
+      if (!m) continue;
+      const lines = m[1].split(LF);
+      const base = src.slice(0, m.index).split(LF).length;
+      for (let i = 0; i < lines.length - 1; i++) {
+        const cur = lines[i].trim(), nxt = lines[i + 1].trim();
+        if (!cur.endsWith(",") || cur.startsWith("/*") || cur.includes("{")) continue;
+        if (nxt.startsWith("/*") || nxt === "") hits.push(`${f}:${base + i} «${cur.slice(0, 40)}»`);
+      }
+    }
+    req(7, "X-60", "ไม่มี selector ที่ถูกแทรกคั่นกลางจนกฎรวมร่างกัน",
+        hits.length ? "VIOLATION" : "PASS",
+        hits.slice(0, 3).join(" · ") || "ตรวจทุกบล็อก <style> แล้ว ไม่พบ");
+    if (hits.length) finding("HIGH", "X-60", "CSS ถูกแทรกคั่นกลางรายการ selector",
+      "กฎสองชุดรวมร่างกัน ทำให้ส่วนที่ไม่เกี่ยวข้องได้สไตล์ผิด — เคยทำให้ป้ายแท็บล่างอ่านไม่ออก",
+      hits.slice(0, 3).join(" · "), "ย้ายบล็อกที่แทรกไปไว้หลัง selector ที่สมบูรณ์");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

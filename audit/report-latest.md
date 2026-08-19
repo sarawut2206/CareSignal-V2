@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 09:24 |
+| วันที่ตรวจ | 2026-08-19 09:30 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 111 |
+| PASS | 112 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -33,12 +33,12 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:781 · CareSignal-Vision.html:1151 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:944 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2555 · CareSignal-Vision.html:3310 · CareSignal-App.html:2752 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:920 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2911 · CareSignal-Vision.html:3184 · CareSignal-App.html:1996 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1213 · CareSignal-Vision.html:719 · CareSignal-App.html:1008 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:785 · CareSignal-Vision.html:1151 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:948 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2559 · CareSignal-Vision.html:3310 · CareSignal-App.html:2756 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:924 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2915 · CareSignal-Vision.html:3184 · CareSignal-App.html:2000 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1217 · CareSignal-Vision.html:719 · CareSignal-App.html:1012 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:427 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
@@ -176,6 +176,7 @@
 | X-57 | ชุดข้อมูลส่งต่ออ่านจากคอลัมน์จริง ไม่ใช่เดาว่าอยู่ใน parts | PASS | อ่าน falls_detail / home_detail จากคอลัมน์ ไม่ได้เดาว่าอยู่ใน parts |
 | X-58 | หัวแอปสมาชิกย่อลงเมื่อเปิดอยู่ในกรอบของหน้าเดียว | PASS | ตั้งธง data-embedded + CSS ย่อหัว (คืนพื้นที่ ~50px) |
 | X-59 | แท็บล่างของแอปสมาชิกยังใหญ่เท่าเดิมแม้อยู่ในกรอบ | PASS | แท็บล่างคง min-height 84px |
+| X-60 | ไม่มี selector ที่ถูกแทรกคั่นกลางจนกฎรวมร่างกัน | PASS | ตรวจทุกบล็อก <style> แล้ว ไม่พบ |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |
