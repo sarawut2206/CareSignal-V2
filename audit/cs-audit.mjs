@@ -1083,6 +1083,59 @@ function layer7() {
     }
   }
 
+  /* ---- ผู้ช่วยเสียงแบบสนทนา และฐานยา ---- */
+  {
+    const meds = read("cs-meds.js") || "";
+    const vChecks = [
+      ["X-85", "ผู้ช่วยเสียงตอบคำถามได้ ไม่ใช่รับเฉพาะคำสั่งตายตัว",
+        (t) => /var VC_ASK=/.test(t) && /function vcReply\(/.test(t) && /function vcAsk\(/.test(t)],
+      ["X-86", "ตัดคำลงท้ายก่อนจับคำสั่ง (พูดสุภาพแล้วยังสั่งได้)",
+        (t) => /function vcStrip\(/.test(t) && /vcParse\(txt\)\|\|vcParse\(vcStrip\(txt\)\)/.test(t)],
+      ["X-87", "ฟังไม่เข้าใจต้องบอกว่าพูดอะไรได้ ไม่เงียบ",
+        (t) => /function vcNotUnderstood\(/.test(t) && /ยังไม่เข้าใจที่พูด/.test(t)],
+      ["X-88", "คำตอบด้วยเสียงเขียนไว้ล่วงหน้า ไม่เรียกโมเดลภาษาภายนอก",
+        (t) => !/openai|anthropic\.com|generativelanguage|\/v1\/chat\/completions/i.test(t)],
+      ["X-89", "คำตอบด้วยเสียงต้องไม่ข้ามเส้นเป็นการวินิจฉัยหรือแนะนำยา",
+        (t) => {
+          const m = t.match(/function vcReply\([\s\S]*?\n\}/);
+          if (!m) return false;
+          const body = m[0];
+          if (/วินิจฉัยว่า|เป็นโรค|ควรกินยา|ให้หยุดยา|ปรับขนาดยา/.test(body)) return false;
+          return /ไม่ใช่การวินิจฉัย/.test(body) && /หยุดทันที/.test(body);
+        }],
+    ];
+    for (const [id, name, fn] of vChecks) {
+      const bad = APP_PAIR.filter(([f, t]) => !fn(t)).map(([f]) => f);
+      const ok = bad.length === 0;
+      req(7, id, name, ok ? "PASS" : "MISSING",
+          ok ? "ครบทั้งแอปสมาชิกและหน้าทดลอง" : ("ขาดใน " + bad.join(", ")));
+      if (!ok) finding("HIGH", id, "ผู้ช่วยเสียงถดถอย: " + name,
+        "ถ้าเสียงรับได้เฉพาะคำตายตัว ผู้สูงอายุที่พูดไม่ตรงรูปแบบจะใช้ไม่ได้เลย " +
+        "และถ้าคำตอบข้ามเส้นไปเป็นคำแนะนำทางการแพทย์ จะขัดกับขอบเขตที่ระบบประกาศไว้",
+        "ขาดใน " + bad.join(", "), "คืนกลไกตามหัวคอมเมนต์ของ vcReply / vcAsk");
+    }
+
+    /* ฐานยาต้องครอบคลุมฉลากที่พบจริง — เคยตอบว่า "ไม่รู้จักยานี้" กับยาสามัญ */
+    const need = ["montelukast", "procaterol", "acetylcysteine", "dextromethorphan",
+                  "guaifenesin", "multivitamin"];
+    const miss = need.filter(k => meds.indexOf(String.fromCharCode(91,34) + k + String.fromCharCode(34)) < 0);
+    req(7, "X-90", "ฐานยาครอบคลุมตัวยาที่พบบนฉลากจริงของผู้ใช้",
+        miss.length ? "MISSING" : "PASS",
+        miss.length ? ("ขาด: " + miss.join(", ")) : "ครบตามฉลากที่ทดสอบ");
+    if (miss.length) finding("MEDIUM", "X-90", "ฐานยาไม่ครอบคลุมฉลากที่พบจริง",
+      "ผู้ใช้ถ่ายฉลากชัดแล้วระบบยังบอกว่าไม่รู้จักยา ทำให้เข้าใจผิดว่าถ่ายรูปไม่ดี",
+      "ขาด: " + miss.join(", "), "เพิ่มตัวยาพร้อมรหัส ATC และกลุ่มเสี่ยงตาม STOPPFall");
+
+    /* ต้องแยกออกว่า OCR อ่านเป็นขยะ กับ อ่านได้แต่ไม่รู้จักยา */
+    const okReadable = APP_PAIR.every(([f, t]) => /function ocrLooksReadable\(/.test(t));
+    req(7, "X-91", "แยกได้ว่า OCR อ่านเป็นขยะ หรืออ่านได้แต่ไม่รู้จักยา",
+        okReadable ? "PASS" : "MISSING",
+        okReadable ? "ocrLooksReadable ตรวจว่ามีคำจริงพอ" : "ยังนับแค่จำนวนอักขระ");
+    if (!okReadable) finding("MEDIUM", "X-91", "ระบบโทษรูปทั้งที่อ่านไม่ออกจริง",
+      "นับแค่จำนวนอักขระ ทำให้ขยะผ่านเกณฑ์ แล้วบอกผู้ใช้ผิดสาเหตุ",
+      "ไม่พบ ocrLooksReadable", "ตรวจว่ามีคำอังกฤษหรือไทยยาวพอ ไม่ใช่แค่นับตัวอักษร");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

@@ -129,10 +129,33 @@ var CSMeds = (function () {
     ["hyoscine",      "A03BB01", "anticho", ["buscopan","hyoscine","hyoscine butylbromide","บัสโคแพน"]],
     ["dicyclomine",   "A03AA07", "anticho", ["bentyl","dicyclomine"]],
     ["atropine",      "A03BA01", "anticho", ["atropine"]],
+    /* ---- ยาระบบทางเดินหายใจ (พบบนฉลากที่ผู้ใช้ถ่ายมาจริง) ----
+       montelukast / procaterol / acetylcysteine ไม่อยู่ในกลุ่มเสี่ยงหกล้มตาม STOPPFall
+       แต่ต้องมีในฐาน มิฉะนั้นระบบจะตอบว่า "ไม่รู้จักยานี้" ทั้งที่เป็นยาที่ใช้กันทั่วไป
+       และผู้ใช้จะเข้าใจผิดว่าถ่ายรูปไม่ดี */
+    ["montelukast",   "R03DC03", "none", ["singulair","montelukast","lumont","montulair","montelukast sodium","มอนเทลูคาสต์"]],
+    ["procaterol",    "R03CC08", "none", ["meptin","meptin mini","procaterol","โปรคาเทอรอล"]],
+    ["acetylcysteine","R05CB01", "none", ["fluimucil","acetylcysteine","cystaline","nac","อะเซทิลซิสเทอีน"]],
+    ["carbocisteine", "R05CB03", "none", ["carbocisteine","flemex","มิวโคโซลแวน"]],
+    ["bromhexine",    "R05CB02", "none", ["bisolvon","bromhexine","โบรมเฮกซีน"]],
+    ["ambroxol",      "R05CB06", "none", ["mucosolvan","ambroxol","แอมบรอกซอล"]],
+    ["guaifenesin",   "R05CA03", "none", ["guaifenesin","glyceryl guaiacolate","กลีเซอริล กัวอะยาโคเลต"]],
+    ["terpin hydrate","R05CA05", "none", ["terpin hydrate","terpin","เทอร์ปิน ไฮเดรต"]],
+    /* dextromethorphan — ยาแก้ไอที่ออกฤทธิ์ต่อระบบประสาทส่วนกลาง
+       ทำให้ง่วงและมึนได้ในผู้สูงอายุ จัดเป็นกลุ่มเฝ้าระวังระดับ 1 ให้เภสัชกรดูรวมกับยาอื่น */
+    ["dextromethorphan","R05DA09","antihist", ["dextromethorphan","clinicof","romilar","เดกซ์โทรเมทอร์แฟน"]],
+    ["budesonide",    "R03BA02", "none", ["pulmicort","budesonide","บูเดโซไนด์"]],
+    /* ---- วิตามินและอาหารเสริมที่พบบ่อยบนฉลาก ---- */
+    ["multivitamin",  "A11AA03", "none", ["multicap","multivitamin","วิตามินรวม","มัลติแคป"]],
+    ["calcium carbonate","A12AA04","none", ["calcium carbonate","calcium","แคลเซียม"]],
+    ["ferrous sulfate","B03AA07","none", ["ferrous sulfate","ferrous","ธาตุเหล็ก"]],
+    /* ---- ยาที่พบบ่อยอื่น ๆ ---- */
+    ["lansoprazole",  "A02BC03", "none", ["prevacid","lansoprazole","แลนโซพราโซล"]],
+    ["esomeprazole",  "A02BC05", "none", ["nexium","esomeprazole","เอโซเมพราโซล"]],
     /* ---- ยาแก้แพ้ที่ทำให้ง่วง (R06A รุ่นแรก) ---- */
     ["chlorpheniramine","R06AB04","antihist", ["chlorpheniramine","cpm","คลอเฟนิรามีน","คลอร์เฟนิรามีน","piriton"]],
     ["diphenhydramine","R06AA02","antihist", ["benadryl","diphenhydramine"]],
-    ["hydroxyzine",   "N05BB01", "antihist", ["atarax","hydroxyzine","ไฮดรอกไซซีน"]],
+    ["hydroxyzine",   "N05BB01", "antihist", ["atarax","hydroxyzine","ไฮดรอกไซซีน","hydroxyzine-fc","ucerax"]],
     ["dimenhydrinate","R06AA52", "antihist", ["dramamine","dimenhydrinate","ไดเมนไฮดริเนต"]],
     ["brompheniramine","R06AB01","antihist", ["brompheniramine"]],
     ["cyproheptadine","R06AX02", "antihist", ["periactin","cyproheptadine"]],
@@ -189,12 +212,12 @@ var CSMeds = (function () {
     ["clopidogrel",   "B01AC04", "none", ["plavix","clopidogrel"]],
     ["warfarin",      "B01AA03", "none", ["orfarin","warfarin","วาร์ฟาริน"]],
     ["paracetamol",   "N02BE01", "none", ["paracetamol","tylenol","sara","พาราเซตามอล","พารา","acetaminophen"]],
-    ["ibuprofen",     "M01AE01", "none", ["brufen","ibuprofen","nurofen","ไอบูโพรเฟน"]],
+    ["ibuprofen",     "M01AE01", "none", ["brufen","ibuprofen","nurofen","ไอบูโพรเฟน","fafen","fafen forte","brufen"]],
     ["diclofenac",    "M01AB05", "none", ["voltaren","diclofenac","ไดโคลฟีแนค"]],
     ["naproxen",      "M01AE02", "none", ["naprosyn","naproxen"]],
     ["celecoxib",     "M01AH01", "none", ["celebrex","celecoxib"]],
     ["etoricoxib",    "M01AH05", "none", ["arcoxia","etoricoxib"]],
-    ["omeprazole",    "A02BC01", "none", ["losec","omeprazole","โอเมพราโซล","miracid"]],
+    ["omeprazole",    "A02BC01", "none", ["losec","omeprazole","โอเมพราโซล","miracid","omeprazole gpo","miracid"]],
     ["pantoprazole",  "A02BC02", "none", ["controloc","pantoprazole"]],
     ["ranitidine",    "A02BA02", "none", ["zantac","ranitidine"]],
     ["domperidone",   "A03FA03", "none", ["motilium","domperidone"]],
