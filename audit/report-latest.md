@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 08:42 |
+| วันที่ตรวจ | 2026-08-19 09:05 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 96 |
+| PASS | 104 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -39,7 +39,7 @@
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:903 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
 | F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2828 · CareSignal-Vision.html:3177 · CareSignal-App.html:1971 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1188 · CareSignal-Vision.html:712 · CareSignal-App.html:991 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:397 · supabase/09_insurtech.sql:20 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:427 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |
@@ -142,7 +142,7 @@
 | X-23 | วิชาชีพเห็นเฉพาะรายการที่ส่งถึงวิชาชีพตน (บังคับด้วย RLS) | PASS | referrals_select เทียบ destination กับ cs_my_destination() |
 | X-24 | หน้า "งานของฉัน" กรองที่ฐานข้อมูล ไม่ใช่ที่หน้าจอ | PASS | view my_work มี auth.uid() ในเงื่อนไขของตัวเอง |
 | X-25 | เมนูของแต่ละบทบาทประกาศไว้ชัด ไม่ใช่ซ่อนทีละปุ่ม | PASS | NAV_BY_ROLE กำหนดเมนูครบทุกบทบาท |
-| X-26 | วิชาชีพไม่มีเมนูคิวเคสทั้งพอร์ต | PASS | เมนูเภสัชกร: "mine","refer","meds","me" |
+| X-26 | วิชาชีพไม่มีเมนูคิวเคสทั้งพอร์ต | PASS | เมนูเภสัชกร: "ยาที่ใช้อยู่มีรายการใดสัมพันธ์กับการทรงตัวหรือเวียนหัวหรือไม่","มีคู่ยาที่เสริมฤทธิ์เพิ่มความเสี่ยงหกล้มหรือไม่","ควรให้แพทย์พิจารณาปรับ |
 | X-27 | กดรับเคสข้ามวิชาชีพไม่ได้ | PASS | claim_referral ตรวจ destination ก่อนอนุญาต |
 | X-28 | เปลี่ยนบทบาทผู้ใช้ได้เฉพาะผู้ดูแลระบบ | PASS | trigger guard_role_change ที่ฐานข้อมูล |
 | X-29 | ผู้เชี่ยวชาญต้องขอความยินยอมก่อนเปิดดูข้อมูลคลินิก | PASS | ตาราง access_requests + ฟังก์ชัน cs_has_live_access |
@@ -161,6 +161,14 @@
 | X-42 | การตรวจสถานะสมาชิกไม่คืนข้อมูลส่วนบุคคล | PASS | คืนเฉพาะ enrolled/consented/channel/can_request |
 | X-43 | มีลิงก์เข้าตรงที่เคส ไม่ต้องไล่หาในคิว | PASS | #ref=<id> พาไปที่เคสนั้นและทำเครื่องหมายให้เห็น |
 | X-44 | ผู้เอาประกันเห็นว่าคำขอมาจากหน่วยบริการใด | PASS | การ์ดคำขอแสดงหน่วยบริการ ณ เวลาที่ขอ |
+| X-45 | ใบส่งต่อมีชุดข้อมูล ณ เวลาส่ง ไม่ใช่ส่งแค่ระดับสี | PASS | send_referral สร้างชุดข้อมูลเอง + แผ่นส่งต่อแสดงชุดข้อมูล |
+| X-46 | ส่งต่อต้องมีคำถามที่ต้องการคำตอบอย่างน้อย 1 ข้อ (บังคับที่ฐานข้อมูล) | PASS | send_referral ปฏิเสธ qs ว่าง + หน้าจอกันก่อน |
+| X-47 | ผู้ประสานงานสร้างรายการส่งต่อได้ (RLS ไม่ปิดกั้น) | PASS | referrals_insert_own อนุญาต cs_is_staff() |
+| X-48 | ผู้เชี่ยวชาญส่งผลกลับเป็นโครงสร้าง ไม่จบที่ "ได้รับบริการแล้ว" | PASS | return_review() + แผ่นส่งผลกลับพร้อมขั้นตอนถัดไป 5 แบบ |
+| X-49 | ผลที่ส่งกลับไปตั้งงานถัดไปของเคสให้ผู้ประสานงาน (วงจรปิด) | PASS | return_review อัปเดต care_cases.next_action |
+| X-50 | return_review กันช่องโหว่ NULL ในการตรวจสิทธิ์ | PASS | สิทธิ์ถูกบังคับเป็น boolean ด้วย coalesce ก่อนตรวจ |
+| X-51 | มีไทม์ไลน์เคสที่ดึงจากข้อมูลจริงทุกตาราง | PASS | case_timeline() รวม signal/contact/refer/review/consent/followup |
+| X-52 | ไม่เป็นระบบส่งต่อผู้ป่วยเต็มรูปแบบ (ไม่มีภาพรังสี/ห้องฉุกเฉิน/รถพยาบาล) | PASS | ส่งเฉพาะ 4 ด้าน: หกล้ม การเคลื่อนไหว ยา กิจวัตร |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

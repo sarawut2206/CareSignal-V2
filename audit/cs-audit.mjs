@@ -768,6 +768,52 @@ function layer7() {
       r.ev, "เพิ่มส่วนที่ขาด");
   }
 
+  /* ---- ส่งต่อแบบมีโครงสร้าง + ส่งกลับ (แนว MOPH Refer) ---- */
+  const mophChecks = [
+    ["X-45", "ใบส่งต่อมีชุดข้อมูล ณ เวลาส่ง ไม่ใช่ส่งแค่ระดับสี",
+      () => ({ ok: /function public\.build_referral_package/.test(sqlAll)
+                && /pkg := public\.build_referral_package\(target\)/.test(sqlAll)
+                && /previewPackage/.test(staff) && /pkgHTML\(/.test(staff),
+               ev: "send_referral สร้างชุดข้อมูลเอง + แผ่นส่งต่อแสดงชุดข้อมูล" })],
+    ["X-46", "ส่งต่อต้องมีคำถามที่ต้องการคำตอบอย่างน้อย 1 ข้อ (บังคับที่ฐานข้อมูล)",
+      () => ({ ok: /array_length\(qs,1\) is null[\s\S]{0,120}raise exception/.test(sqlAll)
+                && /if\(!qs\.length\)\{toast/.test(staff),
+               ev: "send_referral ปฏิเสธ qs ว่าง + หน้าจอกันก่อน" })],
+    ["X-47", "ผู้ประสานงานสร้างรายการส่งต่อได้ (RLS ไม่ปิดกั้น)",
+      () => ({ ok: /^create policy referrals_insert_own[\s\S]{0,200}cs_is_staff\(\)/m.test(sqlAll),
+               ev: "referrals_insert_own อนุญาต cs_is_staff()" })],
+    ["X-48", "ผู้เชี่ยวชาญส่งผลกลับเป็นโครงสร้าง ไม่จบที่ \"ได้รับบริการแล้ว\"",
+      () => ({ ok: /function public\.return_review/.test(sqlAll)
+                && /next_step not in \('sufficient','need_more_info','book_assessment','refer_doctor','follow_plan'\)/.test(sqlAll)
+                && /function reviewSheet\(/.test(staff) && /returnReview/.test(staff),
+               ev: "return_review() + แผ่นส่งผลกลับพร้อมขั้นตอนถัดไป 5 แบบ" })],
+    ["X-49", "ผลที่ส่งกลับไปตั้งงานถัดไปของเคสให้ผู้ประสานงาน (วงจรปิด)",
+      () => ({ ok: /function public\.return_review[\s\S]{0,3000}update public\.care_cases[\s\S]{0,500}กลับมาแล้ว — ปรับแผนดูแล/.test(sqlAll),
+               ev: "return_review อัปเดต care_cases.next_action" })],
+    ["X-50", "return_review กันช่องโหว่ NULL ในการตรวจสิทธิ์",
+      () => ({ /* พบจากการทดสอบจริง: assigned_to เป็น NULL → not(NULL) ไม่ยก exception */
+               ok: /allowed := coalesce\(public\.cs_is_staff\(\), false\)[\s\S]{0,300}coalesce\(rec\.assigned_to = auth\.uid\(\), false\)/.test(sqlAll)
+                && /if not allowed then raise exception/.test(sqlAll),
+               ev: "สิทธิ์ถูกบังคับเป็น boolean ด้วย coalesce ก่อนตรวจ" })],
+    ["X-51", "มีไทม์ไลน์เคสที่ดึงจากข้อมูลจริงทุกตาราง",
+      () => ({ ok: /function public\.case_timeline/.test(sqlAll)
+                && /from public\.access_requests a, c/.test(sqlAll)
+                && /function timelineHTML\(/.test(staff) && /tlHost/.test(staff),
+               ev: "case_timeline() รวม signal/contact/refer/review/consent/followup" })],
+    ["X-52", "ไม่เป็นระบบส่งต่อผู้ป่วยเต็มรูปแบบ (ไม่มีภาพรังสี/ห้องฉุกเฉิน/รถพยาบาล)",
+      () => {
+        const bad = /ภาพรังสี|x-ray|รถพยาบาล|ambulance|ห้องฉุกเฉิน|admit|ผู้ป่วยใน|IPD/i.test(staff);
+        return { ok: !bad, ev: bad ? "พบคำที่เป็นระบบโรงพยาบาล" : "ส่งเฉพาะ 4 ด้าน: หกล้ม การเคลื่อนไหว ยา กิจวัตร" };
+      }],
+  ];
+  for (const [id, name, fn] of mophChecks) {
+    const r = fn();
+    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
+    if (!r.ok) finding(id === "X-50" || id === "X-47" ? "HIGH" : "MEDIUM", id, "การส่งต่อไม่ครบวงจร: " + name,
+      "ถ้าส่งต่อแค่ระดับสี หรือไม่มีผลกลับ ผู้ประสานงานพิสูจน์ไม่ได้ว่า Red แล้วเกิดการดูแลจริง",
+      r.ev, "เพิ่มส่วนที่ขาดทั้งที่ฐานข้อมูลและหน้าจอ");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

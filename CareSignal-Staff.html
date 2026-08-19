@@ -104,6 +104,36 @@ h3{font-size:15.5px;margin:0 0 10px;color:#fff}
 .work[data-late="1"]{border-color:rgba(240,82,76,.55);background:rgba(240,82,76,.10)}
 .work .claim{border:0;border-radius:10px;background:var(--gold);color:var(--goldink);
   font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;margin-top:7px}
+.sheet{position:fixed;inset:0;background:rgba(4,12,36,.72);backdrop-filter:blur(4px);z-index:200;
+  display:grid;place-items:start center;padding:20px;overflow:auto}
+.sheet .card{max-width:640px;width:100%;margin:0 0 40px}
+.sheet h3{margin:0 0 4px}
+.pkg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.pkg .pk{background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:11px;padding:10px 12px}
+.pkg .pk .l{font-size:11px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
+.pkg .pk .v{font-family:var(--mono);font-size:15px;font-weight:700;color:#fff;margin-top:2px}
+.pkg .pk .v.w{color:var(--c2)}
+.pkg .pk .t{font-size:11.5px;color:var(--ink2)}
+.qs{margin:8px 0}
+.qs label{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;padding:7px 0;border-bottom:1px dashed var(--line2);cursor:pointer}
+.qs input[type=checkbox]{margin-top:4px;flex:none}
+.tl{position:relative;padding-left:22px;margin:6px 0}
+.tl::before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:2px;background:var(--line)}
+.tl .ev{position:relative;padding:6px 0 10px;font-size:13px}
+.tl .ev::before{content:"";position:absolute;left:-19px;top:10px;width:10px;height:10px;border-radius:99px;
+  background:var(--ink3);border:2px solid var(--blue2)}
+.tl .ev[data-k="signal"]::before{background:var(--c1)}
+.tl .ev[data-k="refer"]::before{background:var(--gold)}
+.tl .ev[data-k="review"]::before{background:var(--c4)}
+.tl .ev[data-k="consent"]::before{background:#8B5CF6}
+.tl .ev[data-k="followup"]::before{background:var(--c3)}
+.tl .ev .at{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.tl .ev b{display:block;color:#fff;font-size:13.5px}
+.tl .ev span{color:var(--ink2)}
+.rv{border:1.5px solid var(--c4);background:rgba(34,181,127,.10);border-radius:13px;padding:13px 15px;margin:10px 0;font-size:13.5px}
+.rv b{color:var(--c4);display:block;margin-bottom:4px}
+.rv .row{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px}
+.rv .row span:nth-child(odd){color:var(--ink3)}
 .orgbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;
   background:rgba(255,255,255,.07);border:1px solid var(--line2);border-radius:11px;
   padding:8px 12px;margin-bottom:12px;color:var(--ink2)}
@@ -238,7 +268,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=216"></script>
+<script src="./cs-backend.js?v=217"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 /* ============================================================
@@ -697,10 +727,14 @@ async function caseDetailV(caseId,userId){
         return '<div class="rowline"><span class="k">'+esc(EV_NM[e.kind]||e.kind)+'</span><span class="v">'+thDate(e.created_at)+'</span></div>'}).join("")
        :'<div class="empty" style="padding:10px">ยังไม่มีเหตุการณ์</div>')+'</div>'+
 
+    '<div class="card"><h3>ไทม์ไลน์เคส</h3><p class="sub" style="margin:0 0 6px">ทุกเหตุการณ์จากทุกตาราง เรียงตามเวลา</p><div id="tlHost"><div class="empty" style="padding:8px">กำลังโหลด…</div></div></div>'+
     '<div class="card"><h3>การส่งต่อ</h3>'+
       ((d.refs||[]).length?d.refs.map(function(r){
-        return '<div class="rowline"><span class="k">'+esc(DEST_NM[r.destination]||r.destination||r.action||"—")+'</span>'+
+        return '<div class="rowline"><span class="k">'+esc(DEST_NM[r.destination]||r.destination||r.action||"—")+
+          (r.reply_due?'<br><span class="tiny">กำหนดตอบ '+esc(thDate(r.reply_due))+'</span>':'')+'</span>'+
           '<span class="v" style="font-family:inherit;font-size:12.5px">'+esc(refNm2(r.status))+'</span></div>'+
+          ((r.questions||[]).length?'<div class="tiny" style="margin:2px 0 4px">ถาม: '+r.questions.map(esc).join(" · ")+'</div>':'')+
+          reviewHTML(r)+
           '<div class="btnrow" style="margin-top:4px;margin-bottom:8px">'+
             (r.status!=="booked"&&r.status!=="completed"&&r.status!=="outcome_recorded"?'<button class="ok" data-ref="'+r.id+'" data-to="booked" style="font-size:12px;padding:7px">นัดหมายแล้ว</button>':'')+
             (r.status!=="completed"&&r.status!=="outcome_recorded"?'<button class="ok" data-ref="'+r.id+'" data-to="completed" style="font-size:12px;padding:7px">ไปพบแล้ว</button>':'')+
@@ -751,12 +785,10 @@ async function caseDetailV(caseId,userId){
       toast("อัปเดตการส่งต่อแล้ว");caseDetailV(caseId,userId);
     }catch(e){toast("อัปเดตไม่สำเร็จ");b.disabled=false}
   })});
-  V.querySelectorAll("[data-newref]").forEach(function(b){b.addEventListener("click",async function(){
-    var act=ask("ระบุสิ่งที่ต้องการให้ "+DEST_NM[b.dataset.newref]+" ทำ",true);
-    if(!act){toast("ยกเลิก — ต้องระบุสิ่งที่ต้องการให้ทำ");return}
-    b.disabled=true;
-    try{await CSBackend.createReferralFor(userId,caseId,b.dataset.newref,act,c.level);toast("เปิดการส่งต่อแล้ว");caseDetailV(caseId,userId)}
-    catch(e){toast("เปิดไม่สำเร็จ");b.disabled=false}
+  /* ส่งต่อแบบมีโครงสร้าง — แผ่นส่งต่อแสดงชุดข้อมูลจริงและให้เลือกคำถาม
+     แทนกล่อง prompt ที่ส่งแค่ข้อความสั้น ๆ และ reasons ว่างเปล่า */
+  V.querySelectorAll("[data-newref]").forEach(function(b){b.addEventListener("click",function(){
+    referSheet(c,userId,caseId,b.dataset.newref);
   })});
   var adv=V.querySelector("[data-adv]");
   if(adv)adv.addEventListener("click",async function(){
@@ -773,6 +805,10 @@ async function caseDetailV(caseId,userId){
     if(b.dataset.act==="notify"){toast("โทรหาผู้ดูแลจากเบอร์ด้านล่าง");window.scrollTo(0,300)}
     else{toast("เลือกปลายทางการส่งต่อด้านล่าง");window.scrollTo(0,document.body.scrollHeight*0.6)}
   })});
+  /* ไทม์ไลน์โหลดแยก — ไม่ให้หน้าค้างรอ */
+  CSBackend.caseTimeline(caseId).then(function(rows){
+    var h=document.getElementById("tlHost"); if(h) h.innerHTML=timelineHTML(rows);
+  }).catch(function(){});
 }
 var EV_NM={fall:"หกล้ม",near_fall:"เกือบล้ม",med_change:"ปรับยา",dizzy:"เวียนหัว",hospital:"เข้าโรงพยาบาล",adl_drop:"กิจวัตรลดลง"};
 var FU_NM={checkin_7d:"โทรติดตาม 7 วัน",review_30d:"ทบทวน 30 วัน",reassess:"ประเมินซ้ำ",referral_check:"ตามผลการส่งต่อ"};
@@ -977,7 +1013,7 @@ var REF_PIPE=[
   {k:"completed",       nm:"รับบริการแล้ว",       t:"รอบันทึกผล",        at:"completed_at"},
   {k:"outcome_recorded",nm:"บันทึกผลแล้ว",        t:"ปิดครบวงจร",        at:"completed_at"}
 ];
-var REF_END={declined:"ปลายทางปฏิเสธ", unreachable:"ติดต่อไม่ได้"};
+var REF_END={declined:"ปลายทางปฏิเสธ", unreachable:"ติดต่อไม่ได้", review_returned:"ผลทบทวนส่งกลับแล้ว"};
 var DEST_NM={doctor:"แพทย์",pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",
              nurse:"พยาบาล",family:"ครอบครัว",community:"ทีมชุมชน"};
 /* ขีดเวลาที่ถือว่าค้างนานเกินไปในแต่ละขั้น (วัน) — ใช้ชี้จุดติดขัด ไม่ใช่เกณฑ์ทางคลินิก */
@@ -1140,6 +1176,142 @@ function bindOrgBar(){
     try{ await CSBackend.startWorkSession(org); ST.org=org; toast("เปลี่ยนหน่วยบริการแล้ว"); go(ST.screen) }
     catch(e){ toast("บันทึกไม่สำเร็จ") }
   });
+}
+
+
+/* ============================================================
+   ใบส่งต่อแบบมีโครงสร้าง — รับแนวจาก MOPH Refer
+   ------------------------------------------------------------
+   MOPH Refer ส่งใบส่งตัวที่มีข้อมูลครบ ไม่ใช่แค่ "ส่งไปหาหมอ"
+   ของเราส่ง: เหตุผล · ข้อมูลประกอบ ณ เวลาส่ง · คำถามที่ต้องการคำตอบ
+   ชุดข้อมูลมาจากฐานข้อมูลโดยตรง (build_referral_package) หน้าจอไม่ประกอบเอง
+   ต้องเลือกคำถามอย่างน้อย 1 ข้อ — ฐานข้อมูลปฏิเสธถ้าไม่มี
+   ============================================================ */
+var Q_BANK={
+  pharmacist:["ยาที่ใช้อยู่มีรายการใดสัมพันธ์กับการทรงตัวหรือเวียนหัวหรือไม่",
+              "มีคู่ยาที่เสริมฤทธิ์เพิ่มความเสี่ยงหกล้มหรือไม่",
+              "ควรให้แพทย์พิจารณาปรับขนาดหรือเปลี่ยนยาหรือไม่",
+              "ยาที่ระบบจัดกลุ่มไม่ได้ ควรจัดอยู่กลุ่มใด"],
+  physio:    ["การเดินที่ช้าลงควรได้รับการประเมินเพิ่มเติมหรือไม่",
+              "ควรมีโปรแกรมออกกำลังกายเพื่อการทรงตัวหรือไม่",
+              "ต้องการอุปกรณ์ช่วยเดินหรือปรับสภาพแวดล้อมหรือไม่"],
+  doctor:    ["อาการเวียนหัวหรือหน้ามืดควรได้รับการตรวจเพิ่มเติมหรือไม่",
+              "ควรทบทวนยาตามที่เภสัชกรเสนอหรือไม่",
+              "มีภาวะอื่นที่อธิบายการถดถอยนี้ได้หรือไม่"],
+  nurse:     ["ควรเยี่ยมบ้านเพื่อประเมินความปลอดภัยหรือไม่",
+              "ผู้ดูแลต้องการคำแนะนำเพิ่มเติมเรื่องใด"],
+  family:    ["ช่วยสังเกตการเดินและการลุกนั่งในช่วง 2 สัปดาห์นี้",
+              "ช่วยยืนยันรายการยาที่ใช้จริงที่บ้าน"],
+  community: ["ประสานกิจกรรมออกกำลังกายในชุมชน",
+              "ประเมินสภาพแวดล้อมในบ้าน"]
+};
+function n2(x){ return (x===null||x===undefined)?"—":(+x).toFixed(1) }
+function trendTxt(a,b,higherWorse){
+  if(a==null||b==null) return "";
+  var d=b-a; if(Math.abs(d)<0.05) return "คงที่";
+  var worse = higherWorse ? d>0 : d<0;
+  return worse ? "แย่ลง" : "ดีขึ้น";
+}
+function pkgHTML(p){
+  if(!p) return '<div class="empty" style="padding:10px">ยังไม่มีข้อมูลประเมิน</div>';
+  var m=p.mobility||{}, adl=p.adl||{}, meds=p.medications||[], falls=p.falls||{};
+  var high=meds.filter(function(x){return x.frid_level===2}).length;
+  function pk(l,v,t,warn){ return '<div class="pk"><div class="l">'+l+'</div><div class="v'+(warn?' w':'')+'">'+v+'</div>'+(t?'<div class="t">'+t+'</div>':'')+'</div>' }
+  return '<div class="pkg">'+
+    pk("หกล้ม 12 เดือน", (falls.n12!=null?falls.n12+" ครั้ง":"—"), falls.injury?"มีบาดเจ็บ":"", falls.n12>=2)+
+    pk("TUG", n2(m.tug_first)+" → "+n2(m.tug_last)+" วิ", trendTxt(m.tug_first,m.tug_last,true), trendTxt(m.tug_first,m.tug_last,true)==="แย่ลง")+
+    pk("FTSST", n2(m.ftsst_first)+" → "+n2(m.ftsst_last)+" วิ", trendTxt(m.ftsst_first,m.ftsst_last,true), trendTxt(m.ftsst_first,m.ftsst_last,true)==="แย่ลง")+
+    pk("ADL", (adl.first??"—")+" → "+(adl.last??"—"), trendTxt(adl.first,adl.last,false), trendTxt(adl.first,adl.last,false)==="แย่ลง")+
+    pk("ยาที่ใช้", meds.length+" รายการ", high?"กลุ่มเสี่ยงสูง "+high:"", high>0)+
+    pk("ประเมินแล้ว", (m.n_assessments||0)+" ครั้ง", m.last_at?"ล่าสุด "+thDate(m.last_at).split(" ")[0]:"")+
+  '</div>'+
+  '<p class="tiny">ข้อมูลนี้เป็นสำเนา ณ เวลาส่ง — ปลายทางเห็นสิ่งเดียวกับที่ท่านเห็นตอนตัดสินใจส่ง</p>';
+}
+/* แผ่นส่งต่อ */
+async function referSheet(c, userId, caseId, dest){
+  var w=document.createElement("div"); w.className="sheet";
+  w.innerHTML='<div class="card"><div class="kick">ใบส่งต่อ</div><h3>ส่งต่อไปยัง'+esc(DEST_NM[dest]||dest)+'</h3>'+
+    '<p class="sub">'+esc(c.pseudonym||"")+' · '+esc(c.display_name||"")+(c.age?' · '+c.age+' ปี':'')+' · ส่งจาก '+esc(ST.name||ST.email||"")+(ST.org?' ('+esc(ST.org)+')':'')+'</p>'+
+    '<div class="rowline"><span class="k">เหตุผลการส่งต่อ</span><span class="v" style="font-family:inherit;font-weight:600;text-align:right">'+
+      ((c.signals||[]).map(function(x){return esc(x.nm||SIG_NM[x.k]||x.k)}).join(" · ")||"สัญญาณเสี่ยง")+'</span></div>'+
+    '<h4 style="margin:12px 0 4px;font-size:14px">ข้อมูลประกอบ ณ เวลาส่ง</h4><div id="pkgHost"><div class="empty" style="padding:8px">กำลังรวบรวม…</div></div>'+
+    '<h4 style="margin:12px 0 4px;font-size:14px">คำถามที่ต้องการให้'+esc(DEST_NM[dest]||dest)+'ตอบ <span class="tiny">(เลือกอย่างน้อย 1)</span></h4>'+
+    '<div class="qs">'+(Q_BANK[dest]||[]).map(function(q,i){return '<label><input type="checkbox" value="'+esc(q)+'"'+(i===0?' checked':'')+'> '+esc(q)+'</label>'}).join("")+
+      '<label><input type="checkbox" id="qCustomOn"> <input id="qCustom" placeholder="คำถามอื่น…" style="flex:1;font-family:inherit;font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:rgba(0,14,50,.35);color:#fff"></label></div>'+
+    '<div class="field" style="margin-top:8px"><label>สิ่งที่ต้องการให้ทำ (สั้น ๆ)</label><input id="rAct" placeholder="เช่น ทบทวนรายการยาและแนะนำแพทย์" value="'+esc((Q_BANK[dest]||[""])[0].slice(0,40))+'"></div>'+
+    '<div class="field"><label>กำหนดตอบกลับภายใน</label><select id="rDue" style="width:100%;font-family:inherit;font-size:15px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:rgba(0,14,50,.35);color:#fff">'+
+      '<option value="24"'+(c.level==="urgent"?" selected":"")+'>24 ชั่วโมง</option><option value="48"'+(c.level==="decline"?" selected":"")+'>48 ชั่วโมง</option><option value="72"'+(c.level==="watch"?" selected":"")+'>72 ชั่วโมง</option><option value="168">7 วัน</option></select></div>'+
+    '<div class="btnrow"><button class="no" id="rCancel">ยกเลิก</button><button class="ok" id="rSend">ส่งต่อพร้อมชุดข้อมูล</button></div>'+
+    '<p class="tiny">ระบบบันทึกว่าใครส่ง ส่งเมื่อใด และปลายทางต้องตอบภายในเมื่อใด · ผู้เชี่ยวชาญต้องขอความยินยอมผู้เอาประกันก่อนเปิดดูรายละเอียด</p></div>';
+  document.body.appendChild(w);
+  try{ var p=await CSBackend.previewPackage(userId); w.querySelector("#pkgHost").innerHTML=pkgHTML(p) }
+  catch(e){ w.querySelector("#pkgHost").innerHTML='<div class="warnbox">รวบรวมข้อมูลไม่ได้: '+esc(e.message||e)+'</div>' }
+  w.querySelector("#rCancel").addEventListener("click",function(){w.remove()});
+  w.querySelector("#rSend").addEventListener("click",async function(){
+    var qs=[...w.querySelectorAll('.qs input[type=checkbox]:checked')].map(function(x){return x.value}).filter(function(v){return v&&v!=="on"});
+    if(w.querySelector("#qCustomOn").checked&&w.querySelector("#qCustom").value.trim()) qs.push(w.querySelector("#qCustom").value.trim());
+    qs=qs.filter(function(q){return q&&q!=="on"});
+    if(!qs.length){toast("เลือกคำถามอย่างน้อย 1 ข้อ");return}
+    var act=w.querySelector("#rAct").value.trim(); if(!act){toast("ระบุสิ่งที่ต้องการให้ทำ");return}
+    var b=this; b.disabled=true; b.textContent="กำลังส่ง…";
+    try{
+      await CSBackend.sendReferral(userId, caseId, dest, act, c.level,
+        (c.signals||[]).map(function(x){return x.k}), qs, +w.querySelector("#rDue").value);
+      toast("ส่งต่อแล้ว พร้อมชุดข้อมูลและคำถาม "+qs.length+" ข้อ"); w.remove(); caseDetailV(caseId,userId);
+    }catch(e){ toast("ส่งไม่สำเร็จ: "+(e.message||e)); b.disabled=false; b.textContent="ส่งต่อพร้อมชุดข้อมูล" }
+  });
+}
+
+/* ============================================================
+   ส่งผลทบทวนกลับ — Refer Back
+   ผู้เชี่ยวชาญเขียนข้อค้นพบ คำแนะนำ และเลือกขั้นตอนถัดไปเป็นโครงสร้าง
+   ============================================================ */
+var NEXT_NM={sufficient:"ข้อมูลเพียงพอ ไม่ต้องทำเพิ่ม",need_more_info:"ขอข้อมูลเพิ่มเติม",
+  book_assessment:"นัดประเมินต่อ",refer_doctor:"ส่งต่อแพทย์",follow_plan:"ติดตามตามแผน"};
+function reviewSheet(r, onDone){
+  var pkg=r.package, qs=r.questions||[];
+  var w=document.createElement("div"); w.className="sheet";
+  w.innerHTML='<div class="card"><div class="kick">ส่งผลทบทวนกลับ</div><h3>'+esc((r.profiles||{}).pseudonym||"")+' · '+esc((r.profiles||{}).display_name||"")+'</h3>'+
+    '<p class="sub">เหตุผล: '+esc(r.action||"")+(r.reply_due?' · กำหนดตอบ '+thDate(r.reply_due):'')+'</p>'+
+    (pkg?'<h4 style="margin:10px 0 4px;font-size:14px">ข้อมูลประกอบที่ส่งมา</h4>'+pkgHTML(pkg):'')+
+    (qs.length?'<h4 style="margin:10px 0 4px;font-size:14px">คำถามจากผู้ประสานงาน</h4><ol style="margin:0 0 8px 18px;font-size:13.5px;color:var(--ink2)">'+qs.map(function(q){return '<li>'+esc(q)+'</li>'}).join("")+'</ol>':'')+
+    '<div class="field"><label>ข้อค้นพบ *</label><textarea id="rvF" rows="3" placeholder="สิ่งที่ท่านพบจากการทบทวน"></textarea></div>'+
+    '<div class="field"><label>คำแนะนำ</label><textarea id="rvR" rows="2" placeholder="สิ่งที่แนะนำให้ทำ (ระบบไม่สั่งหยุดหรือปรับยา — ความเห็นนี้เป็นของท่าน)"></textarea></div>'+
+    '<div class="field"><label>ขั้นตอนถัดไป *</label><select id="rvN" style="width:100%;font-family:inherit;font-size:15px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:rgba(0,14,50,.35);color:#fff">'+
+      Object.keys(NEXT_NM).map(function(k){return '<option value="'+k+'">'+esc(NEXT_NM[k])+'</option>'}).join("")+'</select></div>'+
+    '<div class="field"><label>หมายเหตุถึงผู้ประสานงาน</label><input id="rvX" placeholder="ไม่บังคับ"></div>'+
+    '<div class="btnrow"><button class="no" id="rvC">ยกเลิก</button><button class="ok" id="rvS">ส่งผลกลับผู้ประสานงาน</button></div>'+
+    '<p class="tiny">ผลนี้จะไปตั้งงานถัดไปของเคสให้ผู้ประสานงานเห็นทันที และบันทึกชื่อท่านในบันทึกตรวจสอบ</p></div>';
+  w.querySelectorAll("textarea").forEach(function(t){t.style.cssText="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:rgba(0,14,50,.35);color:#fff"});
+  document.body.appendChild(w);
+  w.querySelector("#rvC").addEventListener("click",function(){w.remove()});
+  w.querySelector("#rvS").addEventListener("click",async function(){
+    var f=w.querySelector("#rvF").value.trim();
+    if(f.length<5){toast("เขียนข้อค้นพบอย่างน้อย 1 ประโยค");return}
+    var b=this; b.disabled=true;
+    try{ await CSBackend.returnReview(r.id,f,w.querySelector("#rvR").value.trim(),w.querySelector("#rvN").value,w.querySelector("#rvX").value.trim());
+      toast("ส่งผลกลับแล้ว"); w.remove(); if(onDone) onDone(); }
+    catch(e){ toast("ส่งไม่สำเร็จ: "+(e.message||e)); b.disabled=false }
+  });
+}
+function reviewHTML(r){
+  var v=r.review; if(!v) return "";
+  return '<div class="rv"><b>✓ ผลทบทวนส่งกลับแล้ว · '+thDate(r.reviewed_at)+'</b><div class="row">'+
+    '<span>ข้อค้นพบ</span><span>'+esc(v.finding||"")+'</span>'+
+    (v.recommend?'<span>คำแนะนำ</span><span>'+esc(v.recommend)+'</span>':'')+
+    '<span>ขั้นตอนถัดไป</span><span><b style="color:#fff;display:inline">'+esc(NEXT_NM[v.next_step]||v.next_step)+'</b></span>'+
+    (v.note?'<span>หมายเหตุ</span><span>'+esc(v.note)+'</span>':'')+'</div></div>';
+}
+
+/* ============================================================
+   ไทม์ไลน์เคส — ทุกฝ่ายเห็นว่าข้อมูลเดินทางไปถึงไหนแล้ว
+   ดึงจากข้อมูลจริงทุกตารางที่ฐานข้อมูล ไม่มีทางเพี้ยนจากของจริง
+   ============================================================ */
+function timelineHTML(rows){
+  if(!rows||!rows.length) return '<div class="empty" style="padding:8px">ยังไม่มีเหตุการณ์</div>';
+  return '<div class="tl">'+rows.map(function(e){
+    return '<div class="ev" data-k="'+esc(e.kind)+'"><div class="at">'+thDate(e.at)+'</div><b>'+esc(e.title)+'</b>'+(e.detail?'<span>'+esc(e.detail)+'</span>':'')+'</div>';
+  }).join("")+'</div>';
 }
 
 async function mineV(){
@@ -1370,7 +1542,10 @@ async function referV(){
         '<td>'+esc(DEST_NM[r.destination||r.referral_type]||r.destination||r.referral_type||"—")+'</td>'+
         '<td>'+esc(st?st.nm:(REF_END[r.status]||r.status))+'</td>'+
         '<td class="num"'+(over?' style="color:var(--c1);font-weight:700"':'')+'>'+dayTxt(d)+(over?' ⚠':'')+'</td>'+
-        '<td>'+esc(st?st.t:"—")+'</td></tr>';
+        '<td>'+esc(st?st.t:"—")+
+          (isClinician()&&!r.review?'<br><button class="claim" data-review="'+esc(r.id)+'" style="margin-top:6px">ส่งผลทบทวนกลับ</button>':'')+
+          (r.review?'<br><span class="tiny" style="color:var(--c4)">✓ ส่งผลกลับแล้ว</span>':'')+
+          '</td></tr>';
     });
     listHTML+='</tbody></table></div>';
     listHTML+='<p class="tiny">⚠ = ค้างนานกว่าที่ตั้งไว้สำหรับขั้นนั้น ('+
@@ -1383,6 +1558,13 @@ async function referV(){
 
   V.innerHTML=orgBarHTML()+pipe+'<div class="cols">'+destHTML+listHTML+'</div>';
   bindOrgBar();
+  /* ส่งผลทบทวนกลับ — Refer Back */
+  V.querySelectorAll("[data-review]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var r=rows.filter(function(x){return x.id===b.dataset.review})[0];
+      if(r) reviewSheet(r, function(){ referV() });
+    });
+  });
   /* เข้าตรงเคสที่ลิงก์มา — เลื่อนไปที่แถวนั้นและทำเครื่องหมายให้เห็นชัด */
   if(ST.focusRef){
     var row=V.querySelector('[data-ref="'+ST.focusRef+'"]');

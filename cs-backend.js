@@ -516,6 +516,43 @@ var CSBackend = (function () {
     return out;
   }
   /* สร้างการส่งต่อจากหน้าเคส (Care Manager เป็นผู้ตัดสินใจ) */
+  /* ============================================================
+     ส่งต่อแบบมีโครงสร้าง — รับแนวจาก MOPH Refer
+     ------------------------------------------------------------
+     ส่งเป็นชุด: เหตุผล · ข้อมูลประกอบ ณ เวลาส่ง · คำถามที่ต้องการคำตอบ
+     ไม่ใช่ส่งแค่คำว่า "แดง" แล้วให้ปลายทางเดาเอง
+     ชุดข้อมูลสร้างที่ฐานข้อมูลจากของจริง ไม่ใช่หน้าจอประกอบเอง */
+  async function previewPackage(userId) {
+    if (!isCloud()) return null;
+    var r = await sb.rpc("build_referral_package", { target: userId });
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  async function sendReferral(userId, caseId, dest, action, level, reasons, questions, replyHours) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("send_referral", {
+      target: userId, cid: caseId || null, dest: dest, action_txt: action,
+      lvl: level || "watch", reasons_j: reasons || [], qs: questions || [], reply_hours: replyHours || 48
+    });
+    if (r.error) throw r.error;
+    return r.data;   /* รหัสรายการส่งต่อ */
+  }
+  /* ส่งผลกลับ — Refer Back: ผู้เชี่ยวชาญเขียนข้อค้นพบ คำแนะนำ และขั้นตอนถัดไป */
+  async function returnReview(referralId, finding, recommend, nextStep, note) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("return_review", {
+      rid: referralId, finding: finding, recommend: recommend || null, next_step: nextStep, note: note || null
+    });
+    if (r.error) throw r.error;
+    return true;
+  }
+  /* ไทม์ไลน์เคส — ดึงจากข้อมูลจริงทุกตาราง เรียงตามเวลา */
+  async function caseTimeline(caseId) {
+    if (!isCloud()) return [];
+    var r = await sb.rpc("case_timeline", { cid: caseId });
+    return r.error ? [] : (r.data || []);
+  }
+
   async function createReferralFor(userId, caseId, dest, action, level) {
     if (!isCloud()) throw new Error("offline");
     var u = await currentUser(); if (!u) throw new Error("no session");
@@ -1119,6 +1156,7 @@ var CSBackend = (function () {
     updateReferral: updateReferral,
     cmWorklist: cmWorklist, logContact: logContact, caseDetail: caseDetail,
     myWork: myWork, claimReferral: claimReferral, myReferrals: myReferrals,
+    previewPackage: previewPackage, sendReferral: sendReferral, returnReview: returnReview, caseTimeline: caseTimeline,
     requestAccess: requestAccess, checkAccess: checkAccess,
     startWorkSession: startWorkSession, myOrg: myOrg, myOrgHistory: myOrgHistory,
     checkMembership: checkMembership,
