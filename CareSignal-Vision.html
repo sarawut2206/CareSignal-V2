@@ -804,8 +804,11 @@ function trajectory(){
      Trajectory เทียบกับอดีตของตัวเอง ต้องมีอย่างน้อย 2 ครั้ง
      ระดับสุดท้ายใช้อันที่แย่กว่า เพื่อไม่ให้ผู้ใช้ครั้งแรกที่ล้มซ้ำ
      ได้สถานะเขียวเพียงเพราะยังไม่มีประวัติให้เทียบ */
+  /* ต้องส่งทุกฟิลด์ที่ baselineRisk ใช้ — ลืมฟิลด์ใดฟิลด์หนึ่ง กฎที่พึ่งฟิลด์นั้น
+     จะเงียบหายไปทั้งที่เขียนไว้แล้ว (เคยเกิดกับ homeDetail → กฎ B15 ไม่เคยติดเลย) */
   var bl=baselineRisk({
     fallsDetail:last.fallsDetail, medsDetail:last.medsDetail, steadi:last.steadi,
+    homeDetail:last.homeDetail,
     ftsst:last.ftsst, tug:last.tug, tugDistanceOk:last.tugDistanceOk,
     balPassed:last.balPassed, balance:last.parts?last.parts.balance:null,
     notTested:last.notTested

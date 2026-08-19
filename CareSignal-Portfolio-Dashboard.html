@@ -78,6 +78,22 @@ footer{padding:28px 0 40px;color:var(--ink3);font-size:12.5px;text-align:center;
 </style>
 </head>
 <body>
+<script>
+/* หน้านี้อ่านจากฐานข้อมูลจริงเท่านั้น — ข้อมูลสาธิตอยู่ในหน่วยความจำของหน้าอื่น
+   จึงไม่มีทางปรากฏที่นี่ ถ้าเปิดโหมดสาธิตอยู่ ให้บอกผู้ชมตรง ๆ */
+document.addEventListener("DOMContentLoaded",function(){
+  if(!(window.CSDemo&&CSDemo.on())) return;
+  CSDemo.banner();
+  var w=document.querySelector(".wrap")||document.body;
+  var n=document.createElement("div");
+  n.style.cssText="border:1.5px solid #86EFAC;background:#F0FDF4;color:#166534;border-radius:14px;"+
+    "padding:13px 16px;margin:0 0 16px;font-size:13.5px;line-height:1.7";
+  n.innerHTML="<b>ขณะนี้เปิดโหมดสาธิตอยู่ — แต่ตัวเลขในหน้านี้ไม่ใช่ข้อมูลสาธิต</b><br>"+
+    "รายงานของบริษัทประกันอ่านจากฐานข้อมูลจริงเท่านั้น ข้อมูลสาธิตเก็บอยู่ในหน่วยความจำของหน้าจอ "+
+    "ไม่เคยถูกบันทึกลงฐานข้อมูล จึงไม่มีทางปะปนเข้ามาในรายงานนี้";
+  w.insertBefore(n,w.firstChild);
+});
+</script>
 
 <header><div class="wrap">
   <div class="kick">CareSignal · Portfolio Dashboard</div>
@@ -139,6 +155,7 @@ footer{padding:28px 0 40px;color:var(--ink3);font-size:12.5px;text-align:center;
   ต้นแบบเพื่อการประกวด OIC InsurTech Award 2026
 </div></footer>
 
+<script src="./cs-demo.js?v=2"></script>
 <script src="./cs-backend.js?v=213"></script>
 <script>
 window.CS_AUTH_SCOPE="staff";

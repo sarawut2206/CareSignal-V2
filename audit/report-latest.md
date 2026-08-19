@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 09:30 |
+| วันที่ตรวจ | 2026-08-19 09:59 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 112 |
+| PASS | 119 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -33,13 +33,13 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:785 · CareSignal-Vision.html:1151 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:948 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2559 · CareSignal-Vision.html:3310 · CareSignal-App.html:2756 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:924 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2915 · CareSignal-Vision.html:3184 · CareSignal-App.html:2000 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1217 · CareSignal-Vision.html:719 · CareSignal-App.html:1012 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:427 · supabase/09_insurtech.sql:20 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:797 · CareSignal-Vision.html:1154 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:960 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2618 · CareSignal-Vision.html:3313 · CareSignal-App.html:2815 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:936 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2974 · CareSignal-Vision.html:3187 · CareSignal-App.html:2017 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1229 · CareSignal-Vision.html:719 · CareSignal-App.html:1024 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:437 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |
@@ -177,6 +177,13 @@
 | X-58 | หัวแอปสมาชิกย่อลงเมื่อเปิดอยู่ในกรอบของหน้าเดียว | PASS | ตั้งธง data-embedded + CSS ย่อหัว (คืนพื้นที่ ~50px) |
 | X-59 | แท็บล่างของแอปสมาชิกยังใหญ่เท่าเดิมแม้อยู่ในกรอบ | PASS | แท็บล่างคง min-height 84px |
 | X-60 | ไม่มี selector ที่ถูกแทรกคั่นกลางจนกฎรวมร่างกัน | PASS | ตรวจทุกบล็อก <style> แล้ว ไม่พบ |
+| X-61 | มีโหมดสาธิตพร้อมสถานการณ์ครบ 4 แบบ | PASS | cs-demo.js มี 4 สถานการณ์ + หน้าเลือกในแอปสมาชิก |
+| X-62 | ข้อมูลสาธิตไม่ถูกบันทึกลงฐานข้อมูล | PASS | cs-demo.js ไม่เรียก CSBackend เลย |
+| X-63 | โหมดสาธิตใช้เอนจินจริง ไม่ใช่ผลที่เขียนไว้ล่วงหน้า | PASS | สถานการณ์เก็บเฉพาะข้อมูลดิบ ระดับมาจากเอนจิน |
+| X-64 | มีแถบกำกับโหมดสาธิตทุกแอป | PASS | แถบกำกับถูกเรียกทั้งแอปสมาชิกและคอนโซล |
+| X-65 | หน้าบริษัทประกันประกาศชัดว่าข้อมูลสาธิตไม่เข้ารายงาน | PASS | ข้อความยืนยันบนหน้าพอร์ต เมื่อเปิดโหมดสาธิตอยู่ |
+| X-66 | ผลลัพธ์หลังติดตามในโหมดสาธิตต้องปฏิเสธการอ้างประสิทธิผล | PASS | outcome() ติดธง simulated + ข้อความปฏิเสธ |
+| X-67 | โหมดสาธิตจำลองเฉพาะการตอบกลับของคน ไม่จำลองการตัดสินของระบบ | PASS | ประกาศไว้ทั้งในโมดูลและบนหน้าจอคอนโซล |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |
