@@ -966,29 +966,39 @@ function layer7() {
     }
   }
 
+  /* กลไกเหล่านี้ต้องมีครบทั้งแอปสมาชิกและหน้าทดลอง — เคยพลาดใส่เฉพาะแอปเดียว
+     ผู้ใช้ที่ใช้อีกแอปจึงไม่เห็นการเปลี่ยนแปลงเลย */
+  /* ต้องตรวจ "แยกไฟล์" ไม่ใช่ต่อกันเป็นสายเดียว
+     ถ้าต่อกัน การมีกลไกในไฟล์เดียวจะทำให้ผ่านทั้งที่อีกไฟล์ขาด
+     ซึ่งเป็นความผิดพลาดที่เพิ่งเกิดจริง: ใส่หน้ารวมหัวข้อเฉพาะแอปสมาชิก
+     ผู้ใช้ที่ใช้หน้าทดลองจึงไม่เห็นการเปลี่ยนแปลงเลย */
+  const APP_PAIR = [["CareSignal-App.html", appAll],
+                    ["CareSignal-Vision.html", read("CareSignal-Vision.html") || ""]];
   /* ---- แยกหัวข้อ · ยืนยันทีละขั้น · กันข้อมูลหาย ---- */
   {
     const hChecks = [
-      ["X-72", "การประเมินแยกเป็นหัวข้อ มีหน้ารวมให้เลือกทำ",
-        () => /var ASSESS_SECTIONS=/.test(appAll) && /function assessHubV\(/.test(appAll)
-           && /assessHub:assessHubV/.test(appAll)],
+      ["X-72", "การประเมินแยกเป็นหัวข้อ มีหน้ารวมให้เลือกทำ (ทั้งสองแอป)",
+        (t) => /var ASSESS_SECTIONS=/.test(t) && /function assessHubV\(/.test(t)
+           && /assessHub:assessHubV/.test(t)],
       ["X-73", "ทุกหัวข้อจบด้วยการ์ดยืนยันก่อนไปต่อ",
-        () => /function sectionDone\(/.test(appAll) && /ยืนยัน · กลับหน้ารวมหัวข้อ/.test(appAll)],
+        (t) => /function sectionDone\(/.test(t) && /ยืนยัน · กลับหน้ารวมหัวข้อ/.test(t)],
       ["X-74", "ร่างการประเมินถูกบันทึกลงเครื่องทุกครั้งที่ยืนยัน",
-        () => new RegExp("^  saveDraft\\(\\);$", "m").test(appAll)
-           && /async function saveDraft\(/.test(appAll)],
+        (t) => new RegExp("^  saveDraft\\(\\);$", "m").test(t)
+           && /async function saveDraft\(/.test(t)],
       ["X-75", "กู้ร่างที่ค้างได้ และร่างหมดอายุเอง",
-        () => /มีการตรวจที่ค้างอยู่/.test(appAll) && /Date\.now\(\)-v\.at>864e5/.test(appAll)],
+        (t) => /มีการตรวจที่ค้างอยู่/.test(t) && /Date\.now\(\)-v\.at>864e5/.test(t)],
       ["X-76", "เขียนฐานข้อมูลครั้งเดียวตอนจบ ไม่เขียนผลค้างครึ่ง ๆ กลาง ๆ",
-        () => !/function sectionDone\([\s\S]{0,600}CSBackend\.saveAssessment/.test(appAll)
-           && new RegExp("clearDraft\\(\\);[\\s\\S]{0,40}go\\(\"assessResult").test(appAll)],
+        (t) => !/function sectionDone\([\s\S]{0,600}CSBackend\.saveAssessment/.test(t)
+           && (function(){ const m = t.match(/go\("(assessResult|result)"/); return !!m && t.slice(Math.max(0, m.index-200), m.index).indexOf("clearDraft()") >= 0; })()],
     ];
     for (const [id, name, fn] of hChecks) {
-      const ok = fn();
-      req(7, id, name, ok ? "PASS" : "MISSING", ok ? "ตรวจจากซอร์สของแอปสมาชิก" : "ไม่พบกลไก");
+      const bad = APP_PAIR.filter(([f, t]) => !fn(t)).map(([f]) => f);
+      const ok = bad.length === 0;
+      req(7, id, name, ok ? "PASS" : "MISSING",
+          ok ? "ครบทั้งแอปสมาชิกและหน้าทดลอง" : ("ขาดใน " + bad.join(", ")));
       if (!ok) finding("HIGH", id, "การประเมินทีละขั้นถดถอย: " + name,
         "ถ้าไม่บันทึกร่าง ผู้ใช้ที่ถูกขัดจังหวะกลางทางจะเสียข้อมูลทั้งชุดและต้องทำใหม่ 8 นาที",
-        "ไม่พบกลไก", "คืนกลไกตามหัวคอมเมนต์ของ assessHubV / sectionDone");
+        "ขาดใน " + bad.join(", "), "คืนกลไกตามหัวคอมเมนต์ของ assessHubV / sectionDone");
     }
   }
 
@@ -996,25 +1006,27 @@ function layer7() {
   {
     const fChecks = [
       ["X-77", "หน้ายืนยันใบหน้าใช้กล้องครึ่งจอ ปุ่มอยู่ครึ่งล่าง",
-        () => /function camHalf\(/.test(appAll) && /height:46dvh/.test(appAll)
-           && !(function(){ const j = appAll.indexOf("async function startFacePipeline");
-                            return j >= 0 && appAll.slice(j, j+400).includes("camFullscreen") })()],
+        (t) => /function camHalf\(/.test(t) && /height:46dvh/.test(t)
+           && !(function(){ const j = t.indexOf("async function startFacePipeline");
+                            return j >= 0 && t.slice(j, j+400).includes("camFullscreen") })()],
       ["X-78", "ย้ายช่องติ๊กยินยอมลงแผงด้วย ไม่ใช่ย้ายเฉพาะปุ่ม",
-        () => appAll.includes('camHalf(["fcChkWrap","fcSave","fcVoiceHint","fcSkip"])')],
+        (t) => t.includes('camHalf(["fcChkWrap","fcSave","fcVoiceHint","fcSkip"')],
       ["X-79", "ยืนยันด้วยเสียงได้ทั้งหน้าใบหน้าและทุกหัวข้อ",
-        () => /function voiceConfirm\(/.test(appAll)
-           && /voiceConfirm\({[\s\S]{0,400}onRedo:goRedo/.test(appAll)
-           && /id="fcVoiceHint"/.test(appAll)],
+        (t) => /function voiceConfirm\(/.test(t)
+           && /voiceConfirm\({[\s\S]{0,400}onRedo:goRedo/.test(t)
+           && /id="fcVoiceHint"/.test(t)],
       ["X-80", "เสียงต้องผ่านเงื่อนไขเดียวกับปุ่ม และบอกเหตุผลเมื่อยังทำไม่ได้",
-        () => /enabled:function\(\){ return !!\(cur&&chk\.checked\)/.test(appAll)
-           && /ยังยืนยันไม่ได้/.test(appAll)],
+        (t) => /enabled:function\(\){ return !!\(cur&&chk\.checked\)/.test(t)
+           && /ยังยืนยันไม่ได้/.test(t)],
     ];
     for (const [id, name, fn] of fChecks) {
-      const ok = fn();
-      req(7, id, name, ok ? "PASS" : "MISSING", ok ? "ตรวจจากซอร์สของแอปสมาชิก" : "ไม่พบกลไก");
+      const bad = APP_PAIR.filter(([f, t]) => !fn(t)).map(([f]) => f);
+      const ok = bad.length === 0;
+      req(7, id, name, ok ? "PASS" : "MISSING",
+          ok ? "ครบทั้งแอปสมาชิกและหน้าทดลอง" : ("ขาดใน " + bad.join(", ")));
       if (!ok) finding("HIGH", id, "หน้ายืนยันตัวตน/เสียงถดถอย: " + name,
         "เคยเกิดจริง: กล้องเต็มจอบังช่องติ๊กยินยอม ปุ่มบันทึกจึงค้าง disabled ผู้ใช้กดไม่ได้เลย",
-        "ไม่พบกลไก", "คืนกลไกตามหัวคอมเมนต์ของ camHalf / voiceConfirm");
+        "ขาดใน " + bad.join(", "), "คืนกลไกตามหัวคอมเมนต์ของ camHalf / voiceConfirm");
     }
   }
 

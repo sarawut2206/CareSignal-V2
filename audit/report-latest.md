@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 13:27 |
+| วันที่ตรวจ | 2026-08-19 14:16 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -33,12 +33,12 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:193 · CareSignal-Vision.html:1154 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1102 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2964 · CareSignal-Vision.html:3394 · CareSignal-App.html:3181 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1078 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3363 · CareSignal-Vision.html:3268 · CareSignal-App.html:2159 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1371 · CareSignal-Vision.html:719 · CareSignal-App.html:1166 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:193 · CareSignal-Vision.html:174 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1102 · CareSignal-Vision.html:506 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2964 · CareSignal-Vision.html:3638 · CareSignal-App.html:3181 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1078 · CareSignal-Vision.html:482 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3363 · CareSignal-Vision.html:3512 · CareSignal-App.html:2159 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1371 · CareSignal-Vision.html:758 · CareSignal-App.html:1166 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:437 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
@@ -188,15 +188,15 @@
 | X-69 | ตัวกรองเสียงสะท้อนต้องหมดอายุเองเสมอ (ห้าม Infinity) | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
 | X-70 | speak() ต้องกันพูดประโยคเดิมซ้ำ | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
 | X-71 | OCR อ่านหลายรอบ และไม่โทษรูปเมื่อยาไม่อยู่ในฐาน | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
-| X-72 | การประเมินแยกเป็นหัวข้อ มีหน้ารวมให้เลือกทำ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-73 | ทุกหัวข้อจบด้วยการ์ดยืนยันก่อนไปต่อ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-74 | ร่างการประเมินถูกบันทึกลงเครื่องทุกครั้งที่ยืนยัน | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-75 | กู้ร่างที่ค้างได้ และร่างหมดอายุเอง | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-76 | เขียนฐานข้อมูลครั้งเดียวตอนจบ ไม่เขียนผลค้างครึ่ง ๆ กลาง ๆ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-77 | หน้ายืนยันใบหน้าใช้กล้องครึ่งจอ ปุ่มอยู่ครึ่งล่าง | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-78 | ย้ายช่องติ๊กยินยอมลงแผงด้วย ไม่ใช่ย้ายเฉพาะปุ่ม | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-79 | ยืนยันด้วยเสียงได้ทั้งหน้าใบหน้าและทุกหัวข้อ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
-| X-80 | เสียงต้องผ่านเงื่อนไขเดียวกับปุ่ม และบอกเหตุผลเมื่อยังทำไม่ได้ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
+| X-72 | การประเมินแยกเป็นหัวข้อ มีหน้ารวมให้เลือกทำ (ทั้งสองแอป) | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-73 | ทุกหัวข้อจบด้วยการ์ดยืนยันก่อนไปต่อ | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-74 | ร่างการประเมินถูกบันทึกลงเครื่องทุกครั้งที่ยืนยัน | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-75 | กู้ร่างที่ค้างได้ และร่างหมดอายุเอง | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-76 | เขียนฐานข้อมูลครั้งเดียวตอนจบ ไม่เขียนผลค้างครึ่ง ๆ กลาง ๆ | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-77 | หน้ายืนยันใบหน้าใช้กล้องครึ่งจอ ปุ่มอยู่ครึ่งล่าง | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-78 | ย้ายช่องติ๊กยินยอมลงแผงด้วย ไม่ใช่ย้ายเฉพาะปุ่ม | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-79 | ยืนยันด้วยเสียงได้ทั้งหน้าใบหน้าและทุกหัวข้อ | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-80 | เสียงต้องผ่านเงื่อนไขเดียวกับปุ่ม และบอกเหตุผลเมื่อยังทำไม่ได้ | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

@@ -170,6 +170,45 @@ body{margin:0;background:#0B1220;font-family:var(--sans);color:var(--ink);-webki
    กล้องเต็มจอ — ทุกหน้าที่วัดผ่านกล้อง
    วิดีโอเต็มหน้าจอ ไม่มีข้อความด้านบน สถานะและปุ่มทั้งหมดอยู่แถบล่าง
    ============================================================ */
+/* ---------- กล้องครึ่งจอ ----------
+   หน้ายืนยันใบหน้าต้องอ่านข้อความและติ๊กช่องยินยอมก่อนกด
+   โหมดเต็มจอเดิมย้ายเฉพาะปุ่มลงแถบล่าง แต่ทิ้งช่องติ๊กไว้หลังกล้อง
+   ผู้ใช้จึงติ๊กไม่ได้ ปุ่มบันทึกค้าง disabled = "ไม่มีปุ่มให้กด" */
+body.camhalf{overflow:hidden}
+body.camhalf .stage{position:fixed;top:0;left:0;right:0;height:46dvh;z-index:70;
+  border-radius:0;aspect-ratio:auto;margin:0;box-shadow:none}
+body.camhalf .stage video,body.camhalf .stage canvas{width:100%;height:100%;object-fit:cover}
+body.camhalf .hudtop{top:8px}
+body.camhalf .hudbot{display:none}
+.camhalfpane{position:fixed;left:0;right:0;top:46dvh;bottom:0;z-index:72;overflow-y:auto;
+  background:var(--bg);padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 24px rgba(11,18,32,.18);-webkit-overflow-scrolling:touch}
+.camhalfpane .cta{margin:10px 0 0}
+.camhalfpane .ghostb{margin:8px 0 0}
+.camhalfpane .chk{display:flex;gap:11px;align-items:flex-start;font-size:15px;line-height:1.6;
+  background:var(--surf2);border-radius:14px;padding:13px 15px;margin:0}
+.camhalfpane .chk input{width:26px;height:26px;flex:none;margin-top:1px}
+.vcline{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--brand2);
+  background:#EEF4FF;border:1px solid #CFE0FD;border-radius:12px;padding:10px 13px;margin:10px 0 0}
+/* ---------- หน้ารวมหัวข้อ ---------- */
+.sect{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  border:2px solid var(--line);background:var(--surf);border-radius:16px;
+  padding:14px 16px;margin-bottom:10px;cursor:pointer;font-family:inherit;min-height:74px}
+.sect .ic{font-size:26px;line-height:1;flex:none;width:34px;text-align:center}
+.sect .tx{flex:1;min-width:0}
+.sect .tx b{display:block;font-size:16.5px;margin-bottom:2px}
+.sect .tx span{display:block;font-size:13.5px;color:var(--ink2);line-height:1.5}
+.sect .st{flex:none;font-size:13px;font-weight:700;padding:5px 11px;border-radius:99px;white-space:nowrap}
+.sect[data-st="done"]{border-color:var(--c4);background:var(--c4b)}
+.sect[data-st="done"] .st{background:var(--c4);color:#fff}
+.sect[data-st="skip"]{border-color:var(--c3)}
+.sect[data-st="skip"] .st{background:var(--c3);color:#fff}
+.sect[data-st="todo"] .st{background:var(--surf2);color:var(--ink3)}
+.sect[data-st="next"]{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.sect[data-st="next"] .st{background:var(--brand);color:#fff}
+.okcard{border:2px solid var(--c4);background:var(--c4b);border-radius:18px;padding:20px}
+.okcard h3{color:var(--c4);margin:0 0 10px;font-size:19px}
+.okcard .val{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink)}
 body.camfs{overflow:hidden}
 body.camfs .stage{position:fixed;inset:0;z-index:70;border-radius:0;aspect-ratio:auto;margin:0;box-shadow:none;width:100vw;height:100vh;height:100dvh}
 body.camfs .stage video,body.camfs .stage canvas{width:100%;height:100%;object-fit:cover}
@@ -1117,7 +1156,7 @@ function render(arg){
   var map={home:"assess",assess:"assess",trend:"trend",cases:"cases",insurer:"insurer",pilot:"pilot"};
   T.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.go===map[S.screen]?"true":"false")});
   var fn={loading:loadingV,welcome:welcomeV,reg:regV,login:loginV,assess:assessV,safety:safetyV,safetyStop:safetyStopV,plan:planV,events:eventsV,calib:calibV,test:testV,tug:tugV,q:qV,result:resultV,
-          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,mydata:mydataV,balance:balanceV}[S.screen]||assessV;
+          trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,assessHub:assessHubV,mydata:mydataV,balance:balanceV}[S.screen]||assessV;
   fn(arg);
 }
 function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
@@ -1323,7 +1362,7 @@ function assessV(){
   '<p class="sub" style="color:#FCD34D;margin:8px 0 0">กล้องจะนับครั้งและจับเวลาให้เอง ไม่ต้องกดปุ่มระหว่างทำ</p></div>'+
   lastCard+
   fontBarHTML()+
-  '<button class="cta" data-go="safety">เริ่มทดสอบ</button>'+
+  '<button class="cta" id="beginAssess">เริ่มทดสอบ</button>'+
   '<button class="ghostb" data-go="plan">📋 แผนดูแลของฉัน</button>'+
   '<button class="ghostb" data-go="events">🩹 รายงานเหตุการณ์ (ล้ม · ปรับยา · เข้า รพ.)</button>'+
   '<button class="ghostb" id="manual">ทำแบบจับเวลาเอง (กรณีกล้องใช้ไม่ได้)</button>'+
@@ -1334,7 +1373,7 @@ function assessV(){
     askTime(function(n){
       S.draft={ftsst:n,method:"manual",reps:5,cv:null};
       audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (ไม่ได้ใช้กล้อง)");
-      go("q",0);
+      sectionDone("ftsst",{next:function(){go("tug")}});
     });
   });
 }
@@ -1395,7 +1434,27 @@ function camFullscreen(){
   }
   document.body.appendChild(dock);
 }
+/* ย้ายทั้งเวทีกล้องและ "ส่วนควบคุมทั้งหมด" (ไม่ใช่แค่ปุ่ม) ขึ้นเป็นลูกของ body */
+function camHalf(controlIds){
+  if(document.getElementById("camhalfpane"))return;
+  var st=document.querySelector(".stage"); if(!st)return;
+  document.body.classList.add("camhalf");
+  st.id="camstage"; document.body.appendChild(st);
+  var pane=document.createElement("div"); pane.className="camhalfpane"; pane.id="camhalfpane";
+  (controlIds||[]).forEach(function(id){
+    var el=document.getElementById(id); if(el)pane.appendChild(el);
+  });
+  var sb=document.getElementById("statusBar"); if(sb)pane.insertBefore(sb,pane.firstChild);
+  document.body.appendChild(pane);
+  return pane;
+}
+function camHalfExit(){
+  var p=document.getElementById("camhalfpane"); if(p)p.remove();
+  var st=document.getElementById("camstage"); if(st)st.remove();
+  document.body.classList.remove("camhalf");
+}
 function camExit(){
+  camHalfExit();
   var d=document.getElementById("camdock"); if(d)d.remove();
   var st=document.getElementById("camstage"); if(st)st.remove();
   document.body.classList.remove("camfs");
@@ -1828,6 +1887,181 @@ function clearFaceSig(){
   S.data.faceEnrolled=false;
   if(CLOUD.session)CSBackend.revokeConsent("biometric_face").catch(function(){});
 }
+
+/* ============================================================
+   ยืนยันด้วยเสียงสำหรับปุ่มบนหน้าจอ
+   ------------------------------------------------------------
+   ใช้กลไกทวนคำสั่งเดียวกับตอนทดสอบท่าทาง แต่หน้าเหล่านี้ไม่มีคำสั่งอื่น
+   จึงรับเฉพาะ ยืนยัน / ทำใหม่ / ยกเลิก
+   ปุ่มบนจอยังกดได้เสมอ — เสียงเป็นทางเลือก ไม่ใช่ทางเดียว
+   ============================================================ */
+function voiceConfirm(opts){
+  if(!VOICE.on||!VC.supported) return false;
+  vcStart(function(cmd){
+    if(cmd==="confirm"){
+      if(opts.enabled&&!opts.enabled()){ speak("ยังยืนยันไม่ได้ กรุณาทำตามที่หน้าจอบอกก่อน"); return }
+      vcStop(); if(opts.onConfirm)opts.onConfirm();
+    }else if(cmd==="again"&&opts.onRedo){ vcStop(); opts.onRedo() }
+    else if(cmd==="stop"&&opts.onCancel){ vcStop(); opts.onCancel() }
+  });
+  setTimeout(function(){ if(opts.prompt)speak(opts.prompt) },500);
+  return true;
+}
+
+/* ============================================================
+   หน้ารวมหัวข้อการประเมิน — แยกทีละขั้น ยืนยันทีละขั้น บันทึกทีละขั้น
+   ------------------------------------------------------------
+   ปัญหาเดิม: ร่างอยู่ในหน่วยความจำล้วน แอปรีเฟรชหรือแบตหมด = ข้อมูลหายหมด
+   และไม่มีจุดยืนยัน ผู้ใช้กดผิดจะรู้ตัวตอนจบ ต้องทำใหม่ทั้งชุด
+   เขียนลงฐานข้อมูลครั้งเดียวตอนกดบันทึกทั้งหมด เพื่อไม่ให้เกิดผลค้างครึ่ง ๆ กลาง ๆ
+   ============================================================ */
+var ASSESS_SECTIONS=[
+  {k:"safety",  ic:"🛡️", t:"ความยินยอมและความปลอดภัย", d:"ตอบคำถามความปลอดภัยก่อนเริ่มทดสอบ",
+   req:true,  go:function(){ go("safety") },
+   done:function(d){ return d.safetyVerdict!=null },
+   sum:function(d){ return d.safetyVerdict==="stop"?"ไม่ปลอดภัยที่จะทดสอบ — หยุดไว้":"ผ่านด่านความปลอดภัย" }},
+  {k:"falls",   ic:"🩹", t:"ประวัติหกล้มและอาการ", d:"หกล้มกี่ครั้งใน 12 เดือน · อาการนำ",
+   req:true,  go:function(){ go("q",1) },
+   done:function(d){ return d.fallsDetail&&d.fallsDetail.done },
+   sum:function(d){ var f=d.fallsDetail||{}; return "หกล้ม "+(f.count!=null?f.count:0)+" ครั้งใน 12 เดือน" }},
+  {k:"meds",    ic:"💊", t:"ยาที่ใช้ประจำ", d:"ถ่ายฉลาก · ยืนยันชื่อยา · จัดกลุ่มเสี่ยง",
+   req:true,  go:function(){ go("q",2) },
+   done:function(d){ return d.medsDetail&&d.medsDetail.done },
+   sum:function(d){ var m=d.medsDetail||{}, n=(m.items||[]).length;
+     return "บันทึก "+n+" รายการ"+(m.summary&&m.summary.needsReview?" · เข้าเกณฑ์ให้เภสัชกรทบทวน":"") }},
+  {k:"tug",     ic:"🚶", t:"ลุกเดิน 3 เมตร (TUG)", d:"วัดการเคลื่อนไหวและการทรงตัวขณะเดิน",
+   req:false, go:function(){ go("tug") },
+   done:function(d){ return d.tug!=null||d.tugSkipped },
+   sum:function(d){ return d.tug!=null?(d.tug.toFixed(1)+" วินาที"):"ข้ามขั้นนี้" }},
+  {k:"ftsst",   ic:"🪑", t:"ลุกนั่ง 5 ครั้ง (FTSST)", d:"วัดกำลังขาส่วนล่าง",
+   req:false, go:function(){ go("calib") },
+   done:function(d){ return d.ftsst!=null||d.ftsstSkipped },
+   sum:function(d){ return d.ftsst!=null?(d.ftsst.toFixed(1)+" วินาที"):"ข้ามขั้นนี้" }},
+  {k:"balance", ic:"⚖️", t:"การทรงตัว 4 ท่า", d:"ผู้ดูแลเป็นผู้ยืนยันผ่าน/ไม่ผ่าน",
+   req:false, go:function(){ go("q",0) },
+   done:function(d){ return d.balPassed!=null||d.balance!=null||d.balanceSkipped },
+   sum:function(d){ return d.balPassed!=null?("ทำได้ "+d.balPassed+" จาก 4 ท่า"):"บันทึกแล้ว" }},
+  {k:"adl",     ic:"🧺", t:"กิจวัตรประจำวัน (Barthel ADL)", d:"อาบน้ำ แต่งตัว เข้าห้องน้ำ เคลื่อนย้าย",
+   req:true,  go:function(){ go("q",3) },
+   done:function(d){ return d.adl!=null },
+   sum:function(d){ return d.barthelTotal!=null?("คะแนน "+d.barthelTotal+" จาก 20"):"บันทึกแล้ว" }}
+];
+function sectState(sec){
+  var d=S.draft||{};
+  if(!sec.done(d)) return "todo";
+  if(d[sec.k+"Skipped"]) return "skip";
+  if(sec.k==="tug"&&d.tug==null) return "skip";
+  if(sec.k==="ftsst"&&d.ftsst==null) return "skip";
+  return "done";
+}
+/* ---------- บันทึกร่างลงเครื่อง (หมดอายุ 24 ชม.) ---------- */
+async function saveDraft(){ try{ await DB.set("assessDraft",{at:Date.now(),draft:S.draft}) }catch(e){} }
+async function loadDraft(){
+  try{
+    var v=await DB.get("assessDraft");
+    if(!v||!v.draft) return null;
+    if(Date.now()-v.at>864e5){ await clearDraft(); return null }
+    return v;
+  }catch(e){ return null }
+}
+async function clearDraft(){ try{ await DB.set("assessDraft",null) }catch(e){} }
+
+function assessHubV(){
+  if(!S.draft) S.draft={};
+  if(!S.draft.t0) S.draft.t0=Date.now();
+  var d=S.draft;
+  var doneN=ASSESS_SECTIONS.filter(function(x){return sectState(x)!=="todo"}).length;
+  var reqLeft=ASSESS_SECTIONS.filter(function(x){return x.req&&sectState(x)==="todo"});
+  var nextK=(ASSESS_SECTIONS.filter(function(x){return sectState(x)==="todo"})[0]||{}).k;
+
+  head("ตรวจร่างกาย","ทำทีละหัวข้อ บันทึกทีละขั้น",
+       "ทำข้อไหนก่อนก็ได้ · หยุดกลางทางแล้วกลับมาทำต่อได้ ระบบเก็บไว้ให้");
+  V.innerHTML='<div class="anim">'+
+    '<div class="card" style="background:var(--surf2)"><h3>ทำแล้ว '+doneN+' จาก '+ASSESS_SECTIONS.length+' หัวข้อ</h3>'+
+    '<p class="sub" style="margin:0">ทุกหัวข้อมีหน้ายืนยันก่อนบันทึก และระบบเก็บความคืบหน้าไว้ในเครื่องของท่านตลอด '+
+    '<b>ผลจะถูกส่งเข้าระบบเมื่อกดบันทึกผลทั้งหมดเท่านั้น</b></p></div>'+
+    ASSESS_SECTIONS.map(function(sec,idx){
+      var st=sectState(sec); if(st==="todo"&&sec.k===nextK)st="next";
+      var lbl={done:"✓ เสร็จ",skip:"ข้าม",todo:sec.req?"ต้องทำ":"ไม่บังคับ",next:"ทำต่อ"}[st];
+      var sub=(st==="done"||st==="skip")?sec.sum(d):sec.d;
+      return '<button class="sect" data-sec="'+sec.k+'" data-st="'+st+'">'+
+        '<span class="ic">'+sec.ic+'</span>'+
+        '<span class="tx"><b>'+(idx+1)+'. '+esc(sec.t)+'</b><span>'+esc(sub)+'</span></span>'+
+        '<span class="st">'+lbl+'</span></button>';
+    }).join("")+
+    (reqLeft.length
+      ? '<div class="notice" style="margin-top:6px">ยังเหลือหัวข้อที่ต้องทำ '+reqLeft.length+' ข้อ — '+
+        esc(reqLeft.map(function(x){return x.t}).join(" · "))+'</div>' : '')+
+    '<button class="cta" id="hSave"'+(reqLeft.length?' disabled':'')+' style="margin-top:8px">บันทึกผลทั้งหมดและดูผลลัพธ์</button>'+
+    '<button class="ghostb" id="hDrop">ล้างและเริ่มใหม่ทั้งหมด</button>'+
+    '<button class="ghostb" data-go="assess">กลับหน้าหลัก</button>'+
+    '</div>';
+
+  V.querySelectorAll("[data-sec]").forEach(function(b){b.addEventListener("click",function(){
+    var sec=ASSESS_SECTIONS.filter(function(x){return x.k===b.dataset.sec})[0];
+    if(sec) sec.go();
+  })});
+  document.getElementById("hSave").addEventListener("click",function(){
+    this.disabled=true; this.textContent="กำลังบันทึก…"; finishAssess();
+  });
+  document.getElementById("hDrop").addEventListener("click",function(){
+    dialog({title:"ล้างและเริ่มใหม่",
+      body:"ข้อมูลที่บันทึกไว้ในการตรวจครั้งนี้จะหายทั้งหมด และเริ่มนับหนึ่งใหม่",
+      ok:"ล้างทั้งหมด",cancel:"ไม่ล้าง",danger:true,
+      onOk:async function(){ await clearDraft(); S.draft={t0:Date.now()}; toast("ล้างแล้ว"); assessHubV() }});
+  });
+}
+
+/* ---------- การ์ดยืนยันท้ายแต่ละหัวข้อ ---------- */
+function sectionDone(key,opts){
+  opts=opts||{};
+  var sec=ASSESS_SECTIONS.filter(function(x){return x.k===key})[0];
+  saveDraft();
+  head("บันทึกแล้ว",sec?sec.t:"","");
+  var left=ASSESS_SECTIONS.filter(function(x){return sectState(x)==="todo"});
+  V.innerHTML='<div class="anim">'+
+    '<div class="okcard"><h3>✓ บันทึก'+esc(sec?sec.t:"")+'แล้ว</h3>'+
+    '<div class="val">'+esc(opts.value||(sec?sec.sum(S.draft):""))+'</div>'+
+    (opts.note?'<p class="sub" style="margin:10px 0 0">'+esc(opts.note)+'</p>':'')+
+    '<p class="sub" style="margin:10px 0 0">ข้อมูลถูกเก็บไว้ในเครื่องของท่านแล้ว ปิดแอปตอนนี้ก็ไม่หาย</p></div>'+
+    (opts.next?'<button class="cta" id="scNext" style="margin-top:14px">ยืนยัน · ทำหัวข้อถัดไป</button>':'')+
+    '<button class="'+(opts.next?"ghostb":"cta")+'" id="scHub" style="margin-top:'+(opts.next?"8px":"14px")+'">'+
+      (left.length?"ยืนยัน · กลับหน้ารวมหัวข้อ":"ยืนยัน · ไปหน้าสรุป")+'</button>'+
+    '<button class="ghostb" id="scRedo">ทำหัวข้อนี้ใหม่</button>'+
+    '</div>';
+  var goNext=function(){ vcStop(); if(opts.next)opts.next(); else go("assessHub") };
+  var goHub =function(){ vcStop(); go("assessHub") };
+  var goRedo=function(){ vcStop(); if(sec)sec.go() };
+  if(opts.next) document.getElementById("scNext").addEventListener("click",goNext);
+  document.getElementById("scHub").addEventListener("click",goHub);
+  document.getElementById("scRedo").addEventListener("click",goRedo);
+  var vOn=voiceConfirm({
+    prompt:"บันทึก"+(sec?sec.t:"")+"แล้ว "+(opts.value||(sec?sec.sum(S.draft):""))+
+           " ถ้าถูกต้อง พูดว่า ยืนยัน หรือพูดว่า ทำใหม่ เพื่อทำหัวข้อนี้อีกครั้ง",
+    onConfirm:goNext, onRedo:goRedo});
+  if(vOn){
+    var h=document.createElement("div"); h.className="vcline";
+    h.innerHTML='🎤 พูดว่า <b style="margin:0 4px">ยืนยัน</b> เพื่อไปต่อ หรือ <b style="margin:0 4px">ทำใหม่</b> เพื่อทำซ้ำ';
+    V.querySelector(".okcard").insertAdjacentElement("afterend",h);
+  }
+}
+
+/* เข้าหน้ารวมหัวข้อแทนการไล่เป็นเส้นตรง และถามก่อนถ้ามีร่างค้าง */
+function beginAssessFlow(){
+  loadDraft().then(function(v){
+    if(v&&v.draft&&Object.keys(v.draft).length>1){
+      dialog({title:"มีการตรวจที่ค้างอยู่",
+        body:"พบข้อมูลการตรวจที่ยังทำไม่เสร็จ ต้องการทำต่อจากเดิมหรือเริ่มใหม่",
+        ok:"ทำต่อจากเดิม",cancel:"เริ่มใหม่",
+        onOk:function(){ S.draft=v.draft; go("assessHub") },
+        onCancel:function(){ clearDraft(); S.draft={t0:Date.now()}; go("assessHub") }});
+    }else{ S.draft={t0:Date.now()}; go("assessHub") }
+  });
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest("#beginAssess"); if(b)beginAssessFlow();
+});
+
 function faceEnabled(){return !!loadFaceSig()}
 
 /* ---------- หน้าลงทะเบียนใบหน้า ---------- */
@@ -1845,8 +2079,9 @@ function faceV(){
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
   '<div class="hudbot"><div class="coach" id="coach">มองตรงมาที่กล้อง ให้เห็นใบหน้าเต็ม</div></div></div></div>'+
   statusHTML()+
-  '<label class="chk" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(already?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
+  '<label class="chk" id="fcChkWrap" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(already?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
   '<button class="cta" id="fcSave" disabled>บันทึกใบหน้าและไปต่อ</button>'+
+  '<div class="vcline" id="fcVoiceHint" hidden>🎤 หรือพูดว่า <b style="margin:0 4px">ยืนยัน</b> เมื่อพร้อมบันทึก</div>'+
   '<button class="ghostb" id="fcSkip">ข้าม · ทำต่อโดยไม่ยืนยันตัวตน</button>'+
   (already?'<button class="ghostb danger" id="fcDel">ลบใบหน้าที่บันทึกไว้</button>':'')+
   '<div class="disc">ขอบเขตที่ระบบทำได้จริง: ตรวจว่าเป็น<b>คนเดิมตลอดการทดสอบ</b>เท่านั้น ไม่ใช่การพิสูจน์ตัวตนแบบธนาคาร</div></div>';
@@ -1864,7 +2099,9 @@ function faceV(){
   startFacePipeline();
 }
 async function startFacePipeline(){
-  camFullscreen();
+  /* ครึ่งจอ ไม่ใช่เต็มจอ — ต้องย้ายช่องติ๊กยินยอมลงแผงด้วย ไม่ใช่แค่ปุ่ม
+     มิฉะนั้นช่องติ๊กจะอยู่หลังกล้อง กดไม่ได้ และปุ่มบันทึกค้าง disabled */
+  camHalf(["fcChkWrap","fcSave","fcVoiceHint","fcSkip","fcDel"]);
   var video=document.getElementById("vid"),canvas=document.getElementById("cv"),ctx=canvas.getContext("2d");
   var tag=document.getElementById("tag"),coach=document.getElementById("coach"),
       save=document.getElementById("fcSave"),chk=document.getElementById("fcConsent");
@@ -1911,7 +2148,14 @@ async function startFacePipeline(){
     onFire:function(){doSaveFace()}});
   loop();
   chk.addEventListener("change",function(){save.disabled=!(this.checked&&cur);if(!this.checked)AUTO.abort()});
-  save.addEventListener("click",function(){AUTO.abort();doSaveFace()});
+  save.addEventListener("click",function(){AUTO.abort();vcStop();doSaveFace()});
+  /* ยืนยันด้วยเสียง — เงื่อนไขเดียวกับปุ่มเป๊ะ ถ้ายังไม่ครบ บอกเหตุผล ไม่ปล่อยผ่าน */
+  var vhint=document.getElementById("fcVoiceHint");
+  if(voiceConfirm({
+      prompt:"เมื่อพร้อมบันทึกใบหน้า ให้ติ๊กช่องยินยอม แล้วพูดว่า ยืนยัน",
+      enabled:function(){ return !!(cur&&chk.checked) },
+      onConfirm:function(){ AUTO.abort(); doSaveFace() }
+    }) && vhint) vhint.hidden=false;
   async function doSaveFace(){
     if(!cur||!chk.checked)return;
     saveFaceSig(cur);
@@ -2002,7 +2246,7 @@ function showFallback(reason){
     askTime(function(n){
       S.draft={ftsst:n,method:"manual",reps:5,cv:null};
       audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที (กล้องใช้ไม่ได้: "+reason+")");
-      go("q",0);
+      sectionDone("ftsst",{next:function(){go("tug")}});
     });
   });
 }
@@ -2283,7 +2527,7 @@ function setupTest(video,canvas,ctx){
     askTime(function(n){
       S.draft.ftsst=n;S.draft.method="manual";S.draft.reps=5;S.draft.cv=null;S.draft.gaps=null;
       audit("บันทึกเวลาด้วยตนเอง","ผู้ใช้กรอกเวลา "+n.toFixed(1)+" วินาที");
-      go("q",0);
+      sectionDone("ftsst",{next:function(){go("tug")}});
     },function(){go("assess")});
   });
 }
@@ -2902,7 +3146,7 @@ async function startTugPipeline(){
 
 function finishVisionTug(ev){
   stopCam();
-  S.draft.tug=Math.round(ev.elapsed*10)/10;
+  S.draft.tug=Math.round(ev.elapsed*10)/10; S.draft.tugSkipped=false;
   S.draft.tugOut=ev.out!=null?Math.round(ev.out*10)/10:null;
   S.draft.tugBack=ev.back!=null?Math.round(ev.back*10)/10:null;
   S.draft.tugDistanceOk=!!ev.distanceOk;
@@ -2958,7 +3202,7 @@ function balanceV(){
   document.getElementById("bStop").addEventListener("click",function(){
     stopCam();
     audit("หยุดการทดสอบทรงตัวกลางคัน","ผู้ใช้เลือกตอบด้วยตนเอง");
-    go("q",0);
+    S.draft.balanceSkipped=true; saveDraft(); go("assessHub");
   });
   startBalancePipeline();
 }
@@ -3164,7 +3408,7 @@ async function startBalancePipeline(){
       "ทดสอบเสร็จสมบูรณ์ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
     coach.innerHTML='<b>ทดสอบเสร็จสมบูรณ์</b> — ยืนผ่าน '+passed+' จาก 4 ท่า';
     speak("การทดสอบการทรงตัวเสร็จสมบูรณ์ ยืนผ่าน "+passed+" จาก 4 ท่า บันทึกเรียบร้อยแล้ว ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
-    setTimeout(function(){ if(S.screen==="balance")go("q",0) },3400);
+    setTimeout(function(){ if(S.screen==="balance")sectionDone("balance") },3400);
   }
 
   function loop(){
@@ -3696,7 +3940,9 @@ function renderMedsQ(i){
       (sum.needsReview?" · เข้าเกณฑ์ส่งเภสัชกรทบทวน":"")+
       ((m.changed||[]).filter(function(x){return x!=="none"}).length?" · มีการปรับยาใน 14 วัน":""));
     if(sum.needsReview)toast("มียาที่ควรให้เภสัชกรทบทวน — ระบบส่งคำขอให้แล้ว");
-    go("q",i+1);
+    m.done=true;
+    sectionDone("meds",{note:sum.needsReview?"เข้าเกณฑ์ให้เภสัชกรทบทวน ระบบจะเปิดคำขอให้เมื่อบันทึกผลทั้งหมด":null,
+      next:function(){go("tug")}});
   });
 }
 
@@ -3776,7 +4022,11 @@ function qV(i){
   V.querySelectorAll(".pick").forEach(function(b){
     b.addEventListener("click",function(){
       S.draft[q.k]=+b.dataset.v;
-      if(i+1<QS.length)go("q",i+1); else finishAssess();
+      /* จบเป็นหัวข้อ ไม่ไล่ต่ออัตโนมัติ */
+      if(q.k==="adl")          sectionDone("adl");
+      else if(q.k==="balance") sectionDone("balance");
+      else if(i+1<QS.length)   go("q",i+1);
+      else                     go("assessHub");
     });
   });
 }
@@ -3824,6 +4074,8 @@ async function finishAssess(){
   await saveAll();
   cloudSync(rec,tr);   /* ซิงก์ขึ้นระบบกลางแบบไม่บล็อกผู้ใช้ */
   S.draft={};
+  /* บันทึกลงระบบสำเร็จแล้ว ร่างไม่จำเป็นอีก */
+  clearDraft();
   go("result",rec);
 }
 
