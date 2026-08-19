@@ -243,6 +243,21 @@ td.num{font-family:var(--mono);white-space:nowrap}
 .pipe .pn[data-alert="1"]{border-color:rgba(240,82,76,.6);background:rgba(240,82,76,.12)}
 .chip2{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.12);color:var(--ink2);margin:0 4px 4px 0}
 .linkbtn{border:0;background:none;color:var(--gold);font-family:inherit;font-size:12.5px;cursor:pointer;padding:0}
+/* ---------- หน้าเปิดแอป ----------
+   ใช้สีเดียวกับ background_color ใน manifest เพื่อให้ต่อจาก splash ของระบบ
+   ได้เนียน ไม่กะพริบขาว-น้ำเงิน และบอกสถานะว่ากำลังทำอะไรอยู่ */
+.boot{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;background:#16337A;color:#fff;
+  padding:24px;text-align:center}
+.boot img{width:92px;height:92px;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
+.boot .bt{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.boot .bt i{color:#F5B93E;font-style:normal}
+.boot .bs{font-size:14px;color:#B9C7E8;line-height:1.6;max-width:280px}
+.boot .bar{width:132px;height:5px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
+.boot .bar i{display:block;width:40%;height:100%;border-radius:99px;background:#F5B93E;
+  animation:bootslide 1.15s ease-in-out infinite}
+@keyframes bootslide{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+@media(prefers-reduced-motion:reduce){.boot .bar i{animation:none;width:100%}}
 </style>
 </head>
 <body>

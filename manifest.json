@@ -1,18 +1,18 @@
 {
-  "id": "./CareSignal-Vision.html",
-  "name": "CareSignal Vision — ประเมินสมรรถภาพด้วยกล้อง",
+  "id": "./index.html",
+  "name": "CareSignal — เฝ้าระวังความเสี่ยงและประสานการดูแลผู้สูงอายุ",
   "short_name": "CareSignal",
-  "description": "วัดการลุกนั่ง 5 ครั้งด้วยกล้องมือถือ วิเคราะห์แนวโน้มความเสี่ยงภาวะพึ่งพิง และส่งต่อทีมดูแล — ประมวลผลภาพในเครื่อง ไม่ส่งภาพออกไปที่ใด",
-  "start_url": "./CareSignal-Vision.html",
+  "description": "คัดกรองสัญญาณเสี่ยงหกล้มด้วยกล้องมือถือที่บ้าน ทีมดูแลติดตามและส่งต่อ ผู้เชี่ยวชาญยืนยัน — ประมวลผลภาพในเครื่อง ไม่ส่งภาพออกไปที่ใด",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#FFFFFF",
-  "theme_color": "#2563EB",
+  "background_color": "#0F2A5C",
+  "theme_color": "#0F2A5C",
   "lang": "th",
   "dir": "ltr",
-  "categories": ["health", "medical", "finance"],
+  "categories": ["health", "medical"],
   "icons": [
     {
       "src": "./icon-192.png",
@@ -27,7 +27,13 @@
       "purpose": "any"
     },
     {
-      "src": "./icon-512.png",
+      "src": "./icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -35,21 +41,21 @@
   ],
   "shortcuts": [
     {
-      "name": "เริ่มประเมินด้วยกล้อง",
-      "short_name": "ประเมิน",
-      "url": "./CareSignal-Vision.html",
+      "name": "ตรวจร่างกายด้วยกล้อง",
+      "short_name": "ตรวจร่างกาย",
+      "url": "./index.html#member",
       "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "แอปสมาชิก (วัด + ประกัน)",
-      "short_name": "แอปสมาชิก",
-      "url": "./CareSignal-App.html",
+      "name": "คอนโซลเจ้าหน้าที่ดูแล",
+      "short_name": "เจ้าหน้าที่",
+      "url": "./index.html#care",
       "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "โมเดลผลประกอบการ",
-      "short_name": "โมเดลธุรกิจ",
-      "url": "./CareSignal-Insurer-Model.html",
+      "name": "ทีมผู้เชี่ยวชาญยืนยันผล",
+      "short_name": "ผู้เชี่ยวชาญ",
+      "url": "./index.html#expert",
       "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
     }
   ]

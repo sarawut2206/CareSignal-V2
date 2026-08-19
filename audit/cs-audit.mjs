@@ -1030,6 +1030,59 @@ function layer7() {
     }
   }
 
+  /* ---- หน้าเปิดแอปและไอคอนติดตั้ง ---- */
+  {
+    let mf = null, mfs = null;
+    try { mf  = JSON.parse(read("manifest.json") || "{}") } catch (e) {}
+    try { mfs = JSON.parse(read("manifest-staff.json") || "{}") } catch (e) {}
+    const iChecks = [
+      ["X-81", "ไอคอน maskable ต้องเป็นไฟล์แยกที่มีขอบปลอดภัย ไม่ใช้ไฟล์เดียวกับไอคอนธรรมดา",
+        () => {
+          /* Android ครอบไอคอน maskable เป็นวงกลม กินขอบราว 20% ของแต่ละด้าน
+             ถ้าใช้ไฟล์เต็มกรอบเป็น maskable โลโก้จะถูกตัด */
+          for (const m of [mf, mfs]) {
+            if (!m || !m.icons) return false;
+            const mk = m.icons.filter(i => (i.purpose || "").includes("maskable"));
+            const any = m.icons.filter(i => (i.purpose || "") === "any").map(i => i.src);
+            if (!mk.length) return false;
+            if (mk.some(i => any.includes(i.src))) return false;
+            if (!mk.every(i => /maskable/.test(i.src))) return false;
+          }
+          return true;
+        }],
+      ["X-82", "สีพื้นหน้าเปิดแอปตรงกับ manifest ทุกแอป (ไม่กะพริบขาว-น้ำเงิน)",
+        () => {
+          if (!mf || mf.background_color !== mf.theme_color) return false;
+          const bg = mf.background_color;
+          for (const f of ["index.html", "CareSignal-App.html", "CareSignal-Vision.html"]) {
+            const t = read(f) || "";
+            const m = t.match(/name="theme-color" content="([^"]+)"/);
+            if (!m || m[1].toUpperCase() !== bg.toUpperCase()) return false;
+          }
+          return true;
+        }],
+      ["X-83", "หน้าเปิดแอปมีโลโก้ ชื่อระบบ และตัวบอกสถานะ ไม่ใช่จอเปล่า",
+        () => ["CareSignal-App.html", "CareSignal-Vision.html"].every(f => {
+          const t = read(f) || "";
+          return /class="boot"/.test(t) && /กำลังเปิด/.test(t) && /class="bar"/.test(t);
+        })],
+      ["X-84", "ทางลัดใน manifest ไม่ชี้หน้าที่เลิกใช้แล้ว",
+        () => {
+          const dead = /Insurer-Model|Actuarial|CareSignal-Web/;
+          const all = [mf, mfs].filter(Boolean);
+          return all.every(m => !(m.shortcuts || []).some(sc => dead.test(sc.url || ""))
+                             && !dead.test(m.start_url || ""));
+        }],
+    ];
+    for (const [id, name, fn] of iChecks) {
+      const ok = fn();
+      req(7, id, name, ok ? "PASS" : "MISSING", ok ? "ตรวจจาก manifest และซอร์สจริง" : "ไม่ตรงตามที่กำหนด");
+      if (!ok) finding("MEDIUM", id, "หน้าเปิดแอป/ไอคอนไม่ได้มาตรฐาน: " + name,
+        "ผู้ใช้เห็นตั้งแต่วินาทีแรกที่เปิดแอป ถ้าโลโก้ถูกครอบหรือจอกะพริบ ระบบจะดูไม่น่าเชื่อถือ",
+        "ไม่ตรงตามที่กำหนด", "แก้ manifest และไอคอนให้ตรงตามที่ระบุ");
+    }
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

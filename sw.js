@@ -13,7 +13,7 @@
    หมายเหตุความเป็นส่วนตัว: Service Worker นี้แคชเฉพาะ "ไฟล์โปรแกรม"
    ไม่แตะข้อมูลผู้ใช้ และไม่มีการส่งข้อมูลใดออกจากเครื่อง
    ============================================================ */
-var VERSION = "caresignal-v47";
+var VERSION = "caresignal-v48";
 
 /* รับคำสั่งจากหน้าเว็บให้สลับเป็นเวอร์ชันใหม่ทันที (ใช้โดยระบบแจ้งอัปเดต) */
 self.addEventListener("message", function (e) {
@@ -34,6 +34,8 @@ var APP_SHELL = [
   "./logo-mark.png",
   "./icon-192.png",
   "./icon-512.png",
+  "./icon-maskable-192.png",
+  "./icon-maskable-512.png",
   "./favicon-64.png",
   "./apple-touch-icon.png"
 ];

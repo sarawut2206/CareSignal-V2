@@ -10,7 +10,7 @@
 <meta name="description" content="วัดสมรรถภาพผู้สูงอายุด้วยกล้องมือถือ — นับลุกนั่ง 5 ครั้งอัตโนมัติ ประมวลผลในเครื่อง ไม่ส่งภาพออกไปที่ใด">
 <title>CareSignal Vision — ตรวจจับสมรรถภาพด้วยกล้อง</title>
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#0F2A5C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -263,6 +263,21 @@ body.camfs .hudtop{display:none}
 #barIn p,#band p,.band p{font-size:16.5px !important;line-height:1.6 !important;opacity:.92 !important}
 .kick{font-size:13.5px !important;letter-spacing:.14em !important}
 .backb{font-size:18px !important;padding:12px 22px !important;min-height:52px !important;font-weight:600}
+/* ---------- หน้าเปิดแอป ----------
+   ใช้สีเดียวกับ background_color ใน manifest เพื่อให้ต่อจาก splash ของระบบ
+   ได้เนียน ไม่กะพริบขาว-น้ำเงิน และบอกสถานะว่ากำลังทำอะไรอยู่ */
+.boot{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;background:#0F2A5C;color:#fff;
+  padding:24px;text-align:center}
+.boot img{width:92px;height:92px;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
+.boot .bt{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.boot .bt i{color:#F5B93E;font-style:normal}
+.boot .bs{font-size:14px;color:#B9C7E8;line-height:1.6;max-width:280px}
+.boot .bar{width:132px;height:5px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
+.boot .bar i{display:block;width:40%;height:100%;border-radius:99px;background:#F5B93E;
+  animation:bootslide 1.15s ease-in-out infinite}
+@keyframes bootslide{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+@media(prefers-reduced-motion:reduce){.boot .bar i{animation:none;width:100%}}
 </style>
 </head>
 <body>
@@ -1159,7 +1174,10 @@ function render(arg){
           trend:trendV,cases:casesV,insurer:insurerV,plog:plogV,pilot:pilotV,mrv:mrvV,face:faceV,assessHub:assessHubV,mydata:mydataV,balance:balanceV}[S.screen]||assessV;
   fn(arg);
 }
-function loadingV(){head("CARESIGNAL VISION","กำลังเปิดระบบ…","");V.innerHTML=""}
+function loadingV(){
+  B.innerHTML="";
+  V.innerHTML='<div class="boot">'+'<img src="./icon-512.png" alt="">'+'<div class="bt">Care<i>Signal</i> Vision</div>'+'<div class="bs">กำลังเปิดกล้องและตัวประมวลผล…</div>'+'<div class="bar"><i></i></div>'+'</div>';
+}
 
 /* ---------- เริ่มต้น ---------- */
 function welcomeV(){
