@@ -35,7 +35,7 @@
   --c4:#16A34A; --c3:#CA8A04; --c2:#EA580C; --c1:#DC2626;
   --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,monospace;
-  --nav-h:64px;
+  --nav-h:64px; --strip-h:52px;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -61,6 +61,12 @@ nav.tabs button[aria-selected="true"]{background:var(--navy);color:#fff}
 nav.tabs button[aria-selected="true"] .n{background:var(--gold);color:#231a02}
 .ribbon{background:var(--navy);color:#DCE7FA;font-size:12.5px;text-align:center;padding:6px 14px}
 .ribbon b{color:var(--gold)}
+/* ---------- ลดหัวซ้อนเมื่ออยู่ในส่วนระบบงาน ----------
+   ส่วนที่ 2–5 ฝังแอปที่มีหัวของตัวเองอยู่แล้ว ถ้าหน้าแม่ยังมีริบบิ้น
+   แถบเมนู แถบอธิบาย และคำอธิบายท้ายอีก จะเหลือที่ให้เนื้อหาจริงน้อยมาก
+   จึงซ่อนริบบิ้นและย่อแถบอธิบายให้เหลือบรรทัดเดียวเมื่อเข้าส่วนระบบงาน */
+body[data-sec="work"] .ribbon{display:none}
+body[data-sec="work"]{overflow:hidden}
 
 /* ---------- แผงเนื้อหา ---------- */
 .panel{display:none}
@@ -89,34 +95,43 @@ h1 em{color:var(--gold);font-style:normal}
 .spec .r b.y{color:var(--gold)}
 .spec .r b.g{color:#4ADE80}
 
-section.s{padding:52px 0}
-section.s.alt{background:var(--surf)}
+section.s{padding:64px 0}
+/* พื้นไล่สีอ่อนแบบเว็บบริการสุขภาพ ให้การ์ดลอยอ่านง่าย ไม่ทึบ */
+section.s.alt{background:linear-gradient(180deg,#EFF6FF 0%,#F8FBFF 60%,var(--bg) 100%)}
 h2{font-size:clamp(22px,2.6vw,30px);letter-spacing:-.02em;margin:0 0 8px}
 .sub{color:var(--ink2);font-size:15.5px;max-width:760px;margin:0 0 26px}
 .kick{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-weight:600;margin-bottom:8px}
 
 /* วงจร STEADI */
-.cycle{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.cycle .st{background:var(--surf);border:1.5px solid var(--line);border-radius:16px;padding:18px;position:relative}
-.cycle .st .no{width:30px;height:30px;border-radius:99px;background:var(--navy);color:var(--gold);display:grid;place-items:center;font-weight:700;font-size:13.5px;margin-bottom:10px}
-.cycle .st h4{margin:0 0 5px;font-size:16px}
-.cycle .st p{margin:0;font-size:13.5px;color:var(--ink2)}
-.cycle .st small{display:block;margin-top:9px;font-size:12px;color:var(--brand);font-weight:600}
+.cycle{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.cycle .st{background:var(--surf);border:1px solid var(--line);border-radius:20px;padding:26px 22px;
+  box-shadow:0 2px 4px rgba(15,42,92,.04),0 12px 28px rgba(15,42,92,.06);text-align:center}
+.cycle .st .ic{width:74px;height:74px;margin:0 auto 14px;border-radius:22px;display:grid;place-items:center;
+  font-size:34px;background:linear-gradient(160deg,#E0EDFF,#F2F7FF);border:1px solid #DBE7FA}
+.cycle .st .no{display:inline-block;font-size:11px;letter-spacing:.1em;color:var(--brand);font-weight:700;margin-bottom:6px}
+.cycle .st h4{margin:0 0 8px;font-size:17px}
+.cycle .st p{margin:0;font-size:14px;color:var(--ink2);line-height:1.75}
+.cycle .st small{display:block;margin-top:12px;font-size:12px;color:var(--brand);font-weight:600}
 
 /* ใครทำอะไร — แผนที่ 5 ส่วนของระบบ */
-.roles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.roles .rl{background:var(--surf);border:1.5px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transition:border-color .15s,transform .15s}
-.roles .rl:hover{border-color:var(--brand);transform:translateY(-2px)}
-.roles .rl .ic{font-size:26px;line-height:1;margin-bottom:8px}
-.roles .rl h4{margin:0 0 4px;font-size:15.5px}
-.roles .rl p{margin:0;font-size:13px;color:var(--ink2)}
-.roles .rl .see{display:block;margin-top:9px;font-size:12px;color:var(--ink3)}
-.roles .rl .see b{color:var(--ink)}
+.roles{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.roles .rl{background:var(--surf);border:1px solid var(--line);border-radius:20px;padding:26px 22px;cursor:pointer;
+  box-shadow:0 2px 4px rgba(15,42,92,.04),0 12px 28px rgba(15,42,92,.06);
+  transition:border-color .16s,transform .16s,box-shadow .16s;text-align:center}
+.roles .rl:hover{border-color:var(--brand);transform:translateY(-3px);box-shadow:0 6px 12px rgba(37,99,235,.10),0 18px 40px rgba(37,99,235,.14)}
+.roles .rl .ic{width:74px;height:74px;margin:0 auto 14px;border-radius:22px;display:grid;place-items:center;
+  font-size:34px;background:linear-gradient(160deg,#E0EDFF,#F2F7FF);border:1px solid #DBE7FA}
+.roles .rl h4{margin:0 0 8px;font-size:17px}
+.roles .rl p{margin:0;font-size:14px;color:var(--ink2);line-height:1.75}
+.roles .rl .see{display:block;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink3)}
+.roles .rl .see b{color:var(--brand)}
+.roles .rl .go{display:block;margin-top:10px;font-size:13px;color:var(--brand);font-weight:600}
 .arrow{text-align:center;color:var(--ink3);font-size:13px;margin:12px 0 0}
 
 /* หลักฐาน + ขอบเขต */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.card{background:var(--surf);border:1.5px solid var(--line);border-radius:16px;padding:20px 22px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:20px;padding:26px 28px;
+  box-shadow:0 2px 4px rgba(15,42,92,.04),0 12px 28px rgba(15,42,92,.06)}
 .card h4{margin:0 0 10px;font-size:15.5px}
 .card ul{margin:0;padding-left:18px;font-size:14px;color:var(--ink2)}
 .card ul li{margin-bottom:6px}
@@ -129,19 +144,25 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
 
 /* ---------- ส่วนที่ 2–5: แผงระบบงานในหน้าเดียว ---------- */
 .strip{background:var(--surf);border-bottom:1px solid var(--line)}
-.strip .wrap{display:flex;align-items:center;gap:16px;padding-top:12px;padding-bottom:12px;flex-wrap:wrap}
-.strip .who{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);font-weight:600}
-.strip h2{font-size:18px;margin:0}
-.strip p{margin:0;font-size:13.5px;color:var(--ink2);flex:1 1 320px}
-.strip .acts{display:flex;gap:8px;flex-wrap:wrap}
-.strip .acts button,.strip .acts a{border:1.5px solid var(--line2);background:var(--surf);color:var(--ink);border-radius:10px;padding:7px 12px;font-size:12.5px;cursor:pointer;text-decoration:none}
+.strip .wrap{display:flex;align-items:center;gap:12px;height:var(--strip-h);flex-wrap:nowrap;overflow:hidden}
+.strip .back{display:none;border:0;background:none;color:var(--brand);font-family:inherit;font-size:15px;font-weight:600;padding:6px 4px;cursor:pointer;flex:none}
+.strip .who{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);font-weight:600;flex:none}
+.strip h2{font-size:16px;margin:0;white-space:nowrap;flex:none}
+.strip h2 .sm,.strip .acts .sm{display:none}
+@media(max-width:640px){.strip h2 .lg,.strip .acts .lg{display:none}
+  .strip h2 .sm,.strip .acts .sm{display:inline}
+  .strip .acts button{padding:7px 10px;font-size:12px}
+  .strip .back{font-size:14px}}
+.strip .note{margin:0;font-size:12.5px;color:var(--ink2);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.strip .note b{color:var(--ink)}
+.strip .acts{display:flex;gap:8px;flex:none}
+.strip .acts button{border:1.5px solid var(--line2);background:var(--surf);color:var(--ink);border-radius:10px;padding:7px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .strip .acts button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* กรอบระบบงานสูงพอดีจอเสมอ — ไม่ให้หน้าแม่มีแถบเลื่อนซ้อนกับแถบเลื่อนของแอป */
 .frame{position:relative;background:#0F2A5C}
-.frame iframe{display:block;width:100%;height:calc(100dvh - var(--nav-h) - 58px);min-height:640px;border:0;background:#fff}
+.frame iframe{display:block;width:100%;height:var(--frame-h,70dvh);border:0;background:#fff}
 .frame .ld{position:absolute;inset:0;display:grid;place-items:center;color:#DCE7FA;font-size:14px;pointer-events:none}
 .frame[data-ready="1"] .ld{display:none}
-.hint{background:var(--surf2);font-size:12.5px;color:var(--ink2);text-align:center;padding:8px 14px}
-.hint b{color:var(--ink)}
 
 @media(max-width:900px){
   .hero .wrap{grid-template-columns:1fr}
@@ -150,6 +171,20 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
   .brand small{display:none}
   nav.tabs button{font-size:13px;padding:8px 10px}
   .cta.g{margin-left:0;margin-top:8px}
+}
+/* ---------- มือถือในส่วนระบบงาน: เหลือแถบเดียว ----------
+   จอสูง 812px มีหัวของหน้าแม่ 154px และหัวของแอปข้างในอีก 365px
+   เหลือที่เนื้อหาจริงไม่ถึง 300px ซึ่งใช้งานไม่ได้
+   จึงยุบแถบเมนู 5 ส่วนทิ้งเมื่อเข้าส่วนระบบงาน แล้วให้แถบอธิบาย
+   ทำหน้าที่เป็นแถบนำทางแทน มีปุ่มย้อนกลับไปเลือกส่วนอื่น */
+@media(max-width:900px){
+  body[data-sec="work"] .top{display:none}
+  body[data-sec="work"] .strip{position:sticky;top:0;z-index:40}
+  body[data-sec="work"] .strip .back{display:inline-flex;align-items:center;gap:3px}
+  body[data-sec="work"] .strip .who,
+  body[data-sec="work"] .strip .note{display:none}
+  body[data-sec="work"] .strip h2{font-size:15px;flex:1 1 auto;min-width:0;
+    overflow:hidden;text-overflow:ellipsis}
 }
 @media(max-width:560px){
   .cycle,.roles{grid-template-columns:1fr}
@@ -218,10 +253,10 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
       <h2>วงจรการดูแลตาม CDC STEADI — คัดกรอง → ประเมิน → แผนดูแล → ติดตาม</h2>
       <p class="sub">โครงหลักคือ<b>วงจรการดูแล</b> ไม่ใช่คะแนน — สีเขียว เหลือง แดง เป็นเพียงลำดับความสำคัญของงานในแต่ละขั้น ทุกหน้าจอตอบสามคำถามทันที: <b>พบอะไร · ใครต้องทำอะไร · ภายในเมื่อไร</b></p>
       <div class="cycle">
-        <div class="st"><div class="no">1</div><h4>คัดกรอง</h4><p>3 คำถามหลัก + ประวัติหกล้ม 12 เดือน ตอบเองที่บ้าน หรือให้ผู้ดูแลช่วยตอบ</p><small>ผู้เอาประกัน</small></div>
-        <div class="st"><div class="no">2</div><h4>ประเมิน</h4><p>ผ่านด่านความปลอดภัยก่อน แล้ววัด FTSST · TUG · ทรงตัว · ยา · ADL ด้วยกล้อง</p><small>ผู้เอาประกัน + ผู้ดูแล</small></div>
-        <div class="st"><div class="no">3</div><h4>แผนดูแลและส่งต่อ</h4><p>ระบบเปิดสัญญาณเสี่ยง → เจ้าหน้าที่ทบทวน ติดต่อ วางแผน ส่งต่อผู้เชี่ยวชาญ</p><small>เจ้าหน้าที่ดูแล → ผู้เชี่ยวชาญ</small></div>
-        <div class="st"><div class="no">4</div><h4>ติดตาม 30–90 วัน</h4><p>ประเมินซ้ำ ดูแนวโน้ม บันทึกผลลัพธ์ — ปิดเคสได้เฉพาะเมื่อมนุษย์ยืนยัน</p><small>เจ้าหน้าที่ดูแล</small></div>
+        <div class="st"><div class="ic">📋</div><div class="no">ขั้นที่ 1</div><h4>คัดกรอง</h4><p>3 คำถามหลัก + ประวัติหกล้ม 12 เดือน ตอบเองที่บ้าน หรือให้ผู้ดูแลช่วยตอบ</p><small>ผู้เอาประกัน</small></div>
+        <div class="st"><div class="ic">📏</div><div class="no">ขั้นที่ 2</div><h4>ประเมิน</h4><p>ผ่านด่านความปลอดภัยก่อน แล้ววัด FTSST · TUG · ทรงตัว · ยา · ADL ด้วยกล้อง</p><small>ผู้เอาประกัน + ผู้ดูแล</small></div>
+        <div class="st"><div class="ic">🤝</div><div class="no">ขั้นที่ 3</div><h4>แผนดูแลและส่งต่อ</h4><p>ระบบเปิดสัญญาณเสี่ยง → เจ้าหน้าที่ทบทวน ติดต่อ วางแผน ส่งต่อผู้เชี่ยวชาญ</p><small>เจ้าหน้าที่ดูแล → ผู้เชี่ยวชาญ</small></div>
+        <div class="st"><div class="ic">🔁</div><div class="no">ขั้นที่ 4</div><h4>ติดตาม 30–90 วัน</h4><p>ประเมินซ้ำ ดูแนวโน้ม บันทึกผลลัพธ์ — ปิดเคสได้เฉพาะเมื่อมนุษย์ยืนยัน</p><small>เจ้าหน้าที่ดูแล</small></div>
       </div>
     </div>
   </section>
@@ -232,10 +267,10 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
       <h2>4 บทบาท 4 หน้าจอ — แต่ละคนเห็นเฉพาะส่วนที่ตนเกี่ยวข้อง</h2>
       <p class="sub">ข้อจำกัดนี้บังคับที่ฐานข้อมูลด้วย Row Level Security ไม่ใช่การซ่อนที่หน้าจอ · กดการ์ดเพื่อไปยังส่วนนั้น</p>
       <div class="roles">
-        <div class="rl" data-go="member"><div class="ic">👵</div><h4>ผู้เอาประกันและครอบครัว</h4><p>ตอบคำถาม วัดด้วยกล้อง บันทึกยา ดูแนวโน้มและแผนดูแลของตน · ครอบครัวเชื่อมบัญชีได้เมื่อได้รับอนุญาต</p><span class="see">เห็น: <b>ข้อมูลของตนเองเท่านั้น</b></span></div>
-        <div class="rl" data-go="care"><div class="ic">🩺</div><h4>เจ้าหน้าที่ดูแล</h4><p>รับสัญญาณเสี่ยง ติดต่อ วางแผน ส่งต่อ และติดตามจนปิดเคส · งานของฉันขึ้นก่อน</p><span class="see">เห็น: <b>เคสทั้งพอร์ตที่ต้องดูแล</b></span></div>
-        <div class="rl" data-go="expert"><div class="ic">💊</div><h4>ทีมผู้เชี่ยวชาญ</h4><p>เภสัชกร พยาบาล นักกายภาพ แพทย์ — ยืนยันหรือแก้สิ่งที่เจ้าหน้าที่ส่งมา แล้วบันทึกข้อสรุปกลับ</p><span class="see">เห็น: <b>เฉพาะเคสที่ส่งถึงวิชาชีพตน</b></span></div>
-        <div class="rl" data-go="insurer"><div class="ic">📊</div><h4>บริษัทประกัน</h4><p>ประชากร · การกระจายความเสี่ยง · การส่งมอบการดูแล · ผลลัพธ์ เพื่อออกแบบผลิตภัณฑ์ต่อ</p><span class="see">เห็น: <b>ภาพรวมระดับกลุ่มแบบแฝงชื่อ</b></span></div>
+        <div class="rl" data-go="member"><div class="ic">👵</div><h4>ผู้เอาประกันและครอบครัว</h4><p>ตอบคำถาม วัดด้วยกล้อง บันทึกยา ดูแนวโน้มและแผนดูแลของตน · ครอบครัวเชื่อมบัญชีได้เมื่อได้รับอนุญาต</p><span class="see">เห็น: <b>ข้อมูลของตนเองเท่านั้น</b></span><span class="go">เข้าส่วนนี้ ›</span></div>
+        <div class="rl" data-go="care"><div class="ic">🩺</div><h4>เจ้าหน้าที่ดูแล</h4><p>รับสัญญาณเสี่ยง ติดต่อ วางแผน ส่งต่อ และติดตามจนปิดเคส · งานของฉันขึ้นก่อน</p><span class="see">เห็น: <b>เคสทั้งพอร์ตที่ต้องดูแล</b></span><span class="go">เข้าส่วนนี้ ›</span></div>
+        <div class="rl" data-go="expert"><div class="ic">💊</div><h4>ทีมผู้เชี่ยวชาญ</h4><p>เภสัชกร พยาบาล นักกายภาพ แพทย์ — ยืนยันหรือแก้สิ่งที่เจ้าหน้าที่ส่งมา แล้วบันทึกข้อสรุปกลับ</p><span class="see">เห็น: <b>เฉพาะเคสที่ส่งถึงวิชาชีพตน</b></span><span class="go">เข้าส่วนนี้ ›</span></div>
+        <div class="rl" data-go="insurer"><div class="ic">📊</div><h4>บริษัทประกัน</h4><p>ประชากร · การกระจายความเสี่ยง · การส่งมอบการดูแล · ผลลัพธ์ เพื่อออกแบบผลิตภัณฑ์ต่อ</p><span class="see">เห็น: <b>ภาพรวมระดับกลุ่มแบบแฝงชื่อ</b></span><span class="go">เข้าส่วนนี้ ›</span></div>
       </div>
       <p class="arrow">ผู้เอาประกันบันทึก → เจ้าหน้าที่ติดตาม → ผู้เชี่ยวชาญยืนยัน → บริษัทประกันเห็นภาพรวม</p>
     </div>
@@ -278,15 +313,14 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
      ============================================================ -->
 <div class="panel" id="p-member" role="tabpanel">
   <div class="strip"><div class="wrap">
-    <div><div class="who">ส่วนที่ 2</div><h2>ผู้เอาประกันและครอบครัว</h2></div>
-    <p>สมัครหรือเข้าสู่ระบบในหน้านี้ · ตอบคำถามคัดกรอง วัดด้วยกล้อง บันทึกยา ดูแนวโน้มและแผนดูแลของท่าน · ครอบครัวเชื่อมบัญชีได้เมื่อท่านอนุญาต</p>
+    <button class="back" data-go="intro">‹ ส่วนอื่น</button><span class="who">ส่วนที่ 2</span><h2><span class="lg">ผู้เอาประกันและครอบครัว</span><span class="sm">ผู้เอาประกัน</span></h2>
+    <p class="note" id="n-member">สมัครหรือเข้าสู่ระบบในหน้านี้ · ครอบครัวเชื่อมบัญชีได้เมื่อท่านอนุญาต</p>
     <div class="acts">
-      <button data-src="member" aria-pressed="true">แอปสมาชิก</button>
-      <button data-src="try">ทดลองวัดโดยไม่สมัคร</button>
+      <button data-src="member" aria-pressed="true"><span class="lg">แอปสมาชิก</span><span class="sm">สมาชิก</span></button>
+      <button data-src="try"><span class="lg">ทดลองวัด · ไม่บันทึกข้อมูล</span><span class="sm">ทดลองวัด</span></button>
     </div>
   </div></div>
   <div class="frame" id="f-member"><div class="ld">กำลังเปิดแอปสมาชิก…</div></div>
-  <div class="hint">ทดลองวัดโดยไม่สมัคร: <b>ไม่บันทึกข้อมูล</b> และไม่เปิดเคสให้ทีมดูแล — เหมาะสำหรับดูว่ากล้องวัดอย่างไร</div>
 </div>
 
 <!-- ============================================================
@@ -295,17 +329,15 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
      ============================================================ -->
 <div class="panel" id="p-care" role="tabpanel">
   <div class="strip"><div class="wrap">
-    <div><div class="who">ส่วนที่ 3</div><h2>เจ้าหน้าที่ดูแล ติดตาม เฝ้าระวัง</h2></div>
-    <p>เมื่อผู้เอาประกันบันทึกข้อมูลและระบบพบสัญญาณเสี่ยง เคสจะขึ้นที่นี่ · เจ้าหน้าที่ทบทวน ติดต่อ วางแผน ส่งต่อผู้เชี่ยวชาญ และติดตามจนปิดเคส · หน้าแรกคือ "งานของฉัน"</p>
-    <div class="acts"><span style="font-size:12.5px;color:var(--ink3)">บทบาท: Care Manager / ผู้ประสานงาน</span></div>
+    <button class="back" data-go="intro">‹ ส่วนอื่น</button><span class="who">ส่วนที่ 3</span><h2><span class="lg">เจ้าหน้าที่ดูแล</span><span class="sm">เจ้าหน้าที่</span></h2>
+    <p class="note">รับสัญญาณเสี่ยง ติดต่อ วางแผน ส่งต่อ ติดตามจนปิดเคส · เห็น<b>เคสทั้งพอร์ต</b>เพราะต้องจัดสรรงาน</p>
   </div></div>
 </div>
 
 <div class="panel" id="p-expert" role="tabpanel">
   <div class="strip"><div class="wrap">
-    <div><div class="who">ส่วนที่ 4</div><h2>ทีมผู้เชี่ยวชาญยืนยันผล</h2></div>
-    <p>เภสัชกร พยาบาล นักกายภาพบำบัด แพทย์ — รับเคสที่เจ้าหน้าที่ส่งมา ยืนยันหรือแก้สิ่งที่ระบบจัดไว้ แล้วบันทึกข้อสรุปกลับ · เข้าสู่ระบบด้วยบัญชีวิชาชีพของท่าน</p>
-    <div class="acts"><span style="font-size:12.5px;color:var(--ink3)">บทบาท: เภสัชกร · พยาบาล · นักกายภาพ · แพทย์</span></div>
+    <button class="back" data-go="intro">‹ ส่วนอื่น</button><span class="who">ส่วนที่ 4</span><h2><span class="lg">ทีมผู้เชี่ยวชาญ</span><span class="sm">ผู้เชี่ยวชาญ</span></h2>
+    <p class="note">เภสัชกร พยาบาล นักกายภาพ แพทย์ — เห็น<b>เฉพาะเคสที่ส่งถึงวิชาชีพตน</b> · ขอความยินยอมก่อนเปิดดูข้อมูลคลินิก</p>
   </div></div>
 </div>
 
@@ -313,8 +345,6 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
      ไม่ย้าย DOM เพื่อไม่ให้เบราว์เซอร์โหลดคอนโซลซ้ำตอนสลับส่วน -->
 <div class="panel" id="p-staffshared" role="presentation">
   <div class="frame" id="f-staff"><div class="ld">กำลังเปิดคอนโซล…</div></div>
-  <div class="hint" data-for="care">เจ้าหน้าที่เห็น<b>เคสทั้งพอร์ต</b>เพราะต้องจัดสรรงาน · ทุกการเปิดดูข้อมูลถูกบันทึกในบันทึกตรวจสอบ</div>
-  <div class="hint" data-for="expert">ผู้เชี่ยวชาญเห็น<b>เฉพาะเคสที่ส่งถึงวิชาชีพตน</b> — เภสัชกรไม่เห็นรายการของนักกายภาพ และกลับกัน · ระบบไม่สั่งหยุดหรือปรับยา ผู้เชี่ยวชาญเป็นผู้ตัดสิน · การเปิดดู<b>รายการยาและผลประเมิน</b>ต้องกดขอความยินยอมและรอผู้เอาประกันอนุญาตก่อน · ระบบตรวจสถานะสมาชิกก่อนจึงส่งคำขอได้ · ผู้เชี่ยวชาญระบุหน่วยบริการที่ปฏิบัติงานทุกครั้งที่เข้าระบบ — แนวเดียวกับระบบแลกเปลี่ยนข้อมูลสุขภาพระดับประเทศ</div>
 </div>
 
 <!-- ============================================================
@@ -322,12 +352,10 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
      ============================================================ -->
 <div class="panel" id="p-insurer" role="tabpanel">
   <div class="strip"><div class="wrap">
-    <div><div class="who">ส่วนที่ 5</div><h2>บริษัทประกัน</h2></div>
-    <p>สถิติการประเมิน · การกระจายความเสี่ยงของพอร์ต · การส่งมอบการดูแล · ผลลัพธ์ก่อน–หลัง — ข้อมูลระดับกลุ่มแบบแฝงชื่อ สำหรับใช้ออกแบบผลิตภัณฑ์และบริการต่อ</p>
-    <div class="acts"><span style="font-size:12.5px;color:var(--ink3)">บทบาท: เจ้าหน้าที่บริษัทประกัน</span></div>
+    <button class="back" data-go="intro">‹ ส่วนอื่น</button><span class="who">ส่วนที่ 5</span><h2><span class="lg">บริษัทประกัน</span><span class="sm">บริษัทประกัน</span></h2>
+    <p class="note">สถิติ · การกระจายความเสี่ยง · การส่งมอบการดูแล · ผลลัพธ์ — <b>ระดับกลุ่มแบบแฝงชื่อ</b> กลุ่มเล็กกว่า 10 คนปิดตัวเลข</p>
   </div></div>
   <div class="frame" id="f-insurer"><div class="ld">กำลังเปิดแดชบอร์ดพอร์ต…</div></div>
-  <div class="hint">บริษัทประกัน<b>ไม่เห็นข้อมูลรายบุคคล</b> — กลุ่มที่เล็กกว่า 10 คนถูกปิดตัวเลข · ผลตรวจไม่ถูกใช้ปรับเบี้ยหรือพิจารณาการเคลม</div>
 </div>
 </main>
 
@@ -361,7 +389,27 @@ function mountStaff(which){
   document.getElementById("p-staffshared").dataset.on = "1";
   document.querySelectorAll('#p-staffshared .hint').forEach(function(h){ h.style.display = h.dataset.for === which ? "" : "none"; });
 }
+/* ============================================================
+   ความสูงของกรอบ — วัดจากของจริง ไม่ใช่ค่าที่เดาไว้ใน CSS
+   ------------------------------------------------------------
+   ความสูงของแถบเมนูเปลี่ยนตามความกว้างจอ (มือถือขึ้นบรรทัดใหม่)
+   และแถบอธิบายมีเส้นขอบ 1px ที่ calc() มองข้ามได้ง่าย
+   ถ้าคำนวณพลาดแม้ 2px หน้าแม่จะมีแถบเลื่อนซ้อนกับแถบเลื่อนของแอป
+   ============================================================ */
+function fitFrame(){
+  var nav=document.querySelector(".top");
+  var strip=document.querySelector('.panel[data-on="1"] .strip');
+  var used=(nav?nav.getBoundingClientRect().height:0)+(strip?strip.getBoundingClientRect().height:0);
+  document.documentElement.style.setProperty("--frame-h",
+    Math.max(320, Math.round(window.innerHeight-used))+"px");
+}
+window.addEventListener("resize", fitFrame);
+window.addEventListener("orientationchange", fitFrame);
+
 function show(t, push){
+  /* ส่วนที่ 2–5 ฝังแอปที่มีหัวของตัวเอง จึงลดหัวของหน้าแม่ให้เหลือน้อยที่สุด
+     ริบบิ้นซ่อน · แถบอธิบายเหลือบรรทัดเดียว · หน้าแม่ไม่มีแถบเลื่อน */
+  document.body.dataset.sec = (t === "intro") ? "intro" : "work";
   document.querySelectorAll(".panel").forEach(function(p){ p.dataset.on = (p.id === "p-" + t) ? "1" : "0"; });
   TABS.forEach(function(b){ b.setAttribute("aria-selected", b.dataset.t === t ? "true" : "false"); });
   if (t === "member")  mountFrame(document.getElementById("f-member"), "member");
@@ -369,6 +417,7 @@ function show(t, push){
   if (t === "insurer") mountFrame(document.getElementById("f-insurer"), "insurer");
   if (push !== false && location.hash !== "#" + t) history.replaceState(null, "", "#" + t);
   window.scrollTo(0, 0);
+  fitFrame();
 }
 TABS.forEach(function(b){ b.addEventListener("click", function(){ show(b.dataset.t); }); });
 document.querySelectorAll("[data-go]").forEach(function(el){ el.addEventListener("click", function(){ show(el.dataset.go); }); });
