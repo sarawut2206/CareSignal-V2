@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 16:02 |
+| วันที่ตรวจ | 2026-08-19 17:01 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 144 |
+| PASS | 151 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -35,9 +35,9 @@
 |---|---|---|---|
 | F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:193 · CareSignal-Vision.html:174 · cs-backend.js:177 |
 | F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1252 · CareSignal-Vision.html:521 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3117 · CareSignal-Vision.html:3792 · CareSignal-App.html:3350 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3125 · CareSignal-Vision.html:3802 · CareSignal-App.html:3423 |
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1228 · CareSignal-Vision.html:497 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3532 · CareSignal-Vision.html:3666 · CareSignal-App.html:2312 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3681 · CareSignal-Vision.html:3676 · CareSignal-App.html:2312 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1521 · CareSignal-Vision.html:773 · CareSignal-App.html:1316 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:452 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
@@ -209,6 +209,13 @@
 | X-90 | ฐานยาครอบคลุมตัวยาที่พบบนฉลากจริงของผู้ใช้ | PASS | ครบตามฉลากที่ทดสอบ |
 | X-91 | แยกได้ว่า OCR อ่านเป็นขยะ หรืออ่านได้แต่ไม่รู้จักยา | PASS | ocrLooksReadable ตรวจว่ามีคำจริงพอ |
 | X-92 | จำนวนตัวยาที่แจ้งผู้ใช้ตรงกับฐานจริง | PASS | ฐาน 170 ตัวยา ตรงกันทุกหน้า |
+| X-93 | แอปมีชั้นค้นทะเบียนตำรับยา อย. เมื่อฐานในเครื่องไม่รู้จัก | PASS | ครบทั้งสองแอป |
+| X-94 | ยาที่ไม่มีใครจัดกลุ่มได้ต้องเข้าคิวเภสัชกร ไม่ค้างเป็น unknown เฉย ๆ | PASS | ครบทั้งสองแอป |
+| X-95 | หน้าจอบอกที่มาของการจัดกลุ่มยาแต่ละรายการ | PASS | ครบทั้งสองแอป |
+| X-96 | อัปโหลดรูปฉลากยาเฉพาะเมื่อผู้ใช้ติ๊กยินยอม | PASS | มีการตรวจความยินยอมก่อนอัปโหลดทั้งสองแอป |
+| X-97 | ถอดรูปฉลากออกจากร่างก่อนบันทึกลงเครื่อง | PASS | ถอดรูปย่อออกก่อนบันทึกร่าง |
+| X-98 | กันการจับคู่ผิดจากการค้นแบบมีคำอยู่กลางชื่อ | PASS | nameMatches กรองก่อนใช้ผลจากทะเบียน |
+| X-99 | ส่งออกไปที่ อย. เฉพาะชื่อยา ไม่มีตัวตนผู้ใช้ | PASS | ตัวเรียกส่งเฉพาะฟิลด์ name |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

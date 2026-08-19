@@ -635,6 +635,64 @@ var CSBackend = (function () {
     var r = await sb.storage.from("med-photos").createSignedUrl(path, 600);   /* 10 นาที */
     return r.data ? r.data.signedUrl : null;
   }
+  /* ---------- ค้นชื่อยาจากทะเบียนตำรับยาของ อย. ----------
+     ใช้ต่อจากฐานในเครื่อง 170 ตัวยา เมื่อจับคู่ในเครื่องไม่ได้
+     เบราว์เซอร์เรียกเว็บเซอร์วิสของ อย. ตรงไม่ได้ (ไม่มี CORS) จึงผ่าน edge function
+     สิ่งที่ส่งออกไปคือ "ชื่อยาที่อ่านได้" อย่างเดียว ไม่มี user id ไม่มีรูป
+     ล้มเหลวเมื่อไรให้คืน null แล้วให้ฝั่งเรียกไปทางเภสัชกรแทน ไม่ใช่ให้แอปค้าง */
+  async function lookupDrug(name) {
+    if (!isCloud() || !name) return null;
+    var q = String(name).toLowerCase().trim().replace(/\s+/g, " ");
+    if (q.length < 3) return null;
+    try {
+      var r = await sb.functions.invoke("drug-lookup", { body: { name: q } });
+      if (r.error || !r.data || !r.data.found) return null;
+      var d = r.data;
+      return {
+        inn: d.inn || null, atc: d.atc || null, atcKind: d.atc_kind || null,
+        frid: d.frid_group || "unknown", lv: (d.frid_level == null ? null : d.frid_level),
+        tradeName: d.trade_name || null, regNo: d.reg_no || null,
+        drugClass: d.drug_class || null, strength: d.strength || null,
+        sourceUrl: d.source_url || null,
+        source: d.source || "fda_registry", by: d.classified_by || null
+      };
+    } catch (e) { return null; }
+  }
+
+  /* ยาที่ทั้งฐานในเครื่องและทะเบียน อย. จัดกลุ่มไม่ได้ → เข้าคิวให้เภสัชกร
+     แนบรูปฉลากไปด้วย เพราะเภสัชกรต้องเห็นของจริงจึงจะจัดกลุ่มได้ */
+  async function queueUnknownDrug(x) {
+    if (!isCloud()) return null;
+    var u = await currentUser(); if (!u) return null;
+    var r = await sb.from("drug_unknown_queue").insert({
+      user_id: u.id, medication_id: x.medId || null,
+      label_text: (x.ocr || "").slice(0, 800), guess_name: x.name || null,
+      photo_path: x.photo || null, registry_hits: x.hits || null
+    }).select().single();
+    if (r.error) { console.warn(r.error); return null; }
+    await audit("drug.queue", u.id, "ส่งยาที่ระบบจัดกลุ่มไม่ได้ให้เภสัชกร · " + (x.name || "ไม่ทราบชื่อ"));
+    return r.data;
+  }
+
+  /* ---- ฝั่งเภสัชกร: คิวยาที่รอจัดกลุ่ม ---- */
+  async function unknownDrugQueue() {
+    if (!isCloud()) return [];
+    var r = await sb.from("drug_unknown_queue")
+      .select("*, profiles!drug_unknown_queue_user_id_fkey(pseudonym, display_name, birth_year_be, sex)")
+      .eq("status", "pending").order("created_at", { ascending: true }).limit(100);
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function resolveUnknownDrug(id, inn, group, atc, note) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("resolve_unknown_drug", {
+      p_queue_id: id, p_inn: inn || null, p_group: group || "unknown",
+      p_atc: atc || null, p_note: note || null
+    });
+    if (r.error) throw r.error;
+    return true;
+  }
+
   async function myMedReview() {
     if (!isCloud()) return null;
     var u = await currentUser(); if (!u) return null;
@@ -1167,6 +1225,8 @@ var CSBackend = (function () {
     insurerFunnel: insurerFunnel, insurerStrata: insurerStrata, insurerSignals: insurerSignals,
     listMeds: listMeds, saveMed: saveMed, retireMed: retireMed,
     uploadMedPhoto: uploadMedPhoto, medPhotoUrl: medPhotoUrl, myMedReview: myMedReview,
+    lookupDrug: lookupDrug, queueUnknownDrug: queueUnknownDrug,
+    unknownDrugQueue: unknownDrugQueue, resolveUnknownDrug: resolveUnknownDrug,
     medReviewQueue: medReviewQueue, medsOf: medsOf, pharmacistFix: pharmacistFix,
     closeMedReview: closeMedReview,
     createInvite: createInvite, listMyCarers: listMyCarers, decideCarer: decideCarer,

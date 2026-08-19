@@ -293,8 +293,8 @@ td.num{font-family:var(--mono);white-space:nowrap}
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
 <script src="./cs-demo.js?v=2"></script>
-<script src="./cs-backend.js?v=218"></script>
-<script src="./cs-meds.js?v=2"></script>
+<script src="./cs-backend.js?v=4"></script>
+<script src="./cs-meds.js?v=4"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -923,18 +923,92 @@ function meV(){
    จัดกลุ่มไว้ แล้ว "ยืนยัน" หรือ "แก้" ทีละรายการ ทุกการแก้บันทึก
    ชื่อผู้แก้ ระบบไม่มีปุ่ม "สั่งหยุดยา" — มีแต่ข้อสรุปเพื่อส่งแพทย์
    ============================================================ */
+/* ============================================================
+   คิวยาที่ระบบจัดกลุ่มไม่ได้
+   ------------------------------------------------------------
+   ยาที่ทั้งฐานในเครื่องและทะเบียนตำรับยาของ อย. ตอบไม่ได้ จะมาอยู่ที่นี่
+   พร้อมข้อความที่กล้องอ่านได้และรูปฉลาก (ถ้าผู้เอาประกันยินยอมให้เก็บ)
+
+   เมื่อเภสัชกรจัดกลุ่มแล้ว ระบบจำชื่อนั้นไว้ในตารางชื่อพ้อง
+   คนถัดไปที่ถ่ายยาตัวเดียวกันจะได้คำตอบทันทีโดยไม่ต้องรอเภสัชกรอีกรอบ
+   — งานหนึ่งครั้งของเภสัชกรจึงมีผลกับทุกคนในระบบ ไม่ใช่แค่เคสตรงหน้า
+   ============================================================ */
+function unknownQueueHtml(list){
+  if(!list||!list.length) return '';
+  var opts=Object.keys(CSMeds.FRID).map(function(k){
+    return '<option value="'+k+'">'+esc(CSMeds.FRID[k].nm)+'</option>'}).join("");
+  var h='<div class="card"><h3 style="margin:0 0 4px">ยาที่รอจัดกลุ่ม '+list.length+' รายการ</h3>'+
+    '<p class="tiny" style="margin:0 0 10px">ระบบอ่านชื่อได้แต่จัดกลุ่มไม่ได้ · เมื่อท่านจัดกลุ่มแล้ว ระบบจะจำไว้ใช้กับผู้เอาประกันคนอื่นที่ใช้ยาตัวเดียวกัน</p>';
+  list.forEach(function(r){
+    var pr=r.profiles||{};
+    h+='<div class="flag" data-dq="'+r.id+'" style="border-left-color:var(--c3)">'+
+      '<b>'+esc(r.guess_name||"ไม่ทราบชื่อ")+'</b>'+
+      ' <span class="tiny">· '+esc(pr.pseudonym||"—")+' · '+thDate(r.created_at)+'</span>'+
+      (r.photo_path?'<div data-dqimg="'+r.id+'" class="tiny" style="margin-top:6px">กำลังเปิดรูปฉลาก…</div>':'<div class="tiny" style="margin-top:6px;color:var(--ink3)">ไม่มีรูปฉลาก — ผู้เอาประกันไม่ได้ยินยอมให้เก็บรูป</div>')+
+      (r.label_text?'<details style="margin-top:6px"><summary class="tiny">ข้อความที่กล้องอ่านได้</summary><pre class="tiny" style="white-space:pre-wrap">'+esc(String(r.label_text).slice(0,400))+'</pre></details>':'')+
+      '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'+
+        '<input data-dqinn="'+r.id+'" placeholder="ตัวยาสำคัญ เช่น diazepam" style="flex:1;min-width:130px;font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+
+        '<select data-dqgrp="'+r.id+'" style="flex:1;min-width:150px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+opts+'</select>'+
+        '<button class="ok" data-dqok="'+r.id+'" style="flex:0 0 auto;padding:6px 12px;font-size:12.5px;border-radius:8px">บันทึกการจัดกลุ่ม</button>'+
+        '<button class="no" data-dqno="'+r.id+'" style="flex:0 0 auto;padding:6px 10px;font-size:12.5px;border-radius:8px">ไม่ใช่ยา</button>'+
+      '</div></div>';
+  });
+  return h+'</div>';
+}
+
+function bindUnknownQueue(){
+  /* ลิงก์รูปเป็น signed URL อายุสั้น จึงขอตอนเปิดหน้า ไม่ฝังไว้ใน HTML ล่วงหน้า */
+  V.querySelectorAll("[data-dqimg]").forEach(async function(el){
+    var row=el.closest("[data-dq]"); if(!row)return;
+    var id=row.dataset.dq;
+    var rec=(bindUnknownQueue.map||{})[id];
+    if(!rec||!rec.photo_path){el.textContent="";return}
+    try{
+      var url=await CSBackend.medPhotoUrl(rec.photo_path);
+      el.innerHTML=url?'<a href="'+url+'" target="_blank" rel="noopener" style="color:var(--gold)">เปิดดูรูปฉลากยา</a>'
+        :'<span style="color:var(--ink3)">เปิดรูปไม่ได้ — อาจหมดสิทธิ์เข้าถึงแล้ว</span>';
+    }catch(e){ el.innerHTML='<span style="color:var(--ink3)">เปิดรูปไม่ได้</span>' }
+  });
+  V.querySelectorAll("[data-dqok]").forEach(function(b){b.addEventListener("click",async function(){
+    var id=b.dataset.dqok;
+    var inn=V.querySelector('[data-dqinn="'+id+'"]').value.trim();
+    var grp=V.querySelector('[data-dqgrp="'+id+'"]').value;
+    if(!inn){toast("กรุณาระบุตัวยาสำคัญ");return}
+    var atc=CSMeds.BY_INN[inn.toLowerCase()]?CSMeds.BY_INN[inn.toLowerCase()].atc:null;
+    b.disabled=true;
+    try{ await CSBackend.resolveUnknownDrug(id,inn.toLowerCase(),grp,atc,null);
+         toast("จัดกลุ่มแล้ว — ระบบจะจำชื่อนี้ไว้ใช้ครั้งต่อไป"); medsV() }
+    catch(e){ toast("บันทึกไม่สำเร็จ"); b.disabled=false }
+  })});
+  V.querySelectorAll("[data-dqno]").forEach(function(b){b.addEventListener("click",async function(){
+    b.disabled=true;
+    try{ await CSBackend.resolveUnknownDrug(b.dataset.dqno,null,"unknown",null,"เภสัชกรระบุว่าไม่ใช่ยา");
+         toast("บันทึกแล้ว"); medsV() }
+    catch(e){ toast("บันทึกไม่สำเร็จ"); b.disabled=false }
+  })});
+}
+
 var REC_NM={consult_doctor:"แนะนำพบแพทย์ทบทวนยา",monitor:"เฝ้าสังเกตอาการ",no_action:"ไม่พบประเด็น",adjusted_by_doctor:"แพทย์ปรับยาแล้ว"};
 async function medsV(){
   head("ทบทวนยา","คำขอที่ระบบเปิดเมื่อพบยากลุ่มเสี่ยงหกล้ม ยาไม่รู้จัก หรือใช้ยาหลายรายการ");
-  if(ST.role!=="care_manager"&&ST.role!=="admin"){
-    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะเภสัชกร / Care Manager</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูรายการยารายบุคคลไม่ได้</div>';
+  /* เดิมเงื่อนไขนี้ไม่มี pharmacist ทั้งที่เมนูเปิดให้เภสัชกรเข้า
+     ผลคือเภสัชกรกดเข้ามาแล้วเจอข้อความว่า "หน้านี้เฉพาะเภสัชกร" แล้วเข้าไม่ได้
+     สิทธิ์จริงคุมอยู่ที่ฐานข้อมูลอีกชั้นหนึ่งแล้ว (ต้องมีการส่งต่อ + ความยินยอมรายครั้ง) */
+  if(["care_manager","admin","pharmacist"].indexOf(ST.role)<0){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้สำหรับเภสัชกรและผู้ประสานงาน</b><br>บัญชีของคุณ ('+esc(ROLE_NM[ST.role]||ST.role)+') เข้าดูรายการยารายบุคคลไม่ได้</div>';
     return;
   }
   V.innerHTML='<div class="empty">กำลังโหลด…</div>';
   var q=[]; try{q=await CSBackend.medReviewQueue()}catch(e){}
-  if(!q.length){V.innerHTML='<div class="card"><div class="empty">ไม่มีคำขอทบทวนยาค้าง 🎉</div></div>'+
-    '<div class="notice">ระบบเปิดคำขอเองเมื่อสมาชิกบันทึกยากลุ่มเสี่ยงสูงอย่างน้อย 1 รายการ · กลุ่มเสี่ยงปานกลางตั้งแต่ 2 · ยาที่ระบบไม่รู้จัก · หรือใช้ยารวมตั้งแต่ 5 รายการ</div>';return}
-  var html='<div class="notice"><b>ระบบไม่สั่งหยุด ลด หรือเพิ่มยา</b> — หน้านี้ให้ยืนยันหรือแก้การจัดกลุ่มที่ระบบทำไว้ และบันทึกข้อสรุปเพื่อส่งต่อแพทย์ ทุกการแก้บันทึกชื่อผู้ทำใน audit log<br><span class="tiny" style="margin-top:6px;display:block">รายการที่ขึ้นว่า <b>ยังไม่จัดกลุ่ม</b> คือยาที่ไม่อยู่ในฐานข้อมูล 170 ตัวยาของระบบ (ยังไม่ได้เชื่อม TMT/อย.) ไม่ได้แปลว่ายานั้นมีปัญหา — ระบบเลือกส่งให้ท่านจัดกลุ่มแทนการเดา</span></div>';
+  var uq=[]; try{uq=await CSBackend.unknownDrugQueue()}catch(e){}
+  bindUnknownQueue.map={}; uq.forEach(function(r){bindUnknownQueue.map[r.id]=r});
+  var html=unknownQueueHtml(uq);
+  if(!q.length){
+    V.innerHTML=html+'<div class="card"><div class="empty">ไม่มีคำขอทบทวนยาค้าง 🎉</div></div>'+
+      '<div class="notice">ระบบเปิดคำขอเองเมื่อสมาชิกบันทึกยากลุ่มเสี่ยงสูงอย่างน้อย 1 รายการ · กลุ่มเสี่ยงปานกลางตั้งแต่ 2 · ยาที่ระบบไม่รู้จัก · หรือใช้ยารวมตั้งแต่ 5 รายการ</div>';
+    bindUnknownQueue(); return;
+  }
+  html+='<div class="notice"><b>ระบบไม่สั่งหยุด ลด หรือเพิ่มยา</b> — หน้านี้ให้ยืนยันหรือแก้การจัดกลุ่มที่ระบบทำไว้ และบันทึกข้อสรุปเพื่อส่งต่อแพทย์ ทุกการแก้บันทึกชื่อผู้ทำใน audit log<br><span class="tiny" style="margin-top:6px;display:block">รายการที่ขึ้นว่า <b>ยังไม่จัดกลุ่ม</b> คือยาที่ทั้งฐานในเครื่อง 170 ตัวยา และ<b>ทะเบียนตำรับยาของ อย.</b> ยังจัดกลุ่มให้ไม่ได้ (ทะเบียนเก่าหลายรายการไม่มีรหัส ATC บันทึกไว้) ไม่ได้แปลว่ายานั้นมีปัญหา — ระบบเลือกส่งให้ท่านจัดกลุ่มแทนการเดา · ยังไม่ได้เชื่อม TMT ของ สมสท.</span></div>';
   q.forEach(function(r){
     var pr=r.profiles||{}, sm=r.summary||{};
     html+='<div class="case" data-rv="'+r.id+'"><div class="top">'+
@@ -950,6 +1024,7 @@ async function medsV(){
         return '<button class="'+(k==="no_action"?"no":"ok")+'" data-close="'+r.id+'" data-rec="'+k+'" style="flex:1 1 45%">'+esc(REC_NM[k])+'</button>'}).join("")+'</div></div>';
   });
   V.innerHTML=html;
+  bindUnknownQueue();
   /* โหลดรายการยาแต่ละคน */
   /* กล่องขอความยินยอม — ต้องผ่านก่อนจึงเห็นรายการยา
      ถ้ายังไม่ได้รับอนุญาต ฐานข้อมูลคืนศูนย์แถวอยู่แล้ว กล่องนี้อธิบายว่าเพราะอะไร */

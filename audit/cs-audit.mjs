@@ -1152,6 +1152,87 @@ function layer7() {
       claimed.join(" · ") || "นับตัวยาในฐานไม่ได้", "แก้ให้ตรงกับจำนวนจริงในไฟล์ cs-meds.js");
   }
 
+
+  /* ============================================================
+     ชั้นที่ต่อกับทะเบียนตำรับยาของ อย. และการแนบรูปฉลากยา
+     ------------------------------------------------------------
+     ทั้งสองอย่างนี้เป็นครั้งแรกที่ระบบส่งข้อมูลออกไปนอกเครื่องผู้ใช้
+     (ชื่อยาไปที่ อย. · รูปฉลากขึ้น storage) จึงต้องมีกฎกำกับให้ชัด
+     ============================================================ */
+  {
+    const fnPath = "supabase/functions/drug-lookup/index.ts";
+    const fn = read(fnPath) || "";
+
+    /* ---- X-93: ทั้งสองแอปต้องมีชั้นค้นทะเบียน ไม่ใช่แอปเดียว ---- */
+    const regChecks = [
+      ["X-93", "แอปมีชั้นค้นทะเบียนตำรับยา อย. เมื่อฐานในเครื่องไม่รู้จัก",
+        (t) => /function\s+askRegistry\s*\(/.test(t) && /function\s+registryBox\s*\(/.test(t),
+        "ยาที่ฐาน 170 ตัวไม่รู้จักจะตันอยู่แค่นั้น ทั้งที่ทะเบียนราชการอาจรู้"],
+      ["X-94", "ยาที่ไม่มีใครจัดกลุ่มได้ต้องเข้าคิวเภสัชกร ไม่ค้างเป็น unknown เฉย ๆ",
+        (t) => /queueUnknownDrug\s*\(/.test(t),
+        "ยาที่ระบบไม่รู้จักจะค้างในรายการโดยไม่มีใครตามต่อ"],
+      ["X-95", "หน้าจอบอกที่มาของการจัดกลุ่มยาแต่ละรายการ",
+        (t) => /function\s+srcBadge\s*\(/.test(t) && /ทะเบียนตำรับยา อย\./.test(t),
+        "ผู้ใช้และเภสัชกรแยกไม่ออกว่ากลุ่มที่เห็นมาจากฐานที่คนตรวจแล้ว หรือจากกฎอัตโนมัติ"],
+    ];
+    for (const [id, name, fnTest, why] of regChecks) {
+      const bad = APP_PAIR.filter(([f, t]) => !fnTest(t)).map(([f]) => f);
+      req(7, id, name, bad.length ? "MISSING" : "PASS",
+          bad.length ? ("ขาดใน " + bad.join(" · ")) : "ครบทั้งสองแอป");
+      if (bad.length) finding("MEDIUM", id, name, why, bad.join(" · "),
+        "ใส่ให้ครบทั้ง CareSignal-App.html และ CareSignal-Vision.html");
+    }
+
+    /* ---- X-96: รูปฉลากยาต้องไม่ขึ้นระบบก่อนได้รับความยินยอม ----
+       ตรวจตำแหน่งจริงในโค้ด ไม่ใช่แค่ว่ามีคำว่า photoConsent อยู่ที่ไหนสักแห่ง */
+    const consentBad = APP_PAIR.filter(([f, t]) => {
+      const up = t.indexOf("CSBackend.uploadMedPhoto");
+      if (up < 0) return true;
+      const guard = t.lastIndexOf("m.photoConsent", up);
+      return guard < 0 || (up - guard) > 200;
+    }).map(([f]) => f);
+    req(7, "X-96", "อัปโหลดรูปฉลากยาเฉพาะเมื่อผู้ใช้ติ๊กยินยอม",
+        consentBad.length ? "MISSING" : "PASS",
+        consentBad.length ? ("ไม่พบการตรวจความยินยอมก่อนอัปโหลดใน " + consentBad.join(" · "))
+                          : "มีการตรวจความยินยอมก่อนอัปโหลดทั้งสองแอป");
+    if (consentBad.length) finding("HIGH", "X-96", "ส่งรูปฉลากยาขึ้นระบบโดยไม่ได้ถาม",
+      "รูปฉลากยาเป็นข้อมูลสุขภาพ การส่งออกจากเครื่องโดยไม่ถามขัดกับที่ประกาศไว้บนหน้าเว็บ",
+      consentBad.join(" · "), "ตรวจ m.photoConsent ก่อนเรียก uploadMedPhoto");
+
+    /* ---- X-97: ร่างที่เก็บในเครื่องต้องไม่มีรูปฉลากยา ---- */
+    const draftBad = APP_PAIR.filter(([f, t]) => !/delete\s+x\.thumb/.test(t)).map(([f]) => f);
+    req(7, "X-97", "ถอดรูปฉลากออกจากร่างก่อนบันทึกลงเครื่อง",
+        draftBad.length ? "MISSING" : "PASS",
+        draftBad.length ? ("ขาดใน " + draftBad.join(" · ")) : "ถอดรูปย่อออกก่อนบันทึกร่าง");
+    if (draftBad.length) finding("MEDIUM", "X-97", "รูปฉลากยาติดไปกับร่างใน localStorage",
+      "ร่างเก็บในเครื่องแบบไม่เข้ารหัสและอยู่ยาว ไม่ควรมีภาพข้อมูลสุขภาพ",
+      draftBad.join(" · "), "ลบฟิลด์ thumb ก่อนเขียนร่าง");
+
+    /* ---- X-98: ตัวกันจับคู่ผิดกับทะเบียน ----
+       ทะเบียน อย. ค้นแบบ substring · ตอนทดสอบพบว่าค้น ZOLAM แล้วได้ DORZOLAMIDE
+       ถ้าไม่มีตัวกรองนี้ ยานอนหลับจะถูกจัดเป็นยาหยอดตาแล้วสัญญาณเสี่ยงหายไป */
+    const guardOk = /function\s+nameMatches\s*\(/.test(fn) && /q\.length\s*<\s*4/.test(fn)
+                    && /nameMatches\(name,/.test(fn);
+    req(7, "X-98", "กันการจับคู่ผิดจากการค้นแบบมีคำอยู่กลางชื่อ",
+        guardOk ? "PASS" : "MISSING",
+        guardOk ? "nameMatches กรองก่อนใช้ผลจากทะเบียน" : "ไม่พบตัวกรองชื่อ หรือกรองไม่ครบ");
+    if (!guardOk) finding("HIGH", "X-98", "ผลจากทะเบียนถูกใช้โดยไม่ตรวจว่าชื่อตรงกันจริง",
+      "ค้น ZOLAM แล้วได้ DORZOLAMIDE ซึ่งเป็นยาหยอดตา จับคู่ผิดทำให้กลุ่มเสี่ยงผิดตามไปด้วย",
+      fnPath, "กรองด้วย nameMatches และไม่รับคำค้นสั้นกว่า 4 ตัวอักษร");
+
+    /* ---- X-99: ตัวกลางต้องไม่ส่งตัวตนผู้ใช้ออกไปนอกระบบ ---- */
+    const bodySafe = /body:\s*\{\s*name:\s*q\s*\}/.test(read("cs-backend.js") || "");
+    const noIdOut = !/user_id|auth\.uid|jwt/i.test(fn.slice(fn.indexOf("async function soap"),
+                                                            fn.indexOf("Deno.serve")));
+    const privacyOk = bodySafe && noIdOut;
+    req(7, "X-99", "ส่งออกไปที่ อย. เฉพาะชื่อยา ไม่มีตัวตนผู้ใช้",
+        privacyOk ? "PASS" : "RISK",
+        privacyOk ? "ตัวเรียกส่งเฉพาะฟิลด์ name" : "พบการส่งข้อมูลอื่นออกไปด้วย");
+    if (!privacyOk) finding("HIGH", "X-99", "ส่งข้อมูลระบุตัวตนไปยังหน่วยงานภายนอก",
+      "ชื่อยาไม่ระบุตัวบุคคล แต่ถ้าพ่วง user id ไปด้วยจะกลายเป็นการเปิดเผยข้อมูลสุขภาพรายบุคคล",
+      fnPath, "ส่งเฉพาะ {name} และอย่าบันทึกผู้ค้นลงตารางแคช");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

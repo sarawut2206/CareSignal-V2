@@ -293,8 +293,8 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=218"></script>
-<script src="./cs-meds.js?v=3"></script>
+<script src="./cs-backend.js?v=4"></script>
+<script src="./cs-meds.js?v=4"></script>
 <script>
 "use strict";
 var LOGO='<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none">'+
@@ -1209,7 +1209,7 @@ function regV(){
   '<div class="field"><label>เบอร์โทรศัพท์ (ใช้เข้าสู่ระบบ)</label><input id="fPhone" inputmode="tel" value="'+esc(d.phone||"")+'" placeholder="เช่น 0812345678"></div>'+
   '<div class="field"><label>ตั้งรหัส 4 หลัก (จำง่าย ๆ ของคุณเอง)</label><input id="fPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
   '<div class="card"><h3>ความยินยอมตาม PDPA</h3>'+
-  '<p class="sub" style="margin:0 0 12px">กล้องประมวลผลท่าทาง<b>ภายในเครื่องของคุณ</b> ระบบเก็บเฉพาะตัวเลข (เวลาที่ใช้ จำนวนครั้ง คะแนน) ไม่เก็บและไม่ส่งภาพหรือวิดีโอ · ใช้เพื่อประเมินความเสี่ยง รายงานสิทธิประโยชน์ให้บริษัทประกันผู้ออกกรมธรรม์ และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · ถอนความยินยอมและลบข้อมูลได้ทุกเมื่อ</p>'+
+  '<p class="sub" style="margin:0 0 12px">กล้องประมวลผลท่าทาง<b>ภายในเครื่องของคุณ</b> ระบบเก็บเฉพาะตัวเลข (เวลาที่ใช้ จำนวนครั้ง คะแนน) <b>ไม่เก็บและไม่ส่งภาพหรือวิดีโอจากการตรวจร่างกาย</b> · ข้อยกเว้นเดียวคือรูปฉลากยา ซึ่งเก็บต่อเมื่อท่านติ๊กยินยอมในหน้าบันทึกยาเท่านั้น · ใช้เพื่อประเมินความเสี่ยง รายงานสิทธิประโยชน์ให้บริษัทประกันผู้ออกกรมธรรม์ และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · ถอนความยินยอมและลบข้อมูลได้ทุกเมื่อ</p>'+
   '<label class="chk"><input type="checkbox" id="fConsent"><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
   '<button class="cta" id="fGo">บันทึกและเริ่มใช้งาน</button></div>';
   document.getElementById("fSex").addEventListener("click",function(e){
@@ -2108,7 +2108,17 @@ function sectState(sec){
   return "done";
 }
 /* ---------- บันทึกร่างลงเครื่อง (หมดอายุ 24 ชม.) ---------- */
-async function saveDraft(){ try{ await DB.set("assessDraft",{at:Date.now(),draft:S.draft}) }catch(e){} }
+async function saveDraft(){
+  /* ร่างเก็บในเครื่องผู้ใช้ ซึ่งไม่ได้เข้ารหัสและอยู่ยาว รูปฉลากยาเป็นข้อมูลสุขภาพ
+     จึงถอดรูปย่อออกก่อนบันทึกร่างเสมอ รูปยังอยู่บนหน้าจอระหว่างทำแบบประเมิน
+     แต่จะไม่ติดไปกับร่างที่กู้คืนทีหลัง */
+  try{
+    var d=JSON.parse(JSON.stringify(S.draft));
+    if(d.medsDetail&&d.medsDetail.items)
+      d.medsDetail.items.forEach(function(x){ delete x.thumb });
+    await DB.set("assessDraft",{at:Date.now(),draft:d});
+  }catch(e){}
+}
 async function loadDraft(){
   try{
     var v=await DB.get("assessDraft");
@@ -3877,8 +3887,19 @@ function renderMedsQ(i){
     '<div class="card" id="medPipe"><h3 style="font-size:16px">รายการยาของท่าน</h3>'+
     '<p class="sub" style="margin:-4px 0 10px">ถ่ายรูปซองยา ขวดยา หรือฉลากทีละอย่าง ระบบจะอ่านชื่อแล้วให้ท่านยืนยัน</p>'+
     '<div id="medList"></div>'+
-    '<label class="cta" style="display:block;text-align:center;cursor:pointer;margin:10px 0 6px">📷 ถ่ายรูปซองยา'+
-      '<input type="file" id="mPhoto" accept="image/*" capture="environment" hidden></label>'+
+    '<div style="display:flex;gap:8px;margin:10px 0 6px">'+
+      '<label class="cta" style="flex:1;margin:0;text-align:center;cursor:pointer">📷 ถ่ายรูปซองยา'+
+        '<input type="file" id="mPhoto" accept="image/*" capture="environment" hidden></label>'+
+      '<label class="ghostb" style="flex:0 0 auto;margin:0;text-align:center;cursor:pointer;padding:12px 14px" title="เลือกรูปที่ถ่ายไว้แล้ว">🖼️'+
+        '<input type="file" id="mPick" accept="image/*" hidden></label>'+
+    '</div>'+
+    /* รูปฉลากยาเป็นข้อมูลสุขภาพ การเก็บไว้ให้เภสัชกรดูคือการส่งภาพออกจากเครื่อง
+       จึงต้องถามก่อน ไม่ใช่ทำเงียบ ๆ — ไม่ยินยอมก็ยังใช้งานได้ครบ เพียงแต่
+       เภสัชกรจะเห็นแค่ชื่อยาที่อ่านได้ ไม่เห็นรูป */
+    '<label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin:2px 0 8px;font-size:13px;line-height:1.55">'+
+      '<input type="checkbox" id="mPhotoOk"'+(m.photoConsent?' checked':'')+' style="margin-top:3px;flex:0 0 auto">'+
+      '<span><b>เก็บรูปฉลากไว้ให้เภสัชกรดู</b> — รูปจะถูกส่งเข้าระบบและเก็บแบบปิด เปิดดูได้เฉพาะท่าน ทีมดูแล และผู้เชี่ยวชาญที่ท่านอนุญาตเป็นครั้ง ๆ ไป<br>'+
+      '<span style="color:var(--ink3)">ไม่ติ๊กก็ใช้งานได้ปกติ ระบบจะอ่านชื่อยาในเครื่องแล้วลบรูปทิ้งทันที</span></span></label>'+
     '<button class="ghostb" id="mManual">พิมพ์ชื่อยาเอง</button>'+
     '<button class="ghostb" id="mPurpose">ไม่รู้ชื่อยา — บอกว่าใช้รักษาอะไร</button>'+
     '<div id="medWork" hidden style="margin-top:10px"></div>'+
@@ -3899,6 +3920,57 @@ function renderMedsQ(i){
     }).join("");
   }
   function lvColor(lv){return lv===2?"var(--c1)":lv===1?"var(--c2)":lv===0?"var(--c4)":"var(--ink3)"}
+
+  /* บอกให้ชัดว่าใครเป็นคนบอกว่ายานี้อยู่กลุ่มไหน — ผู้ใช้และเภสัชกรควรรู้ว่า
+     มาจากฐานที่คนตรวจแล้ว จากทะเบียนราชการ หรือยังไม่มีใครบอก */
+  var SRC_NM={local:["ฐานข้อมูลในเครื่อง","var(--ink3)"],fda:["ทะเบียนตำรับยา อย.","var(--c4)"],
+              pharm:["เภสัชกรจัดกลุ่มไว้","var(--c4)"],queue:["รอเภสัชกรจัดกลุ่ม","var(--c2)"]};
+  function srcBadge(x){
+    var s=SRC_NM[x.src]; if(!s)return '';
+    var extra=(x.src==="fda"&&x.regNo)?' · ทะเบียน '+esc(x.regNo):'';
+    return '<br><span style="font-size:11.5px;color:'+s[1]+'">ที่มา: '+s[0]+extra+'</span>';
+  }
+
+  /* รูปย่อไว้ให้ผู้ใช้เห็นว่าแนบรูปไหนไปกับยารายการไหน — เก็บในหน่วยความจำอย่างเดียว
+     ไม่ลงร่างที่บันทึกไว้ เพราะร่างเก็บใน localStorage ซึ่งไม่ควรมีรูปฉลากยา */
+  function thumbOf(canvas){
+    try{
+      var c=document.createElement("canvas"), s=96;
+      var r=Math.min(s/canvas.width,s/canvas.height);
+      c.width=Math.max(1,Math.round(canvas.width*r)); c.height=Math.max(1,Math.round(canvas.height*r));
+      c.getContext("2d").drawImage(canvas,0,0,c.width,c.height);
+      return c.toDataURL("image/jpeg",0.6);
+    }catch(e){return null}
+  }
+
+  /* คำที่น่าจะเป็นชื่อยาบนฉลาก — ใช้เมื่อฐานในเครื่องจับไม่ได้ แล้วจะไปถามทะเบียน อย.
+     ตัดคำที่พบบนฉลากทุกใบออก ไม่งั้นจะเอาคำว่า TABLET ไปค้นทะเบียน */
+  var LABEL_STOP=/^(tablet|tablets|capsule|capsules|syrup|cream|oral|mg|ml|mcg|gm|take|daily|twice|once|before|after|meal|meals|bedtime|hospital|clinic|pharmacy|exp|mfg|lot|batch|use|for|and|the|with|water|day|days|time|times)$/i;
+  function ocrBrandGuesses(text){
+    var out=[], seen={};
+    String(text||"").split(/[\r\n]+/).slice(0,12).forEach(function(line){
+      (line.match(/[A-Za-z][A-Za-z0-9-]{3,}/g)||[]).forEach(function(w){
+        var k=w.toLowerCase();
+        if(LABEL_STOP.test(k)||seen[k])return;
+        seen[k]=1; out.push(k);
+      });
+    });
+    return out.slice(0,6);
+  }
+
+  /* ถามทะเบียนตำรับยาของ อย. ทีละชื่อ หยุดทันทีที่เจอ
+     ทะเบียนล่มหรือไม่มีเน็ตก็แค่คืน null แล้วไปทางเภสัชกร ไม่ทำให้การประเมินสะดุด */
+  async function askRegistry(names,onStep){
+    if(typeof CSBackend==="undefined"||!CSBackend.isCloud()||!CSBackend.lookupDrug)return null;
+    for(var i=0;i<names.length;i++){
+      if(onStep)onStep(names[i],i+1,names.length);
+      try{
+        var r=await CSBackend.lookupDrug(names[i]);
+        if(r&&(r.inn||r.tradeName))return r;
+      }catch(e){}
+    }
+    return null;
+  }
   function renderList(){
     var el=document.getElementById("medList");
     if(!m.items.length){el.innerHTML='<p class="sub" style="margin:0 0 6px;color:var(--ink3)">ยังไม่มีรายการ</p>';return}
@@ -3910,7 +3982,10 @@ function renderMedsQ(i){
         '<b>'+esc(nm)+'</b>'+(x.dose?' · '+esc(x.dose):'')+(x.freq?' · '+esc(x.freq):'')+
         '<br><span style="font-size:12.5px;color:'+lvColor(c.lv)+'">'+esc(c.fridNm)+'</span>'+
         (x.source==="photo_ocr"?'<span style="font-size:11.5px;color:var(--ink3)"> · อ่านจากรูป'+(x.conf!=null?' ('+Math.round(x.conf*100)+'%)':'')+'</span>':'')+
-        '</span><button class="ghostb" data-rm="'+ix+'" style="width:auto;padding:6px 10px;margin:0;font-size:12.5px">ลบ</button></div>';
+        srcBadge(x)+
+        '</span>'+
+        (x.thumb?'<img src="'+x.thumb+'" alt="รูปฉลากยา" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:0 0 auto;margin:0 8px">':'')+
+        '<button class="ghostb" data-rm="'+ix+'" style="width:auto;padding:6px 10px;margin:0;font-size:12.5px">ลบ</button></div>';
     }).join("");
     el.querySelectorAll("[data-rm]").forEach(function(b){b.addEventListener("click",function(){m.items.splice(+b.dataset.rm,1);renderList();syncSummary()})});
   }
@@ -4006,14 +4081,55 @@ function renderMedsQ(i){
       var r=CSMeds.matchToken(inp.value);
       sug.innerHTML=r?'<p class="sub" style="margin:0 0 6px;color:var(--c4)">น่าจะเป็น <b>'+esc(r.inn)+'</b> · '+esc(CSMeds.classify(r.inn).fridNm)+'</p>':'<p class="sub" style="margin:0 0 6px;color:var(--ink3)">ไม่พบในฐานข้อมูล — จะบันทึกชื่อตามที่พิมพ์ แล้วให้เภสัชกรจัดกลุ่ม</p>';
     });
-    document.getElementById("wOk").addEventListener("click",function(){
+    document.getElementById("wOk").addEventListener("click",async function(){
       var nm=inp.value.trim(); if(!nm){toast("กรุณาพิมพ์ชื่อยา");return}
       var r=CSMeds.matchToken(nm), cl=r?CSMeds.classify(r.inn):null;
+      /* ชื่อที่พิมพ์ไม่อยู่ในฐานในเครื่อง ลองทะเบียน อย. ก่อนบันทึกเป็นไม่รู้จัก */
+      if(!r){
+        var btn=document.getElementById("wOk"); if(btn){btn.disabled=true;btn.textContent="กำลังค้นทะเบียน อย. …"}
+        var reg=await askRegistry([nm]);
+        if(btn){btn.disabled=false;btn.textContent="บันทึก"}
+        if(reg){registryBox(reg,{ocr:ctx.ocr||null,photoFile:ctx.photoFile});return}
+      }
       addItem({inn:r?r.inn:null,brand:nm,dose:document.getElementById("wDose").value.trim(),atc:cl?cl.atc:null,
-               frid:cl?cl.frid:"unknown",lv:cl?cl.lv:null,source:ctx.ocr?"photo_ocr":"manual",conf:r?r.conf:null,ocr:ctx.ocr||null,photoFile:ctx.photoFile,by:"user"});
+               frid:cl?cl.frid:"unknown",lv:cl?cl.lv:null,source:ctx.ocr?"photo_ocr":"manual",conf:r?r.conf:null,ocr:ctx.ocr||null,photoFile:ctx.photoFile,by:"user",
+               src:r?"local":"queue"});
     });
     document.getElementById("wCancel").addEventListener("click",workClose);
   }
+  /* ---------- กล่องงาน: ยืนยันผลที่ได้จากทะเบียนตำรับยาของ อย. ----------
+     แสดงเลขทะเบียนและชื่อตามทะเบียนให้เห็น เพื่อให้ผู้ใช้เทียบกับซองในมือได้เอง
+     ระบบยังไม่ตัดสินแทน — ผู้ใช้กดยืนยันเสมอ เหมือนทางที่มาจากฐานในเครื่อง */
+  function registryBox(reg,ctx){
+    var nm=reg.inn||reg.tradeName||"";
+    var grp=reg.frid&&reg.frid!=="unknown"
+      ? (CSMeds.FRID[reg.frid]?CSMeds.FRID[reg.frid].nm:reg.frid)
+      : "ทะเบียนไม่ได้ระบุรหัสจัดกลุ่มไว้ — เภสัชกรจะช่วยจัดกลุ่มให้";
+    work('<div class="notice" style="margin:0 0 10px">พบใน<b>ทะเบียนตำรับยาของ อย.</b><br>'+
+      '<b style="font-size:15px">'+esc(reg.tradeName||nm)+'</b>'+
+      (reg.inn?'<br>ตัวยาสำคัญ: <b>'+esc(reg.inn)+'</b>':'')+
+      (reg.strength?' · '+esc(reg.strength):'')+
+      (reg.regNo?'<br>เลขทะเบียน '+esc(reg.regNo):'')+
+      (reg.drugClass?' · '+esc(reg.drugClass):'')+
+      '<br><span style="color:'+lvColor(reg.lv)+'">'+esc(grp)+'</span>'+
+      '<br><span style="font-size:12px;color:var(--ink3)">ตรวจสอบกับซองยาในมือก่อนกดยืนยัน</span></div>'+
+      '<div class="field"><label>ขนาดยา (ถ้ามี)</label><input id="wDose" value="'+esc(reg.strength||"")+'"></div>'+
+      '<div class="field"><label>วิธีใช้ (ถ้ามี)</label><input id="wFreq" placeholder="เช่น ก่อนนอน"></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="cta" id="wOk" style="flex:1;margin:0">✓ ใช่ ยานี้</button>'+
+        '<button class="ghostb" id="wEdit" style="flex:1;margin:0">ไม่ใช่ พิมพ์เอง</button></div>');
+    document.getElementById("wOk").addEventListener("click",function(){
+      addItem({inn:reg.inn||null,brand:reg.tradeName||null,
+               dose:document.getElementById("wDose").value.trim(),
+               freq:document.getElementById("wFreq").value.trim(),
+               atc:reg.atc,frid:reg.frid||"unknown",lv:reg.lv,
+               source:ctx.ocr?"photo_ocr":"manual",ocr:ctx.ocr||null,
+               photoFile:ctx.photoFile,by:"user",
+               src:(reg.frid&&reg.frid!=="unknown")?"fda":"queue",regNo:reg.regNo||null});
+    });
+    document.getElementById("wEdit").addEventListener("click",function(){manualBox(ctx)});
+  }
+
   function purposeBox(ctx){
     ctx=ctx||{};
     work('<p class="sub" style="margin:0 0 8px">ไม่เป็นไร — บอกแค่ว่ายานี้ใช้เพื่ออะไร เภสัชกรจะช่วยดูจากรูปให้</p>'+
@@ -4026,11 +4142,18 @@ function renderMedsQ(i){
     document.getElementById("wCancel").addEventListener("click",workClose);
   }
   async function addItem(x){
-    /* อัปโหลดรูปเมื่อมี session — เก็บ path ไว้ให้เภสัชกรเปิดดู */
-    if(x.photoFile&&typeof CSBackend!=="undefined"&&CSBackend.isCloud()){
-      try{ var sh=await shrinkImage(x.photoFile,1200); x.photo=await CSBackend.uploadMedPhoto(new File([sh.blob],"med.jpg",{type:"image/jpeg"})); }catch(e){}
+    /* เก็บรูปได้ต่อเมื่อผู้ใช้ติ๊กยินยอมไว้ — ไม่ยินยอมก็แค่ไม่มีรูปให้เภสัชกรดู
+       รูปย่อสำหรับแสดงบนหน้าจอทำในเครื่องเสมอ ไม่เกี่ยวกับการอัปโหลด */
+    if(x.photoFile){
+      try{
+        var sh=await shrinkImage(x.photoFile,1200);
+        x.thumb=thumbOf(sh.canvas);
+        if(m.photoConsent&&typeof CSBackend!=="undefined"&&CSBackend.isCloud())
+          x.photo=await CSBackend.uploadMedPhoto(new File([sh.blob],"med.jpg",{type:"image/jpeg"}));
+      }catch(e){}
     }
     delete x.photoFile;
+    if(!x.src)x.src=x.inn?"local":(x.frid&&x.frid!=="unknown"?"local":"queue");
     m.items.push(x);
     workClose(); renderList(); syncSummary();
     var cl=x.frid&&x.frid!=="unknown"?{lv:x.lv}:(x.inn?CSMeds.classify(x.inn):{lv:null});
@@ -4062,6 +4185,13 @@ function renderMedsQ(i){
         /* พบชื่อยาที่พอเทียบได้ — ผู้ใช้เป็นคนยืนยันเสมอ ระบบไม่ตัดสินเอง */
         confirmBox(best.cands,{ocr:best.text,doses:best.doses,freq:best.freq,photoFile:f});
       }else if(ocrLooksReadable(allText)){
+        /* ฐานในเครื่องมี 170 ตัวยา ไม่ใช่ทะเบียนทั้งประเทศ ก่อนจะยอมแพ้
+           ลองถามทะเบียนตำรับยาของ อย. ด้วยชื่อการค้าที่อ่านได้จากฉลาก */
+        var guesses=ocrBrandGuesses(allText);
+        var reg=await askRegistry(guesses,function(nm,i,n){status("ค้นทะเบียนตำรับยา อย. ("+i+"/"+n+") …")});
+        status("");
+        if(reg){ registryBox(reg,{ocr:allText,photoFile:f}); return }
+
         /* อ่านตัวหนังสือได้ แต่ยาไม่อยู่ในฐาน 170 ตัวยา — ไม่ใช่ความผิดของรูป
            เดิมกรณีนี้ถูกเหมาว่า "รูปไม่ชัด ถ่ายใหม่" ทำให้ถ่ายซ้ำกี่ครั้งก็ล้มเหลวเหมือนเดิม */
         work('<div class="notice" style="margin:0 0 10px">อ่านตัวหนังสือจากรูปได้ แต่<b>ไม่พบชื่อยาที่ระบบรู้จัก</b> (ฐานข้อมูลมี 170 ตัวยา) — ไม่ใช่ปัญหาความคมชัดของรูป เลือกวิธีอื่นได้เลย</div>'+
@@ -4091,6 +4221,18 @@ function renderMedsQ(i){
       document.getElementById("wPur2").addEventListener("click",function(){purposeBox({photoFile:f})});
     }
   });
+  /* เลือกรูปที่ถ่ายไว้แล้วให้เข้าทางเดียวกับการถ่ายสด ไม่ต้องมีโค้ดสองชุด
+     ผู้สูงอายุหลายคนให้ลูกหลานถ่ายส่งมาทางแชท แล้วมาเปิดในแอปทีหลัง */
+  document.getElementById("mPick").addEventListener("change",function(){
+    var f=this.files&&this.files[0]; this.value=""; if(!f)return;
+    var src=document.getElementById("mPhoto");
+    var dt=new DataTransfer(); dt.items.add(f); src.files=dt.files;
+    src.dispatchEvent(new Event("change"));
+  });
+  document.getElementById("mPhotoOk").addEventListener("change",function(){
+    m.photoConsent=this.checked;
+    status(this.checked?"รูปฉลากจะถูกเก็บไว้ให้เภสัชกรดู":"จะไม่เก็บรูป — ระบบอ่านชื่อยาในเครื่องแล้วลบรูปทิ้ง");
+  });
   document.getElementById("mManual").addEventListener("click",function(){manualBox({})});
   document.getElementById("mPurpose").addEventListener("click",function(){purposeBox({})});
 
@@ -4103,7 +4245,16 @@ function renderMedsQ(i){
     /* บันทึกรายการยาลงฐานข้อมูล (ทีละรายการ) — ทริกเกอร์จะเปิดคำขอทบทวนให้เองเมื่อเข้าเกณฑ์ */
     if(typeof CSBackend!=="undefined"&&CSBackend.isCloud()){
       for(var k=0;k<m.items.length;k++){ if(m.items[k].saved)continue;
-        try{await CSBackend.saveMed(m.items[k]);m.items[k].saved=true}catch(e){} }
+        try{
+          var saved=await CSBackend.saveMed(m.items[k]);
+          m.items[k].saved=true;
+          /* ยาที่ไม่มีใครจัดกลุ่มได้ ต้องไปถึงเภสัชกรพร้อมรูปและข้อความบนฉลาก
+             ไม่ใช่ปล่อยให้เป็น unknown ค้างอยู่เฉย ๆ ในรายการ */
+          var it=m.items[k];
+          if((!it.frid||it.frid==="unknown")&&CSBackend.queueUnknownDrug)
+            await CSBackend.queueUnknownDrug({medId:saved?saved.id:null,ocr:it.ocr,
+              name:it.brand||it.inn||null,photo:it.photo||null});
+        }catch(e){} }
     }
     audit("บันทึกข้อมูลยา (pipeline)",
       "รายการ "+m.items.length+" · กลุ่มเสี่ยงสูง "+sum.high+" · ปานกลาง "+sum.mod+" · ไม่รู้จัก "+sum.unknown+
