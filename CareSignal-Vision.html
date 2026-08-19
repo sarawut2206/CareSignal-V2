@@ -2611,7 +2611,8 @@ function plogV(){
     S.pilotT0=Date.now();
     go("test");
   });
-  document.getElementById("pSaveQ").addEventListener("click",function(){if(save())go("q",0)});
+  /* ไปหน้ารวมหัวข้อ ไม่ลัดเข้าคำถามข้อแรก — ให้เห็นสถานะทุกหัวข้อเหมือนเส้นทางปกติ */
+  document.getElementById("pSaveQ").addEventListener("click",function(){if(save())go("assessHub")});
 }
 
 /* ---------- สรุปผลการตรวจสอบเครื่องมือวัด ---------- */
