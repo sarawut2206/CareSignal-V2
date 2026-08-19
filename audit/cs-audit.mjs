@@ -941,6 +941,31 @@ function layer7() {
       r.ev, "แก้ให้ตรงตามที่ประกาศไว้ในหัวไฟล์ cs-demo.js");
   }
 
+  /* ---- เสถียรภาพเสียงและ OCR (แก้ด่วนตามรายงานผู้ใช้) ---- */
+  {
+    const visAll = read("CareSignal-Vision.html") || "";
+    const pair = [["CareSignal-App.html", appAll], ["CareSignal-Vision.html", visAll]];
+    const vChecks = [
+      ["X-68", "คำสั่งเสียงต้องทวนกลับและรอคำว่า ยืนยัน ก่อนทำจริง",
+        (t) => t.includes("function vcDispatch(") && t.includes("var VC_NAMES=")
+            && t.includes("พูดว่า ยืนยัน") && t.includes('k:"confirm"')],
+      ["X-69", "ตัวกรองเสียงสะท้อนต้องหมดอายุเองเสมอ (ห้าม Infinity)",
+        (t) => !t.includes("until:Infinity") && t.includes("until:Date.now()+9000")],
+      ["X-70", "speak() ต้องกันพูดประโยคเดิมซ้ำ",
+        (t) => t.includes("SPK.last[key]")],
+      ["X-71", "OCR อ่านหลายรอบ และไม่โทษรูปเมื่อยาไม่อยู่ในฐาน",
+        (t) => t.includes("function ocrVariants(") && t.includes("ไม่ใช่ปัญหาความคมชัดของรูป")],
+    ];
+    for (const [id, name, fn] of vChecks) {
+      const bad = pair.filter(([f, t]) => !fn(t)).map(([f]) => f);
+      req(7, id, name, bad.length ? "MISSING" : "PASS",
+          bad.length ? ("ขาดใน " + bad.join(", ")) : "ครบทั้งแอปสมาชิกและหน้าทดลอง");
+      if (bad.length) finding("HIGH", id, "เสถียรภาพเสียง/OCR ถดถอย: " + name,
+        "อาการที่ผู้ใช้รายงานจริง: ระบบไม่ฟังคำสั่ง พูดซ้ำ และโทษว่ารูปไม่ชัดทั้งที่รูปคม",
+        "ขาดใน " + bad.join(", "), "คืนกลไกตามหัวคอมเมนต์ของแต่ละฟังก์ชัน");
+    }
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

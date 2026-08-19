@@ -1443,6 +1443,7 @@ var VC={rec:null,on:false,handler:null,lastFire:0,lastHeard:"",live:"",
    ลำดับสำคัญ: ตรวจคำที่เจาะจงกว่าก่อนเสมอ
    (บันทึกท่านั่ง/ท่ายืน ต้องมาก่อน "เริ่ม" · "ไม่ผ่าน" ต้องมาก่อน "ผ่าน") */
 var VC_CMDS=[
+  {k:"confirm", re:/ยืนยัน|คอนเฟิร์ม/, ack:null},
   {k:"sit",   re:/(บันทึก|เก็บ|จำ).{0,4}(ท่า|ค่า)?นั่ง|นั่งแล้ว|บันทึกนั่ง/,  ack:"รับทราบ กำลังบันทึกท่านั่ง"},
   {k:"stand", re:/(บันทึก|เก็บ|จำ).{0,4}(ท่า|ค่า)?ยืน|ยืนแล้ว|บันทึกยืน/,     ack:"รับทราบ กำลังบันทึกท่ายืน"},
   {k:"stop",  re:/หยุด|ยกเลิก|พอแล้ว|พอก่อน/,                                ack:"รับทราบ หยุดการทดสอบ"},
@@ -1455,7 +1456,14 @@ var VC_CMDS=[
   {k:"start", re:/เริ่ม|พร้อมแล้ว|สตาร์ท|เอาเลย|ลุยเลย/,                       ack:"รับทราบ เริ่มจับเวลา"}
 ];
 var VC_HELP="คำสั่งที่ใช้ได้คือ เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน "+
+            "เมื่อระบบทวนคำสั่งกลับ ให้พูดว่า ยืนยัน เพื่อทำจริง หรือ ยกเลิก "+
             "ตอนสอบเทียบใช้ บันทึกท่านั่ง และ บันทึกท่ายืน ทุกคำสั่งมีปุ่มบนหน้าจอด้วย";
+/* ชื่อคำสั่งสำหรับทวนกลับ — ผู้ใช้ต้องได้ยินว่าระบบเข้าใจว่าอะไร ก่อนจะยืนยัน */
+var VC_NAMES={start:"เริ่มจับเวลา",sit:"บันทึกท่านั่ง",stand:"บันทึกท่ายืน",
+              pass:"บันทึกว่าผ่าน",fail:"บันทึกว่าไม่ผ่าน",again:"ทำท่านี้ใหม่",
+              next:"ไปขั้นตอนต่อไป",done:"จบและบันทึกผล"};
+/* คำสั่งที่ทำทันทีไม่ต้องทวน: หยุด (เรื่องความปลอดภัย ต้องไม่มีขั้นกลาง) และ ช่วยเหลือ */
+var VC_IMMEDIATE={stop:1,help:1};
 function vcNorm(t){return String(t||"").replace(/[\s\u200b.,!?ๆฯ]/g,"")}
 function vcParse(t){
   t=vcNorm(t);
@@ -1471,7 +1479,11 @@ function vcAck(cmd){
 /* ---- ตัวกรองเสียงสะท้อน: จำสิ่งที่ระบบเพิ่งพูด ไม่ให้สั่งตัวเอง ---- */
 function vcRemember(text){
   var t=vcNorm(text); if(!t)return null;
-  var e={t:t,until:Infinity};      /* ระหว่างพูดยังไม่หมดอายุ */
+  /* หมดอายุแข็ง 9 วินาทีตั้งแต่เริ่มพูด — เดิมตั้ง Infinity แล้วรอเหตุการณ์พูดจบ
+     แต่บางเครื่องเหตุการณ์นั้นไม่มา (โดยเฉพาะเมื่อถูก cancel แทรก)
+     รายการจึงค้างถาวร และคำสั่งจริงที่บังเอิญเป็นส่วนหนึ่งของประโยคระบบ
+     เช่น "ผ่าน" ใน "รับทราบ บันทึกว่าผ่าน" ถูกทิ้งตลอดไป = อาการ "พูดแล้วไม่ฟัง" */
+  var e={t:t,until:Date.now()+9000};
   VC.echo.push(e);
   if(VC.echo.length>6)VC.echo.shift();
   return e;
@@ -1482,11 +1494,79 @@ function vcIsEcho(heard){
   for(var i=0;i<VC.echo.length;i++){
     var e=VC.echo[i];
     if(now>e.until)continue;
-    /* ได้ยินเป็นส่วนหนึ่งของสิ่งที่ระบบพูด = เสียงตัวเองสะท้อนกลับ */
-    if(e.t.indexOf(h)>=0)return true;
+    /* นับเป็นเสียงสะท้อนเฉพาะเมื่อได้ยิน "ก้อนใหญ่" ของประโยคที่ระบบพูด
+       คำสั่งสั้น ๆ เช่น "ผ่าน" ที่บังเอิญอยู่ในประโยคระบบ ต้องไม่ถูกทิ้ง */
+    if(e.t.indexOf(h)>=0&&(h.length>=8||h.length/e.t.length>=0.6))return true;
   }
   return false;
 }
+/* ============================================================
+   ตัดสินใจจากประโยคที่ได้ยิน — วงจรทวนคำสั่ง
+   ------------------------------------------------------------
+   คำสั่งที่มีผลต่อการบันทึก (เริ่ม/ผ่าน/ไม่ผ่าน/บันทึกท่า/ฯลฯ)
+   ระบบจะ "ทวนกลับ" ก่อน แล้วรอคำว่า ยืนยัน จึงทำจริง
+   กันเสียงแวดล้อมหรือการได้ยินผิดสั่งระบบเอง
+   "หยุด" ทำทันทีเสมอ — เรื่องความปลอดภัยต้องไม่มีขั้นกลาง
+   ปุ่มบนหน้าจอไม่ผ่านขั้นนี้ (การกดคือความตั้งใจอยู่แล้ว)
+   ============================================================ */
+function vcDispatch(txt){
+  if(vcIsEcho(txt))return "echo";
+  var cmd=vcParse(txt);
+  VC.lastHeard=String(txt).trim().slice(0,24);
+  if(!cmd){VC.live="";vcRender();return null}
+  var now=Date.now();
+
+  if(cmd==="confirm"){
+    VC.live="";
+    if(!VC.pending){vcRender();return "confirm-none"}
+    /* กันระบบยืนยันตัวเอง: ต้องพ้นช่วงที่เสียงระบบยังพูดอยู่ก่อน */
+    if(now<VC.pending.notBefore||("speechSynthesis" in window&&window.speechSynthesis&&speechSynthesis.speaking)){
+      vcRender();return "confirm-early"}
+    if(now>VC.pending.expires){vcClearPending();vcRender();speak("หมดเวลายืนยัน กรุณาสั่งใหม่");return "confirm-late"}
+    var p=VC.pending; vcClearPending();
+    VC.lastFire=now; vcRender();
+    vcAck(p.cmd);
+    if(VC.handler)VC.handler(p.cmd);
+    return "exec:"+p.cmd;
+  }
+
+  /* หยุด/ยกเลิก ระหว่างรอยืนยัน = ยกเลิกคำสั่งที่ค้าง ไม่ใช่หยุดการทดสอบ */
+  if(cmd==="stop"&&VC.pending){
+    vcClearPending(); VC.live=""; vcRender();
+    speak("ยกเลิกคำสั่งแล้ว");
+    return "canceled";
+  }
+
+  if(now-VC.lastFire<1200){VC.live="";vcRender();return "debounce"}
+
+  if(VC_IMMEDIATE[cmd]){
+    VC.lastFire=now; VC.live=""; vcRender();
+    vcAck(cmd);
+    if(cmd!=="help"&&VC.handler)VC.handler(cmd);
+    return "exec:"+cmd;
+  }
+
+  vcSetPending(cmd);
+  return "pending:"+cmd;
+}
+function vcSetPending(cmd){
+  var now=Date.now();
+  /* notBefore เริ่มที่ +3500 เผื่อเสียงทวนไม่ตอบกลับ — เมื่อพูดจบจริงจะร่นเหลือ +350 */
+  VC.pending={cmd:cmd,expires:now+10000,notBefore:now+3500};
+  VC.live=""; vcRender();
+  if(VC.pendT)clearTimeout(VC.pendT);
+  VC.pendT=setTimeout(function(){
+    if(VC.pending&&Date.now()>=VC.pending.expires){vcClearPending();vcRender()}
+  },10300);
+  speak("ได้ยินคำสั่ง "+(VC_NAMES[cmd]||cmd)+" ถ้าถูกต้อง พูดว่า ยืนยัน",{onDone:function(){
+    if(VC.pending&&VC.pending.cmd===cmd)VC.pending.notBefore=Date.now()+350;
+  }});
+}
+function vcClearPending(){
+  VC.pending=null;
+  if(VC.pendT){clearTimeout(VC.pendT);VC.pendT=null}
+}
+
 /* ---- ป้ายไมค์บนจอ: ผู้ใช้ต้องเห็นตลอดว่าระบบฟังอยู่และได้ยินอะไร ---- */
 function vcMount(){
   var top=document.querySelector(".hudtop"); if(!top)return;
@@ -1501,6 +1581,7 @@ function vcRender(){
   var b=document.getElementById("vcbadge"); if(!b)return;
   if(!VC.supported){b.textContent="🎤 เครื่องนี้ใช้ปุ่มแทนเสียง";return}
   if(!VC.on){b.textContent="🎤 ปิดอยู่";return}
+  if(VC.pending){b.textContent='🎤 พูดว่า "ยืนยัน" — '+(VC_NAMES[VC.pending.cmd]||VC.pending.cmd);return}
   b.textContent=VC.live?("🎤 "+VC.live):(VC.lastHeard?("🎤 ได้ยิน: "+VC.lastHeard):"🎤 กำลังฟัง…");
 }
 function vcStart(handler){
@@ -1516,17 +1597,8 @@ function vcStart(handler){
       for(var i=ev.resultIndex;i<ev.results.length;i++){
         var res=ev.results[i], txt=res[0]&&res[0].transcript||"";
         if(!res.isFinal){interim+=txt;continue}
-        /* ---- ตัดสินใจจากผลสุดท้ายเท่านั้น ---- */
-        if(vcIsEcho(txt))continue;                    /* เสียงของระบบเอง */
-        var cmd=vcParse(txt);
-        VC.lastHeard=String(txt).trim().slice(0,24);
-        if(!cmd){VC.live="";vcRender();continue}
-        var now=performance.now();
-        if(now-VC.lastFire<1200){VC.live="";vcRender();continue}  /* กันสั่งรัวซ้อน */
-        VC.lastFire=now;
-        VC.live=""; vcRender();
-        vcAck(cmd);                                   /* ตอบรับให้ได้ยินทุกครั้ง */
-        if(cmd!=="help"&&VC.handler)VC.handler(cmd);
+        /* ---- ตัดสินใจจากผลสุดท้ายเท่านั้น (แยกเป็น vcDispatch ให้ทดสอบได้) ---- */
+        vcDispatch(txt);
       }
       if(interim){VC.live=interim.trim().slice(0,24);vcRender()}
     };
@@ -1560,29 +1632,38 @@ function vcRevive(ms){
 }
 function vcStop(){
   VC.on=false;VC.handler=null;VC.live="";VC.starting=false;
+  vcClearPending();
   if(VC.reviveT){clearTimeout(VC.reviveT);VC.reviveT=null}
   if(VC.rec){try{VC.rec.onend=null;VC.rec.stop()}catch(e){}VC.rec=null}
   var b=document.getElementById("vcbadge"); if(b&&b.parentNode)b.parentNode.removeChild(b);
 }
 function vcHint(){return VC.supported?'พูดว่า "เริ่ม" หรือกดปุ่ม':"กดปุ่มเริ่มเมื่อพร้อม"}
 
+var SPK={last:{}};
 function speak(text,opts){
-  if(!VOICE.on||!text)return;
+  opts=opts||{};
+  var fin=function(){ if(opts.onDone){var f=opts.onDone;opts.onDone=null;try{f()}catch(e){}} };
+  if(!VOICE.on||!text){setTimeout(fin,120);return}
   try{
-    if(!("speechSynthesis" in window))return;
-    opts=opts||{};
+    if(!("speechSynthesis" in window)){setTimeout(fin,120);return}
+    /* กันพูดซ้ำ: ประโยคเดิมภายใน 4 วินาทีไม่พูดซ้ำ — แก้อาการ "พูดซ้ำไปซ้ำมา"
+       เมื่อหลายจุดในโปรแกรมเรียกพูดข้อความเดียวกันติด ๆ กัน */
+    var key=vcNorm(text), now=Date.now();
+    if(!opts.force&&SPK.last[key]&&now-SPK.last[key]<4000){setTimeout(fin,120);return}
+    SPK.last[key]=now;
     if(opts.interrupt!==false)speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(text);
     u.lang="th-TH"; u.rate=opts.rate||0.95; u.volume=1;
     var v=speechSynthesis.getVoices().filter(function(x){return /th/i.test(x.lang)});
     if(v.length)u.voice=v[0];
-    /* จำไว้ว่าระบบพูดอะไร เพื่อไม่ให้ไมค์รับเสียงตัวเองไปเป็นคำสั่ง
-       หมดอายุ 2.5 วินาทีหลังพูดจบ — สั้นพอที่ผู้ใช้จะพูดคำเดียวกันตามได้ */
+    /* จำไว้ว่าระบบพูดอะไร ไม่ให้ไมค์รับเสียงตัวเองเป็นคำสั่ง — จบแล้วเหลืออายุ 2.2 วิ */
     var e=vcRemember(text);
-    if(e){u.onend=function(){e.until=Date.now()+2500};
-          u.onerror=function(){e.until=Date.now()+2500}}
+    var done=function(){ if(e)e.until=Date.now()+2200; fin() };
+    u.onend=done; u.onerror=done;
+    /* บางเครื่องเหตุการณ์พูดจบไม่มา — ตั้งเผื่อไว้ตามความยาวข้อความ ไม่ให้อะไรค้าง */
+    setTimeout(done, 1200+text.length*90);
     speechSynthesis.speak(u);
-  }catch(e){}
+  }catch(e2){fin()}
 }
 function voiceToggle(){
   VOICE.on=!VOICE.on;
@@ -3322,29 +3403,49 @@ async function ocrLoad(onStatus){
   OCR.state="ready";
   return OCR.worker;
 }
-/* ย่อรูปก่อน OCR — มือถือถ่ายมา 12MP อ่านช้าและไม่จำเป็น */
+/* ย่อรูปอย่างเดียว ไม่ปรับสี — รูปที่เก็บให้เภสัชกรต้องคงสีเดิม
+   ความละเอียดตั้งต้น 2000px เพราะตัวหนังสือบนฉลากยาไทยเล็ก ที่ 1400px อ่านพลาดบ่อย */
 function shrinkImage(file,maxW){
-  return new Promise(function(res){
+  return new Promise(function(res,rej){
     var img=new Image(), url=URL.createObjectURL(file);
     img.onload=function(){
-      var sc=Math.min(1,(maxW||1400)/img.width);
+      var sc=Math.min(1,(maxW||2000)/img.width);
       var c=document.createElement("canvas");
       c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
-      var ctx=c.getContext("2d");
-      ctx.drawImage(img,0,0,c.width,c.height);
-      /* เพิ่มคอนทราสต์เล็กน้อย ช่วยฉลากซีด */
-      var d=ctx.getImageData(0,0,c.width,c.height), px=d.data;
-      for(var i=0;i<px.length;i+=4){
-        var g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
-        g=Math.max(0,Math.min(255,(g-128)*1.35+128));
-        px[i]=px[i+1]=px[i+2]=g;
-      }
-      ctx.putImageData(d,0,0);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
       URL.revokeObjectURL(url);
       c.toBlob(function(b){res({blob:b,canvas:c})},"image/jpeg",0.85);
     };
+    img.onerror=function(){URL.revokeObjectURL(url);rej(new Error("เปิดรูปไม่ได้"))};
     img.src=url;
   });
+}
+/* ============================================================
+   เตรียมภาพ 3 แบบสำหรับอ่านฉลาก
+   ------------------------------------------------------------
+   ฉลากยามีทั้งพื้นขาว พื้นสี และฟอยล์สะท้อนแสง — สูตรปรับภาพสูตรเดียว
+   จึงล้มเหลวบ่อยทั้งที่รูปคมชัด อ่านทีละแบบแล้วเลือกผลที่ดีที่สุดแทน
+   ============================================================ */
+function ocrVariants(base){
+  function mono(fn){
+    var c=document.createElement("canvas"); c.width=base.width; c.height=base.height;
+    var ctx=c.getContext("2d"); ctx.drawImage(base,0,0);
+    var d=ctx.getImageData(0,0,c.width,c.height), px=d.data, i;
+    var lum=new Float32Array(px.length/4), sum=0;
+    for(i=0;i<px.length;i+=4){var g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];lum[i/4]=g;sum+=g}
+    var mean=sum/(px.length/4);
+    for(i=0;i<px.length;i+=4){
+      var v=fn(lum[i/4],mean);
+      px[i]=px[i+1]=px[i+2]=v<0?0:v>255?255:v;
+    }
+    ctx.putImageData(d,0,0);
+    return c;
+  }
+  return [
+    mono(function(g){return (g-128)*1.35+128}),          /* คอนทราสต์ (สูตรเดิม) */
+    mono(function(g){return g}),                          /* ขาวดำล้วน — ฉลากซีดบางแบบอ่านง่ายกว่า */
+    mono(function(g,mean){return g>mean*0.92?255:0})      /* ตัดสองระดับ — ตัวพิมพ์บนพื้นสี/ฟอยล์ */
+  ];
 }
 
 function renderMedsQ(i){
@@ -3528,24 +3629,45 @@ function renderMedsQ(i){
     var f=this.files&&this.files[0]; this.value=""; if(!f)return;
     status("กำลังเตรียมรูป…");
     try{
-      var sh=await shrinkImage(f,1400);
+      var sh=await shrinkImage(f,2000);
       var w=await ocrLoad(status);
-      status("กำลังอ่านฉลาก…");
-      var r=await w.recognize(sh.canvas);
-      var text=(r&&r.data&&r.data.text)||"";
-      var ex=CSMeds.extract(text);
+      /* อ่านทีละแบบ สูงสุด 3 รอบ หยุดทันทีเมื่อมั่นใจพอ */
+      var vars=ocrVariants(sh.canvas), best=null, allText="";
+      for(var vi=0;vi<vars.length;vi++){
+        status("กำลังอ่านฉลาก รอบที่ "+(vi+1)+" จาก "+vars.length+"…");
+        var r=await w.recognize(vars[vi]);
+        var text=(r&&r.data&&r.data.text)||"";
+        if(text.replace(/\s+/g,"").length>allText.replace(/\s+/g,"").length)allText=text;
+        var ex=CSMeds.extract(text);
+        if(ex.candidates.length&&(!best||ex.candidates[0].conf>best.conf))
+          best={conf:ex.candidates[0].conf,cands:ex.candidates,text:text,doses:ex.doses,freq:ex.freq};
+        if(best&&best.conf>=0.75)break;
+      }
       status("");
-      if(ex.candidates.length&&ex.candidates[0].conf>=0.6){
-        confirmBox(ex.candidates,{ocr:text,doses:ex.doses,freq:ex.freq,photoFile:f});
-      }else{
-        work('<div class="notice" style="margin:0 0 10px">อ่านชื่อยาจากรูปนี้ไม่ชัดพอ — ไม่เป็นไร เลือกวิธีอื่นได้ รูปจะถูกเก็บให้เภสัชกรดูอยู่ดี</div>'+
-          '<button class="cta" id="wRetry" style="margin:0 0 8px">📷 ถ่ายใหม่ให้ชัดขึ้น</button>'+
+      if(best){
+        /* พบชื่อยาที่พอเทียบได้ — ผู้ใช้เป็นคนยืนยันเสมอ ระบบไม่ตัดสินเอง */
+        confirmBox(best.cands,{ocr:best.text,doses:best.doses,freq:best.freq,photoFile:f});
+      }else if(allText.replace(/\s+/g,"").length>=14){
+        /* อ่านตัวหนังสือได้ แต่ยาไม่อยู่ในฐาน 155 ตัวยา — ไม่ใช่ความผิดของรูป
+           เดิมกรณีนี้ถูกเหมาว่า "รูปไม่ชัด ถ่ายใหม่" ทำให้ถ่ายซ้ำกี่ครั้งก็ล้มเหลวเหมือนเดิม */
+        work('<div class="notice" style="margin:0 0 10px">อ่านตัวหนังสือจากรูปได้ แต่<b>ไม่พบชื่อยาที่ระบบรู้จัก</b> (ฐานข้อมูลมี 155 ตัวยา) — ไม่ใช่ปัญหาความคมชัดของรูป เลือกวิธีอื่นได้เลย</div>'+
+          '<button class="cta" id="wKeep" style="margin:0 0 8px">📎 เก็บรูปให้เภสัชกรจัดกลุ่มให้</button>'+
           '<button class="ghostb" id="wType">พิมพ์ชื่อยาเอง</button>'+
           '<button class="ghostb" id="wPur2">บอกว่าใช้รักษาอะไร</button>'+
-          (text.trim()?'<details style="margin-top:8px"><summary style="font-size:12.5px;color:var(--ink3)">ข้อความที่อ่านได้</summary><pre style="font-size:11.5px;white-space:pre-wrap;color:var(--ink2)">'+esc(text.slice(0,400))+'</pre></details>':''));
+          '<details style="margin-top:8px" open><summary style="font-size:12.5px;color:var(--ink3)">ข้อความที่อ่านได้</summary><pre style="font-size:11.5px;white-space:pre-wrap;color:var(--ink2)">'+esc(allText.slice(0,400))+'</pre></details>');
+        document.getElementById("wKeep").addEventListener("click",function(){addItem({inn:null,brand:null,purpose:null,frid:"unknown",lv:null,source:"photo_only",ocr:allText.slice(0,400),photoFile:f})});
+        document.getElementById("wType").addEventListener("click",function(){manualBox({ocr:allText,photoFile:f})});
+        document.getElementById("wPur2").addEventListener("click",function(){purposeBox({ocr:allText,photoFile:f})});
+      }else{
+        /* อ่านแทบไม่ได้จริง ๆ — ค่อยแนะนำให้ถ่ายใหม่ พร้อมบอกวิธี */
+        work('<div class="notice" style="margin:0 0 10px">อ่านตัวหนังสือจากรูปนี้แทบไม่ได้ — มักเกิดจากแสงน้อย เงาบัง หรือถ่ายไกลเกินไป<br>'+
+          '<b>เคล็ดลับ:</b> ถ่ายในที่สว่าง ให้ชื่อยาเต็มกรอบ ถือให้นิ่งสัก 1 วินาที</div>'+
+          '<button class="cta" id="wRetry" style="margin:0 0 8px">📷 ถ่ายใหม่</button>'+
+          '<button class="ghostb" id="wType">พิมพ์ชื่อยาเอง</button>'+
+          '<button class="ghostb" id="wPur2">บอกว่าใช้รักษาอะไร</button>');
         document.getElementById("wRetry").addEventListener("click",function(){workClose();document.getElementById("mPhoto").click()});
-        document.getElementById("wType").addEventListener("click",function(){manualBox({ocr:text,doses:ex.doses,photoFile:f})});
-        document.getElementById("wPur2").addEventListener("click",function(){purposeBox({ocr:text,photoFile:f})});
+        document.getElementById("wType").addEventListener("click",function(){manualBox({photoFile:f})});
+        document.getElementById("wPur2").addEventListener("click",function(){purposeBox({photoFile:f})});
       }
     }catch(e){
       status("");
