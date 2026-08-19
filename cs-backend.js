@@ -371,6 +371,44 @@ var CSBackend = (function () {
      กดอนุญาตในแอปของตน และสิทธิ์นั้นหมดอายุเอง
      บังคับด้วย RLS ที่ฐานข้อมูล ไม่ใช่การซ่อนที่หน้าจอ
      ============================================================ */
+  /* ---------- หน่วยบริการที่ปฏิบัติงาน ----------
+     Health Link ให้เลือกทุกครั้งที่เข้าระบบ เพราะคนหนึ่งอาจทำงานหลายแห่ง
+     และระบบต้องตอบได้ว่า "ตอนเปิดดูข้อมูล เขาอยู่ที่ไหน" */
+  async function startWorkSession(orgName) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    await sb.from("work_sessions").update({ ended_at: new Date().toISOString() })
+      .eq("staff_id", u.id).is("ended_at", null);
+    var r = await sb.from("work_sessions").insert({ staff_id: u.id, org_name: orgName })
+      .select().single();
+    if (r.error) throw r.error;
+    await audit("session.start", u.id, "เข้าระบบจากหน่วยบริการ: " + orgName, { org: orgName });
+    return r.data;
+  }
+  async function myOrg() {
+    if (!isCloud()) return null;
+    var r = await sb.rpc("cs_my_org");
+    return r.error ? null : r.data;
+  }
+  /* หน่วยบริการที่เคยระบุไว้ — ให้เลือกซ้ำได้เร็วโดยไม่ต้องพิมพ์ใหม่ */
+  async function myOrgHistory() {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("work_sessions").select("org_name")
+      .eq("staff_id", u.id).order("started_at", { ascending: false }).limit(20);
+    if (r.error) return [];
+    var seen = {}, out = [];
+    (r.data || []).forEach(function (x) { if (!seen[x.org_name]) { seen[x.org_name] = 1; out.push(x.org_name) } });
+    return out;
+  }
+  /* ตรวจสถานะสมาชิกก่อนขอความยินยอม — คืนเฉพาะสถานะ ไม่คืนข้อมูลส่วนบุคคล */
+  async function checkMembership(memberId) {
+    if (!isCloud()) return null;
+    var r = await sb.rpc("check_membership", { target: memberId });
+    if (r.error) throw r.error;
+    return r.data;
+  }
+
   async function requestAccess(memberId, referralId, scope, reason) {
     if (!isCloud()) throw new Error("offline");
     var u = await currentUser(); if (!u) throw new Error("no session");
@@ -1082,6 +1120,8 @@ var CSBackend = (function () {
     cmWorklist: cmWorklist, logContact: logContact, caseDetail: caseDetail,
     myWork: myWork, claimReferral: claimReferral, myReferrals: myReferrals,
     requestAccess: requestAccess, checkAccess: checkAccess,
+    startWorkSession: startWorkSession, myOrg: myOrg, myOrgHistory: myOrgHistory,
+    checkMembership: checkMembership,
     myAccessRequests: myAccessRequests, decideAccess: decideAccess, myAccessLog: myAccessLog,
     listStaff: listStaff, setRole: setRole,
     createReferralFor: createReferralFor,

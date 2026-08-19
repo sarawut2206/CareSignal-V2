@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 08:13 |
+| วันที่ตรวจ | 2026-08-19 08:28 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 90 |
+| PASS | 96 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -35,11 +35,11 @@
 |---|---|---|---|
 | F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:764 · CareSignal-Vision.html:1144 · cs-backend.js:177 |
 | F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:927 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2528 · CareSignal-Vision.html:3303 · CareSignal-App.html:2669 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2529 · CareSignal-Vision.html:3303 · CareSignal-App.html:2670 |
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:903 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2827 · CareSignal-Vision.html:3177 · CareSignal-App.html:1971 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2828 · CareSignal-Vision.html:3177 · CareSignal-App.html:1971 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1188 · CareSignal-Vision.html:712 · CareSignal-App.html:991 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:379 · supabase/09_insurtech.sql:20 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:397 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |
@@ -61,7 +61,7 @@
 | W-09 | บันทึกผลการตรวจโดยผู้เชี่ยวชาญ | PASS | ตรวจพบในซอร์ส |
 | W-10 | สร้างงานติดตาม (follow-up) | PASS | ตรวจพบในซอร์ส |
 | W-12 | มี audit log ทุกขั้นตอนสำคัญ | PASS | ตรวจพบในซอร์ส |
-| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:453 · RLS cases_staff: true |
+| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:491 · RLS cases_staff: true |
 | W-13 | สถานะใน UI ต้องมีอยู่จริงในฐานข้อมูล | PASS | UI: new,reviewing,contacted,care_plan_agreed,referred,appointment_booked,service_completed,follow_up_due,intervention · DB: new,reviewing,contacted,re · สถานะที่มีใน DB แต่ UI ไม่ใช้: stable |
 
 ## ชั้นที่ 3 — ขอบเขตของระบบ
@@ -155,6 +155,12 @@
 | X-36 | การปฏิเสธไม่กระทบสิทธิ์ตามกรมธรรม์ (ต้องบอกผู้ใช้) | PASS | ข้อความใต้ปุ่มในการ์ดคำขอ |
 | X-37 | คอนโซลออกจากระบบเองเมื่อไม่มีการใช้งาน | PASS | ประกาศ IDLE_MIN + ตัวจับเวลาเรียก signOut + รีเซ็ตเมื่อมีการใช้งาน |
 | X-38 | ไม่มีช่องค้นหาผู้เอาประกันข้ามพอร์ต (ต่างจากระบบแลกเปลี่ยนข้อมูลระดับชาติ) | PASS | ไม่มีช่องค้นหาข้ามพอร์ต |
+| X-39 | เจ้าหน้าที่ต้องระบุหน่วยบริการที่ปฏิบัติงานทุกครั้งที่เข้าระบบ | PASS | ตาราง work_sessions + กล่องเลือกหน่วยบริการตอนเข้าระบบ |
+| X-40 | หน่วยบริการถูกบันทึกติดกับคำขอ ไม่ใช่อ่านสดจากโปรไฟล์ | PASS | create trigger trg_stamp_request_org + แอปแสดง requester_org |
+| X-41 | ตรวจสถานะสมาชิกก่อนจึงส่งคำขอความยินยอมได้ | PASS | check_membership() + canAsk ปิดปุ่มเมื่อยังขอไม่ได้ |
+| X-42 | การตรวจสถานะสมาชิกไม่คืนข้อมูลส่วนบุคคล | PASS | คืนเฉพาะ enrolled/consented/channel/can_request |
+| X-43 | มีลิงก์เข้าตรงที่เคส ไม่ต้องไล่หาในคิว | PASS | #ref=<id> พาไปที่เคสนั้นและทำเครื่องหมายให้เห็น |
+| X-44 | ผู้เอาประกันเห็นว่าคำขอมาจากหน่วยบริการใด | PASS | การ์ดคำขอแสดงหน่วยบริการ ณ เวลาที่ขอ |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

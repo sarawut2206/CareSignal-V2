@@ -104,6 +104,15 @@ h3{font-size:15.5px;margin:0 0 10px;color:#fff}
 .work[data-late="1"]{border-color:rgba(240,82,76,.55);background:rgba(240,82,76,.10)}
 .work .claim{border:0;border-radius:10px;background:var(--gold);color:var(--goldink);
   font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;margin-top:7px}
+.orgbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;
+  background:rgba(255,255,255,.07);border:1px solid var(--line2);border-radius:11px;
+  padding:8px 12px;margin-bottom:12px;color:var(--ink2)}
+.orgbar b{color:#fff}
+.orgbar button{margin-left:auto;border:1px solid var(--line);background:none;color:var(--gold);
+  font-family:inherit;font-size:12px;padding:4px 10px;border-radius:9px;cursor:pointer}
+.mstat{font-size:12.5px;color:var(--ink2);margin-top:8px;line-height:1.6}
+.mstat b{color:#fff}
+.mstat .bad{color:var(--c2)}
 .consent{border:1.5px solid var(--gold);background:rgba(245,185,62,.10);border-radius:13px;
   padding:13px 15px;margin:10px 0;font-size:13.5px}
 .consent b{color:var(--gold);display:block;margin-bottom:4px}
@@ -229,7 +238,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=215"></script>
+<script src="./cs-backend.js?v=216"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 /* ============================================================
@@ -347,6 +356,15 @@ async function doLogin(){
     }
     ST.role=pr.role; ST.email=em; ST.name=pr.display_name||em;
     chip(); TABS.hidden=false;
+    /* ทีมดูแลต้องระบุหน่วยบริการที่ปฏิบัติงานก่อนเริ่มงาน ตามแนว Health Link
+       บัญชีบริษัทประกันไม่ต้อง เพราะดูเฉพาะภาพรวมระดับกลุ่ม ไม่แตะข้อมูลรายบุคคล */
+    if(ST.role!=="insurer"){
+      try{ ST.org=await CSBackend.myOrg() }catch(e){}
+      if(!ST.org){
+        var org=await orgPrompt();
+        try{ await CSBackend.startWorkSession(org); ST.org=org }catch(e){ toast("บันทึกหน่วยบริการไม่สำเร็จ") }
+      }
+    }
     /* หมวดที่เลือกเป็นการนำทาง — ถ้าไม่ตรงกับบทบาทจริงในฐานข้อมูล ให้บอกตรง ๆ
        ไม่ใช่ปล่อยให้ผู้ใช้งงว่าทำไมเมนูไม่เหมือนที่คาด */
     if(ST.pickedCat&&ST.pickedCat!==ST.role){
@@ -1037,12 +1055,24 @@ async function consentBox(host, memberId, referralId, onGranted){
     return false;
   }
 
+  /* ตรวจสถานะสมาชิกก่อน — Health Link ให้ตรวจสถานะการเป็นสมาชิกก่อนจึงส่งคำขอได้
+     ถ้ายังไม่ได้ให้ความยินยอมหลักไว้ ระบบจะไม่มีช่องทางส่งคำขอไปถึง */
+  var ms=null; try{ ms=await CSBackend.checkMembership(memberId) }catch(e){}
   var why = a&&a.status==="denied" ? "ผู้เอาประกันไม่อนุญาตในครั้งก่อน — ขอใหม่ได้"
           : a&&a.status==="expired" ? "คำขอครั้งก่อนหมดเวลา — กดขอใหม่"
           : "ต้องได้รับอนุญาตจากผู้เอาประกันก่อนจึงเปิดดูรายการยาและผลประเมินย้อนหลังได้";
-  host.innerHTML='<div class="consent"><b>🔒 ยังไม่ได้รับความยินยอม</b>'+esc(why)+
-    '<div class="btns"><button data-ask>ขอความยินยอม</button></div>'+
-    '<div class="cd">รายการส่งต่อและงานที่ต้องทำยังดูได้ตามปกติ — ที่ต้องขอคือข้อมูลคลินิกรายบุคคล</div></div>';
+  var canAsk = !ms || ms.can_request;
+  var msLine = ms
+    ? '<div class="mstat">สถานะสมาชิก: <b>'+(ms.enrolled?"ลงทะเบียนแล้ว":"ยังไม่ลงทะเบียน")+'</b>'+
+      ' · ความยินยอมหลัก: <b class="'+(ms.consented?"":"bad")+'">'+(ms.consented?"ให้ไว้แล้ว":"ยังไม่ได้ให้")+'</b>'+
+      (ms.can_request?' · ช่องทางแจ้ง: <b>'+esc(ms.channel)+'</b>'
+                     :'<br><span class="bad">ยังส่งคำขอไม่ได้ — ผู้เอาประกันต้องเปิดใช้งานและให้ความยินยอมหลักในแอปก่อน</span>')+
+      '</div>' : '';
+  host.innerHTML='<div class="consent"><b>🔒 ยังไม่ได้รับความยินยอม</b>'+esc(why)+ msLine +
+    '<div class="btns"><button data-ask'+(canAsk?'':' disabled')+'>ขอความยินยอม</button></div>'+
+    '<div class="cd">รายการส่งต่อและงานที่ต้องทำยังดูได้ตามปกติ — ที่ต้องขอคือข้อมูลคลินิกรายบุคคล'+
+    (ST.org?'<br>คำขอจะระบุว่ามาจาก '+esc(ST.org):'')+'</div></div>';
+  if(!canAsk) return false;
   host.querySelector("[data-ask]").addEventListener("click",async function(){
     var b=this; b.disabled=true; b.textContent="กำลังส่งคำขอ…";
     try{
@@ -1053,6 +1083,63 @@ async function consentBox(host, memberId, referralId, onGranted){
     }catch(e){ toast("ส่งคำขอไม่สำเร็จ: "+(e.message||e)); b.disabled=false; b.textContent="ขอความยินยอม" }
   });
   return false;
+}
+
+
+/* ============================================================
+   หน่วยบริการที่ปฏิบัติงาน — ตามขั้นตอนของระบบ Health Link
+   ------------------------------------------------------------
+   Health Link: "เมื่อยืนยันตัวตนสำเร็จ ระบบจะกลับมาที่หน้าเว็บไซต์
+   เพื่อให้เลือกหน่วยบริการสุขภาพที่ท่านประจำอยู่"
+   เหตุผล: ผู้ให้บริการคนหนึ่งอาจทำงานหลายแห่ง และระบบต้องตอบได้ว่า
+   ตอนที่เปิดดูข้อมูลคนไข้ เขาปฏิบัติงานอยู่ที่ใด
+   หน่วยบริการที่เลือกจะถูกบันทึกติดไปกับคำขอความยินยอมทุกใบ
+   ============================================================ */
+function orgPrompt(){
+  return new Promise(function(resolve){
+    var w=document.createElement("div");
+    w.style.cssText="position:fixed;inset:0;background:rgba(4,12,36,.72);backdrop-filter:blur(4px);"+
+      "display:grid;place-items:center;z-index:200;padding:20px";
+    w.innerHTML='<div class="card" style="max-width:440px;width:100%;margin:0">'+
+      '<div class="kick">ขั้นตอนสุดท้ายก่อนเริ่มงาน</div>'+
+      '<h3 style="margin:4px 0 6px">เลือกหน่วยบริการที่ท่านปฏิบัติงานอยู่</h3>'+
+      '<p class="sub">ระบบบันทึกหน่วยบริการไว้กับทุกคำขอเปิดดูข้อมูล เพื่อให้ตรวจย้อนได้ '+
+      'และเพื่อให้ผู้เอาประกันเห็นว่าคำขอมาจากที่ใด</p>'+
+      '<div class="field"><label>หน่วยบริการ / หน่วยงาน</label>'+
+      '<input id="orgIn" list="orgList" placeholder="เช่น โรงพยาบาลส่งเสริมสุขภาพตำบลบางแค" autocomplete="off">'+
+      '<datalist id="orgList"></datalist></div>'+
+      '<button class="cta" id="orgGo">ยืนยันและเริ่มงาน</button>'+
+      '<p class="tiny" style="margin:8px 0 0">เลือกผิดสามารถเปลี่ยนได้ภายหลังจากแถบด้านบน</p></div>';
+    document.body.appendChild(w);
+    var input=w.querySelector("#orgIn");
+    CSBackend.myOrgHistory().then(function(list){
+      w.querySelector("#orgList").innerHTML=list.map(function(o){
+        return '<option value="'+esc(o)+'">'}).join("");
+      if(list.length) input.value=list[0];
+      input.focus();
+    }).catch(function(){input.focus()});
+    function done(){
+      var v=(input.value||"").trim();
+      if(!v){ toast("กรุณาระบุหน่วยบริการ"); return }
+      w.remove(); resolve(v);
+    }
+    w.querySelector("#orgGo").addEventListener("click",done);
+    input.addEventListener("keydown",function(e){if(e.key==="Enter")done()});
+  });
+}
+/* แถบบอกหน่วยบริการปัจจุบัน ติดบนสุดของทุกหน้าที่ทำงานกับเคส */
+function orgBarHTML(){
+  if(!ST.org) return "";
+  return '<div class="orgbar">🏥 ปฏิบัติงานที่ <b>'+esc(ST.org)+'</b>'+
+    '<button data-chorg>เปลี่ยนหน่วยบริการ</button></div>';
+}
+function bindOrgBar(){
+  var b=V.querySelector("[data-chorg]"); if(!b) return;
+  b.addEventListener("click",async function(){
+    var org=await orgPrompt();
+    try{ await CSBackend.startWorkSession(org); ST.org=org; toast("เปลี่ยนหน่วยบริการแล้ว"); go(ST.screen) }
+    catch(e){ toast("บันทึกไม่สำเร็จ") }
+  });
 }
 
 async function mineV(){
@@ -1109,7 +1196,7 @@ async function mineV(){
     '</div>';
   }
 
-  var html='<div class="pipe">'+
+  var html=orgBarHTML()+'<div class="pipe">'+
     '<div class="pn" data-alert="'+(late.length?1:0)+'"><div class="pl">เกินกำหนด</div>'+
       '<div class="pv">'+late.length+'</div><div class="pt">ต้องจัดการก่อน</div></div>'+
     '<div class="pn"><div class="pl">ครบกำหนดวันนี้</div>'+
@@ -1125,7 +1212,7 @@ async function mineV(){
   });
   html+='<p class="tiny">รายการนี้กรองที่ฐานข้อมูลด้วยบัญชีที่ล็อกอิน — '+
     'ท่านเห็นเฉพาะงานในความรับผิดชอบของท่าน ไม่ใช่การซ่อนไว้ที่หน้าจอ</p>';
-  V.innerHTML=html;
+  V.innerHTML=html; bindOrgBar();
 
   /* กดรับเคส */
   V.querySelectorAll("[data-claim]").forEach(function(b){
@@ -1279,7 +1366,7 @@ async function referV(){
       var pr=r.profiles||{}, st=REF_PIPE.filter(function(p){return p.k===r.status})[0];
       var d=timeInStage(r), lim=REF_LIMIT[r.status];
       var over=lim&&d!==null&&d>lim;
-      listHTML+='<tr><td>'+esc(pr.pseudonym||"—")+'<br><span style="color:var(--ink3);font-size:11.5px">'+esc(pr.display_name||"")+'</span></td>'+
+      listHTML+='<tr data-ref="'+esc(r.id)+'"><td>'+esc(pr.pseudonym||"—")+'<br><span style="color:var(--ink3);font-size:11.5px">'+esc(pr.display_name||"")+'</span></td>'+
         '<td>'+esc(DEST_NM[r.destination||r.referral_type]||r.destination||r.referral_type||"—")+'</td>'+
         '<td>'+esc(st?st.nm:(REF_END[r.status]||r.status))+'</td>'+
         '<td class="num"'+(over?' style="color:var(--c1);font-weight:700"':'')+'>'+dayTxt(d)+(over?' ⚠':'')+'</td>'+
@@ -1294,7 +1381,20 @@ async function referV(){
   }
   listHTML+='</div>';
 
-  V.innerHTML=pipe+'<div class="cols">'+destHTML+listHTML+'</div>';
+  V.innerHTML=orgBarHTML()+pipe+'<div class="cols">'+destHTML+listHTML+'</div>';
+  bindOrgBar();
+  /* เข้าตรงเคสที่ลิงก์มา — เลื่อนไปที่แถวนั้นและทำเครื่องหมายให้เห็นชัด */
+  if(ST.focusRef){
+    var row=V.querySelector('[data-ref="'+ST.focusRef+'"]');
+    if(row){
+      row.style.cssText="outline:2px solid var(--gold);outline-offset:2px;border-radius:8px";
+      row.scrollIntoView({block:"center"});
+      toast("เปิดจากลิงก์ที่ได้รับ — เคสนี้อยู่ในรายการด้านล่าง");
+    }else{
+      toast("ไม่พบเคสจากลิงก์นี้ หรือเคสนี้ไม่ได้ส่งมาถึงท่าน");
+    }
+    ST.focusRef=null;
+  }
 }
 
 /* ============================================================
@@ -1420,6 +1520,18 @@ function go(sc){
 [TABS,SIDE].forEach(function(nav){
   nav.addEventListener("click",function(e){var b=e.target.closest("[data-go]");if(b)go(b.dataset.go)});
 });
+/* ============================================================
+   เข้าตรงที่เคส — เทียบเคียงกรณีที่ 1 ของ Health Link
+   ------------------------------------------------------------
+   ถ้าระบบ HIS มีปุ่ม Health Link แพทย์กดจากหน้าประวัติคนไข้ได้เลย
+   ไม่ต้องเลือกคนไข้ใหม่ · ของเรา: ลิงก์ที่ส่งไปกับการแจ้งส่งต่อ
+   จะพาผู้เชี่ยวชาญมาที่เคสนั้นโดยตรง ไม่ต้องไล่หาในคิว
+   รูปแบบ: ...CareSignal-Staff.html#ref=<รหัสรายการส่งต่อ>
+   ============================================================ */
+function deepLink(){
+  var m=(location.hash||"").match(/ref=([0-9a-f-]{8,})/i);
+  return m?m[1]:null;
+}
 /* บัญชีบริษัทประกันเห็นเฉพาะภาพรวมระดับกลุ่ม — ซ่อนเมนูรายบุคคลไว้ตั้งแต่แรก
    ไม่ใช่แค่กันตอนกดเข้า เพื่อไม่ให้เข้าใจผิดว่ามีสิทธิ์ */
 var NAV_BY_ROLE={
@@ -1499,6 +1611,17 @@ function resetIdle(){
       if(p&&p.id===u.id&&["care_manager","insurer","admin","pharmacist","physio","doctor","nurse"].indexOf(p.role)>=0){
         ST.role=p.role;ST.email=u.email;ST.name=p.display_name||u.email;
         chip();TABS.hidden=false;SIDE.hidden=false;navForRole();navCounts();
+        if(p.role!=="insurer"){
+          try{ ST.org=await CSBackend.myOrg() }catch(e){}
+          if(!ST.org){
+            var org0=await orgPrompt();
+            try{ await CSBackend.startWorkSession(org0); ST.org=org0 }catch(e){}
+          }
+        }
+        /* ลิงก์เข้าตรงเคส — ถ้ามี #ref=... ให้ไปหน้าติดตามการส่งต่อทันที
+           เทียบเคียงกับปุ่ม Health Link ในระบบ HIS ที่พาเข้าตรงหน้าประวัติคนไข้ */
+        var dl=deepLink();
+        if(dl){ ST.focusRef=dl; go("refer"); return }
         go(ST.role==="insurer"?"port":"queue");
       }else{try{await CSBackend.signOut()}catch(e){}}
     }

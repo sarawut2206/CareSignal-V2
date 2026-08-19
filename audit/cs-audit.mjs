@@ -725,6 +725,49 @@ function layer7() {
       r.ev, "เพิ่มการกั้นที่ฐานข้อมูล และแสดงสถานะให้ทั้งสองฝ่ายเห็น");
   }
 
+  /* ---- ขั้นตอนตามระบบ Health Link ---- */
+  const hlChecks = [
+    ["X-39", "เจ้าหน้าที่ต้องระบุหน่วยบริการที่ปฏิบัติงานทุกครั้งที่เข้าระบบ",
+      () => ({ ok: /create table if not exists public\.work_sessions/.test(sqlAll)
+                && /function orgPrompt\(\)/.test(staff)
+                && /startWorkSession/.test(staff),
+               ev: "ตาราง work_sessions + กล่องเลือกหน่วยบริการตอนเข้าระบบ" })],
+    ["X-40", "หน่วยบริการถูกบันทึกติดกับคำขอ ไม่ใช่อ่านสดจากโปรไฟล์",
+      /* ต้องเห็นคำสั่งสร้าง trigger จริง — ชื่อฟังก์ชันโผล่เฉย ๆ ไม่ได้แปลว่ามันทำงาน */
+      () => ({ ok: /requester_org/.test(sqlAll)
+                && /^create trigger trg_stamp_request_org[\s\S]{0,200}stamp_request_org\(\)/m.test(sqlAll)
+                && /requester_org/.test(appAll),
+               ev: "create trigger trg_stamp_request_org + แอปแสดง requester_org" })],
+    ["X-41", "ตรวจสถานะสมาชิกก่อนจึงส่งคำขอความยินยอมได้",
+      /* ต้องเห็นว่าเอาค่า can_request มาปิดปุ่มจริง ไม่ใช่แค่มีคำนี้อยู่ในไฟล์ */
+      () => ({ ok: /function public\.check_membership/.test(sqlAll)
+                && /canAsk\s*=\s*!ms\s*\|\|\s*ms\.can_request/.test(staff)
+                && /data-ask'\+\(canAsk\?''/.test(staff),
+               ev: "check_membership() + canAsk ปิดปุ่มเมื่อยังขอไม่ได้" })],
+    ["X-42", "การตรวจสถานะสมาชิกไม่คืนข้อมูลส่วนบุคคล",
+      () => {
+        const m = sqlAll.match(/function public\.check_membership[\s\S]{0,1600}?\$\$;/);
+        const body = m ? m[0] : "";
+        /* ต้องคืนเฉพาะสถานะ ไม่คืนชื่อ เบอร์ วันเกิด หรือผลตรวจ */
+        const leaks = /jsonb_build_object[\s\S]{0,400}(display_name|'phone'|birth_year|ftsst|tug_seconds)/.test(body);
+        return { ok: !!body && !leaks,
+                 ev: leaks ? "พบข้อมูลส่วนบุคคลในค่าที่คืน" : "คืนเฉพาะ enrolled/consented/channel/can_request" };
+      }],
+    ["X-43", "มีลิงก์เข้าตรงที่เคส ไม่ต้องไล่หาในคิว",
+      () => ({ ok: /function deepLink\(\)/.test(staff) && /ST\.focusRef/.test(staff),
+               ev: "#ref=<id> พาไปที่เคสนั้นและทำเครื่องหมายให้เห็น" })],
+    ["X-44", "ผู้เอาประกันเห็นว่าคำขอมาจากหน่วยบริการใด",
+      () => ({ ok: /หน่วยบริการที่ขอ/.test(appAll),
+               ev: "การ์ดคำขอแสดงหน่วยบริการ ณ เวลาที่ขอ" })],
+  ];
+  for (const [id, name, fn] of hlChecks) {
+    const r = fn();
+    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
+    if (!r.ok) finding("MEDIUM", id, "ขั้นตอนตามมาตรฐานไม่ครบ: " + name,
+      "ขั้นตอนนี้ทำให้ตรวจย้อนได้ว่าใครเปิดดูข้อมูลจากที่ใด และผู้เอาประกันตัดสินใจได้บนข้อมูลที่ครบ",
+      r.ev, "เพิ่มส่วนที่ขาด");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],
