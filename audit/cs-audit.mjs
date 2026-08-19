@@ -992,6 +992,32 @@ function layer7() {
     }
   }
 
+  /* ---- กล้องครึ่งจอ + ยืนยันด้วยเสียง ---- */
+  {
+    const fChecks = [
+      ["X-77", "หน้ายืนยันใบหน้าใช้กล้องครึ่งจอ ปุ่มอยู่ครึ่งล่าง",
+        () => /function camHalf\(/.test(appAll) && /height:46dvh/.test(appAll)
+           && !(function(){ const j = appAll.indexOf("async function startFacePipeline");
+                            return j >= 0 && appAll.slice(j, j+400).includes("camFullscreen") })()],
+      ["X-78", "ย้ายช่องติ๊กยินยอมลงแผงด้วย ไม่ใช่ย้ายเฉพาะปุ่ม",
+        () => appAll.includes('camHalf(["fcChkWrap","fcSave","fcVoiceHint","fcSkip"])')],
+      ["X-79", "ยืนยันด้วยเสียงได้ทั้งหน้าใบหน้าและทุกหัวข้อ",
+        () => /function voiceConfirm\(/.test(appAll)
+           && /voiceConfirm\({[\s\S]{0,400}onRedo:goRedo/.test(appAll)
+           && /id="fcVoiceHint"/.test(appAll)],
+      ["X-80", "เสียงต้องผ่านเงื่อนไขเดียวกับปุ่ม และบอกเหตุผลเมื่อยังทำไม่ได้",
+        () => /enabled:function\(\){ return !!\(cur&&chk\.checked\)/.test(appAll)
+           && /ยังยืนยันไม่ได้/.test(appAll)],
+    ];
+    for (const [id, name, fn] of fChecks) {
+      const ok = fn();
+      req(7, id, name, ok ? "PASS" : "MISSING", ok ? "ตรวจจากซอร์สของแอปสมาชิก" : "ไม่พบกลไก");
+      if (!ok) finding("HIGH", id, "หน้ายืนยันตัวตน/เสียงถดถอย: " + name,
+        "เคยเกิดจริง: กล้องเต็มจอบังช่องติ๊กยินยอม ปุ่มบันทึกจึงค้าง disabled ผู้ใช้กดไม่ได้เลย",
+        "ไม่พบกลไก", "คืนกลไกตามหัวคอมเมนต์ของ camHalf / voiceConfirm");
+    }
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

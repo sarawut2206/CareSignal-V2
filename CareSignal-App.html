@@ -189,6 +189,27 @@ html[data-embedded] .dbchip{top:8px;right:10px}
    กล้องเต็มจอ — ทุกหน้าที่วัดผ่านกล้อง
    วิดีโอเต็มหน้าจอ ไม่มีข้อความด้านบน สถานะและปุ่มทั้งหมดอยู่แถบล่าง
    ============================================================ */
+/* ---------- โหมดกล้องครึ่งจอ ----------
+   ใช้กับหน้ายืนยันใบหน้า ซึ่งต้องอ่านข้อความยินยอมและติ๊กช่องก่อนกด
+   โหมดเต็มจอเดิมย้ายเฉพาะปุ่มลงแถบล่าง แต่ทิ้งช่องติ๊กไว้หลังกล้อง
+   ผู้ใช้จึงติ๊กไม่ได้ และปุ่มบันทึกค้างเป็น disabled ตลอด = "ไม่มีปุ่มให้กด"
+   โหมดนี้แบ่งจอชัดเจน: กล้องอยู่ครึ่งบน ส่วนควบคุมอยู่ครึ่งล่างและเลื่อนได้ */
+body.camhalf{overflow:hidden}
+body.camhalf .stage{position:fixed;top:0;left:0;right:0;height:46dvh;z-index:70;
+  border-radius:0;aspect-ratio:auto;margin:0;box-shadow:none}
+body.camhalf .stage video,body.camhalf .stage canvas{width:100%;height:100%;object-fit:cover}
+body.camhalf .hudtop{top:8px}
+body.camhalf .hudbot{display:none}
+.camhalfpane{position:fixed;left:0;right:0;top:46dvh;bottom:0;z-index:72;overflow-y:auto;
+  background:var(--bg);padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 24px rgba(11,18,32,.18);-webkit-overflow-scrolling:touch}
+.camhalfpane .cta{margin:10px 0 0}
+.camhalfpane .ghostb{margin:8px 0 0}
+.camhalfpane .chk{display:flex;gap:11px;align-items:flex-start;font-size:15px;line-height:1.6;
+  background:var(--surf2);border-radius:14px;padding:13px 15px;margin:0}
+.camhalfpane .chk input{width:26px;height:26px;flex:none;margin-top:1px}
+.vcline{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--brand2);
+  background:#EEF4FF;border:1px solid #CFE0FD;border-radius:12px;padding:10px 13px;margin:10px 0 0}
 body.camfs{overflow:hidden}
 body.camfs .stage{position:fixed;inset:0;z-index:70;border-radius:0;aspect-ratio:auto;margin:0;box-shadow:none;width:100vw;height:100vh;height:100dvh}
 body.camfs .stage video,body.camfs .stage canvas{width:100%;height:100%;object-fit:cover}
@@ -400,7 +421,28 @@ function camFullscreen(){
   }
   document.body.appendChild(dock);
 }
+/* กล้องครึ่งจอ: ย้ายทั้งเวทีกล้องและ "ส่วนควบคุมทั้งหมด" (ไม่ใช่แค่ปุ่ม)
+   ขึ้นเป็นลูกของ body เพื่อไม่ให้ถูกบังหรือถูก transform ของแอนิเมชันกิน */
+function camHalf(controlIds){
+  if(document.getElementById("camhalfpane"))return;
+  var st=document.querySelector(".stage"); if(!st)return;
+  document.body.classList.add("camhalf");
+  st.id="camstage"; document.body.appendChild(st);
+  var pane=document.createElement("div"); pane.className="camhalfpane"; pane.id="camhalfpane";
+  (controlIds||[]).forEach(function(id){
+    var el=document.getElementById(id); if(el)pane.appendChild(el);
+  });
+  var sb=document.getElementById("statusBar"); if(sb)pane.insertBefore(sb,pane.firstChild);
+  document.body.appendChild(pane);
+  return pane;
+}
+function camHalfExit(){
+  var p=document.getElementById("camhalfpane"); if(p)p.remove();
+  var st=document.getElementById("camstage"); if(st)st.remove();
+  document.body.classList.remove("camhalf");
+}
 function camExit(){
+  camHalfExit();
   var d=document.getElementById("camdock"); if(d)d.remove();
   var st=document.getElementById("camstage"); if(st)st.remove();
   document.body.classList.remove("camfs");
@@ -2664,6 +2706,30 @@ async function loadDraft(){
 }
 async function clearDraft(){ try{ await DB.set("assessDraft",null) }catch(e){} }
 
+/* ============================================================
+   ยืนยันด้วยเสียงสำหรับปุ่มบนหน้าจอ
+   ------------------------------------------------------------
+   ใช้กลไกเดียวกับตอนทดสอบท่าทาง: ระบบทวนคำสั่งกลับ แล้วรอคำว่า "ยืนยัน"
+   ต่างกันที่หน้านี้ไม่มีคำสั่งอื่นให้สับสน จึงรับเฉพาะ ยืนยัน / ทำใหม่ / ยกเลิก
+   ปุ่มบนจอยังกดได้ตามปกติเสมอ — เสียงเป็นทางเลือก ไม่ใช่ทางเดียว
+   เหตุผล: ผู้สูงอายุที่ยืนห่างมือถือ (ตอนวัดท่าทาง) เอื้อมมากดไม่ได้
+   ============================================================ */
+function voiceConfirm(opts){
+  /* opts = {prompt, onConfirm, onRedo, onCancel, enabled} */
+  if(!VOICE.on||!VC.supported) return false;
+  var armed=false;
+  vcStart(function(cmd){
+    if(cmd==="confirm"){
+      if(opts.enabled&&!opts.enabled()){ speak("ยังยืนยันไม่ได้ กรุณาทำตามที่หน้าจอบอกก่อน"); return }
+      vcStop(); if(opts.onConfirm)opts.onConfirm();
+    }else if(cmd==="again"&&opts.onRedo){ vcStop(); opts.onRedo() }
+    else if(cmd==="stop"&&opts.onCancel){ vcStop(); opts.onCancel() }
+  });
+  /* พูดคำชวนหลังหน้าจอวาดเสร็จ ไม่ให้ทับเสียงก่อนหน้า */
+  setTimeout(function(){ if(opts.prompt)speak(opts.prompt) },500);
+  return true;
+}
+
 function assessHubV(){
   var p=S.data.profile; if(!p){go("portal");return}
   if(!S.draft||!S.draft.t0) S.draft=S.draft||{}, S.draft.t0=S.draft.t0||Date.now();
@@ -2730,9 +2796,23 @@ function sectionDone(key,opts){
       (left.length?"ยืนยัน · กลับหน้ารวมหัวข้อ":"ยืนยัน · ไปหน้าสรุป")+'</button>'+
     '<button class="ghostb" id="scRedo">ทำหัวข้อนี้ใหม่</button>'+
     '</div>';
-  if(opts.next) document.getElementById("scNext").addEventListener("click",opts.next);
-  document.getElementById("scHub").addEventListener("click",function(){ go("assessHub") });
-  document.getElementById("scRedo").addEventListener("click",function(){ if(sec)sec.go() });
+  var goNext=function(){ vcStop(); if(opts.next)opts.next(); else go("assessHub") };
+  var goHub =function(){ vcStop(); go("assessHub") };
+  var goRedo=function(){ vcStop(); if(sec)sec.go() };
+  if(opts.next) document.getElementById("scNext").addEventListener("click",goNext);
+  document.getElementById("scHub").addEventListener("click",goHub);
+  document.getElementById("scRedo").addEventListener("click",goRedo);
+  /* ยืนยันด้วยเสียงได้ทุกหัวข้อ — พูด "ยืนยัน" เพื่อไปต่อ หรือ "ทำใหม่" เพื่อทำซ้ำ */
+  var vOn=voiceConfirm({
+    prompt:"บันทึก"+(sec?sec.t:"")+"แล้ว "+(opts.value||(sec?sec.sum(S.draft):""))+
+           " ถ้าถูกต้อง พูดว่า ยืนยัน หรือพูดว่า ทำใหม่ เพื่อทำหัวข้อนี้อีกครั้ง",
+    onConfirm:goNext, onRedo:goRedo
+  });
+  if(vOn){
+    var h=document.createElement("div"); h.className="vcline";
+    h.innerHTML='🎤 พูดว่า <b style="margin:0 4px">ยืนยัน</b> เพื่อไปต่อ หรือ <b style="margin:0 4px">ทำใหม่</b> เพื่อทำซ้ำ';
+    V.querySelector(".okcard").insertAdjacentElement("afterend",h);
+  }
 }
 
 function assessIntroV(){
@@ -3492,18 +3572,22 @@ function faceEnrollV(){
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span></div>'+
   '<div class="hudbot"><div class="coach" id="coach">มองตรงมาที่กล้อง ให้เห็นใบหน้าเต็ม</div></div></div></div>'+
   statusHTML()+
-  '<label class="chk" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(S.data.consentFace?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
+  '<div id="fcPane">'+
+  '<label class="chk" id="fcChkWrap" style="margin-bottom:12px"><input type="checkbox" id="fcConsent"'+(S.data.consentFace?" checked":"")+'><span>ข้าพเจ้ายินยอมให้เก็บลายเซ็นเชิงสัดส่วนใบหน้าไว้ในเครื่องนี้ เพื่อยืนยันว่าเป็นข้าพเจ้าเองที่ทำการทดสอบ</span></label>'+
   '<button class="cta" id="fcSave" disabled>บันทึกใบหน้าและไปต่อ</button>'+
+  '<div class="vcline" id="fcVoiceHint" hidden>🎤 หรือพูดว่า <b style="margin:0 4px">ยืนยัน</b> เมื่อพร้อมบันทึก</div>'+
   '<button class="ghostb" id="fcSkip">ไม่ยินยอม · ทำต่อโดยไม่นับสิทธิประโยชน์</button></div>';
   document.getElementById("fcSkip").addEventListener("click",async function(){
-    stopCam(); S.draft.identityVerified=false;
+    vcStop(); stopCam(); S.draft.identityVerified=false;
     audit("ไม่ยินยอมยืนยันใบหน้า","ผู้ใช้เลือกทำการทดสอบโดยไม่ยืนยันตัวตน ผลครั้งนี้ไม่นับเป็นสิทธิประโยชน์");
     go("calib");
   });
   startFacePipeline();
 }
 async function startFacePipeline(){
-  camFullscreen();
+  /* ครึ่งจอ ไม่ใช่เต็มจอ — ย้ายช่องติ๊ก ปุ่ม และคำใบ้เสียงลงแผงล่างทั้งหมด
+     เดิมย้ายเฉพาะปุ่ม ช่องติ๊กจึงอยู่หลังกล้องและกดไม่ได้ */
+  camHalf(["fcChkWrap","fcSave","fcVoiceHint","fcSkip"]);
   var video=document.getElementById("vid"), canvas=document.getElementById("cv"), ctx=canvas.getContext("2d");
   var tag=document.getElementById("tag"), coach=document.getElementById("coach"),
       save=document.getElementById("fcSave"), chk=document.getElementById("fcConsent");
@@ -3552,7 +3636,15 @@ async function startFacePipeline(){
     onFire:function(){doSaveFaceApp()}});
   loop();
   chk.addEventListener("change",function(){save.disabled=!(cur&&chk.checked);if(!this.checked)AUTOF.abort()});
-  save.addEventListener("click",function(){AUTOF.abort();doSaveFaceApp()});
+  save.addEventListener("click",function(){AUTOF.abort();vcStop();doSaveFaceApp()});
+  /* ยืนยันด้วยเสียง — ใช้ได้ต่อเมื่อกล้องเห็นหน้าและติ๊กยินยอมแล้วเท่านั้น
+     ถ้ายังไม่ครบ ระบบบอกเหตุผล ไม่ปล่อยผ่านเงียบ ๆ */
+  var vhint=document.getElementById("fcVoiceHint");
+  if(voiceConfirm({
+      prompt:"เมื่อพร้อมบันทึกใบหน้า ให้ติ๊กช่องยินยอม แล้วพูดว่า ยืนยัน",
+      enabled:function(){ return !!(cur&&chk.checked) },
+      onConfirm:function(){ AUTOF.abort(); doSaveFaceApp() }
+    }) && vhint) vhint.hidden=false;
   async function doSaveFaceApp(){
     if(!cur||!chk.checked)return;
     S.data.consentFace={at:todayISO(), version:"PDPA-BIO-1.0"};
