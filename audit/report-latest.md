@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 12:30 |
+| วันที่ตรวจ | 2026-08-19 13:07 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 123 |
+| PASS | 128 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -33,12 +33,12 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:878 · CareSignal-Vision.html:1154 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1041 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2699 · CareSignal-Vision.html:3394 · CareSignal-App.html:2916 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1017 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3096 · CareSignal-Vision.html:3268 · CareSignal-App.html:2098 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1310 · CareSignal-Vision.html:719 · CareSignal-App.html:1105 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:897 · CareSignal-Vision.html:1154 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1060 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2884 · CareSignal-Vision.html:3394 · CareSignal-App.html:3101 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1036 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3283 · CareSignal-Vision.html:3268 · CareSignal-App.html:2117 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1329 · CareSignal-Vision.html:719 · CareSignal-App.html:1124 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:437 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
@@ -188,6 +188,11 @@
 | X-69 | ตัวกรองเสียงสะท้อนต้องหมดอายุเองเสมอ (ห้าม Infinity) | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
 | X-70 | speak() ต้องกันพูดประโยคเดิมซ้ำ | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
 | X-71 | OCR อ่านหลายรอบ และไม่โทษรูปเมื่อยาไม่อยู่ในฐาน | PASS | ครบทั้งแอปสมาชิกและหน้าทดลอง |
+| X-72 | การประเมินแยกเป็นหัวข้อ มีหน้ารวมให้เลือกทำ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
+| X-73 | ทุกหัวข้อจบด้วยการ์ดยืนยันก่อนไปต่อ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
+| X-74 | ร่างการประเมินถูกบันทึกลงเครื่องทุกครั้งที่ยืนยัน | PASS | ตรวจจากซอร์สของแอปสมาชิก |
+| X-75 | กู้ร่างที่ค้างได้ และร่างหมดอายุเอง | PASS | ตรวจจากซอร์สของแอปสมาชิก |
+| X-76 | เขียนฐานข้อมูลครั้งเดียวตอนจบ ไม่เขียนผลค้างครึ่ง ๆ กลาง ๆ | PASS | ตรวจจากซอร์สของแอปสมาชิก |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

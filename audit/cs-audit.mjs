@@ -966,6 +966,32 @@ function layer7() {
     }
   }
 
+  /* ---- แยกหัวข้อ · ยืนยันทีละขั้น · กันข้อมูลหาย ---- */
+  {
+    const hChecks = [
+      ["X-72", "การประเมินแยกเป็นหัวข้อ มีหน้ารวมให้เลือกทำ",
+        () => /var ASSESS_SECTIONS=/.test(appAll) && /function assessHubV\(/.test(appAll)
+           && /assessHub:assessHubV/.test(appAll)],
+      ["X-73", "ทุกหัวข้อจบด้วยการ์ดยืนยันก่อนไปต่อ",
+        () => /function sectionDone\(/.test(appAll) && /ยืนยัน · กลับหน้ารวมหัวข้อ/.test(appAll)],
+      ["X-74", "ร่างการประเมินถูกบันทึกลงเครื่องทุกครั้งที่ยืนยัน",
+        () => new RegExp("^  saveDraft\\(\\);$", "m").test(appAll)
+           && /async function saveDraft\(/.test(appAll)],
+      ["X-75", "กู้ร่างที่ค้างได้ และร่างหมดอายุเอง",
+        () => /มีการตรวจที่ค้างอยู่/.test(appAll) && /Date\.now\(\)-v\.at>864e5/.test(appAll)],
+      ["X-76", "เขียนฐานข้อมูลครั้งเดียวตอนจบ ไม่เขียนผลค้างครึ่ง ๆ กลาง ๆ",
+        () => !/function sectionDone\([\s\S]{0,600}CSBackend\.saveAssessment/.test(appAll)
+           && new RegExp("clearDraft\\(\\);[\\s\\S]{0,40}go\\(\"assessResult").test(appAll)],
+    ];
+    for (const [id, name, fn] of hChecks) {
+      const ok = fn();
+      req(7, id, name, ok ? "PASS" : "MISSING", ok ? "ตรวจจากซอร์สของแอปสมาชิก" : "ไม่พบกลไก");
+      if (!ok) finding("HIGH", id, "การประเมินทีละขั้นถดถอย: " + name,
+        "ถ้าไม่บันทึกร่าง ผู้ใช้ที่ถูกขัดจังหวะกลางทางจะเสียข้อมูลทั้งชุดและต้องทำใหม่ 8 นาที",
+        "ไม่พบกลไก", "คืนกลไกตามหัวคอมเมนต์ของ assessHubV / sectionDone");
+    }
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],
