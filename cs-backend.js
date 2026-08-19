@@ -363,6 +363,65 @@ var CSBackend = (function () {
     return r.data;
   }
 
+  /* ============================================================
+     ความยินยอมรายครั้ง — รับแนวจากระบบ Health Link
+     ------------------------------------------------------------
+     ผู้เชี่ยวชาญภายนอกเห็นรายการส่งต่อได้ (ชื่อแฝง งานที่ต้องทำ ระดับ)
+     แต่จะเปิดดูรายการยาและผลประเมินย้อนหลังได้ต่อเมื่อผู้เอาประกัน
+     กดอนุญาตในแอปของตน และสิทธิ์นั้นหมดอายุเอง
+     บังคับด้วย RLS ที่ฐานข้อมูล ไม่ใช่การซ่อนที่หน้าจอ
+     ============================================================ */
+  async function requestAccess(memberId, referralId, scope, reason) {
+    if (!isCloud()) throw new Error("offline");
+    var u = await currentUser(); if (!u) throw new Error("no session");
+    var r = await sb.from("access_requests").insert({
+      member_id: memberId, requester_id: u.id, referral_id: referralId || null,
+      scope: scope || "clinical", reason: reason || null
+    }).select().single();
+    if (r.error) throw r.error;
+    return r.data;
+  }
+  /* ตรวจสถานะคำขอล่าสุด — ปุ่ม "ตรวจสอบความยินยอม" ของฝั่งผู้เชี่ยวชาญ */
+  async function checkAccess(memberId) {
+    if (!isCloud()) return null;
+    try { await sb.rpc("expire_access_requests"); } catch (e) {}
+    var u = await currentUser(); if (!u) return null;
+    var r = await sb.from("access_requests").select("*")
+      .eq("member_id", memberId).eq("requester_id", u.id)
+      .order("requested_at", { ascending: false }).limit(1);
+    if (r.error || !r.data || !r.data.length) return null;
+    var a = r.data[0];
+    a.live = a.status === "granted" && new Date(a.access_until) > new Date();
+    return a;
+  }
+  /* ฝั่งผู้เอาประกัน: คำขอที่รอการตัดสินของฉัน */
+  async function myAccessRequests() {
+    if (!isCloud()) return [];
+    try { await sb.rpc("expire_access_requests"); } catch (e) {}
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("access_requests")
+      .select("*, profiles!access_requests_requester_id_fkey(display_name, role, license_no, license_body, org_name)")
+      .eq("member_id", u.id).eq("status", "pending")
+      .order("requested_at", { ascending: false });
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function decideAccess(id, approve, hours) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("decide_access", { rid: id, approve: !!approve, hours: hours || 8 });
+    if (r.error) throw r.error;
+    return true;
+  }
+  /* ประวัติการเปิดดู — ผู้เอาประกันตรวจย้อนได้ว่าใครขอและได้ดูหรือไม่ */
+  async function myAccessLog(limit) {
+    if (!isCloud()) return [];
+    var u = await currentUser(); if (!u) return [];
+    var r = await sb.from("access_requests")
+      .select("*, profiles!access_requests_requester_id_fkey(display_name, role, org_name)")
+      .eq("member_id", u.id).order("requested_at", { ascending: false }).limit(limit || 20);
+    return r.data || [];
+  }
+
   async function cmWorklist() {
     if (!isCloud()) return [];
     var r = await sb.from("cm_worklist").select("*").order("priority", { ascending: true }).limit(200);
@@ -1022,6 +1081,8 @@ var CSBackend = (function () {
     updateReferral: updateReferral,
     cmWorklist: cmWorklist, logContact: logContact, caseDetail: caseDetail,
     myWork: myWork, claimReferral: claimReferral, myReferrals: myReferrals,
+    requestAccess: requestAccess, checkAccess: checkAccess,
+    myAccessRequests: myAccessRequests, decideAccess: decideAccess, myAccessLog: myAccessLog,
     listStaff: listStaff, setRole: setRole,
     createReferralFor: createReferralFor,
     insurerFunnel: insurerFunnel, insurerStrata: insurerStrata, insurerSignals: insurerSignals,

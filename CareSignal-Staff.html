@@ -104,6 +104,15 @@ h3{font-size:15.5px;margin:0 0 10px;color:#fff}
 .work[data-late="1"]{border-color:rgba(240,82,76,.55);background:rgba(240,82,76,.10)}
 .work .claim{border:0;border-radius:10px;background:var(--gold);color:var(--goldink);
   font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;margin-top:7px}
+.consent{border:1.5px solid var(--gold);background:rgba(245,185,62,.10);border-radius:13px;
+  padding:13px 15px;margin:10px 0;font-size:13.5px}
+.consent b{color:var(--gold);display:block;margin-bottom:4px}
+.consent .btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.consent button{border:0;border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;
+  font-weight:700;cursor:pointer;background:var(--gold);color:var(--goldink)}
+.consent button.wait{background:rgba(255,255,255,.14);color:var(--ink)}
+.consent .cd{font-family:var(--mono);font-size:12.5px;color:var(--ink2);margin-top:6px}
+.locked{filter:blur(4px);pointer-events:none;user-select:none}
 .newtag{display:inline-block;font-size:10.5px;font-weight:700;background:var(--gold);
   color:var(--goldink);padding:1px 7px;border-radius:99px;margin-left:6px}
 .warnbox{background:rgba(240,82,76,.16);border:1px solid rgba(240,82,76,.5);border-radius:13px;padding:13px 15px;font-size:13.5px;color:#FFD9D7;margin-bottom:14px}
@@ -220,7 +229,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=214"></script>
+<script src="./cs-backend.js?v=215"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 /* ============================================================
@@ -268,16 +277,41 @@ function mfaPrompt(){
 }
 
 /* ---------- เข้าสู่ระบบ ---------- */
+/* หมวดผู้ให้บริการ — เลือกก่อนกรอกรหัส ตามแนว Health Link
+   ช่วยให้ผู้ใช้รู้ตั้งแต่ต้นว่ากำลังเข้าในฐานะอะไร และเห็นว่าจะเข้าถึงอะไรได้
+   หมายเหตุ: หมวดที่เลือกเป็นเพียงการนำทางบนหน้าจอ — บทบาทจริงอ่านจากฐานข้อมูล
+   หลังเข้าสู่ระบบ เลือกผิดก็ไม่ได้สิทธิ์เพิ่ม */
+var LOGIN_CATS=[
+  {k:"care_manager",nm:"Care Manager / ผู้ประสานงาน",d:"รับสัญญาณเสี่ยง ติดตาม ส่งต่อ ปิดเคส"},
+  {k:"pharmacist",  nm:"เภสัชกร",                    d:"ทบทวนรายการยาที่ส่งมาถึงท่าน"},
+  {k:"nurse",       nm:"พยาบาล",                     d:"ยืนยันผลและให้คำแนะนำตามที่ส่งต่อ"},
+  {k:"physio",      nm:"นักกายภาพบำบัด",              d:"ประเมินการเดินและการทรงตัว"},
+  {k:"doctor",      nm:"แพทย์",                       d:"พิจารณาเคสที่ส่งต่อมา"},
+  {k:"insurer",     nm:"เจ้าหน้าที่บริษัทประกัน",       d:"ภาพรวมระดับกลุ่มเท่านั้น"},
+  {k:"admin",       nm:"ผู้ดูแลระบบ",                  d:"จัดการผู้ใช้และสิทธิ์"}
+];
 function loginV(){
-  ST.screen="login"; TABS.hidden=true;
-  head("เข้าสู่ระบบเจ้าหน้าที่","เฉพาะบัญชีที่ผู้ดูแลระบบกำหนดบทบาทแล้วเท่านั้น");
+  ST.screen="login"; TABS.hidden=true; if(typeof SIDE!=="undefined"&&SIDE) SIDE.hidden=true;
+  head("เข้าสู่ระบบ","เลือกหมวดผู้ให้บริการของท่าน แล้วเข้าสู่ระบบด้วยบัญชีที่ได้รับสิทธิ์");
   V.innerHTML='<div class="card">'+
+    '<div class="field"><label>หมวดผู้ให้บริการ</label>'+
+      '<select id="lCat" style="width:100%;font-family:inherit;font-size:16px;padding:13px;'+
+      'border:1.5px solid var(--line);border-radius:13px;background:rgba(0,14,50,.35);color:#fff">'+
+      '<option value="">— เลือกหมวด —</option>'+
+      LOGIN_CATS.map(function(c){return '<option value="'+c.k+'">'+esc(c.nm)+'</option>'}).join("")+
+      '</select><p class="sub" id="lCatD" style="margin:6px 0 0;font-size:12.5px"></p></div>'+
     '<div class="field"><label>อีเมลเจ้าหน้าที่</label><input id="lEm" type="email" autocomplete="username" placeholder="name@company.com"></div>'+
     '<div class="field"><label>รหัสผ่าน</label><input id="lPw" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
     '<button class="cta" id="lGo">เข้าสู่ระบบ</button></div>'+
     '<div class="notice"><b>สำหรับเจ้าหน้าที่เท่านั้น</b> — ผู้เอาประกันและครอบครัวใช้แอป CareSignal (แอปสมาชิก) ไม่ใช่แอปนี้ · บัญชีใหม่ต้องให้ผู้ดูแลระบบกำหนดบทบาทก่อนจึงเข้าได้ (ฐานข้อมูลบล็อกการเลื่อนบทบาทด้วยตนเอง)</div>'+
     '<div class="card"><h3>ความปลอดภัย</h3>'+
     '<p class="sub" style="margin:0">สิทธิ์ข้อมูลบังคับด้วย Row Level Security บนฐานข้อมูล · ทุกการเปิดดูและการตัดสินเคสถูกบันทึกลง audit log ที่แก้ไขไม่ได้ · รองรับ MFA (ตั้งค่าจากแดชบอร์ดบนเว็บ)</p></div>';
+  var cat=document.getElementById("lCat"), catD=document.getElementById("lCatD");
+  cat.addEventListener("change",function(){
+    var c=LOGIN_CATS.filter(function(x){return x.k===cat.value})[0];
+    catD.textContent=c?("หมวดนี้เห็น: "+c.d):"";
+    ST.pickedCat=cat.value||null;
+  });
   document.getElementById("lGo").addEventListener("click",doLogin);
   document.getElementById("lPw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin()});
 }
@@ -313,7 +347,13 @@ async function doLogin(){
     }
     ST.role=pr.role; ST.email=em; ST.name=pr.display_name||em;
     chip(); TABS.hidden=false;
-    toast("เข้าสู่ระบบแล้ว · "+(ROLE_NM[ST.role]||ST.role)+(vf.length?" · ผ่าน MFA":""));
+    /* หมวดที่เลือกเป็นการนำทาง — ถ้าไม่ตรงกับบทบาทจริงในฐานข้อมูล ให้บอกตรง ๆ
+       ไม่ใช่ปล่อยให้ผู้ใช้งงว่าทำไมเมนูไม่เหมือนที่คาด */
+    if(ST.pickedCat&&ST.pickedCat!==ST.role){
+      toast("บัญชีนี้มีบทบาทจริงเป็น "+(ROLE_NM[ST.role]||ST.role)+" — ระบบใช้บทบาทจากฐานข้อมูล");
+    }else{
+      toast("เข้าสู่ระบบแล้ว · "+(ROLE_NM[ST.role]||ST.role)+(vf.length?" · ผ่าน MFA":""));
+    }
     go(ST.role==="insurer"?"port":"mine");
   }catch(e){
     toast("เข้าสู่ระบบไม่สำเร็จ: "+(e.message||""));
@@ -824,6 +864,7 @@ async function medsV(){
       '<span class="who">'+esc(pr.pseudonym||"—")+' · '+esc(pr.display_name||"")+'</span>'+
       '<span style="margin-left:auto;font-size:11.5px;color:var(--ink3)">'+thDate(r.requested_at)+'</span></div>'+
       '<div class="rowline"><span class="k">เหตุผล</span><span class="v" style="font-family:inherit;font-weight:500;text-align:right">'+esc(r.reason||"—")+'</span></div>'+
+      '<div class="cbox" data-uid="'+r.user_id+'"></div>'+
       '<div class="medlist" data-uid="'+r.user_id+'" data-rv="'+r.id+'"><div class="empty" style="padding:10px">กำลังโหลดรายการยา…</div></div>'+
       '<div class="field" style="margin-top:8px"><label>ข้อสรุปของเภสัชกร</label><textarea data-out="'+r.id+'" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:rgba(0,14,50,.35);color:#fff" placeholder="เช่น พบ diazepam ร่วมกับ amitriptyline — แนะนำให้แพทย์พิจารณาทบทวน"></textarea></div>'+
       '<div class="btnrow" style="flex-wrap:wrap">'+Object.keys(REC_NM).map(function(k){
@@ -831,9 +872,20 @@ async function medsV(){
   });
   V.innerHTML=html;
   /* โหลดรายการยาแต่ละคน */
-  V.querySelectorAll(".medlist").forEach(async function(box){
+  /* กล่องขอความยินยอม — ต้องผ่านก่อนจึงเห็นรายการยา
+     ถ้ายังไม่ได้รับอนุญาต ฐานข้อมูลคืนศูนย์แถวอยู่แล้ว กล่องนี้อธิบายว่าเพราะอะไร */
+  V.querySelectorAll(".cbox").forEach(function(cb){
+    var uid=cb.dataset.uid;
+    consentBox(cb, uid, null, function(){
+      var ml=V.querySelector('.medlist[data-uid="'+uid+'"]'); if(ml) loadMeds(ml);
+    });
+  });
+  V.querySelectorAll(".medlist").forEach(loadMeds);
+  async function loadMeds(box){
     var meds=[]; try{meds=await CSBackend.medsOf(box.dataset.uid)}catch(e){}
-    if(!meds.length){box.innerHTML='<div class="empty" style="padding:10px">ไม่พบรายการยาที่ยังใช้อยู่</div>';return}
+    if(!meds.length){box.innerHTML='<div class="empty" style="padding:10px">'+
+      (isClinician()?"ยังเปิดดูรายการยาไม่ได้ — รอความยินยอมจากผู้เอาประกัน":"ไม่พบรายการยาที่ยังใช้อยู่")+
+      '</div>';return}
     var rows=await Promise.all(meds.map(async function(x){
       var lv=x.frid_level, col=lv===2?"var(--c1)":lv===1?"var(--c2)":lv===0?"var(--c4)":"var(--ink3)";
       var g=CSMeds.FRID[x.frid_group]; var gn=g?g.nm:(x.frid_group==="unknown"||!x.frid_group?"ยังไม่จัดกลุ่ม":x.frid_group);
@@ -867,7 +919,7 @@ async function medsV(){
       try{await CSBackend.pharmacistFix(b.dataset.stop,{active:false,review_note:"เภสัชกรระบุว่าเลิกใช้แล้ว"});toast("บันทึกว่าเลิกใช้แล้ว");medsV()}
       catch(e){toast("ไม่สำเร็จ");b.disabled=false}
     })});
-  });
+  }
   V.querySelectorAll("[data-close]").forEach(function(b){b.addEventListener("click",async function(){
     var id=b.dataset.close, rec=b.dataset.rec, out=(V.querySelector('[data-out="'+id+'"]')||{}).value||"";
     if(rec!=="no_action"&&!out.trim()){toast("กรุณาเขียนข้อสรุปก่อนปิด");return}
@@ -935,6 +987,74 @@ function dayTxt(d){
    หน้านี้ดึงจาก view my_work ซึ่งกรองด้วย auth.uid() ที่ฐานข้อมูล
    ไม่ได้กรองที่หน้าจอ — เปลี่ยนโค้ดหน้าเว็บก็ไม่ทำให้เห็นงานคนอื่น
    ============================================================ */
+
+/* ============================================================
+   ขอความยินยอมรายครั้ง — ตามแนวระบบ Health Link
+   ------------------------------------------------------------
+   สามสถานะเหมือนกัน: ขอความยินยอม → รอผู้เอาประกัน → ตรวจสอบความยินยอม
+   ผู้เอาประกันมีเวลา 5 นาทีในการกดอนุญาตจากแอปของตน
+   ถ้าไม่ทันต้องกดขอใหม่ · เมื่ออนุญาตแล้วสิทธิ์หมดอายุเองใน 8 ชั่วโมง
+   สิทธิ์จริงบังคับที่ฐานข้อมูล การซ่อนบนหน้าจอเป็นเพียงการบอกผู้ใช้
+   ============================================================ */
+function mmss(ms){
+  if(ms<0) ms=0;
+  var t=Math.round(ms/1000);
+  return Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+}
+/* วาดกล่องความยินยอมตามสถานะปัจจุบัน แล้วผูกปุ่ม */
+async function consentBox(host, memberId, referralId, onGranted){
+  if(!isClinician()){ host.innerHTML=""; return true }   /* ผู้ประสานงานไม่ต้องขอ */
+  var a=null; try{ a=await CSBackend.checkAccess(memberId) }catch(e){}
+
+  if(a&&a.live){
+    var left=new Date(a.access_until)-Date.now();
+    host.innerHTML='<div class="consent"><b>✓ ผู้เอาประกันอนุญาตให้เปิดดูข้อมูลแล้ว</b>'+
+      'สิทธิ์นี้หมดอายุเองใน '+Math.round(left/36e5)+' ชั่วโมง — เมื่อหมดอายุต้องขอใหม่'+
+      '<div class="cd">อนุญาตเมื่อ '+thDate(a.decided_at)+'</div></div>';
+    return true;
+  }
+
+  if(a&&a.status==="pending"&&new Date(a.expires_at)>Date.now()){
+    host.innerHTML='<div class="consent"><b>⏳ รอผู้เอาประกันยืนยัน</b>'+
+      'ระบบส่งคำขอไปที่แอปของผู้เอาประกันแล้ว — ท่านมีเวลาให้ผู้เอาประกันกดอนุญาต '+
+      '<span data-cd></span> หากไม่ทันให้กดขอใหม่'+
+      '<div class="btns"><button class="wait" data-check>ตรวจสอบความยินยอม</button></div></div>';
+    var cd=host.querySelector("[data-cd]"), exp=new Date(a.expires_at);
+    var t=setInterval(function(){
+      var l=exp-Date.now();
+      if(l<=0){ clearInterval(t); consentBox(host,memberId,referralId,onGranted); return }
+      cd.textContent="เหลือ "+mmss(l);
+    },1000);
+    cd.textContent="เหลือ "+mmss(exp-Date.now());
+    host.querySelector("[data-check]").addEventListener("click",async function(){
+      clearInterval(t);
+      var b=this; b.disabled=true; b.textContent="กำลังตรวจสอบ…";
+      var n=await CSBackend.checkAccess(memberId);
+      await consentBox(host,memberId,referralId,onGranted);
+      if(n&&n.live&&onGranted) onGranted();
+      else if(!n||!n.live) toast("ผู้เอาประกันยังไม่ได้กดอนุญาต");
+    });
+    return false;
+  }
+
+  var why = a&&a.status==="denied" ? "ผู้เอาประกันไม่อนุญาตในครั้งก่อน — ขอใหม่ได้"
+          : a&&a.status==="expired" ? "คำขอครั้งก่อนหมดเวลา — กดขอใหม่"
+          : "ต้องได้รับอนุญาตจากผู้เอาประกันก่อนจึงเปิดดูรายการยาและผลประเมินย้อนหลังได้";
+  host.innerHTML='<div class="consent"><b>🔒 ยังไม่ได้รับความยินยอม</b>'+esc(why)+
+    '<div class="btns"><button data-ask>ขอความยินยอม</button></div>'+
+    '<div class="cd">รายการส่งต่อและงานที่ต้องทำยังดูได้ตามปกติ — ที่ต้องขอคือข้อมูลคลินิกรายบุคคล</div></div>';
+  host.querySelector("[data-ask]").addEventListener("click",async function(){
+    var b=this; b.disabled=true; b.textContent="กำลังส่งคำขอ…";
+    try{
+      await CSBackend.requestAccess(memberId, referralId, "medications",
+        "ทบทวนข้อมูลเพื่อดำเนินการตามที่ได้รับส่งต่อ");
+      toast("ส่งคำขอแล้ว — รอผู้เอาประกันกดอนุญาตในแอป");
+      await consentBox(host,memberId,referralId,onGranted);
+    }catch(e){ toast("ส่งคำขอไม่สำเร็จ: "+(e.message||e)); b.disabled=false; b.textContent="ขอความยินยอม" }
+  });
+  return false;
+}
+
 async function mineV(){
   var rn=ROLE_NM[ST.role]||ST.role;
   head("งานของฉัน", isClinician()
@@ -1346,6 +1466,26 @@ async function navCounts(){
     if(el&&n[k]>0){ el.textContent=n[k]; el.hidden=false }
   });
 }
+
+/* ============================================================
+   ออกจากระบบอัตโนมัติ — คอนโซลนี้เปิดข้อมูลสุขภาพรายบุคคล
+   ถ้าเดินออกจากโต๊ะแล้วลืมออกจากระบบ คนอื่นจะเปิดดูต่อได้
+   ============================================================ */
+var IDLE_MIN=20, idleT=null;
+function resetIdle(){
+  if(!ST.role) return;
+  clearTimeout(idleT);
+  idleT=setTimeout(async function(){
+    try{ await CSBackend.signOut() }catch(e){}
+    ST.role=null; ST.email=null; chip(); TABS.hidden=true; if(SIDE) SIDE.hidden=true;
+    loginV();
+    V.insertAdjacentHTML("afterbegin",
+      '<div class="warnbox">ออกจากระบบอัตโนมัติ เนื่องจากไม่มีการใช้งานเกิน '+IDLE_MIN+' นาที</div>');
+  }, IDLE_MIN*60000);
+}
+["click","keydown","touchstart","scroll"].forEach(function(ev){
+  window.addEventListener(ev, resetIdle, {passive:true});
+});
 
 /* ---------- บูต ---------- */
 (async function(){

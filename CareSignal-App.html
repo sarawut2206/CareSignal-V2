@@ -220,6 +220,24 @@ body.camfs .hudtop{display:none}
    พร้อมจุดที่ตัวเองอยู่ ช่วยให้รู้ว่าเหลืออีกกี่ขั้นและขั้นถัดไปคืออะไร
    ใช้ทั้งไอคอน ตัวหนังสือ และสี ไม่พึ่งสีอย่างเดียว
    เพราะผู้สูงอายุจำนวนมากแยกสีเขียว-เหลืองได้ยาก */
+/* ---------- คำขอเปิดดูข้อมูล ----------
+   ผู้สูงอายุต้องอ่านออกทันทีว่าใครขอ ขออะไร และกดอะไรได้บ้าง
+   ปุ่มใหญ่ ตัวหนังสือใหญ่ และบอกเวลาที่เหลือชัด ๆ */
+.areq{border:2px solid var(--brand);background:#EEF4FF;border-radius:16px;
+  padding:16px 18px;margin:0 0 14px}
+.areq h3{margin:0 0 6px;font-size:17px;color:var(--brand2)}
+.areq .who{font-size:15.5px;font-weight:600;margin-bottom:2px}
+.areq .meta{font-size:13.5px;color:var(--ink2);line-height:1.6}
+.areq .cd{font-family:var(--mono);font-size:14px;color:var(--c2);font-weight:700;margin-top:8px}
+.areq .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.areq .btns button{border:0;border-radius:14px;padding:15px;font-family:inherit;
+  font-size:16.5px;font-weight:700;cursor:pointer;min-height:56px}
+.areq .yes{background:var(--brand);color:#fff}
+.areq .no{background:var(--surf2);color:var(--ink);border:1.5px solid var(--line)}
+.alog{font-size:13.5px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.alog:last-child{border-bottom:0}
+.alog b{display:block}
+.alog span{color:var(--ink2)}
 .prog{height:8px;background:rgba(255,255,255,.28);border-radius:99px;overflow:hidden;margin:12px 0 2px}
 .prog i{display:block;height:100%;background:#FCD34D;border-radius:99px;transition:width .3s}
 .journey{display:flex;gap:6px;margin:0 0 14px}
@@ -268,7 +286,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=214"></script>
+<script src="./cs-backend.js?v=215"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
@@ -2128,6 +2146,67 @@ function journeyHTML(){
     (j.next?'<div class="jnext"><b>ขั้นตอนถัดไป: '+esc(j.next.t)+'</b>'+esc(j.next.d)+
       '<button class="cta" data-go="'+j.next.go+'" style="margin-top:10px">'+esc(j.next.btn)+'</button></div>':'');
 }
+/* ============================================================
+   คำขอเปิดดูข้อมูลจากผู้เชี่ยวชาญ — รับแนวจากระบบ Health Link
+   ------------------------------------------------------------
+   ผู้เชี่ยวชาญที่ได้รับส่งต่อกดขอ → ขึ้นที่นี่ → ท่านกดอนุญาตหรือไม่อนุญาต
+   มีเวลา 5 นาที ถ้าไม่ทันคำขอหมดอายุเอง ผู้เชี่ยวชาญต้องขอใหม่
+   เมื่ออนุญาตแล้วสิทธิ์หมดอายุเองใน 8 ชั่วโมง ไม่ใช่ให้ตลอดไป
+   ============================================================ */
+var ROLE_TH={pharmacist:"เภสัชกร",physio:"นักกายภาพบำบัด",doctor:"แพทย์",
+             nurse:"พยาบาล",care_manager:"ทีมดูแล",admin:"ผู้ดูแลระบบ"};
+var SCOPE_TH={medications:"รายการยาที่ท่านใช้อยู่",clinical:"ผลประเมินและข้อมูลคลินิกของท่าน"};
+
+function areqHTML(a){
+  var pr=a.profiles||{};
+  var left=new Date(a.expires_at)-Date.now();
+  return '<div class="areq" data-areq="'+esc(a.id)+'">'+
+    '<h3>มีผู้เชี่ยวชาญขอเปิดดูข้อมูลของท่าน</h3>'+
+    '<div class="who">'+esc(pr.display_name||"ผู้เชี่ยวชาญ")+' · '+esc(ROLE_TH[pr.role]||pr.role||"")+'</div>'+
+    '<div class="meta">'+
+      (pr.org_name?'หน่วยงาน: '+esc(pr.org_name)+'<br>':'')+
+      (pr.license_no?'เลขใบประกอบวิชาชีพ: '+esc(pr.license_no)+'<br>':'')+
+      'ขอดู: <b>'+esc(SCOPE_TH[a.scope]||a.scope)+'</b><br>'+
+      (a.reason?'เหตุผล: '+esc(a.reason):'')+
+    '</div>'+
+    '<div class="cd" data-cd></div>'+
+    '<div class="btns">'+
+      '<button class="no"  data-deny="'+esc(a.id)+'">ไม่อนุญาต</button>'+
+      '<button class="yes" data-allow="'+esc(a.id)+'">อนุญาต 8 ชั่วโมง</button>'+
+    '</div>'+
+    '<p class="small" style="margin:10px 0 0">ท่านปฏิเสธได้ และการปฏิเสธไม่กระทบสิทธิ์ตามกรมธรรม์ · '+
+    'เมื่ออนุญาตแล้วสิทธิ์จะหมดอายุเองอัตโนมัติ</p></div>';
+}
+/* แสดงคำขอที่ค้างอยู่บนหน้าแรก และเดินนาฬิกาถอยหลัง */
+async function renderAccessReqs(host){
+  if(!host) return;
+  var list=[]; try{ list=await CSBackend.myAccessRequests() }catch(e){}
+  if(!list.length){ host.innerHTML=""; return }
+  host.innerHTML=list.map(areqHTML).join("");
+  host.querySelectorAll("[data-areq]").forEach(function(box){
+    var a=list.filter(function(x){return x.id===box.dataset.areq})[0];
+    var cd=box.querySelector("[data-cd]"), exp=new Date(a.expires_at);
+    var t=setInterval(function(){
+      var l=exp-Date.now();
+      if(l<=0){ clearInterval(t); renderAccessReqs(host); return }
+      var sec=Math.round(l/1000);
+      cd.textContent="เหลือเวลาตอบ "+Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")+" นาที";
+    },1000);
+    function decide(ok){
+      return async function(){
+        clearInterval(t);
+        box.querySelectorAll("button").forEach(function(b){b.disabled=true});
+        try{
+          await CSBackend.decideAccess(box.dataset.areq, ok, 8);
+          toast(ok?"อนุญาตแล้ว":"ไม่อนุญาตแล้ว");
+        }catch(e){ toast(e.message||"ไม่สำเร็จ") }
+        renderAccessReqs(host);
+      };
+    }
+    box.querySelector("[data-allow]").addEventListener("click",decide(true));
+    box.querySelector("[data-deny]").addEventListener("click",decide(false));
+  });
+}
 function homeV(){
   var p=S.data.profile;
   /* กันจอขาว: เข้าหน้านี้ได้โดยยังไม่มีโปรไฟล์ ถ้า session ค้างหรือกลับมาจากลิงก์เก่า */
@@ -2184,10 +2263,13 @@ function homeV(){
     '<button class="ghostb" data-go="me" style="font-size:17px;min-height:56px">⚙️ ตั้งค่าและความเป็นส่วนตัว</button>'+
     '<button class="ghostb" data-go="ai" style="font-size:17px;min-height:56px">🔍 ระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>';
   /* แถบเส้นทาง STEADI วางไว้ใต้ผลตรวจ เพื่อตอบว่า "ตรวจแล้วยังไงต่อ" */
-  V.innerHTML='<div class="anim">'+hero+journeyHTML()+fontBarHTML()+mainBtn+warnPart+polPart+
+  /* คำขอเปิดดูข้อมูลต้องขึ้นก่อนทุกอย่าง — มีเวลาตอบจำกัด */
+  V.innerHTML='<div class="anim"><div id="areqHost"></div>'+hero+journeyHTML()+fontBarHTML()+mainBtn+warnPart+polPart+
   (A.length>1?'<button class="ghostb" data-go="history" style="font-size:17px;min-height:56px">📈 ดูกราฟแนวโน้มย้อนหลัง ('+A.length+' ครั้ง)</button>':'')+
   morePart+
   '</div>';
+  /* โหลดคำขอเปิดดูข้อมูลหลังวาดหน้าเสร็จ — ไม่ให้หน้าค้างรอเครือข่าย */
+  renderAccessReqs(document.getElementById("areqHost"));
 }
 
 /* ---------- เนื้อหาคำอธิบายเหตุผล (ใช้ร่วมกันหลายหน้า) ---------- */
@@ -4600,6 +4682,9 @@ function aiV(){
   var log=(S.data.audit||[]).slice(-12).reverse();
   var c=S.data.consent;
   V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>ใครขอเปิดดูข้อมูลของท่านบ้าง</h3>'+
+  '<p class="sub">ผู้เชี่ยวชาญที่ได้รับส่งต่อต้องขออนุญาตท่านทุกครั้ง และสิทธิ์หมดอายุเองอัตโนมัติ — รายการนี้ตรวจย้อนได้เสมอ</p>'+
+  '<div id="alogHost"><p class="small">กำลังโหลด…</p></div></div>'+
   '<div style="background:var(--surf2);border:1px solid #CFE0FD;border-radius:14px;padding:16px 18px;margin-bottom:14px"><b style="color:var(--brand)">ข้อมูลของคุณเดินทางไปไหน</b><span style="display:block;font-size:13.5px;color:var(--ink2);margin-top:6px;line-height:1.6">กล้องประมวลผลในเครื่อง ไม่ส่งภาพออก → เก็บเฉพาะตัวเลขและคำตอบ → ระบบเปิดสัญญาณเสี่ยงตามกฎที่ประกาศไว้ → ทีมดูแลเห็นและติดต่อกลับ → ผู้เชี่ยวชาญยืนยัน → บริษัทประกันเห็นเฉพาะภาพรวมระดับกลุ่ม ไม่เห็นชื่อคุณ · ผลตรวจ<b>ไม่ถูกใช้ปรับเบี้ยหรือพิจารณาการเคลม</b></span></div>'+
   
   '<div class="card"><h3>ระบบนี้คืออะไร (Model Card ฉบับผู้ใช้)</h3>'+
@@ -4624,6 +4709,22 @@ function aiV(){
    :'<p class="sub" style="margin:0">ยังไม่มีบันทึก</p>')+
   '<p class="sub" style="margin:10px 0 0">เก็บ 200 รายการล่าสุดในฐานข้อมูลของคุณ เพื่อให้ตรวจสอบย้อนหลังได้ว่าระบบตัดสินใจอะไรด้วยเหตุผลใด</p></div>'+
   '<button class="cta" data-go="me">กลับ</button></div>';
+  /* ประวัติคำขอเปิดดูข้อมูล — โหลดหลังวาดหน้าเสร็จ */
+  (async function(){
+    var host=document.getElementById("alogHost"); if(!host) return;
+    var rows=[]; try{ rows=await CSBackend.myAccessLog(20) }catch(e){}
+    if(!rows.length){ host.innerHTML='<p class="small">ยังไม่มีผู้ใดขอเปิดดูข้อมูลของท่าน</p>'; return }
+    var ST_TH={pending:"รอท่านตอบ",granted:"ท่านอนุญาต",denied:"ท่านไม่อนุญาต",expired:"หมดเวลา ไม่ได้เปิดดู"};
+    host.innerHTML=rows.map(function(a){
+      var pr=a.profiles||{};
+      var live=a.status==="granted"&&new Date(a.access_until)>new Date();
+      return '<div class="alog"><b>'+esc(pr.display_name||"ผู้เชี่ยวชาญ")+' · '+
+        esc(ROLE_TH[pr.role]||pr.role||"")+(pr.org_name?" · "+esc(pr.org_name):"")+'</b>'+
+        '<span>'+esc(SCOPE_TH[a.scope]||a.scope)+' · '+esc(ST_TH[a.status]||a.status)+
+        (live?' (ยังเปิดดูได้ถึง '+thDate(a.access_until)+')':'')+
+        ' · '+thDate(a.requested_at)+'</span></div>';
+    }).join("");
+  })();
 }
 
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-18 06:09 |
+| วันที่ตรวจ | 2026-08-19 08:13 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 80 |
+| PASS | 90 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -33,13 +33,13 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:746 · CareSignal-Vision.html:1144 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:909 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2446 · CareSignal-Vision.html:3303 · CareSignal-App.html:2587 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:885 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2745 · CareSignal-Vision.html:3177 · CareSignal-App.html:1953 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1170 · CareSignal-Vision.html:712 · CareSignal-App.html:973 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:339 · supabase/09_insurtech.sql:20 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:764 · CareSignal-Vision.html:1144 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:927 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2528 · CareSignal-Vision.html:3303 · CareSignal-App.html:2669 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:903 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2827 · CareSignal-Vision.html:3177 · CareSignal-App.html:1971 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1188 · CareSignal-Vision.html:712 · CareSignal-App.html:991 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:379 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |
@@ -61,7 +61,7 @@
 | W-09 | บันทึกผลการตรวจโดยผู้เชี่ยวชาญ | PASS | ตรวจพบในซอร์ส |
 | W-10 | สร้างงานติดตาม (follow-up) | PASS | ตรวจพบในซอร์ส |
 | W-12 | มี audit log ทุกขั้นตอนสำคัญ | PASS | ตรวจพบในซอร์ส |
-| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:394 · RLS cases_staff: true |
+| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:453 · RLS cases_staff: true |
 | W-13 | สถานะใน UI ต้องมีอยู่จริงในฐานข้อมูล | PASS | UI: new,reviewing,contacted,care_plan_agreed,referred,appointment_booked,service_completed,follow_up_due,intervention · DB: new,reviewing,contacted,re · สถานะที่มีใน DB แต่ UI ไม่ใช้: stable |
 
 ## ชั้นที่ 3 — ขอบเขตของระบบ
@@ -145,6 +145,16 @@
 | X-26 | วิชาชีพไม่มีเมนูคิวเคสทั้งพอร์ต | PASS | เมนูเภสัชกร: "mine","refer","meds","me" |
 | X-27 | กดรับเคสข้ามวิชาชีพไม่ได้ | PASS | claim_referral ตรวจ destination ก่อนอนุญาต |
 | X-28 | เปลี่ยนบทบาทผู้ใช้ได้เฉพาะผู้ดูแลระบบ | PASS | trigger guard_role_change ที่ฐานข้อมูล |
+| X-29 | ผู้เชี่ยวชาญต้องขอความยินยอมก่อนเปิดดูข้อมูลคลินิก | PASS | ตาราง access_requests + ฟังก์ชัน cs_has_live_access |
+| X-30 | รายการยาถูกกั้นด้วยความยินยอมที่ยังไม่หมดอายุ | PASS | RLS ของ medications เรียก cs_has_live_access |
+| X-31 | ผู้เอาประกันเท่านั้นที่ตัดสินคำขอ | PASS | decide_access ปฏิเสธถ้าไม่ใช่เจ้าของข้อมูล |
+| X-32 | คำขอมีเวลาจำกัด และสิทธิ์ที่ให้แล้วหมดอายุเอง | PASS | ตอบภายใน 5 นาที · สิทธิ์มี access_until |
+| X-33 | หน้าจอผู้เชี่ยวชาญมีครบ 3 สถานะ ขอ → รอ → ตรวจสอบ | PASS | consentBox แสดงสามสถานะ |
+| X-34 | ผู้เอาประกันเห็นว่าใครขอ จากหน่วยงานใด เลขใบประกอบวิชาชีพอะไร | PASS | การ์ดคำขอแสดงตัวตนผู้ขอ + ปุ่มอนุญาต/ไม่อนุญาต |
+| X-35 | ผู้เอาประกันตรวจย้อนได้ว่าใครเคยขอและได้ดูหรือไม่ | PASS | ประวัติคำขอในหน้าความโปร่งใส |
+| X-36 | การปฏิเสธไม่กระทบสิทธิ์ตามกรมธรรม์ (ต้องบอกผู้ใช้) | PASS | ข้อความใต้ปุ่มในการ์ดคำขอ |
+| X-37 | คอนโซลออกจากระบบเองเมื่อไม่มีการใช้งาน | PASS | ประกาศ IDLE_MIN + ตัวจับเวลาเรียก signOut + รีเซ็ตเมื่อมีการใช้งาน |
+| X-38 | ไม่มีช่องค้นหาผู้เอาประกันข้ามพอร์ต (ต่างจากระบบแลกเปลี่ยนข้อมูลระดับชาติ) | PASS | ไม่มีช่องค้นหาข้ามพอร์ต |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |
