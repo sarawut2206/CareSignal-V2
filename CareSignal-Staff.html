@@ -268,7 +268,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-backend.js?v=217"></script>
+<script src="./cs-backend.js?v=218"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 /* ============================================================
@@ -1199,6 +1199,7 @@ var Q_BANK={
               "ควรทบทวนยาตามที่เภสัชกรเสนอหรือไม่",
               "มีภาวะอื่นที่อธิบายการถดถอยนี้ได้หรือไม่"],
   nurse:     ["ควรเยี่ยมบ้านเพื่อประเมินความปลอดภัยหรือไม่",
+              "อันตรายในบ้านที่ผู้เอาประกันระบุ ควรแก้ข้อใดก่อน",
               "ผู้ดูแลต้องการคำแนะนำเพิ่มเติมเรื่องใด"],
   family:    ["ช่วยสังเกตการเดินและการลุกนั่งในช่วง 2 สัปดาห์นี้",
               "ช่วยยืนยันรายการยาที่ใช้จริงที่บ้าน"],
@@ -1224,6 +1225,9 @@ function pkgHTML(p){
     pk("ADL", (adl.first??"—")+" → "+(adl.last??"—"), trendTxt(adl.first,adl.last,false), trendTxt(adl.first,adl.last,false)==="แย่ลง")+
     pk("ยาที่ใช้", meds.length+" รายการ", high?"กลุ่มเสี่ยงสูง "+high:"", high>0)+
     pk("ประเมินแล้ว", (m.n_assessments||0)+" ครั้ง", m.last_at?"ล่าสุด "+thDate(m.last_at).split(" ")[0]:"")+
+    (p.home&&p.home.hazards?pk("อันตรายในบ้าน", p.home.hazards.length+" ข้อ",
+        p.home.helper==="alone"?"อยู่คนเดียว":p.home.helper==="day"?"มีคนบางเวลา":p.home.helper==="full"?"มีคนอยู่ด้วย":"",
+        p.home.hazards.length>=3||(p.home.hazards.length>=1&&p.home.helper==="alone")):"")+
   '</div>'+
   '<p class="tiny">ข้อมูลนี้เป็นสำเนา ณ เวลาส่ง — ปลายทางเห็นสิ่งเดียวกับที่ท่านเห็นตอนตัดสินใจส่ง</p>';
 }

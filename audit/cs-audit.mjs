@@ -814,6 +814,57 @@ function layer7() {
       r.ev, "เพิ่มส่วนที่ขาดทั้งที่ฐานข้อมูลและหน้าจอ");
   }
 
+  /* ---- ความปลอดภัยในบ้าน + โหมดอยู่ในกรอบ ---- */
+  const visAll = read("CareSignal-Vision.html") || "";
+  const extraChecks = [
+    ["X-53", "มีการประเมินความปลอดภัยในบ้านตาม CDC STEADI",
+      () => ({ ok: /var HOME_Q=/.test(appAll) && /function renderHomeQ\(/.test(appAll)
+                && /k:"home"[\s\S]{0,60}homeDetail:true/.test(appAll),
+               ev: "HOME_Q 7 ข้อ + หน้าคำถามในชุดประเมิน" })],
+    ["X-54", "อันตรายในบ้านไม่เข้าคะแนนหลัก แต่ออกที่สัญญาณความปลอดภัย",
+      () => {
+        /* ต้องมีกฎ B15 ที่ผลักเข้า S7 และต้องไม่ถูกบวกเข้าคะแนน */
+        const hasRule = /id:"B15"/.test(appAll);
+        const inS7 = /k:"S7"[\s\S]{0,120}"B15"/.test(appAll);
+        const inScore = /parts=\{[^}]*home/.test(appAll) || /\+\s*parts\.home/.test(appAll);
+        return { ok: hasRule && inS7 && !inScore,
+                 ev: hasRule && inS7 ? "B15 → S7 และไม่อยู่ในสูตรคะแนน" : "ขาด B15 หรือไม่ได้ผูกกับ S7" };
+      }],
+    ["X-55", "เอนจินของแอปสมาชิกและโหมดทดลองมีกฎเท่ากัน",
+      () => ({ ok: /id:"B15"/.test(appAll) && /id:"B15"/.test(visAll),
+               ev: "B15 อยู่ในทั้งสองไฟล์ (test_parity ตรวจซ้ำอีกชั้น)" })],
+    ["X-56", "ความปลอดภัยในบ้านถูกส่งไปกับชุดข้อมูลส่งต่อ",
+      () => ({ ok: /home_detail/.test(sqlAll) && /'home', coalesce\(last_a\.home_detail/.test(sqlAll)
+                && /home_detail/.test(backAll),
+               ev: "คอลัมน์ home_detail + อยู่ใน build_referral_package + backend ส่งค่า" })],
+    ["X-57", "ชุดข้อมูลส่งต่ออ่านจากคอลัมน์จริง ไม่ใช่เดาว่าอยู่ใน parts",
+      () => ({ /* ของเดิมอ่าน parts->'falls_detail' ซึ่งไม่ใช่ที่เก็บจริง — เก็บในคอลัมน์
+                  ตรวจว่ารูปแบบผิดนั้นหายไป และมีการอ่านจากคอลัมน์ (จะเขียนตรง ๆ
+                  หรือผ่านตัวแปรก็ได้ ผลเท่ากัน) */
+               ok: !/parts->'falls_detail'/.test(sqlAll)
+                && /last_a\.falls_detail/.test(sqlAll)
+                && /last_a\.home_detail/.test(sqlAll),
+               ev: "อ่าน falls_detail / home_detail จากคอลัมน์ ไม่ได้เดาว่าอยู่ใน parts" })],
+    ["X-58", "หัวแอปสมาชิกย่อลงเมื่อเปิดอยู่ในกรอบของหน้าเดียว",
+      () => ({ ok: /html\[data-embedded\] \.bar\{/.test(appAll)
+                && /window\.self!==window\.top/.test(appAll),
+               ev: "ตั้งธง data-embedded + CSS ย่อหัว (คืนพื้นที่ ~50px)" })],
+    ["X-59", "แท็บล่างของแอปสมาชิกยังใหญ่เท่าเดิมแม้อยู่ในกรอบ",
+      () => {
+        /* ปุ่มใหญ่สำหรับผู้สูงอายุเป็นข้อกำหนดเดิม ห้ามย่อเพื่อประหยัดที่ */
+        const shrinks = /html\[data-embedded\][^{]*\.tabs[^{]*\{[^}]*min-height/.test(appAll);
+        return { ok: !shrinks && /min-height:84px/.test(appAll),
+                 ev: shrinks ? "พบการย่อแท็บล่างในโหมดกรอบ" : "แท็บล่างคง min-height 84px" };
+      }],
+  ];
+  for (const [id, name, fn] of extraChecks) {
+    const r = fn();
+    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
+    if (!r.ok) finding("MEDIUM", id, "ส่วนที่ขาด: " + name,
+      "รายการนี้อยู่ในแผนงานที่ประกาศไว้ ถ้าขาดจะทำให้การประเมินหรือการส่งต่อไม่ครบ",
+      r.ev, "เพิ่มส่วนที่ขาด");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

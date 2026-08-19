@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-19 09:05 |
+| วันที่ตรวจ | 2026-08-19 09:24 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 104 |
+| PASS | 111 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -33,12 +33,12 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:764 · CareSignal-Vision.html:1144 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:927 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2529 · CareSignal-Vision.html:3303 · CareSignal-App.html:2670 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:903 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2828 · CareSignal-Vision.html:3177 · CareSignal-App.html:1971 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1188 · CareSignal-Vision.html:712 · CareSignal-App.html:991 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:781 · CareSignal-Vision.html:1151 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:944 · CareSignal-Vision.html:467 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:2555 · CareSignal-Vision.html:3310 · CareSignal-App.html:2752 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:920 · CareSignal-Vision.html:443 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:2911 · CareSignal-Vision.html:3184 · CareSignal-App.html:1996 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1213 · CareSignal-Vision.html:719 · CareSignal-App.html:1008 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:427 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
@@ -61,7 +61,7 @@
 | W-09 | บันทึกผลการตรวจโดยผู้เชี่ยวชาญ | PASS | ตรวจพบในซอร์ส |
 | W-10 | สร้างงานติดตาม (follow-up) | PASS | ตรวจพบในซอร์ส |
 | W-12 | มี audit log ทุกขั้นตอนสำคัญ | PASS | ตรวจพบในซอร์ส |
-| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:491 · RLS cases_staff: true |
+| W-11 | ปิดเคสต้องผ่านคน ไม่มีทางปิดอัตโนมัติ | PASS | จุดที่เปลี่ยนเป็น stable/closed: cs-backend.js:492 · RLS cases_staff: true |
 | W-13 | สถานะใน UI ต้องมีอยู่จริงในฐานข้อมูล | PASS | UI: new,reviewing,contacted,care_plan_agreed,referred,appointment_booked,service_completed,follow_up_due,intervention · DB: new,reviewing,contacted,re · สถานะที่มีใน DB แต่ UI ไม่ใช้: stable |
 
 ## ชั้นที่ 3 — ขอบเขตของระบบ
@@ -169,6 +169,13 @@
 | X-50 | return_review กันช่องโหว่ NULL ในการตรวจสิทธิ์ | PASS | สิทธิ์ถูกบังคับเป็น boolean ด้วย coalesce ก่อนตรวจ |
 | X-51 | มีไทม์ไลน์เคสที่ดึงจากข้อมูลจริงทุกตาราง | PASS | case_timeline() รวม signal/contact/refer/review/consent/followup |
 | X-52 | ไม่เป็นระบบส่งต่อผู้ป่วยเต็มรูปแบบ (ไม่มีภาพรังสี/ห้องฉุกเฉิน/รถพยาบาล) | PASS | ส่งเฉพาะ 4 ด้าน: หกล้ม การเคลื่อนไหว ยา กิจวัตร |
+| X-53 | มีการประเมินความปลอดภัยในบ้านตาม CDC STEADI | PASS | HOME_Q 7 ข้อ + หน้าคำถามในชุดประเมิน |
+| X-54 | อันตรายในบ้านไม่เข้าคะแนนหลัก แต่ออกที่สัญญาณความปลอดภัย | PASS | B15 → S7 และไม่อยู่ในสูตรคะแนน |
+| X-55 | เอนจินของแอปสมาชิกและโหมดทดลองมีกฎเท่ากัน | PASS | B15 อยู่ในทั้งสองไฟล์ (test_parity ตรวจซ้ำอีกชั้น) |
+| X-56 | ความปลอดภัยในบ้านถูกส่งไปกับชุดข้อมูลส่งต่อ | PASS | คอลัมน์ home_detail + อยู่ใน build_referral_package + backend ส่งค่า |
+| X-57 | ชุดข้อมูลส่งต่ออ่านจากคอลัมน์จริง ไม่ใช่เดาว่าอยู่ใน parts | PASS | อ่าน falls_detail / home_detail จากคอลัมน์ ไม่ได้เดาว่าอยู่ใน parts |
+| X-58 | หัวแอปสมาชิกย่อลงเมื่อเปิดอยู่ในกรอบของหน้าเดียว | PASS | ตั้งธง data-embedded + CSS ย่อหัว (คืนพื้นที่ ~50px) |
+| X-59 | แท็บล่างของแอปสมาชิกยังใหญ่เท่าเดิมแม้อยู่ในกรอบ | PASS | แท็บล่างคง min-height 84px |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

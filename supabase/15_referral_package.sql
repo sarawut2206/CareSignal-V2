@@ -19,6 +19,9 @@
 -- จึงส่งเฉพาะ 4 ด้าน: หกล้ม · การเคลื่อนไหว · ยา · กิจวัตร
 -- ============================================================
 
+-- ความปลอดภัยในบ้าน (CDC STEADI home hazards) เก็บแยกคอลัมน์เหมือน falls_detail
+alter table public.assessments add column if not exists home_detail jsonb;
+
 alter table public.referrals
   add column if not exists package     jsonb,        -- ชุดข้อมูล ณ เวลาส่ง (สำเนา ไม่ใช่อ้างสด)
   add column if not exists questions   text[],       -- คำถามที่ต้องการให้ผู้เชี่ยวชาญตอบ
@@ -55,8 +58,8 @@ begin
   select * into first_a from public.assessments where user_id = target order by assessed_at asc  limit 1;
   select * into last_a  from public.assessments where user_id = target order by assessed_at desc limit 1;
 
-  /* หกล้ม: จากผลประเมินล่าสุด (parts.falls_detail ถ้ามี) */
-  fallsj := coalesce(last_a.parts->'falls_detail', '{}'::jsonb);
+  /* หกล้ม: จากคอลัมน์ falls_detail ของผลประเมินล่าสุด (ไม่ใช่ใน parts) */
+  fallsj := coalesce(last_a.falls_detail, '{}'::jsonb);
 
   /* ยา: เฉพาะที่ยังใช้อยู่ พร้อมกลุ่มเสี่ยง */
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -82,6 +85,7 @@ begin
        'n_assessments', (select count(*) from public.assessments where user_id = target)),
     'medications', medsj,
     'adl', adlj,
+    'home', coalesce(last_a.home_detail, '{}'::jsonb),
     'risk', jsonb_build_object('tier', last_a.tier, 'score', last_a.score, 'max', last_a.score_max),
     'open_followups', fu_n,
     'open_referrals', ref_n,

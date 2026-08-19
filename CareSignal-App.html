@@ -49,6 +49,19 @@ body{background:#D9DEE2;font-family:var(--sans);color:var(--ink);font-size:17px;
 .bar h1{margin:3px 0 0;font-size:23px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
 .bar p{margin:6px 0 0;font-size:14px;opacity:.78;line-height:1.6}
 .backb{background:none;border:0;color:#fff;font:inherit;font-size:14px;padding:0;margin-bottom:8px;opacity:.75;cursor:pointer}
+/* ---------- โหมดอยู่ในกรอบของหน้าเดียว ----------
+   เมื่อแอปเปิดในส่วนที่ 2 ของหน้าหลัก หน้าแม่แสดงชื่อระบบและชื่อส่วนอยู่แล้ว
+   แถวโลโก้ คำโปรย และระยะห่างใหญ่ในหัวของแอปจึงซ้ำซ้อน
+   ย่อให้เหลือเฉพาะชื่อหน้า — คืนพื้นที่ให้เนื้อหาราว 100px บนมือถือ
+   แท็บล่าง 84px คงไว้ เพราะเป็นปุ่มใหญ่สำหรับผู้สูงอายุโดยตั้งใจ */
+html[data-embedded] .bar{padding:10px 16px 10px}
+html[data-embedded] .bar .brandrow{display:none}
+html[data-embedded] .bar .kick{font-size:9.5px}
+html[data-embedded] .bar h1{font-size:18px;margin-top:1px;line-height:1.25}
+html[data-embedded] .bar p{display:none}
+html[data-embedded] .bar .prog{margin:8px 0 0}
+html[data-embedded] .backb{margin-bottom:4px;font-size:13px}
+html[data-embedded] .dbchip{top:8px;right:10px}
 .dbchip{position:absolute;top:calc(env(safe-area-inset-top) + 16px);right:16px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;background:rgba(245,158,11,.22);color:#FDE68A;padding:4px 9px;border-radius:99px}
 .scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 26px;-webkit-overflow-scrolling:touch}
 .anim{animation:rise .32s cubic-bezier(.25,.9,.35,1)}
@@ -286,7 +299,11 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=217"></script>
+<script>
+/* อยู่ในกรอบของหน้าเดียวหรือไม่ — ตั้งธงก่อนวาด เพื่อให้ CSS ย่อหัวทำงานตั้งแต่เฟรมแรก */
+try{if(window.self!==window.top)document.documentElement.setAttribute("data-embedded","1")}catch(e){document.documentElement.setAttribute("data-embedded","1")}
+</script>
+<script src="./cs-backend.js?v=218"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
@@ -1012,6 +1029,14 @@ function baselineRisk(d, age){
   /* ---- เหลือง ---- */
   if(fc===1) yellows.push({id:"B7",text:"หกล้ม 1 ครั้งใน 12 เดือน",
     why:"ล้มครั้งแรกเพิ่มโอกาสล้มซ้ำใน 12 เดือนถัดไปอย่างชัดเจน"});
+  /* B15 — อันตรายในบ้านหลายข้อ หรืออยู่คนเดียวร่วมกับอันตราย: ธงความปลอดภัย
+     ไม่เข้าคะแนนหลัก เพราะเป็นสิ่งแวดล้อม แก้ได้โดยไม่ต้องรอสมรรถภาพเปลี่ยน */
+  if(d.homeDetail&&d.homeDetail.hazards){
+    var hz=d.homeDetail.hazards.length, alone=d.homeDetail.helper==="alone";
+    if(hz>=3||(hz>=1&&alone))
+      yellows.push({id:"B15",text:"พบอันตรายในบ้าน "+hz+" ข้อ"+(alone?" และอยู่คนเดียว":""),
+        why:"CDC STEADI ระบุให้ประเมินและแก้ไขสิ่งแวดล้อมในบ้าน เป็นมาตรการที่ได้ผลเร็วที่สุด"});
+  }
   if(d.steadi&&(d.steadi.unsteady||d.steadi.worried))
     yellows.push({id:"B8",text:"รู้สึกไม่มั่นคงขณะเดิน หรือกังวลว่าจะล้ม",
       why:"ความรู้สึกของเจ้าตัวเป็นสัญญาณคัดกรองที่ CDC STEADI ใช้เป็นข้อแรก"});
@@ -1139,7 +1164,7 @@ var SIGNAL_DEFS=[
    dest:"physio",     act:"ประเมินการเดินและพิจารณาอุปกรณ์ช่วยเดินที่เหมาะสม"},
   {k:"S6", nm:"ทำกิจวัตรประจำวันได้น้อยลง", rules:["R6","R9"],
    dest:"nurse",      act:"ประเมินภาวะพึ่งพิงเชิงลึกและวางแผนการดูแลร่วมกับครอบครัว"},
-  {k:"S7", nm:"ธงแดงด้านความปลอดภัย", rules:["B5","B8"],
+  {k:"S7", nm:"ธงแดงด้านความปลอดภัย", rules:["B5","B8","B15"],
    dest:"doctor",     act:"ให้บุคลากรประเมินก่อน ยังไม่ควรทดสอบสมรรถภาพด้วยตนเอง"}
 ];
 /* แปลงกฎที่ติดทั้งหมด → สัญญาณหลักพร้อมความรุนแรงและงานที่ต้องทำ */
@@ -2442,6 +2467,7 @@ var QS=[
   o:[["ยืนได้เกิน 10 วินาที",3],["ยืนได้ 3–9 วินาที",2],["ยืนได้ไม่ถึง 3 วินาที",1],["ไม่กล้าลอง / ทำไม่ได้",0]]},
  {k:"falls",q:"ประวัติการหกล้ม",h:"",fallsDetail:true,verify:true,o:[]},
  {k:"meds", q:"ยาที่ใช้ประจำ",h:"",medsDetail:true,verify:true,o:[]},
+ {k:"home",q:"ความปลอดภัยในบ้าน",h:"",homeDetail:true,o:[]},
  {k:"adl",q:"กิจวัตรประจำวัน ทำเองได้แค่ไหน?",h:"อาบน้ำ แต่งตัว เข้าห้องน้ำ ลุกจากเตียง เดินในบ้าน ขึ้นบันได",adl:true,
   o:[["ทำเองได้ทั้งหมด",2],["ต้องมีคนช่วยบางอย่าง",1],["ต้องมีคนช่วยเกือบทุกอย่าง",0]]}
 ];
@@ -2560,6 +2586,62 @@ function shrinkImage(file,maxW){
       c.toBlob(function(b){res({blob:b,canvas:c})},"image/jpeg",0.85);
     };
     img.src=url;
+  });
+}
+
+
+/* ============================================================
+   ความปลอดภัยในบ้าน — CDC STEADI ให้ถามเรื่องอันตรายในบ้าน
+   (พรม พื้นลื่น แสง ราวจับ บันได รองเท้า) เป็นส่วนหนึ่งของการประเมิน
+   ------------------------------------------------------------
+   ไม่ให้คะแนนเข้าคะแนนหลัก 9 แต้ม — เพราะเป็นปัจจัยสิ่งแวดล้อม
+   ไม่ใช่สมรรถภาพ จึงไปออกที่สัญญาณ S7 (ธงด้านความปลอดภัย) แทน
+   และส่งไปกับชุดข้อมูลส่งต่อให้พยาบาล/นักกายภาพประเมินบ้านต่อได้
+   ============================================================ */
+var HOME_Q=[
+  {k:"rug",   t:"มีพรมหรือสายไฟบนพื้นทางเดินที่อาจสะดุดได้",      ic:"🧶"},
+  {k:"wet",   t:"พื้นห้องน้ำหรือห้องครัวลื่น ไม่มีแผ่นกันลื่น",       ic:"💧"},
+  {k:"light", t:"ทางเดินตอนกลางคืนหรือบันไดมืด ไม่มีไฟส่อง",         ic:"💡"},
+  {k:"rail",  t:"ห้องน้ำไม่มีราวจับ หรือลุกจากโถส้วมลำบาก",          ic:"🚿"},
+  {k:"stair", t:"ต้องขึ้นลงบันไดทุกวัน และบันไดไม่มีราวทั้งสองข้าง",  ic:"🪜"},
+  {k:"shoe",  t:"ในบ้านใส่รองเท้าแตะหลวม หรือเดินเท้าเปล่าบนพื้นลื่น", ic:"🥿"},
+  {k:"reach", t:"ของใช้ประจำอยู่สูงจนต้องปีนหรือเขย่งหยิบ",           ic:"📦"}
+];
+function renderHomeQ(i){
+  head("คำถามที่ "+(i+1)+" จาก "+QS.length,"ความปลอดภัยในบ้าน",
+       "ติ๊กข้อที่ตรงกับบ้านของท่าน — ข้อนี้ไม่มีผลต่อคะแนน แต่ช่วยให้ทีมดูแลรู้ว่าควรช่วยปรับอะไร",
+       "assessIntro",[i+1,QS.length]);
+  if(!S.draft.homeDetail) S.draft.homeDetail={hazards:[],helper:null};
+  var h=S.draft.homeDetail;
+  V.innerHTML='<div class="anim">'+
+    '<div class="card" style="background:var(--surf2)"><h3>ทำไมถึงถาม</h3>'+
+    '<p class="sub" style="margin:0">การหกล้มในบ้านส่วนใหญ่เกิดจากสิ่งแวดล้อม ไม่ใช่ตัวคน — '+
+    'CDC STEADI ให้ถามเรื่องนี้ทุกครั้ง เพราะแก้ได้ง่ายที่สุดและได้ผลเร็วที่สุด</p></div>'+
+    '<div class="card"><h3 style="font-size:16px">ในบ้านของท่านมีข้อใดบ้าง</h3>'+
+      '<div id="hzList">'+HOME_Q.map(function(q){
+        var on=h.hazards.indexOf(q.k)>=0;
+        return '<button class="opt" data-hz="'+q.k+'" aria-pressed="'+on+'" style="text-align:left;display:flex;gap:12px;align-items:flex-start;min-height:56px">'+
+          '<span style="font-size:22px;line-height:1">'+q.ic+'</span><span>'+esc(q.t)+'</span></button>';
+      }).join("")+'</div>'+
+      '<button class="ghostb" id="hzNone" style="margin-top:8px">ไม่มีข้อใดเลย</button></div>'+
+    '<div class="card"><h3 style="font-size:16px">มีคนอยู่ด้วยที่บ้านหรือไม่</h3>'+
+      '<div id="hlpWrap">'+[["alone","อยู่คนเดียว"],["day","มีคนอยู่เฉพาะกลางวัน/กลางคืน"],["full","มีคนอยู่ด้วยตลอด"]].map(function(o){
+        return '<button class="opt" data-hlp="'+o[0]+'" aria-pressed="'+(h.helper===o[0])+'">'+o[1]+'</button>'}).join("")+'</div></div>'+
+    '<button class="cta" id="hGo">ถัดไป</button></div>';
+  function sync(){
+    V.querySelectorAll("[data-hz]").forEach(function(b){b.setAttribute("aria-pressed",h.hazards.indexOf(b.dataset.hz)>=0)});
+    V.querySelectorAll("[data-hlp]").forEach(function(b){b.setAttribute("aria-pressed",h.helper===b.dataset.hlp)});
+  }
+  V.querySelectorAll("[data-hz]").forEach(function(b){b.addEventListener("click",function(){
+    var k=b.dataset.hz, j=h.hazards.indexOf(k);
+    if(j>=0) h.hazards.splice(j,1); else h.hazards.push(k);
+    h.none=false; sync();
+  })});
+  document.getElementById("hzNone").addEventListener("click",function(){ h.hazards=[]; h.none=true; sync(); toast("บันทึกว่าไม่มีข้อใด") });
+  V.querySelectorAll("[data-hlp]").forEach(function(b){b.addEventListener("click",function(){ h.helper=b.dataset.hlp; sync() })});
+  document.getElementById("hGo").addEventListener("click",function(){
+    if(!h.none&&!h.hazards.length&&h.helper===null){ toast("กรุณาเลือกอย่างน้อย 1 ข้อ หรือกด \"ไม่มีข้อใดเลย\""); return }
+    h.done=true; go("assessQ",i+1);
   });
 }
 
@@ -2798,6 +2880,7 @@ function assessQV(i){
   i=i||0;var q=QS[i];
   if(q.fallsDetail){ renderFallsQ(i); return }
   if(q.medsDetail){ renderMedsQ(i); return }
+  if(q.homeDetail){ renderHomeQ(i); return }
   head("คำถามที่ "+(i+1)+" จาก "+QS.length,q.q,"","assessIntro",[i+1,QS.length]);
   var extra="";
   if(q.k==="balance"&&S.draft.balPassed!=null){
@@ -2872,6 +2955,7 @@ async function finishAssess(){
     safety:S.draft.safety||null, safetyVerdict:S.draft.safetyVerdict||null,
     notTested:!!S.draft.notTested, fallsDetail:S.draft.fallsDetail||null,
     medsDetail:S.draft.medsDetail||null, steadi:S.draft.steadi||null,
+    homeDetail:S.draft.homeDetail||null,
     tugOut:S.draft.tugOut!=null?S.draft.tugOut:null,
     tugBack:S.draft.tugBack!=null?S.draft.tugBack:null,
     tugDistanceOk:S.draft.tugDistanceOk!=null?S.draft.tugDistanceOk:null,

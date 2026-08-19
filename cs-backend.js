@@ -232,6 +232,7 @@ var CSBackend = (function () {
       /* ข้อมูลเชิงลึกของระบบวงจรปิด v2 */
       safety_gate:    a.safetyGate    || null,
       falls_detail:   a.fallsDetail   || null,
+      home_detail:    a.homeDetail    || null,
       meds_detail:    a.medsDetail    || null,
       test_quality:   a.testQuality   || null,
       baseline_level: a.baselineLevel || null,

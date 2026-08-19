@@ -239,7 +239,7 @@ body.camfs .hudtop{display:none}
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 
-<script src="./cs-backend.js?v=217"></script>
+<script src="./cs-backend.js?v=218"></script>
 <script src="./cs-meds.js?v=2"></script>
 <script>
 "use strict";
@@ -552,6 +552,13 @@ function baselineRisk(d, age){
   /* ---- เหลือง ---- */
   if(fc===1) yellows.push({id:"B7",text:"หกล้ม 1 ครั้งใน 12 เดือน",
     why:"ล้มครั้งแรกเพิ่มโอกาสล้มซ้ำใน 12 เดือนถัดไปอย่างชัดเจน"});
+  /* B15 — อันตรายในบ้าน (เอนจินต้องเท่ากับแอปสมาชิก แม้หน้านี้ไม่ถาม) */
+  if(d.homeDetail&&d.homeDetail.hazards){
+    var hz=d.homeDetail.hazards.length, alone=d.homeDetail.helper==="alone";
+    if(hz>=3||(hz>=1&&alone))
+      yellows.push({id:"B15",text:"พบอันตรายในบ้าน "+hz+" ข้อ"+(alone?" และอยู่คนเดียว":""),
+        why:"CDC STEADI ระบุให้ประเมินและแก้ไขสิ่งแวดล้อมในบ้าน เป็นมาตรการที่ได้ผลเร็วที่สุด"});
+  }
   if(d.steadi&&(d.steadi.unsteady||d.steadi.worried))
     yellows.push({id:"B8",text:"รู้สึกไม่มั่นคงขณะเดิน หรือกังวลว่าจะล้ม",
       why:"ความรู้สึกของเจ้าตัวเป็นสัญญาณคัดกรองที่ CDC STEADI ใช้เป็นข้อแรก"});
@@ -663,7 +670,7 @@ var SIGNAL_DEFS=[
    dest:"physio",     act:"ประเมินการเดินและพิจารณาอุปกรณ์ช่วยเดินที่เหมาะสม"},
   {k:"S6", nm:"ทำกิจวัตรประจำวันได้น้อยลง", rules:["R6","R9"],
    dest:"nurse",      act:"ประเมินภาวะพึ่งพิงเชิงลึกและวางแผนการดูแลร่วมกับครอบครัว"},
-  {k:"S7", nm:"ธงแดงด้านความปลอดภัย", rules:["B5","B8"],
+  {k:"S7", nm:"ธงแดงด้านความปลอดภัย", rules:["B5","B8","B15"],
    dest:"doctor",     act:"ให้บุคลากรประเมินก่อน ยังไม่ควรทดสอบสมรรถภาพด้วยตนเอง"}
 ];
 /* แปลงกฎที่ติดทั้งหมด → สัญญาณหลักพร้อมความรุนแรงและงานที่ต้องทำ */
