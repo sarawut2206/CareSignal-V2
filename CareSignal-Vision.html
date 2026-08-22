@@ -357,7 +357,13 @@ function dbLabel(){
    ============================================================ */
 var CFG={
   ftsstCut:function(age){return age<60?10.0:(age<70?11.5:12.1);},
-  ageBand:function(a){return a<55?"50–54":(a<60?"55–59":(a<66?"60–65":"66–70"));},
+  /* ช่วงอายุมีสองงานที่ไม่เหมือนกัน เดิมใช้ฟังก์ชันเดียวทำทั้งคู่จึงผิดทั้งคู่
+     ftsstBand — ป้ายกำกับเกณฑ์เวลาลุกนั่ง ต้องแบ่งตรงกับ ftsstCut คือ 60 และ 70
+     ageBand   — ช่วงอายุสำหรับรายงานให้บริษัทประกัน ต้องครอบคลุมทุกอายุ
+     ของเดิมจบที่ "66–70" แบบ catch-all ทำให้คนอายุ 72 หรือ 85 ถูกรายงานว่า 66–70
+     ซึ่งผิดตรง ๆ สำหรับผลิตภัณฑ์ที่จับกลุ่มผู้สูงอายุ */
+  ftsstBand:function(a){return a<60?"ต่ำกว่า 60 ปี":(a<70?"60–69 ปี":"70 ปีขึ้นไป");},
+  ageBand:function(a){return a<60?"50–59":(a<70?"60–69":(a<80?"70–79":"80+"));},
   /* ตัวคูณเบี้ย แผนความคุ้มครอง และส่วนลด ถูกถอดออกทั้งหมด
      CareSignal เป็นแพลตฟอร์มประเมิน ติดตาม และประสานการดูแล
      ไม่คิดเบี้ย ไม่ออกแบบผลิตภัณฑ์ และไม่ตัดสินการจ่ายสินไหม */
@@ -793,7 +799,7 @@ function trajectory(){
     for(var i=A.length-2;i>=0;i--){if(A[i].ftsst!=null){prevFt=A[i].ftsst;break}}
     if(last.ftsst>cut&&(prevFt==null||prevFt<=cut)){
       out.flags.push({id:"R2",sev:2,
-        text:"เวลาลุกนั่งขึ้นเป็น "+last.ftsst.toFixed(1)+" วินาที สูงกว่าเกณฑ์ของช่วงอายุ "+CFG.ageBand(p.age)+" ปี ("+cut.toFixed(1)+" วินาที)",
+        text:"เวลาลุกนั่งขึ้นเป็น "+last.ftsst.toFixed(1)+" วินาที สูงกว่าเกณฑ์ของช่วงอายุ "+CFG.ftsstBand(p.age)+" ("+cut.toFixed(1)+" วินาที)",
         why:"เป็นการข้ามค่าตัดเกณฑ์ครั้งแรก จึงถือเป็นการเปลี่ยนสถานะ ไม่ใช่ความผันผวนปกติ"});
     }
   }
@@ -4570,7 +4576,7 @@ function resultV(rec){
   '<p class="sub" style="color:rgba(255,255,255,.85);margin:8px 0 0">'+t.act+'</p></div>'+
   '<div class="card"><h3>สิ่งที่กล้องวัดได้</h3>'+
   '<div class="rowline"><span class="k">เวลาลุกนั่ง 5 ครั้ง</span><span class="v">'+(rec.ftsst?rec.ftsst.toFixed(1)+" วินาที":"—")+'</span></div>'+
-  '<div class="rowline"><span class="k">เกณฑ์ช่วงอายุ '+CFG.ageBand(p.age)+' ปี</span><span class="v">'+CFG.ftsstCut(p.age).toFixed(1)+' วินาที</span></div>'+
+  '<div class="rowline"><span class="k">เกณฑ์ช่วงอายุ '+CFG.ftsstBand(p.age)+'</span><span class="v">'+CFG.ftsstCut(p.age).toFixed(1)+' วินาที</span></div>'+
   gapsRow+
   (rec.cv!=null?'<div class="rowline"><span class="k">ความสม่ำเสมอของจังหวะ</span><span class="v">'+(100-rec.cv*100).toFixed(0)+'%</span></div>':"")+
   '<div class="rowline"><span class="k">คะแนนส่วนลุกนั่ง</span><span class="v">'+rec.parts.ftsst+' / 4</span></div></div>'+
@@ -5003,7 +5009,7 @@ async function insurerV(){
   document.getElementById("seed2").addEventListener("click",async function(){await seed();toast("เติมข้อมูลสาธิตแล้ว");render()});
 }
 async function seed(){
-  var band=["55–59","60–65","60–65","66–70","50–54","60–65","66–70","55–59","60–65","66–70"];
+  var band=["50–59","60–69","60–69","70–79","50–59","60–69","80+","60–69","70–79","70–79"];
   var tiers=[4,4,3,2,4,3,1,4,3,2];
   var fts=[9.2,9.8,11.1,13.4,8.9,11.8,16.2,9.5,11.4,14.1];
   for(var i=0;i<10;i++){

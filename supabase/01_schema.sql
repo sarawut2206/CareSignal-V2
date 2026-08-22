@@ -182,12 +182,7 @@ $$;
 create or replace view public.insurer_portfolio as
 select
   p.pseudonym,
-  case
-    when (extract(year from now())::int + 543) - p.birth_year_be < 55 then '50-54'
-    when (extract(year from now())::int + 543) - p.birth_year_be < 60 then '55-59'
-    when (extract(year from now())::int + 543) - p.birth_year_be < 66 then '60-65'
-    else '66-70'
-  end                                              as age_band,
+  public.cs_age_band(p.birth_year_be)                                              as age_band,
   p.sex,
   a.tier,
   a.score,

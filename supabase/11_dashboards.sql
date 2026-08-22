@@ -110,12 +110,7 @@ drop view if exists public.insurer_portfolio;
 create or replace view public.insurer_portfolio as
 select
   p.pseudonym,
-  case
-    when (extract(year from now())::int + 543) - p.birth_year_be < 55 then '50-54'
-    when (extract(year from now())::int + 543) - p.birth_year_be < 60 then '55-59'
-    when (extract(year from now())::int + 543) - p.birth_year_be < 66 then '60-65'
-    else '66-70'
-  end                                                    as age_band,
+  public.cs_age_band(p.birth_year_be)                                                    as age_band,
   p.sex,
   r.level                                                as risk_level,
   (select count(*) from public.assessments x where x.user_id = p.id) as n_assessments,
@@ -156,11 +151,7 @@ where public.cs_role() in ('insurer','care_manager','admin');
 create or replace view public.insurer_strata as
 with mem as (
   select p.id, p.sex, p.province,
-    case
-      when (extract(year from now())::int + 543) - p.birth_year_be < 60 then '50-59'
-      when (extract(year from now())::int + 543) - p.birth_year_be < 70 then '60-69'
-      else '70+'
-    end as age_band
+    public.cs_age_band(p.birth_year_be) as age_band
   from public.profiles p where p.role='user' and p.share_pool
 ),
 lv as (
