@@ -2310,7 +2310,7 @@ function renderFamBody(){
     if(A.length<2)return el.innerHTML='<div class="card"><p class="sub" style="margin:0">ต้องมีผลอย่างน้อย 2 ครั้งจึงจะดูแนวโน้มได้</p></div>';
     var rc=A.slice(-8), xl=rc.map(function(x){return thDate(x.at).replace(/ \d{2}$/,"")});
     h+=trendSummaryHTML(A,C.me.age||70);
-    h+='<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12)</h3>'+
+    h+='<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 9)</h3>'+
       lineChart({values:rc.map(function(x){return x.score}),labels:xl,min:0,max:9,band:[6,9],color:"#2563EB",aria:"กราฟคะแนนรวม"})+'</div>';
     if(perms.results){
       h+='<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที)</h3>'+
@@ -5441,8 +5441,8 @@ function historyV(){
   var xlA=recent.map(function(x){return thDate(x.at).replace(/ \d{2}$/,"")});
   V.innerHTML='<div class="anim">'+
   trendSummaryHTML(a,S.data.profile.age)+
-  (a.length>1?'<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12) — ยิ่งสูงยิ่งดี</h3>'+
-    '<p class="sub" style="margin:-2px 0 8px">พื้นเขียวคือช่วงที่ถือว่าแข็งแรงดี (8 ขึ้นไป)</p>'+
+  (a.length>1?'<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 9) — ยิ่งสูงยิ่งดี</h3>'+
+    '<p class="sub" style="margin:-2px 0 8px">พื้นเขียวคือช่วงที่ถือว่าแข็งแรงดี (6 ขึ้นไป)</p>'+
     lineChart({values:recent.map(function(x){return x.score}),labels:xlA,min:0,max:9,band:[6,9],
                color:"#2563EB",aria:"กราฟเส้นคะแนนรวม"})+'</div>'+
     '<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที) — ยิ่งน้อยยิ่งดี</h3>'+

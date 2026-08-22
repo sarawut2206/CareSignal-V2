@@ -4339,7 +4339,7 @@ function qV(i){
     q.o.map(function(o,k){
       return '<button class="pick" data-v="'+o[1]+'">'+esc(o[0])+'</button>'}).join("")+
     (q.verify?verifyNotice():"")+
-    '<div class="disc">ข้อมูลชุดนี้รวมกับผลจากกล้อง เป็นคะแนนเต็ม 12</div></div>';
+    '<div class="disc">ข้อมูลชุดนี้รวมกับผลจากกล้อง เป็นคะแนนเต็ม 9</div></div>';
   V.querySelectorAll(".pick").forEach(function(b){
     b.addEventListener("click",function(){
       S.draft[q.k]=+b.dataset.v;
@@ -4877,8 +4877,8 @@ function trendV(){
   var xl=a.map(function(x){return thDate(x.at).replace(/ \d{2}$/,"")});
   V.innerHTML='<div class="anim">'+
   trendSummaryHTML(A,S.data.profile.age)+
-  '<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 12) — ยิ่งสูงยิ่งดี</h3>'+
-  '<p class="sub" style="margin:-2px 0 8px">พื้นเขียวคือช่วงคะแนนที่ถือว่าแข็งแรงดี (8 ขึ้นไป)</p>'+
+  '<div class="card"><h3 style="font-size:18px">คะแนนรวม (เต็ม 9) — ยิ่งสูงยิ่งดี</h3>'+
+  '<p class="sub" style="margin:-2px 0 8px">พื้นเขียวคือช่วงคะแนนที่ถือว่าแข็งแรงดี (6 ขึ้นไป)</p>'+
   lineChart({values:a.map(function(x){return x.score}),labels:xl,min:0,max:9,band:[6,9],
              color:"#2563EB",aria:"กราฟเส้นคะแนนรวมย้อนหลัง"})+'</div>'+
   '<div class="card"><h3 style="font-size:18px">เวลาลุกนั่ง 5 ครั้ง (วินาที) — ยิ่งน้อยยิ่งดี</h3>'+
