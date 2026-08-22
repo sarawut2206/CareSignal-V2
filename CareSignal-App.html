@@ -2455,7 +2455,12 @@ var STEADI=[
 ];
 function steadiState(){
   var A=S.data.assessments||[], last=A[A.length-1];
-  var hasPlan=!!(S.data.plan||(last&&last.level&&last.level!=="stable"));
+  /* ระเบียนการประเมินในเครื่องไม่มีฟิลด์ level — มันอยู่แค่ใน payload ที่ส่งให้บริษัทประกัน
+     เดิมบรรทัดนี้จึงเป็นเท็จเสมอ ทำให้หน้าแรกขึ้นว่า "อยู่ในเกณฑ์ดูแลตนเองตามปกติ"
+     พร้อมกับการ์ดสีแดงที่บอกว่าต้องดูแลด่วน — ขัดกันเองบนจอเดียว
+     ถามเอนจินโดยตรงแทน เพราะเป็นแหล่งเดียวที่รู้ระดับจริง */
+  var lvNow=(function(){try{var x=trajectory();return x?x.level:null}catch(e){return null}})();
+  var hasPlan=!!(S.data.plan||(lvNow&&lvNow!=="stable"));
   var fu=(S.data.followUps||[]).filter(function(f){return f.status!=="done"});
   var st={screen:"wait",assess:"wait",plan:"wait",follow:"wait"}, now="screen", next=null;
   if(!A.length){
