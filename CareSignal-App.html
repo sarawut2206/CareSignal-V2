@@ -808,17 +808,21 @@ function vcRender(){
 
    เปิดสายคู่ขนานไม่ได้ (ไม่ได้สิทธิ์/เบราว์เซอร์เก่า) = ถอยไปทำงานแบบเดิม
    ============================================================ */
-var VAD={ready:false,ctx:null,an:null,stream:null,timer:null,
+var VAD={ready:false,armed:false,disabled:false,ctx:null,an:null,stream:null,timer:null,
          hist:[],segs:[],active:false,belowSince:0,floor:0.008};
 function vadStart(){
-  if(VAD.ready||VAD.timer)return;
+  if(VAD.ready||VAD.timer||VAD.disabled)return;
   if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return;
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})
+  /* จงใจปิด echoCancellation: เปิดแล้วเบราว์เซอร์นับสายนี้เป็นสายสนทนา
+     Windows/Android จะหรี่หรือปิดเสียงสื่ออื่นทั้งเครื่อง = เสียงพูดของระบบเงียบ
+     งานกันเสียงสะท้อนใช้ด่านหน้าต่างเวลา TTS แทน ซึ่งไม่พึ่งการประมวลผลเสียง */
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}})
   .then(function(st){
     var AC=window.AudioContext||window.webkitAudioContext;
     if(!AC){try{st.getTracks().forEach(function(t){t.stop()})}catch(e){}return}
     VAD.stream=st;
     VAD.ctx=new AC();
+    try{if(VAD.ctx.state==="suspended")VAD.ctx.resume()}catch(e){}
     var src=VAD.ctx.createMediaStreamSource(st);
     VAD.an=VAD.ctx.createAnalyser(); VAD.an.fftSize=1024;
     src.connect(VAD.an);
@@ -847,6 +851,9 @@ function vadStart(){
         }
       }
       while(VAD.segs.length&&now-VAD.segs[0].e>8000)VAD.segs.shift();
+      /* ด่านนี้เริ่มบังคับก็ต่อเมื่อพิสูจน์แล้วว่าไมค์เครื่องนี้จับเสียงพูดได้จริง
+         ก่อนหน้านั้นปล่อยผ่านหมด — เครื่องที่ไมค์เบาจะไม่ถูกทิ้งคำสั่งทั้งหมด */
+      if(!VAD.armed){var L=VAD.segs[VAD.segs.length-1];if(L&&L.e-L.s>=400)VAD.armed=true}
     },30);
   }).catch(function(){});
 }
@@ -855,7 +862,7 @@ function vadStop(){
   if(VAD.timer){clearInterval(VAD.timer);VAD.timer=null}
   try{if(VAD.stream)VAD.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
   try{if(VAD.ctx)VAD.ctx.close()}catch(e){}
-  VAD.ctx=null;VAD.an=null;VAD.stream=null;VAD.hist=[];VAD.segs=[];VAD.active=false;VAD.belowSince=0;
+  VAD.ctx=null;VAD.an=null;VAD.stream=null;VAD.hist=[];VAD.segs=[];VAD.active=false;VAD.belowSince=0;VAD.armed=false;
 }
 function vadVoicedMs(win){
   var now=Date.now(), from=now-(win||5000), ms=0;
@@ -868,9 +875,11 @@ function vadVoicedMs(win){
 /* เหตุที่ต้องทิ้งข้อความที่เพิ่งได้ยิน — คืน null เมื่อรับได้ */
 function vcBlockedBy(){
   var now=Date.now();
-  if(now<SPK.until||("speechSynthesis" in window&&window.speechSynthesis&&speechSynthesis.speaking))
-    return "tts";
-  if(VAD.ready&&vadVoicedMs(5000)<250)return "novoice";
+  /* speechSynthesis.speaking ค้างเป็น true ถาวรได้บนบางเครื่อง (บั๊กเบราว์เซอร์ที่รู้จักกัน)
+     ถ้าเชื่อดิบ ๆ ระบบจะหูหนวกถาวร — เชื่อได้เฉพาะภายในเพดานเวลาจากรอบพูดล่าสุด */
+  var speaking=("speechSynthesis" in window&&window.speechSynthesis&&speechSynthesis.speaking);
+  if(now<SPK.until||(speaking&&now<SPK.until+5000))return "tts";
+  if(VAD.ready&&VAD.armed&&vadVoicedMs(5000)<250)return "novoice";
   return null;
 }
 
@@ -896,6 +905,8 @@ function vcStart(handler){
     VC.rec.onend=function(){ VC.starting=false; if(VC.on)vcRevive(400) };
     VC.rec.onerror=function(e){
       var err=e&&e.error;
+      /* สายวัดระดับเสียงแย่งไมค์กับตัวรู้จำบนบางเครื่อง — เลือกตัวรู้จำ ปิดสายวัดถาวร */
+      if(err==="audio-capture"&&(VAD.ready||VAD.timer)){vadStop();VAD.disabled=true}
       if(err==="not-allowed"||err==="service-not-allowed"){
         VC.on=false; VC.supported=false; vcRender();
         setStatus("yellow","ไมโครโฟนถูกปิดไว้ — ใช้ปุ่มบนหน้าจอแทนได้ทุกคำสั่ง",false);
