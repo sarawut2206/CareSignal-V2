@@ -515,9 +515,10 @@ var VC_CMDS=[
   {k:"done",  re:/จบ|เสร็จแล้ว|เรียบร้อย/,                                    ack:"รับทราบ บันทึกผล"},
   {k:"start", re:/เริ่ม|พร้อมแล้ว|สตาร์ท|เอาเลย|ลุยเลย/,                       ack:"รับทราบ เริ่มจับเวลา"}
 ];
-var VC_HELP="คำสั่งที่ใช้ได้คือ เริ่ม · หยุด · ทำใหม่ · ทำต่อ · ผ่าน · ไม่ผ่าน "+
-            "เมื่อระบบทวนคำสั่งกลับ ให้พูดว่า ยืนยัน เพื่อทำจริง หรือ ยกเลิก "+
-            "ตอนสอบเทียบใช้ บันทึกท่านั่ง และ บันทึกท่ายืน ทุกคำสั่งมีปุ่มบนหน้าจอด้วย";
+/* ระบบบอกเองทุกขั้นว่าให้พูดคำไหน ข้อความนี้จึงเป็นแค่ตัวช่วยเมื่อผู้ใช้ขอ */
+var VC_HELP="ระบบจะบอกทุกขั้นว่าให้พูดคำว่าอะไร ส่วนใหญ่คือ บันทึก หรือ เริ่ม "+
+            "ถ้าจะทำท่านั้นใหม่ พูดว่า ทำใหม่ ถ้าจะเลิก พูดว่า หยุด "+
+            "ตอนถามผลให้พูดว่า ผ่าน หรือ ไม่ผ่าน ทุกคำสั่งมีปุ่มบนหน้าจอด้วย";
 /* ชื่อคำสั่งสำหรับทวนกลับ — ผู้ใช้ต้องได้ยินว่าระบบเข้าใจว่าอะไร ก่อนจะยืนยัน */
 var VC_NAMES={start:"เริ่มจับเวลา",sit:"บันทึกท่านั่ง",stand:"บันทึกท่ายืน",
               pass:"บันทึกว่าผ่าน",fail:"บันทึกว่าไม่ผ่าน",again:"ทำท่านี้ใหม่",
@@ -694,6 +695,90 @@ function vcNotUnderstood(heard){
    "หยุด" ทำทันทีเสมอ — เรื่องความปลอดภัยต้องไม่มีขั้นกลาง
    ปุ่มบนหน้าจอไม่ผ่านขั้นนี้ (การกดคือความตั้งใจอยู่แล้ว)
    ============================================================ */
+/* ============================================================
+   สั่งงานด้วยเสียงแบบทีละขั้น — จับรูปแบบคำล้วน ๆ ไม่ใช่การสนทนา
+   ------------------------------------------------------------
+   เดิม: ฟังคำสั่งได้ตลอดเวลา แล้วทวนกลับให้ผู้ใช้พูด "ยืนยัน" ซ้ำอีกครั้ง
+   ปัญหาที่ผู้ใช้เจอจริง: ประโยคทวนยาวราว 45 ตัวอักษร ด่านกันฟังเสียงตัวเอง
+   จึงปิดหูระบบไปราว 5.2 วินาที คนที่ตอบ "ยืนยัน" ทันทีตามธรรมชาติจะถูกทิ้ง
+   เงียบ ๆ ไม่มีเสียงตอบใด ๆ พอพูดซ้ำ คำสั่งที่ค้างก็หมดอายุไปแล้ว
+   ผู้ใช้จึงเห็นเป็น "พูดแล้วระบบไม่ฟังเลย"
+
+   ใหม่: แต่ละขั้นตอนประกาศชัดว่าตอนนี้ให้พูดคำว่าอะไร รับไม่กี่คำ
+   พูดแล้วทำทันที ไม่ต้องยืนยันซ้ำ
+   ทิ้งการยืนยันได้เพราะทุกอย่างในขั้นตอนตรวจร่างกายย้อนกลับได้ด้วยคำว่า
+   "ทำใหม่" และระบบบอกผลด้วยเสียงทุกครั้งที่ทำ ผู้ใช้จึงรู้ทันทีถ้าผิด
+   ต่างจากคำสั่งที่ลบข้อมูลจริงซึ่งไม่มีในหน้าเหล่านี้
+
+   เงียบเกิน 13 วินาที = ทวนสิ่งที่ต้องพูดให้อีกครั้ง (มากสุด 2 รอบ)
+   เพราะความเงียบทำให้ผู้สูงอายุไม่รู้ว่าระบบรออะไรอยู่ หรือไมค์ตายไปแล้ว
+
+   ไม่มีการเรียกโมเดลภาษาหรือบริการภายนอกใด ๆ ทั้งสิ้น
+   ============================================================ */
+var VC_INTENT=[
+  /* ลำดับสำคัญ คำที่ยาวกว่าและเจาะจงกว่าต้องมาก่อนเสมอ
+     "ไม่ได้ยิน" ต้องมาก่อน "ไม่ได้" · "ไม่ผ่าน" ก่อน "ผ่าน" · "เริ่มใหม่" ก่อน "เริ่ม" */
+  ["repeat",/ไม่ได้ยิน|ทวนอีกที|พูดอีกที|ว่าไงนะ|อะไรนะ|ซ้ำอีกที/],
+  ["stop",  /หยุด|ยกเลิก|พอแล้ว|พอก่อน|เลิกแล้ว|ออกก่อน/],
+  ["fail",  /ไม่ผ่าน|ไม่ไหว|ทำไม่ได้|ไม่ได้เลย|ล้ม|เสียหลัก|ต้องพยุง|จับราว/],
+  ["redo",  /ทำใหม่|ลองใหม่|เริ่มใหม่|บันทึกใหม่|อีกครั้ง|ใหม่อีก|ล้างค่า|แก้ไข/],
+  ["next",  /ต่อไป|ถัดไป|ไปต่อ|ทำต่อ|ท่าต่อไป|ข้ามไป/],
+  ["pass",  /ผ่าน|ทำได้|ได้แล้ว|ยืนได้|ครบแล้ว|สำเร็จ/],
+  ["record",/บันทึก|เก็บค่า|เก็บท่า|จำท่า|โอเค|ตกลง|พร้อมแล้ว|เรียบร้อย/],
+  ["start", /เริ่ม|สตาร์ท|ลุยเลย|เอาเลย|ไปเลย|จับเวลา/]
+];
+function vcIntent(txt){
+  var t=vcNorm(txt); if(!t)return null;
+  for(var i=0;i<VC_INTENT.length;i++)if(VC_INTENT[i][1].test(t))return VC_INTENT[i][0];
+  return null;
+}
+
+var STEP={id:null,on:null,cue:"",hint:"",say:"",quiet:false,t0:0,nudges:0,timer:null,lastMiss:0};
+function stepBegin(spec){
+  stepStop();
+  STEP.id=spec.id; STEP.on=spec.on||{};
+  STEP.cue=spec.cue||""; STEP.hint=spec.hint||spec.cue||"";
+  STEP.t0=Date.now(); STEP.nudges=0; STEP.lastMiss=0;
+  /* quiet = หน้าจอนั้นมีการทวนของตัวเองอยู่แล้ว อย่าทวนซ้อน */
+  STEP.quiet=!!spec.quiet; STEP.say=spec.say||"";
+  if(typeof vcRender==="function")vcRender();
+  if(STEP.cue)speak(STEP.cue,{force:true});
+  STEP.timer=setInterval(stepTick,1000);
+}
+function stepStop(){
+  if(STEP.timer){clearInterval(STEP.timer);STEP.timer=null}
+  STEP.id=null;STEP.on=null;STEP.cue="";STEP.hint="";STEP.say="";STEP.quiet=false;
+  if(typeof vcRender==="function")vcRender();
+}
+function stepTick(){
+  if(!STEP.id)return;
+  /* ไม่ทวนทับตอนระบบกำลังพูดอยู่ และไม่ทวนเกินสองรอบ ไม่งั้นกลายเป็นรบกวน */
+  if(STEP.quiet)return;
+  if(Date.now()-STEP.t0<13000||STEP.nudges>=2)return;
+  if(vcBlockedBy()==="tts")return;
+  STEP.nudges++; STEP.t0=Date.now();
+  speak(STEP.hint,{force:true});
+}
+/* ผู้ใช้พูดมาแล้ว — ขั้นตอนนี้รับคำนั้นไหม */
+function stepHear(txt){
+  if(!STEP.id||!STEP.on)return null;
+  var k=vcIntent(txt);
+  if(!k)return null;
+  if(k==="repeat"){STEP.t0=Date.now();STEP.nudges=0;speak(STEP.hint,{force:true});return "repeat"}
+  var fn=STEP.on[k];
+  if(!fn)return null;                      /* ขั้นตอนนี้ไม่รับคำนี้ */
+  STEP.t0=Date.now(); STEP.nudges=0;
+  fn();
+  return k;
+}
+/* ได้ยินเสียงพูดแต่ไม่ใช่คำที่ขั้นตอนนี้รับ — บอกสั้น ๆ ดีกว่าเงียบ */
+function stepNudge(){
+  var now=Date.now();
+  if(STEP.quiet||now-STEP.lastMiss<7000)return;
+  STEP.lastMiss=now;
+  speak(STEP.hint,{force:true});
+}
+
 function vcDispatch(txt){
   /* ---- ด่านแรก: เชื่อได้ไหมว่านี่คือคนสั่งจริง ----
      ระหว่างที่ระบบกำลังพูด สิ่งที่ไมค์ได้ยินคือเสียงตัวเอง — ทิ้งทั้งหมด
@@ -701,10 +786,18 @@ function vcDispatch(txt){
      ไม่มีเสียงพูดจริงใกล้เครื่อง (เช่นเป็นเสียงทีวีเบา ๆ) ก็ทิ้งเช่นกัน */
   var blocked=vcBlockedBy();
   if(blocked){
-    var c0=vcParse(txt)||vcParse(vcStrip(txt));
-    if(!(blocked==="tts"&&c0==="stop"))return "gated-"+blocked;
+    /* "หยุด" ต้องแทรกได้เสมอแม้ระบบกำลังพูด — เป็นทางออกฉุกเฉินของผู้ใช้ */
+    if(!(blocked==="tts"&&vcIntent(txt)==="stop"))return "gated-"+blocked;
   }
   if(vcIsEcho(txt))return "echo";
+  /* ---- อยู่ในขั้นตอนที่ประกาศไว้ = ใช้คำสั่งของขั้นตอนนั้น ทำทันที ไม่ต้องยืนยัน ---- */
+  if(STEP.id){
+    VC.lastHeard=String(txt).trim().slice(0,24); VC.live="";
+    var hit=stepHear(txt);
+    if(hit){vcRender();return "step:"+hit}
+    vcRender(); stepNudge();
+    return "step-miss";
+  }
   /* ตัดคำลงท้ายก่อน แล้วลองจับคำสั่งจากทั้งข้อความเดิมและข้อความที่ตัดแล้ว
      "เริ่มได้เลยนะครับ" จึงถูกอ่านเป็นคำสั่ง เริ่ม ได้ */
   var cmd=vcParse(txt)||vcParse(vcStrip(txt));
@@ -785,6 +878,8 @@ function vcRender(){
   if(!VC.supported){b.textContent="🎤 เครื่องนี้ใช้ปุ่มแทนเสียง";return}
   if(!VC.on){b.textContent="🎤 ปิดอยู่";return}
   if(VC.pending){b.textContent='🎤 พูดว่า "ยืนยัน" — '+(VC_NAMES[VC.pending.cmd]||VC.pending.cmd);return}
+  /* อยู่ในขั้นตอน = บอกคำที่ต้องพูดค้างไว้บนจอ ผู้ใช้ที่ไม่ได้ยินเสียงยังทำต่อได้ */
+  if(STEP.id&&STEP.say){b.textContent="🎤 พูดว่า “"+STEP.say+"”";return}
   b.textContent=VC.live?("🎤 "+VC.live):(VC.lastHeard?("🎤 ได้ยิน: "+VC.lastHeard):"🎤 กำลังฟัง…");
 }
 
@@ -4238,20 +4333,24 @@ function setupCalib(video,canvas,ctx){
   function capture(kind){
     if(cur==null){speak("ยังมองไม่เห็นตัวชัดพอ กรุณาขยับให้เห็นทั้งตัวก่อน");
       setStatus("yellow","ยังมองไม่เห็นตัวชัดพอ — ยังบันทึกไม่ได้",false);return}
-    if(kind==="sit"){sitVal=cur;toast("บันทึกท่านั่งแล้ว");speak("บันทึกท่านั่งเรียบร้อยแล้ว")}
-    else{standVal=cur;toast("บันทึกท่ายืนแล้ว");speak("บันทึกท่ายืนเรียบร้อยแล้ว")}
+    /* บันทึกแล้วเดินไปขั้นถัดไปเอง ผู้ใช้ไม่ต้องจำว่าเหลืออะไร */
+    if(kind==="sit"){sitVal=cur;toast("บันทึกท่านั่งแล้ว")}
+    else{standVal=cur;toast("บันทึกท่ายืนแล้ว")}
     cstep.textContent=fmtState();
     setStatus("green",(kind==="sit"?"บันทึกท่านั่งเรียบร้อย":"บันทึกท่ายืนเรียบร้อย")+" · "+fmtState(),false);
-    if(sitVal!=null&&standVal!=null)finish();
+    if(sitVal!=null&&standVal!=null){stepStop();finish();return}
+    if(kind==="sit"&&CAL_ASK_STAND)CAL_ASK_STAND();
+    else if(kind==="stand"&&CAL_ASK_SIT)CAL_ASK_SIT();
   }
   function finish(){
     if(standVal-sitVal<0.045){
       /* ค่าสองท่าใกล้กันเกินไป = น่าจะบันทึกท่าเดียวกันสองครั้ง หรือสลับกัน */
       toast("ค่าท่านั่งกับท่ายืนต่างกันน้อยเกินไป");
       setStatus("red","ค่าสองท่าต่างกันน้อยเกินไป — กรุณาบันทึกใหม่ทีละท่า",false);
-      speak("ค่าท่านั่งกับท่ายืนต่างกันน้อยเกินไป อาจบันทึกท่าเดียวกันสองครั้ง "+
-            "กรุณานั่งลงแล้วพูดว่า บันทึกท่านั่ง จากนั้นยืนขึ้นแล้วพูดว่า บันทึกท่ายืน");
-      sitVal=null;standVal=null;cstep.textContent=fmtState();return;
+      sitVal=null;standVal=null;cstep.textContent=fmtState();
+      speak("ค่าท่านั่งกับท่ายืนต่างกันน้อยเกินไป อาจบันทึกท่าเดียวกันสองครั้ง เริ่มใหม่ทีละท่า");
+      if(CAL_ASK_SIT)setTimeout(CAL_ASK_SIT,4200);
+      return;
     }
     S.draft.sitRef=sitVal;S.draft.standRef=standVal;
     audit("สอบเทียบกล้อง (ผู้ใช้เป็นผู้สั่งบันทึกทีละท่า)",
@@ -4264,18 +4363,34 @@ function setupCalib(video,canvas,ctx){
   }
   cap.addEventListener("click",function(){capture("sit")});
   if(capStand)capStand.addEventListener("click",function(){capture("stand")});
-  vcStart(function(cmd){
-    if(cmd==="sit")capture("sit");
-    else if(cmd==="stand")capture("stand");
-    else if(cmd==="again"){sitVal=null;standVal=null;cstep.textContent=fmtState();
-      setStatus("yellow","ล้างค่าที่บันทึกไว้แล้ว — เริ่มบันทึกใหม่ได้",false)}
-    else if(cmd==="stop"){vcStop();stopCam();go("assess")}
-  });
+  /* ทีละขั้น: บอกให้ทำท่าไหน แล้วรอคำว่า "บันทึก" คำเดียว ทำทันที
+     เดิมต้องพูด "บันทึกท่านั่ง" แล้วตอบ "ยืนยัน" อีกครั้ง ซึ่งยาวและพลาดง่าย */
+  function calBail(){stepStop();vcStop();stopCam();go("assess")}
+  function calReset(){
+    sitVal=null;standVal=null;cstep.textContent=fmtState();
+    setStatus("yellow","ล้างค่าที่บันทึกไว้แล้ว — เริ่มบันทึกใหม่",false);
+    askSit();
+  }
+  function askSit(){
+    stepBegin({id:"calSit",say:"บันทึก",
+      cue:"ขั้นตอนที่หนึ่ง บันทึกท่านั่ง กรุณานั่งบนเก้าอี้ กอดอกไว้ "+
+          "เมื่อนั่งเรียบร้อยแล้ว พูดว่า บันทึก",
+      hint:"เมื่อนั่งเรียบร้อยแล้ว พูดว่า บันทึก",
+      on:{record:function(){capture("sit")},redo:calReset,stop:calBail}});
+  }
+  function askStand(){
+    stepBegin({id:"calStand",say:"บันทึก",
+      cue:"บันทึกท่านั่งแล้ว ต่อไปบันทึกท่ายืน กรุณายืนขึ้นตรง ๆ "+
+          "เมื่อยืนตรงแล้ว พูดว่า บันทึก",
+      hint:"เมื่อยืนตรงแล้ว พูดว่า บันทึก",
+      on:{record:function(){capture("stand")},redo:calReset,stop:calBail}});
+  }
+  CAL_ASK_SIT=askSit; CAL_ASK_STAND=askStand;
+  vcStart(function(){});
   cstep.textContent=fmtState();
-  speak("ขั้นตอนสอบเทียบ ระบบจะไม่บันทึกเอง ท่านเป็นผู้สั่ง "+
-        "เมื่อนั่งบนเก้าอี้เรียบร้อยแล้ว พูดว่า บันทึกท่านั่ง "+
-        "จากนั้นยืนขึ้นตรง ๆ แล้วพูดว่า บันทึกท่ายืน");
+  askSit();
 }
+var CAL_ASK_SIT=null, CAL_ASK_STAND=null;
 function setupTest(video,canvas,ctx){
   DET=new RepDetector({target:5});
   /* ตัวนับสำหรับตรวจใบหน้าเป็นระยะ ป้องกันการสลับคนกลางคัน */
@@ -4315,6 +4430,8 @@ function setupTest(video,canvas,ctx){
         if(ev&&ev.event==="rep"){lastEvt=performance.now();
           coach.innerHTML="นับได้ "+ev.reps+" ครั้ง — นั่งลงให้สุดแล้วลุกต่อ<span class='statebadge'>"+(DET.state==="stand"?"ยืน":"นั่ง")+"</span>";
           setStatus("green","นับได้ "+ev.reps+" ครั้ง จาก 5 ครั้ง",false);
+          /* นับออกเสียงให้ผู้ใช้รู้ว่าระบบนับถึงไหนแล้ว โดยไม่ต้องมองจอ */
+          speak(["","หนึ่ง","สอง","สาม","สี่","ห้า"][ev.reps]||String(ev.reps),{interrupt:false});
           speak(["","หนึ่ง","สอง","สาม","สี่","ห้า"][ev.reps]);}
         if(ev&&ev.event==="down")lastEvt=performance.now();
         if(ev&&ev.event==="finish"){finishTest(ev.elapsed);return}
@@ -4347,11 +4464,14 @@ function setupTest(video,canvas,ctx){
       setStatus("green","นั่งพร้อมแล้ว — "+vcHint(),false);
       speak("นั่งพร้อมแล้ว เมื่อพร้อม พูดว่า เริ่มทดสอบ หรือกดปุ่มเริ่มจับเวลา");
     }});
-  vcStart(function(cmd){
-    if(cmd==="start")beginTimer();
-    else if(cmd==="stop"&&running)stopBtn.click();
-  });
-  speak("กรุณานั่งบนเก้าอี้ กอดอกไว้ เมื่อพร้อมแล้ว พูดว่า เริ่มทดสอบ หรือกดปุ่มเริ่ม");
+  vcStart(function(){});
+  /* คำว่า "บันทึก" กับ "เริ่ม" ทำอย่างเดียวกัน เพราะผู้ใช้พูดได้ทั้งสองแบบ */
+  stepBegin({id:"ftsst",say:"เริ่ม",
+    cue:"ขณะนี้เข้าสู่ขั้นตอนลุกนั่ง ห้าครั้ง กรุณานั่งบนเก้าอี้ กอดอกไว้ "+
+        "เมื่อพร้อมแล้ว พูดว่า เริ่ม",
+    hint:"เมื่อพร้อมแล้ว พูดว่า เริ่ม",
+    on:{start:function(){beginTimer()},record:function(){beginTimer()},
+        stop:function(){stepStop();if(running)stopBtn.click();else{vcStop();stopCam();go("assessIntro")}}}});
   function beginTimer(){
     if(running)return;
     AUTOSTART.abort();AUTOSTART.done=true;
@@ -4359,6 +4479,9 @@ function setupTest(video,canvas,ctx){
     startBtn.textContent="กำลังจับเวลา…";startBtn.disabled=true;
     stopBtn.hidden=false;
     setStatus("green","เริ่ม! ลุก-นั่งให้ครบ 5 ครั้ง",false);speak("เริ่มได้เลย");
+    /* ระหว่างจับเวลารับแค่ "หยุด" — คำอื่นไม่ควรไปแตะอะไรกลางการวัด */
+    stepBegin({id:"ftsstRun",say:"หยุด",cue:"",hint:"ถ้าจะเลิกกลางคัน พูดว่า หยุด",
+      on:{stop:function(){stepStop();stopBtn.click()}}});
     coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
   }
   startBtn.addEventListener("click",function(){
@@ -4377,6 +4500,7 @@ function setupTest(video,canvas,ctx){
     },function(){go("assessIntro")});
   });
 }
+var TUG_ASK=null;
 function finishTest(elapsed){
   stopCam();
   var gaps=[];
@@ -4916,16 +5040,21 @@ async function startTugPipeline(){
   loop();
 
   startBtn.addEventListener("click",function(){ if(phase==="waitSit")countdown(); });
-  vcStart(function(cmd){
-    if(cmd==="start"&&phase==="waitSit")countdown();
-    else if(cmd==="stop"&&phase!=="done"){var b=document.getElementById("tugSkip");if(b)b.click()}
-  });
+  vcStart(function(){});
+  TUG_ASK=function(){
+    stepBegin({id:"tug",say:"เริ่ม",
+      cue:"ขณะนี้เข้าสู่ขั้นตอนลุกเดินสามเมตร เมื่อนั่งพิงพนักเก้าอี้แล้ว พูดว่า เริ่ม",
+      hint:"เมื่อนั่งพิงพนักเก้าอี้แล้ว พูดว่า เริ่ม",
+      on:{start:function(){if(phase==="waitSit")countdown()},
+          record:function(){if(phase==="waitSit")countdown()},
+          stop:function(){stepStop();var b=document.getElementById("tugSkip");if(b)b.click()}}});
+  };
 
   if(!introDone){
     introDone=true;
     setStatus("yellow","วางป้าย 2 จุด แล้วกลับมานั่งเก้าอี้",false);
     speak("การทดสอบลุกเดินสามเมตร กรุณาวางป้ายจุดเริ่มไว้ที่เก้าอี้ และป้ายจุดกลับให้ห่างสามเมตร "+
-          "เมื่อวางเสร็จแล้ว กลับมานั่งพิงพนักเก้าอี้ เมื่อระบบเห็นว่าท่านนั่งแล้ว พูดว่า เริ่มทดสอบ ระบบจึงจะนับถอยหลัง");
+          "เมื่อวางเสร็จแล้ว กลับมานั่งพิงพนักเก้าอี้",{onDone:function(){if(TUG_ASK)TUG_ASK()}});
   }
 }
 
@@ -5034,6 +5163,7 @@ async function startBalancePipeline(){
     setStatus("yellow","ท่าที่ "+(stage+1)+" จาก 4 — "+st.nm,false);
     speak((retry?"ลองท่านี้ใหม่อีกครั้ง ":"ต่อไป ")+"ท่าที่ "+(stage+1)+" จาก 4 ท่า "+st.nm+" "+st.how+
           " เมื่อพร้อม กรุณาพูดว่า เริ่ม");
+    if(BAL_ASK)BAL_ASK("setup");
   }
 
   function countdown(){
@@ -5042,6 +5172,7 @@ async function startBalancePipeline(){
     var n=3, w={3:"สาม",2:"สอง",1:"หนึ่ง"};
     setStatus("green","เตรียมตัว "+n,false);
     coach.textContent="เตรียมตัว "+n;
+    stepStop();   /* ระหว่างนับถอยหลังไม่รับคำสั่งใด ๆ กันสั่งซ้อนตอนกำลังจะเริ่ม */
     speak("พร้อมแล้ว เตรียมตัว สาม");
     clearCd();
     cdTimer=setInterval(function(){
@@ -5059,6 +5190,7 @@ async function startBalancePipeline(){
     coach.innerHTML='<b>'+esc(BAL_STAGES[stage].nm)+'</b> — ยืนนิ่ง ๆ อย่าขยับเท้า';
     setStatus("green","กำลังจับเวลา — ยืนนิ่ง 10 วินาที ลืมตาไว้",false);
     speak("เริ่มจับเวลา ยืนนิ่ง ๆ สิบวินาที");
+    if(BAL_ASK)BAL_ASK("holding");
   }
 
   /* ---------- จบการจับเวลา → ให้ "คน" ยืนยันผลเสมอ ----------
@@ -5089,6 +5221,7 @@ async function startBalancePipeline(){
     setStatus(o.suggest==="fail"?"yellow":"green", "รอการยืนยันผล — พูดว่า ผ่าน หรือ ไม่ผ่าน", false);
     coach.innerHTML='<b>กรุณายืนยันผล</b> — พูดว่า "ผ่าน" หรือ "ไม่ผ่าน" หรือกดปุ่ม';
     speak(q+hint+"กรุณาพูดว่า ผ่าน หรือ ไม่ผ่าน หรือกดปุ่มบนหน้าจอ");
+    if(BAL_ASK)BAL_ASK("confirm");
 
     /* ถามซ้ำครั้งเดียวเมื่อเงียบไป 25 วินาที แล้วเปิดทางออกให้กดเอง
        ไม่ตัดสินใจแทนโดยอัตโนมัติ และไม่ปล่อยให้ค้างตลอดไป */
@@ -5107,6 +5240,7 @@ async function startBalancePipeline(){
     if(phase!=="confirm"||!pending)return;
     if(askTimer){clearTimeout(askTimer);askTimer=null}
     phase="between"; confirmBox.hidden=true;
+    if(BAL_ASK)BAL_ASK("between");
     var o=pending.o;
     results[stage]={held:pending.held, pass:!!pass,
                     stage:BAL_STAGES[stage].nm, attempts:attempts[stage], reason:pending.reason,
@@ -5248,21 +5382,38 @@ async function startBalancePipeline(){
     if(phase==="between"&&pendingRetry)pendingRetry();
     else if(phase==="setup"||phase==="holding"){clearCd();announce(true)}
   });
-  document.getElementById("bHelp").addEventListener("click",function(){speak(VC_HELP)});
+  document.getElementById("bHelp").addEventListener("click",function(){speak(STEP.hint||VC_HELP,{force:true})});
   /* คำสั่งเสียงครบชุด — ทุกคำมีปุ่มบนจอทดแทนได้เสมอ */
-  vcStart(function(cmd){
-    if(cmd==="start"&&phase==="setup"){countdown();return}
-    if(cmd==="pass"&&phase==="confirm"){settle(true);return}
-    if(cmd==="fail"&&phase==="confirm"){settle(false);return}
-    if(cmd==="done"&&phase==="confirm"){settle(pending&&pending.held>=BAL_SECONDS-0.3);return}
-    if(cmd==="again"){
-      if(phase==="between"&&pendingRetry){pendingRetry();return}
-      if(phase==="setup"||phase==="holding"){clearCd();announce(true);return}
-    }
-    if(cmd==="next"&&phase==="between"&&pendingNext){pendingNext();return}
-    if(cmd==="stop"){ if(phase==="confirm"||phase==="holding")haltSafe();
-                      else{var b=document.getElementById("bStop");if(b)b.click()} }
-  });
+  vcStart(function(){});
+  /* หน้าทรงตัวมีหลายจังหวะ แต่ละจังหวะรับคำต่างกัน จึงประกาศขั้นตอนใหม่ทุกครั้ง
+     ที่จังหวะเปลี่ยน แทนการฟังทุกคำตลอดเวลาแล้วมาไล่ if ทีหลัง */
+  var BAL_ASK=null;
+  BAL_ASK=function(kind){
+    if(kind==="setup")
+      return stepBegin({id:"balSetup",say:"เริ่ม",
+        cue:"",hint:"เมื่อยืนในท่าพร้อมแล้ว พูดว่า เริ่ม",
+        on:{start:function(){if(phase==="setup")countdown()},
+            record:function(){if(phase==="setup")countdown()},
+            redo:function(){clearCd();announce(true)},
+            stop:function(){stepStop();var b=document.getElementById("bStop");if(b)b.click()}}});
+    if(kind==="confirm")
+      return stepBegin({id:"balConfirm",say:"ผ่าน",
+        cue:"",quiet:true,hint:"ถ้ายืนได้ พูดว่า ผ่าน ถ้าเสียหลัก พูดว่า ไม่ผ่าน",
+        on:{pass:function(){stepStop();settle(true)},
+            fail:function(){stepStop();settle(false)},
+            stop:function(){stepStop();haltSafe()}}});
+    if(kind==="between")
+      return stepBegin({id:"balBetween",say:"ต่อไป",
+        cue:"",hint:"พูดว่า ต่อไป เพื่อทำท่าถัดไป หรือ ทำใหม่ เพื่อทำท่านี้อีกครั้ง",
+        on:{next:function(){stepStop();if(pendingNext)pendingNext()},
+            redo:function(){stepStop();if(pendingRetry)pendingRetry()},
+            stop:function(){stepStop();var b=document.getElementById("bStop");if(b)b.click()}}});
+    if(kind==="holding")
+      return stepBegin({id:"balHold",say:"หยุด",cue:"",hint:"ถ้าเสียหลัก พูดว่า หยุด",
+        on:{stop:function(){stepStop();haltSafe()},
+            fail:function(){stepStop();haltSafe()}}});
+    stepStop();
+  };
 
   phase="intro";
   setStatus("yellow","ยืนห่างกล้อง 2–3 เมตร ให้เห็นทั้งตัว",false);
