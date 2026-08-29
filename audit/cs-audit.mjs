@@ -1427,6 +1427,40 @@ function layer7() {
       bad.join(" · "), "ใช้ชื่อหน้าจอที่ลงทะเบียนไว้ในตาราง render ของไฟล์นั้น");
   }
 
+  /* ---- X-109: ติดตั้งแล้วกดไอคอนต้องเข้าตัวแอป ไม่ใช่หน้าเว็บนำเสนอ ----
+     ผู้ใช้แจ้งว่ากดไอคอนแล้วไปโผล่หน้าเบราว์เซอร์ ต้องกดผ่านหน้าเว็บอีกทอด
+     ต้นเหตุ: manifest ตั้ง start_url ไว้ที่ index.html ซึ่งเป็นหน้านำเสนอ
+     และ index.html ไม่มีเมตาเต็มจอของ iOS ถ้าติดตั้งจากหน้านั้นบน iPhone
+     ระบบจะเปิดใน Safari พร้อมแถบที่อยู่เว็บ เห็นเป็นเบราว์เซอร์ชัด ๆ */
+  {
+    const miss = [];
+    let mf = null;
+    try { mf = JSON.parse(read("manifest.json")); }
+    catch (e) { miss.push("อ่าน manifest.json ไม่ได้"); }
+    if (mf) {
+      if (mf.start_url !== "./CareSignal-App.html")
+        miss.push('start_url ต้องเป็นตัวแอป ไม่ใช่ ' + mf.start_url);
+      if (mf.display !== "standalone") miss.push("display ต้องเป็น standalone");
+      /* id ต้องคงเดิม เปลี่ยนเมื่อไหร่เบราว์เซอร์นับเป็นแอปตัวใหม่แล้วขึ้นไอคอนซ้ำ */
+      if (mf.id !== "./index.html") miss.push("id เปลี่ยนไป จะเกิดไอคอนซ้ำบนเครื่องผู้ใช้");
+    }
+    const idx = read("index.html");
+    for (const [nm, needle] of [
+      ["เมตาเต็มจอ iOS", 'name="apple-mobile-web-app-capable" content="yes"'],
+      ["เมตาเต็มจอ Android", 'name="mobile-web-app-capable" content="yes"'],
+      ["ตัวพาเข้าแอปเมื่อเปิดจากไอคอน", 'location.replace("./CareSignal-App.html")'],
+      ["ตัวกันวนลูปเปลี่ยนเส้นทาง", 'sessionStorage.setItem("cs:toapp"'],
+    ]) if (!idx.includes(needle)) miss.push("index.html ขาด" + nm);
+    if (!read("sw.js").includes('"./CareSignal-App.html"'))
+      miss.push("service worker ไม่ได้แคชตัวแอป เปิดออฟไลน์จากไอคอนจะพัง");
+    req(7, "X-109", "ติดตั้งแล้วกดไอคอนเข้าตัวแอปเลย ไม่ผ่านหน้าเว็บนำเสนอ",
+        miss.length ? "FAIL" : "PASS",
+        miss.length ? miss.join(" · ") : "start_url ชี้ตัวแอป เต็มจอทั้งสองระบบ และมีตัวพาเข้าแอปสำหรับเครื่องที่ติดตั้งไว้ก่อน");
+    if (miss.length) finding("MEDIUM", "X-109", "แอปที่ติดตั้งแล้วเปิดมาเป็นหน้าเว็บ",
+      "ผู้ใช้สูงอายุต้องกดผ่านหน้าเว็บอีกทอดกว่าจะถึงการตรวจ และเห็นแถบเบราว์เซอร์จนไม่รู้สึกว่าเป็นแอป",
+      miss.join(" · "), "ตั้ง start_url ไปที่ CareSignal-App.html และใส่เมตาเต็มจอในหน้าเว็บด้วย");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

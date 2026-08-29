@@ -12,7 +12,34 @@
 <meta property="og:url" content="https://sarawut2206.github.io/CareSignal-V2/">
 <meta property="og:image" content="https://sarawut2206.github.io/CareSignal-V2/icon-512.png">
 <meta property="og:locale" content="th_TH">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CareSignal">
 <link rel="manifest" href="./manifest.json">
+<script>
+/* เปิดจากไอคอนแอปที่ติดตั้งไว้ = เข้าตัวแอปเลย ไม่ใช่หน้าเว็บแนะนำ
+   manifest ตั้ง start_url ไปที่ตัวแอปอยู่แล้ว แต่เครื่องที่ติดตั้งไปก่อนหน้านี้
+   ยังจำ start_url เดิมไว้จนกว่าเบราว์เซอร์จะอ่าน manifest ใหม่ ซึ่งอาจกินเวลา
+   เป็นวัน ตัวเปลี่ยนเส้นทางนี้จึงทำให้ได้ผลทันทีโดยไม่ต้องถอนแล้วติดตั้งใหม่
+   ต่อท้าย ?site=1 เมื่อจงใจจะดูหน้าเว็บนำเสนอจากในแอป */
+(function(){
+  try{
+    var inApp=matchMedia("(display-mode: standalone)").matches
+           || matchMedia("(display-mode: fullscreen)").matches
+           || matchMedia("(display-mode: minimal-ui)").matches
+           || navigator.standalone===true;
+    /* ยอมเปลี่ยนเส้นทางครั้งเดียวต่อการเปิดหนึ่งครั้ง — ตอนออฟไลน์ service worker
+       ตั้งทางออกสำรองไว้ที่หน้านี้ ถ้าเราส่งกลับไปหาไฟล์ที่โหลดไม่ได้ซ้ำ ๆ จะวนไม่รู้จบ */
+    var once=false;
+    try{once=sessionStorage.getItem("cs:toapp")==="1"}catch(e2){}
+    if(inApp&&!once&&location.search.indexOf("site=1")<0){
+      try{sessionStorage.setItem("cs:toapp","1")}catch(e3){}
+      location.replace("./CareSignal-App.html");
+    }
+  }catch(e){}
+})();
+</script>
 <meta name="theme-color" content="#0F2A5C">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon-64.png">

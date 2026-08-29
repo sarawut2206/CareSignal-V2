@@ -3,16 +3,22 @@
   "name": "CareSignal — เฝ้าระวังความเสี่ยงและประสานการดูแลผู้สูงอายุ",
   "short_name": "CareSignal",
   "description": "คัดกรองสัญญาณเสี่ยงหกล้มด้วยกล้องมือถือที่บ้าน ทีมดูแลติดตามและส่งต่อ ผู้เชี่ยวชาญยืนยัน — ประมวลผลภาพในเครื่อง ไม่ส่งภาพออกไปที่ใด",
-  "start_url": "./index.html",
+  "start_url": "./CareSignal-App.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#0F2A5C",
   "theme_color": "#0F2A5C",
   "lang": "th",
   "dir": "ltr",
-  "categories": ["health", "medical"],
+  "categories": [
+    "health",
+    "medical"
+  ],
   "icons": [
     {
       "src": "./icon-192.png",
@@ -43,20 +49,35 @@
     {
       "name": "ตรวจร่างกายด้วยกล้อง",
       "short_name": "ตรวจร่างกาย",
-      "url": "./index.html#member",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "url": "./CareSignal-App.html",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "คอนโซลเจ้าหน้าที่ดูแล",
       "short_name": "เจ้าหน้าที่",
-      "url": "./index.html#care",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "url": "./CareSignal-Staff.html",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
-      "name": "ทีมผู้เชี่ยวชาญยืนยันผล",
-      "short_name": "ผู้เชี่ยวชาญ",
-      "url": "./index.html#expert",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "name": "เว็บไซต์ CareSignal",
+      "short_name": "เว็บไซต์",
+      "url": "./index.html?site=1",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
