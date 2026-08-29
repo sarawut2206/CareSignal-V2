@@ -779,6 +779,20 @@ function stepNudge(){
   speak(STEP.hint,{force:true});
 }
 
+/* ---- รับคำสั่งจากผลชั่วคราว พร้อมกันยิงซ้ำจากผลสุดท้ายที่ตามมาทีหลัง ---- */
+function vcDispatchEarly(txt){
+  if(!STEP.id||!STEP.on)return null;
+  var k=vcIntent(txt);
+  if(!k||!(k==="repeat"||STEP.on[k]))return null;
+  var now=Date.now();
+  if(VC.earlyK===k&&now-(VC.earlyT||0)<2500)return null;   /* ยิงไปแล้ว รอผลสุดท้ายผ่านไปก่อน */
+  var r=vcDispatch(txt);
+  /* ตั้งเครื่องหมายหลังลงมือเสร็จ ไม่ใช่ก่อน ไม่งั้น vcDispatch จะเห็นเครื่องหมาย
+     ที่เราเพิ่งตั้งเอง แล้วปฏิเสธว่าเป็นการยิงซ้ำ กลายเป็นไม่ทำอะไรเลย */
+  VC.earlyK=k; VC.earlyT=Date.now();
+  return r;
+}
+
 function vcDispatch(txt){
   /* ---- ด่านแรก: เชื่อได้ไหมว่านี่คือคนสั่งจริง ----
      ระหว่างที่ระบบกำลังพูด สิ่งที่ไมค์ได้ยินคือเสียงตัวเอง — ทิ้งทั้งหมด
@@ -792,6 +806,9 @@ function vcDispatch(txt){
   if(vcIsEcho(txt))return "echo";
   /* ---- อยู่ในขั้นตอนที่ประกาศไว้ = ใช้คำสั่งของขั้นตอนนั้น ทำทันที ไม่ต้องยืนยัน ---- */
   if(STEP.id){
+    /* ผลสุดท้ายที่ตามหลังผลชั่วคราวซึ่งลงมือไปแล้ว ต้องไม่ทำซ้ำอีกรอบ */
+    var ik=vcIntent(txt);
+    if(ik&&VC.earlyK===ik&&Date.now()-(VC.earlyT||0)<2500){VC.earlyK=null;return "already"}
     VC.lastHeard=String(txt).trim().slice(0,24); VC.live="";
     var hit=stepHear(txt);
     if(hit){vcRender();return "step:"+hit}
@@ -940,10 +957,17 @@ function vcStart(handler){
       for(var i=ev.resultIndex;i<ev.results.length;i++){
         var res=ev.results[i], txt=res[0]&&res[0].transcript||"";
         if(!res.isFinal){interim+=txt;continue}
-        /* ---- ตัดสินใจจากผลสุดท้ายเท่านั้น (แยกเป็น vcDispatch ให้ทดสอบได้) ---- */
         vcDispatch(txt);
       }
-      if(interim){VC.live=interim.trim().slice(0,24);vcRender()}
+      if(interim){
+        VC.live=interim.trim().slice(0,24);vcRender();
+        /* ---- รับคำสั่งจากผลชั่วคราวด้วย ----
+           Chrome ส่งผลสุดท้ายช้ากว่าเสียงจริงราวหนึ่งถึงสองวินาที และถ้าตัวรู้จำ
+           เสียงถูกรีสตาร์ตในช่วงนั้น ผลสุดท้ายจะไม่มาเลย คำที่พูดไปแล้วหายเงียบ
+           ผู้ใช้จึงต้องพูดซ้ำหลายครั้ง — อาการที่แจ้งมาตรง ๆ
+           ทำได้เฉพาะตอนอยู่ในขั้นตอน เพราะเป็นคำปิดชุดเล็กและย้อนได้ด้วย ทำใหม่ */
+        if(STEP.id)vcDispatchEarly(interim);
+      }
     };
     /* Chrome หยุดฟังเองเมื่อเงียบนาน — ต่อชีวิตให้เสมอขณะยังอยู่หน้าทดสอบ */
     VC.rec.onend=function(){ VC.starting=false; vcTouch(); if(VC.on)vcRevive(400) };
@@ -4304,15 +4328,20 @@ function setupCalib(video,canvas,ctx){
       "ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
     toast("สอบเทียบเรียบร้อย");
     setStatus("green","สอบเทียบเรียบร้อย — ขั้นต่อไป ทดสอบลุกนั่ง 5 ครั้ง",false);
-    speak("สอบเทียบเรียบร้อยแล้ว ขั้นตอนต่อไป ทดสอบลุกนั่ง ห้าครั้ง กรุณานั่งลงบนเก้าอี้");
+    /* สั้นไว้ เพราะหน้าถัดไปจะประกาศขั้นตอนของตัวเองใน 2.6 วินาที
+       ถ้ายาวกว่านี้จะถูกตัดกลางประโยคแล้วผู้ใช้ได้ยินไม่จบความ */
+    speak("สอบเทียบเรียบร้อย");
     vcStop();
-    setTimeout(function(){go("test")},2600);
+    /* ชื่อหน้าจอในไฟล์นี้คือ camtest ทั้งในตารางหน้าจอ ในลูปตรวจ S.screen
+       และใน AutoCapture — go("test") จึงตกกลับไปหน้าแรกด้วย ||homeV
+       ทำให้ขั้นลุกนั่ง 5 ครั้งเข้าไม่ถึงเลย และไม่มีค่าใดถูกบันทึก */
+    setTimeout(function(){go("camtest")},2600);
   }
   cap.addEventListener("click",function(){capture("sit")});
   if(capStand)capStand.addEventListener("click",function(){capture("stand")});
   /* ทีละขั้น: บอกให้ทำท่าไหน แล้วรอคำว่า "บันทึก" คำเดียว ทำทันที
      เดิมต้องพูด "บันทึกท่านั่ง" แล้วตอบ "ยืนยัน" อีกครั้ง ซึ่งยาวและพลาดง่าย */
-  function calBail(){stepStop();vcStop();stopCam();go("assess")}
+  function calBail(){stepStop();vcStop();stopCam();go("assessIntro")}
   function calReset(){
     sitVal=null;standVal=null;cstep.textContent=fmtState();
     setStatus("yellow","ล้างค่าที่บันทึกไว้แล้ว — เริ่มบันทึกใหม่",false);
