@@ -1722,6 +1722,15 @@ function vcNotUnderstood(heard){
    ปุ่มบนหน้าจอไม่ผ่านขั้นนี้ (การกดคือความตั้งใจอยู่แล้ว)
    ============================================================ */
 function vcDispatch(txt){
+  /* ---- ด่านแรก: เชื่อได้ไหมว่านี่คือคนสั่งจริง ----
+     ระหว่างที่ระบบกำลังพูด สิ่งที่ไมค์ได้ยินคือเสียงตัวเอง — ทิ้งทั้งหมด
+     ยกเว้น "หยุด" ให้แทรกได้เสมอ · และถ้าด่าน VAD บอกว่าช่วงที่ผ่านมา
+     ไม่มีเสียงพูดจริงใกล้เครื่อง (เช่นเป็นเสียงทีวีเบา ๆ) ก็ทิ้งเช่นกัน */
+  var blocked=vcBlockedBy();
+  if(blocked){
+    var c0=vcParse(txt)||vcParse(vcStrip(txt));
+    if(!(blocked==="tts"&&c0==="stop"))return "gated-"+blocked;
+  }
   if(vcIsEcho(txt))return "echo";
   /* ตัดคำลงท้ายก่อน แล้วลองจับคำสั่งจากทั้งข้อความเดิมและข้อความที่ตัดแล้ว
      "เริ่มได้เลยนะครับ" จึงถูกอ่านเป็นคำสั่ง เริ่ม ได้ */
@@ -1805,6 +1814,93 @@ function vcRender(){
   if(VC.pending){b.textContent='🎤 พูดว่า "ยืนยัน" — '+(VC_NAMES[VC.pending.cmd]||VC.pending.cmd);return}
   b.textContent=VC.live?("🎤 "+VC.live):(VC.lastHeard?("🎤 ได้ยิน: "+VC.lastHeard):"🎤 กำลังฟัง…");
 }
+
+/* ============================================================
+   ด่านตรวจ "เสียงพูดจริงใกล้เครื่อง" — VAD ในเครื่อง ไม่ใช้คลาวด์
+   ------------------------------------------------------------
+   อาการที่แก้: ระบบตอบเอง/ทำงานเองทั้งที่ไม่มีใครสั่ง เพราะตัวรู้จำเสียง
+   ของเบราว์เซอร์ส่งข้อความมาแม้ต้นเสียงเป็นทีวี คนพูดไกล ๆ หรือเสียงพูด
+   ของระบบเองที่ถูกถอดความเพี้ยนจนตัวกรองข้อความ (vcIsEcho) จับไม่ได้
+
+   วิธีแก้: เปิดสายไมค์คู่ขนานผ่าน Web Audio โดยเปิด echoCancellation +
+   noiseSuppression + autoGainControl ของเบราว์เซอร์ แล้ววัดระดับเสียงจริง
+   ด้วยเกณฑ์มาตรฐานของงาน VAD — threshold ขาขึ้น/ขาลงไม่เท่ากัน (hysteresis)
+   ต่อท้ายเสียง 300ms กันตัดท้ายคำ (hangover) และย้อนหัว 200ms กันหัวคำหาย
+   (pre-roll) — เสียงพูดของระบบเองออกจากลำโพงเครื่องเดียวกัน จึงถูก
+   echoCancellation หักทิ้งและไม่ผ่านด่านนี้
+
+   เกณฑ์เริ่มพูดปรับตามพื้นเสียงแวดล้อม: ทีวีที่เปิดค้างจะกลายเป็นพื้น
+   ทำให้เกณฑ์ลอยขึ้นตาม คนที่สั่งจริงต้องพูดดังกว่าสภาพแวดล้อม
+   จึงเป็นการประมาณ "ผู้พูดหลัก" อย่างตรงไปตรงมาโดยไม่ส่งเสียงออกนอกเครื่อง
+
+   เปิดสายคู่ขนานไม่ได้ (ไม่ได้สิทธิ์/เบราว์เซอร์เก่า) = ถอยไปทำงานแบบเดิม
+   ============================================================ */
+var VAD={ready:false,ctx:null,an:null,stream:null,timer:null,
+         hist:[],segs:[],active:false,belowSince:0,floor:0.008};
+function vadStart(){
+  if(VAD.ready||VAD.timer)return;
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return;
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})
+  .then(function(st){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC){try{st.getTracks().forEach(function(t){t.stop()})}catch(e){}return}
+    VAD.stream=st;
+    VAD.ctx=new AC();
+    var src=VAD.ctx.createMediaStreamSource(st);
+    VAD.an=VAD.ctx.createAnalyser(); VAD.an.fftSize=1024;
+    src.connect(VAD.an);
+    var buf=new Uint8Array(VAD.an.fftSize);
+    VAD.ready=true;
+    VAD.timer=setInterval(function(){
+      if(!VAD.ready)return;
+      VAD.an.getByteTimeDomainData(buf);
+      var s=0; for(var i=0;i<buf.length;i+=4){var d=(buf[i]-128)/128; s+=d*d}
+      var rms=Math.sqrt(s/(buf.length/4)), now=Date.now();
+      VAD.hist.push({t:now,v:rms});
+      while(VAD.hist.length&&now-VAD.hist[0].t>3000)VAD.hist.shift();
+      var a=VAD.hist.map(function(x){return x.v}).sort(function(x,y){return x-y});
+      VAD.floor=a[Math.floor(a.length*0.2)]||0.008;
+      var attack=Math.max(0.015,VAD.floor*3.0);
+      var release=Math.max(0.009,VAD.floor*1.8);
+      if(!VAD.active){
+        if(rms>attack){VAD.active=true;VAD.belowSince=0;VAD.segs.push({s:now-200,e:now})}
+      }else{
+        var seg=VAD.segs[VAD.segs.length-1];
+        if(rms>release){seg.e=now;VAD.belowSince=0}
+        else{
+          if(!VAD.belowSince)VAD.belowSince=now;
+          if(now-VAD.belowSince>300)VAD.active=false;
+          else seg.e=now;
+        }
+      }
+      while(VAD.segs.length&&now-VAD.segs[0].e>8000)VAD.segs.shift();
+    },30);
+  }).catch(function(){});
+}
+function vadStop(){
+  VAD.ready=false;
+  if(VAD.timer){clearInterval(VAD.timer);VAD.timer=null}
+  try{if(VAD.stream)VAD.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
+  try{if(VAD.ctx)VAD.ctx.close()}catch(e){}
+  VAD.ctx=null;VAD.an=null;VAD.stream=null;VAD.hist=[];VAD.segs=[];VAD.active=false;VAD.belowSince=0;
+}
+function vadVoicedMs(win){
+  var now=Date.now(), from=now-(win||5000), ms=0;
+  for(var i=0;i<VAD.segs.length;i++){
+    var s=Math.max(VAD.segs[i].s,from), e=Math.min(VAD.segs[i].e,now);
+    if(e>s)ms+=e-s;
+  }
+  return ms;
+}
+/* เหตุที่ต้องทิ้งข้อความที่เพิ่งได้ยิน — คืน null เมื่อรับได้ */
+function vcBlockedBy(){
+  var now=Date.now();
+  if(now<SPK.until||("speechSynthesis" in window&&window.speechSynthesis&&speechSynthesis.speaking))
+    return "tts";
+  if(VAD.ready&&vadVoicedMs(5000)<250)return "novoice";
+  return null;
+}
+
 function vcStart(handler){
   VC.handler=handler;
   if(!VC.supported)return false;
@@ -1837,6 +1933,7 @@ function vcStart(handler){
     };
     VC.on=true; VC.lastHeard=""; VC.live="";
     vcTryStart();
+    vadStart();
     vcMount();
     return true;
   }catch(e){VC.on=false;return false}
@@ -1854,13 +1951,14 @@ function vcRevive(ms){
 function vcStop(){
   VC.on=false;VC.handler=null;VC.live="";VC.starting=false;
   vcClearPending();
+  vadStop();
   if(VC.reviveT){clearTimeout(VC.reviveT);VC.reviveT=null}
   if(VC.rec){try{VC.rec.onend=null;VC.rec.stop()}catch(e){}VC.rec=null}
   var b=document.getElementById("vcbadge"); if(b&&b.parentNode)b.parentNode.removeChild(b);
 }
 function vcHint(){return VC.supported?'พูดว่า "เริ่ม" หรือกดปุ่ม':"กดปุ่มเริ่มเมื่อพร้อม"}
 
-var SPK={last:{}};
+var SPK={last:{},until:0};
 function speak(text,opts){
   opts=opts||{};
   var fin=function(){ if(opts.onDone){var f=opts.onDone;opts.onDone=null;try{f()}catch(e){}} };
@@ -1872,6 +1970,9 @@ function speak(text,opts){
     var key=vcNorm(text), now=Date.now();
     if(!opts.force&&SPK.last[key]&&now-SPK.last[key]<4000){setTimeout(fin,120);return}
     SPK.last[key]=now;
+    /* หน้าต่างเวลาที่ระบบกำลังพูด — ประเมินจากความยาวข้อความก่อน
+       แล้วร่นให้สั้นลงเมื่อรู้เวลาพูดจบจริง ใช้เป็นด่านกันฟังเสียงตัวเอง */
+    SPK.until=now+1200+text.length*90;
     if(opts.interrupt!==false)speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(text);
     u.lang="th-TH"; u.rate=opts.rate||0.95; u.volume=1;
@@ -1880,7 +1981,7 @@ function speak(text,opts){
     /* จำไว้ว่าระบบพูดอะไร ไม่ให้ไมค์รับเสียงตัวเองเป็นคำสั่ง — จบแล้วเหลืออายุ 2.2 วิ */
     VC.lastSpoken=text;
     var e=vcRemember(text);
-    var done=function(){ if(e)e.until=Date.now()+2200; fin() };
+    var done=function(){ if(e)e.until=Date.now()+2200; SPK.until=Date.now()+600; fin() };
     u.onend=done; u.onerror=done;
     /* บางเครื่องเหตุการณ์พูดจบไม่มา — ตั้งเผื่อไว้ตามความยาวข้อความ ไม่ให้อะไรค้าง */
     setTimeout(done, 1200+text.length*90);
