@@ -1905,105 +1905,50 @@ function vcRender(){
   if(!VC.supported){b.textContent="🎤 เครื่องนี้ใช้ปุ่มแทนเสียง";return}
   if(!VC.on){b.textContent="🎤 ปิดอยู่";return}
   if(VC.pending){b.textContent='🎤 พูดว่า "ยืนยัน" — '+(VC_NAMES[VC.pending.cmd]||VC.pending.cmd);return}
-  /* อยู่ในขั้นตอน = บอกคำที่ต้องพูดค้างไว้บนจอ ผู้ใช้ที่ไม่ได้ยินเสียงยังทำต่อได้ */
-  if(STEP.id&&STEP.say){b.textContent="🎤 พูดว่า “"+STEP.say+"”";return}
+  /* อยู่ในขั้นตอน = บอกทั้งคำที่ต้องพูด และคำล่าสุดที่ไมค์ได้ยิน
+     ถ้าไม่บอกสิ่งที่ได้ยิน ผู้ใช้แยกไม่ออกว่าไมค์ไม่ทำงาน หรือได้ยินแล้วแต่ไม่เข้าใจ */
+  if(STEP.id&&STEP.say){
+    b.textContent="🎤 พูดว่า “"+STEP.say+"”"+
+      (VC.live?" · "+VC.live:(VC.lastHeard?" · ได้ยิน: "+VC.lastHeard:""));
+    return;
+  }
   b.textContent=VC.live?("🎤 "+VC.live):(VC.lastHeard?("🎤 ได้ยิน: "+VC.lastHeard):"🎤 กำลังฟัง…");
 }
 
-/* ============================================================
-   ด่านตรวจ "เสียงพูดจริงใกล้เครื่อง" — VAD ในเครื่อง ไม่ใช้คลาวด์
-   ------------------------------------------------------------
-   อาการที่แก้: ระบบตอบเอง/ทำงานเองทั้งที่ไม่มีใครสั่ง เพราะตัวรู้จำเสียง
-   ของเบราว์เซอร์ส่งข้อความมาแม้ต้นเสียงเป็นทีวี คนพูดไกล ๆ หรือเสียงพูด
-   ของระบบเองที่ถูกถอดความเพี้ยนจนตัวกรองข้อความ (vcIsEcho) จับไม่ได้
-
-   วิธีแก้: เปิดสายไมค์คู่ขนานผ่าน Web Audio โดยเปิด echoCancellation +
-   noiseSuppression + autoGainControl ของเบราว์เซอร์ แล้ววัดระดับเสียงจริง
-   ด้วยเกณฑ์มาตรฐานของงาน VAD — threshold ขาขึ้น/ขาลงไม่เท่ากัน (hysteresis)
-   ต่อท้ายเสียง 300ms กันตัดท้ายคำ (hangover) และย้อนหัว 200ms กันหัวคำหาย
-   (pre-roll) — เสียงพูดของระบบเองออกจากลำโพงเครื่องเดียวกัน จึงถูก
-   echoCancellation หักทิ้งและไม่ผ่านด่านนี้
-
-   เกณฑ์เริ่มพูดปรับตามพื้นเสียงแวดล้อม: ทีวีที่เปิดค้างจะกลายเป็นพื้น
-   ทำให้เกณฑ์ลอยขึ้นตาม คนที่สั่งจริงต้องพูดดังกว่าสภาพแวดล้อม
-   จึงเป็นการประมาณ "ผู้พูดหลัก" อย่างตรงไปตรงมาโดยไม่ส่งเสียงออกนอกเครื่อง
-
-   เปิดสายคู่ขนานไม่ได้ (ไม่ได้สิทธิ์/เบราว์เซอร์เก่า) = ถอยไปทำงานแบบเดิม
-   ============================================================ */
-var VAD={ready:false,armed:false,disabled:false,ctx:null,an:null,stream:null,timer:null,
-         hist:[],segs:[],active:false,belowSince:0,floor:0.008};
-function vadStart(){
-  if(VAD.ready||VAD.timer||VAD.disabled)return;
-  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia))return;
-  /* จงใจปิด echoCancellation: เปิดแล้วเบราว์เซอร์นับสายนี้เป็นสายสนทนา
-     Windows/Android จะหรี่หรือปิดเสียงสื่ออื่นทั้งเครื่อง = เสียงพูดของระบบเงียบ
-     งานกันเสียงสะท้อนใช้ด่านหน้าต่างเวลา TTS แทน ซึ่งไม่พึ่งการประมวลผลเสียง */
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}})
-  .then(function(st){
-    var AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC){try{st.getTracks().forEach(function(t){t.stop()})}catch(e){}return}
-    VAD.stream=st;
-    VAD.ctx=new AC();
-    try{if(VAD.ctx.state==="suspended")VAD.ctx.resume()}catch(e){}
-    var src=VAD.ctx.createMediaStreamSource(st);
-    VAD.an=VAD.ctx.createAnalyser(); VAD.an.fftSize=1024;
-    src.connect(VAD.an);
-    var buf=new Uint8Array(VAD.an.fftSize);
-    VAD.ready=true;
-    VAD.timer=setInterval(function(){
-      if(!VAD.ready)return;
-      VAD.an.getByteTimeDomainData(buf);
-      var s=0; for(var i=0;i<buf.length;i+=4){var d=(buf[i]-128)/128; s+=d*d}
-      var rms=Math.sqrt(s/(buf.length/4)), now=Date.now();
-      VAD.hist.push({t:now,v:rms});
-      while(VAD.hist.length&&now-VAD.hist[0].t>3000)VAD.hist.shift();
-      var a=VAD.hist.map(function(x){return x.v}).sort(function(x,y){return x-y});
-      VAD.floor=a[Math.floor(a.length*0.2)]||0.008;
-      var attack=Math.max(0.015,VAD.floor*3.0);
-      var release=Math.max(0.009,VAD.floor*1.8);
-      if(!VAD.active){
-        if(rms>attack){VAD.active=true;VAD.belowSince=0;VAD.segs.push({s:now-200,e:now})}
-      }else{
-        var seg=VAD.segs[VAD.segs.length-1];
-        if(rms>release){seg.e=now;VAD.belowSince=0}
-        else{
-          if(!VAD.belowSince)VAD.belowSince=now;
-          if(now-VAD.belowSince>300)VAD.active=false;
-          else seg.e=now;
-        }
-      }
-      while(VAD.segs.length&&now-VAD.segs[0].e>8000)VAD.segs.shift();
-      /* ด่านนี้เริ่มบังคับก็ต่อเมื่อพิสูจน์แล้วว่าไมค์เครื่องนี้จับเสียงพูดได้จริง
-         ก่อนหน้านั้นปล่อยผ่านหมด — เครื่องที่ไมค์เบาจะไม่ถูกทิ้งคำสั่งทั้งหมด */
-      if(!VAD.armed){var L=VAD.segs[VAD.segs.length-1];if(L&&L.e-L.s>=400)VAD.armed=true}
-    },30);
-  }).catch(function(){});
-}
-function vadStop(){
-  VAD.ready=false;
-  if(VAD.timer){clearInterval(VAD.timer);VAD.timer=null}
-  try{if(VAD.stream)VAD.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}
-  try{if(VAD.ctx)VAD.ctx.close()}catch(e){}
-  VAD.ctx=null;VAD.an=null;VAD.stream=null;VAD.hist=[];VAD.segs=[];VAD.active=false;VAD.belowSince=0;VAD.armed=false;
-}
-function vadVoicedMs(win){
-  var now=Date.now(), from=now-(win||5000), ms=0;
-  for(var i=0;i<VAD.segs.length;i++){
-    var s=Math.max(VAD.segs[i].s,from), e=Math.min(VAD.segs[i].e,now);
-    if(e>s)ms+=e-s;
-  }
-  return ms;
-}
-/* เหตุที่ต้องทิ้งข้อความที่เพิ่งได้ยิน — คืน null เมื่อรับได้ */
+/* ---- เหตุที่ต้องทิ้งสิ่งที่ได้ยิน — คืน null เมื่อรับได้ ----
+   เคยมีชั้น VAD เปิดไมค์เส้นที่สองมาวัดระดับเสียงคู่ขนาน ถอดออกแล้ว
+   เพราะบนมือถือมันแย่งไมค์กับตัวรู้จำเสียง และวัดจริงบนเครื่องพบว่า
+   ไม่เคยเปิดติดด้วยซ้ำ (ready=false) คือได้ความเสี่ยงมาโดยไม่ได้ประโยชน์
+   เหลือด่านเดียวคือช่วงเวลาที่ระบบกำลังพูด ซึ่งพิสูจน์แล้วว่าจำเป็นจริง
+   สำหรับกันไม่ให้ไมค์รับเสียงของระบบเองไปเป็นคำสั่ง */
 function vcBlockedBy(){
   var now=Date.now();
-  /* speechSynthesis.speaking ค้างเป็น true ถาวรได้บนบางเครื่อง (บั๊กเบราว์เซอร์ที่รู้จักกัน)
-     ถ้าเชื่อดิบ ๆ ระบบจะหูหนวกถาวร — เชื่อได้เฉพาะภายในเพดานเวลาจากรอบพูดล่าสุด */
+  /* speechSynthesis.speaking ค้างเป็น true ถาวรได้บนบางเครื่อง (บั๊กที่รู้จักกัน)
+     ถ้าเชื่อดิบ ๆ ระบบจะหูหนวกถาวร — เชื่อได้เฉพาะในเพดานเวลาจากรอบพูดล่าสุด */
   var speaking=("speechSynthesis" in window&&window.speechSynthesis&&speechSynthesis.speaking);
-  if(now<SPK.until||(speaking&&now<SPK.until+5000))return "tts";
-  if(VAD.ready&&VAD.armed&&vadVoicedMs(5000)<250)return "novoice";
+  if(now<SPK.until||(speaking&&now<SPK.until+2500))return "tts";
   return null;
 }
+
+
+/* ---- ยามเฝ้าไมค์ ----
+   ตัวรู้จำเสียงของเบราว์เซอร์ตายเงียบได้ โดยไม่ส่ง onend หรือ onerror ออกมาเลย
+   (พบบ่อยบน Android เมื่อลำโพงทำงานพร้อมไมค์) เมื่อนั้น VC.starting จะค้างเป็น
+   true ตลอดไป และ vcTryStart จะ return ทิ้งทุกครั้ง = ไมค์ตายถาวรแบบเงียบสนิท
+   จึงต้องมีคนคอยจับเวลา ถ้าไม่มีสัญญาณชีวิตเกิน 9 วินาที ให้ล้มแล้วเริ่มใหม่ */
+function vcTouch(){ VC.lastEvent=Date.now(); }
+function vcWatch(){
+  if(VC.watchT)return;
+  VC.watchT=setInterval(function(){
+    if(!VC.on||!VC.rec)return;
+    if(Date.now()-(VC.lastEvent||0)<9000)return;
+    VC.revivals=(VC.revivals||0)+1;
+    try{VC.rec.abort()}catch(e){}
+    VC.starting=false; vcTouch();
+    vcTryStart();
+  },3000);
+}
+function vcUnwatch(){ if(VC.watchT){clearInterval(VC.watchT);VC.watchT=null} }
 
 function vcStart(handler){
   VC.handler=handler;
@@ -2013,7 +1958,11 @@ function vcStart(handler){
   try{
     VC.rec=new SR();
     VC.rec.lang="th-TH"; VC.rec.continuous=true; VC.rec.interimResults=true;
+    VC.rec.onstart=function(){VC.starting=false;vcTouch();vcRender()};
+    VC.rec.onaudiostart=vcTouch;
+    VC.rec.onspeechstart=vcTouch;
     VC.rec.onresult=function(ev){
+      vcTouch();
       var interim="";
       for(var i=ev.resultIndex;i<ev.results.length;i++){
         var res=ev.results[i], txt=res[0]&&res[0].transcript||"";
@@ -2024,11 +1973,10 @@ function vcStart(handler){
       if(interim){VC.live=interim.trim().slice(0,24);vcRender()}
     };
     /* Chrome หยุดฟังเองเมื่อเงียบนาน — ต่อชีวิตให้เสมอขณะยังอยู่หน้าทดสอบ */
-    VC.rec.onend=function(){ VC.starting=false; if(VC.on)vcRevive(400) };
+    VC.rec.onend=function(){ VC.starting=false; vcTouch(); if(VC.on)vcRevive(400) };
     VC.rec.onerror=function(e){
-      var err=e&&e.error;
+      var err=e&&e.error; vcTouch();
       /* สายวัดระดับเสียงแย่งไมค์กับตัวรู้จำบนบางเครื่อง — เลือกตัวรู้จำ ปิดสายวัดถาวร */
-      if(err==="audio-capture"&&(VAD.ready||VAD.timer)){vadStop();VAD.disabled=true}
       if(err==="not-allowed"||err==="service-not-allowed"){
         VC.on=false; VC.supported=false; vcRender();
         setStatus("yellow","ไมโครโฟนถูกปิดไว้ — ใช้ปุ่มบนหน้าจอแทนได้ทุกคำสั่ง",false);
@@ -2037,9 +1985,8 @@ function vcStart(handler){
       VC.starting=false;
       if(VC.on)vcRevive(err==="network"?1500:600);    /* no-speech / aborted / network */
     };
-    VC.on=true; VC.lastHeard=""; VC.live="";
+    VC.on=true; VC.lastHeard=""; VC.live=""; vcTouch(); vcWatch();
     vcTryStart();
-    vadStart();
     vcMount();
     return true;
   }catch(e){VC.on=false;return false}
@@ -2057,7 +2004,7 @@ function vcRevive(ms){
 function vcStop(){
   VC.on=false;VC.handler=null;VC.live="";VC.starting=false;
   vcClearPending();
-  vadStop();
+  vcUnwatch();
   if(VC.reviveT){clearTimeout(VC.reviveT);VC.reviveT=null}
   if(VC.rec){try{VC.rec.onend=null;VC.rec.stop()}catch(e){}VC.rec=null}
   var b=document.getElementById("vcbadge"); if(b&&b.parentNode)b.parentNode.removeChild(b);
@@ -2078,7 +2025,7 @@ function speak(text,opts){
     SPK.last[key]=now;
     /* หน้าต่างเวลาที่ระบบกำลังพูด — ประเมินจากความยาวข้อความก่อน
        แล้วร่นให้สั้นลงเมื่อรู้เวลาพูดจบจริง ใช้เป็นด่านกันฟังเสียงตัวเอง */
-    SPK.until=now+1200+text.length*90;
+    SPK.until=now+800+text.length*75;
     if(opts.interrupt!==false)speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(text);
     u.lang="th-TH"; u.rate=opts.rate||0.95; u.volume=1;
@@ -2090,7 +2037,7 @@ function speak(text,opts){
     var done=function(){ if(e)e.until=Date.now()+2200; SPK.until=Date.now()+600; fin() };
     u.onend=done; u.onerror=done;
     /* บางเครื่องเหตุการณ์พูดจบไม่มา — ตั้งเผื่อไว้ตามความยาวข้อความ ไม่ให้อะไรค้าง */
-    setTimeout(done, 1200+text.length*90);
+    setTimeout(done, 800+text.length*75);
     speechSynthesis.speak(u);
   }catch(e2){fin()}
 }
@@ -2810,16 +2757,14 @@ function setupCalib(video,canvas,ctx){
   }
   function askSit(){
     stepBegin({id:"calSit",say:"บันทึก",
-      cue:"ขั้นตอนที่หนึ่ง บันทึกท่านั่ง กรุณานั่งบนเก้าอี้ กอดอกไว้ "+
-          "เมื่อนั่งเรียบร้อยแล้ว พูดว่า บันทึก",
-      hint:"เมื่อนั่งเรียบร้อยแล้ว พูดว่า บันทึก",
+      cue:"ท่านั่ง นั่งลงแล้วพูดว่า บันทึก",
+      hint:"พูดว่า บันทึก",
       on:{record:function(){capture("sit")},redo:calReset,stop:calBail}});
   }
   function askStand(){
     stepBegin({id:"calStand",say:"บันทึก",
-      cue:"บันทึกท่านั่งแล้ว ต่อไปบันทึกท่ายืน กรุณายืนขึ้นตรง ๆ "+
-          "เมื่อยืนตรงแล้ว พูดว่า บันทึก",
-      hint:"เมื่อยืนตรงแล้ว พูดว่า บันทึก",
+      cue:"ท่ายืน ยืนขึ้นแล้วพูดว่า บันทึก",
+      hint:"พูดว่า บันทึก",
       on:{record:function(){capture("stand")},redo:calReset,stop:calBail}});
   }
   CAL_ASK_SIT=askSit; CAL_ASK_STAND=askStand;
@@ -2905,9 +2850,8 @@ function setupTest(video,canvas,ctx){
   vcStart(function(){});
   /* คำว่า "บันทึก" กับ "เริ่ม" ทำอย่างเดียวกัน เพราะผู้ใช้พูดได้ทั้งสองแบบ */
   stepBegin({id:"ftsst",say:"เริ่ม",
-    cue:"ขณะนี้เข้าสู่ขั้นตอนลุกนั่ง ห้าครั้ง กรุณานั่งบนเก้าอี้ กอดอกไว้ "+
-        "เมื่อพร้อมแล้ว พูดว่า เริ่ม",
-    hint:"เมื่อพร้อมแล้ว พูดว่า เริ่ม",
+    cue:"ลุกนั่ง ห้าครั้ง นั่งลงแล้วพูดว่า เริ่ม",
+    hint:"พูดว่า เริ่ม",
     on:{start:function(){beginTimer()},record:function(){beginTimer()},
         stop:function(){stepStop();if(running)stopBtn.click();else{vcStop();stopCam();go("assessIntro")}}}});
   function beginTimer(){
@@ -2918,7 +2862,7 @@ function setupTest(video,canvas,ctx){
     stopBtn.hidden=false;
     setStatus("green","เริ่มได้เลย — นาฬิกาจะเริ่มเดินเมื่อคุณเริ่มลุก",false);speak("เริ่มได้เลย");
     /* ระหว่างจับเวลารับแค่ "หยุด" — คำอื่นไม่ควรไปแตะอะไรกลางการวัด */
-    stepBegin({id:"ftsstRun",say:"หยุด",cue:"",hint:"ถ้าจะเลิกกลางคัน พูดว่า หยุด",
+    stepBegin({id:"ftsstRun",say:"หยุด",cue:"",quiet:true,hint:"พูดว่า หยุด เพื่อเลิก",
       on:{stop:function(){stepStop();stopBtn.click()}}});
     coach.innerHTML="ลุกยืนให้สุดแล้วนั่งลงให้สุด ทำต่อเนื่อง<span class='statebadge'>เริ่มแล้ว</span>";
   }
@@ -3543,8 +3487,8 @@ async function startTugPipeline(){
   vcStart(function(){});
   TUG_ASK=function(){
     stepBegin({id:"tug",say:"เริ่ม",
-      cue:"ขณะนี้เข้าสู่ขั้นตอนลุกเดินสามเมตร เมื่อนั่งพิงพนักเก้าอี้แล้ว พูดว่า เริ่ม",
-      hint:"เมื่อนั่งพิงพนักเก้าอี้แล้ว พูดว่า เริ่ม",
+      cue:"ลุกเดินสามเมตร นั่งพิงพนักแล้วพูดว่า เริ่ม",
+      hint:"พูดว่า เริ่ม",
       on:{start:function(){if(phase==="waitSit")countdown()},
           record:function(){if(phase==="waitSit")countdown()},
           stop:function(){stepStop();var b=document.getElementById("tugSkip");if(b)b.click()}}});
@@ -3891,25 +3835,25 @@ async function startBalancePipeline(){
   BAL_ASK=function(kind){
     if(kind==="setup")
       return stepBegin({id:"balSetup",say:"เริ่ม",
-        cue:"",hint:"เมื่อยืนในท่าพร้อมแล้ว พูดว่า เริ่ม",
+        cue:"",hint:"พูดว่า เริ่ม",
         on:{start:function(){if(phase==="setup")countdown()},
             record:function(){if(phase==="setup")countdown()},
             redo:function(){clearCd();announce(true)},
             stop:function(){stepStop();var b=document.getElementById("bStop");if(b)b.click()}}});
     if(kind==="confirm")
       return stepBegin({id:"balConfirm",say:"ผ่าน",
-        cue:"",quiet:true,hint:"ถ้ายืนได้ พูดว่า ผ่าน ถ้าเสียหลัก พูดว่า ไม่ผ่าน",
+        cue:"",quiet:true,hint:"พูดว่า ผ่าน หรือ ไม่ผ่าน",
         on:{pass:function(){stepStop();settle(true)},
             fail:function(){stepStop();settle(false)},
             stop:function(){stepStop();haltSafe()}}});
     if(kind==="between")
       return stepBegin({id:"balBetween",say:"ต่อไป",
-        cue:"",hint:"พูดว่า ต่อไป เพื่อทำท่าถัดไป หรือ ทำใหม่ เพื่อทำท่านี้อีกครั้ง",
+        cue:"",hint:"พูดว่า ต่อไป หรือ ทำใหม่",
         on:{next:function(){stepStop();if(pendingNext)pendingNext()},
             redo:function(){stepStop();if(pendingRetry)pendingRetry()},
             stop:function(){stepStop();var b=document.getElementById("bStop");if(b)b.click()}}});
     if(kind==="holding")
-      return stepBegin({id:"balHold",say:"หยุด",cue:"",hint:"ถ้าเสียหลัก พูดว่า หยุด",
+      return stepBegin({id:"balHold",say:"หยุด",cue:"",quiet:true,hint:"พูดว่า หยุด",
         on:{stop:function(){stepStop();haltSafe()},
             fail:function(){stepStop();haltSafe()}}});
     stepStop();

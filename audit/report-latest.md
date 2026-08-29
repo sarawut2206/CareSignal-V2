@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-29 11:00 |
+| วันที่ตรวจ | 2026-08-29 11:25 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -34,11 +34,11 @@
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
 | F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:193 · CareSignal-Vision.html:174 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1469 · CareSignal-Vision.html:531 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3347 · CareSignal-Vision.html:4074 · CareSignal-App.html:3645 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1445 · CareSignal-Vision.html:507 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3903 · CareSignal-Vision.html:3948 · CareSignal-App.html:2529 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1738 · CareSignal-Vision.html:783 · CareSignal-App.html:1533 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1416 · CareSignal-Vision.html:531 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3294 · CareSignal-Vision.html:4018 · CareSignal-App.html:3592 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1392 · CareSignal-Vision.html:507 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:3850 · CareSignal-Vision.html:3892 · CareSignal-App.html:2476 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1685 · CareSignal-Vision.html:783 · CareSignal-App.html:1480 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:452 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
@@ -220,7 +220,7 @@
 | X-101 | ช่วงอายุที่รายงานครอบคลุมผู้สูงอายุเกิน 70 ปี | PASS | ครอบคลุมถึง 80+ |
 | X-102 | ป้ายเกณฑ์เวลาลุกนั่งแบ่งช่วงตรงกับค่าตัดเกณฑ์ | PASS | ใช้ ftsstBand ซึ่งแบ่งที่ 60 และ 70 |
 | X-103 | ค่าตัดเกณฑ์ลุกนั่งแบ่งช่วงอายุตามงานวิจัยต้นทาง (65–74 · 75+) | PASS | 11.5 ที่ 65–74 · 12.1 ที่ 75+ |
-| X-104 | ด่านกันระบบสั่งตัวเอง (หน้าต่าง TTS + VAD) ต่อไว้หน้า vcDispatch | PASS | ครบทั้งสองแอป และเรียกก่อนตัดสินใจ |
+| X-104 | ด่านกันระบบพูดใส่ตัวเอง ต่อไว้หน้า vcDispatch และไม่ปิดหูนานเกินไป | PASS | ครบทั้งสองแอป และเรียกก่อนตัดสินใจ |
 | X-105 | ปุ่มติดตั้งเป็นแอปในหน้าแรกกดได้จริงทุกเบราว์เซอร์ | PASS | เป็นปุ่มจริง มีตัวรับการกด และมีคำแนะนำครบทุกแพลตฟอร์ม |
 | X-106 | สั่งงานด้วยเสียงแบบทีละขั้น พูดแล้วทำทันที ไม่ต้องยืนยันซ้ำ | PASS | ครบทั้งสองแอป ทุกหน้าวัดผลประกาศขั้นตอน และลำดับการจับคำถูกต้อง |
 | X-107 | การรู้จำเสียงและ VAD ทำในเครื่อง ไม่ส่งเสียงออกนอกเครื่อง | PASS | ใช้ Web Speech API ของเบราว์เซอร์และ VAD ในเครื่องเท่านั้น |
