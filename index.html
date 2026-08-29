@@ -89,6 +89,20 @@ h1 em{color:var(--gold);font-style:normal}
 .vows{display:flex;gap:26px;flex-wrap:wrap;margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.16)}
 .vows div b{display:block;font-size:14.5px}
 .vows div span{font-size:12px;color:#B9C7E8}
+/* การ์ด "ติดตั้งเป็นแอป" เป็นปุ่มจริง — เดิมเป็นข้อความเฉย ๆ ผู้ใช้กดแล้วไม่มีอะไรเกิดขึ้น */
+.vows button{font:inherit;color:inherit;background:transparent;border:0;padding:0;text-align:left;cursor:pointer}
+.vows button b{display:block;font-size:14.5px}
+.vows button span{font-size:12px;color:#8FB8FF;text-decoration:underline;text-decoration-color:rgba(143,184,255,.45);text-underline-offset:3px}
+.vows button:hover span,.vows button:focus-visible span{text-decoration-color:#8FB8FF}
+/* แผ่นคำแนะนำวิธีติดตั้ง — แสดงเมื่อเบราว์เซอร์ไม่มีปุ่มติดตั้งอัตโนมัติ */
+.isheet{position:fixed;inset:0;background:rgba(15,27,51,.58);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px}
+.isheet-card{background:#fff;color:#16233B;border-radius:20px;padding:24px;max-width:440px;width:100%;max-height:86vh;overflow:auto}
+.isheet-card h3{margin:0 0 12px;font-size:19px}
+.isheet-body{font-size:15.5px;line-height:1.85;color:#3E4E68}
+.isheet-body ol{margin:10px 0 0;padding-left:22px}
+.isheet-body li{margin-bottom:7px}
+.isheet-note{margin:14px 0 0;font-size:13.5px;line-height:1.75;color:#6B7B96;background:#F1F5FB;border-radius:10px;padding:11px 13px}
+.isheet-ok{display:block;width:100%;border:0;border-radius:14px;padding:15px;font:inherit;font-size:16px;font-weight:700;background:var(--brand);color:#fff;margin-top:18px;cursor:pointer}
 .spec{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:20px 22px;backdrop-filter:blur(6px)}
 .spec h3{margin:0 0 8px;font-size:15px;color:#fff}
 .spec .r{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed rgba(255,255,255,.14);font-size:13.5px}
@@ -231,7 +245,7 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
           <div><b>ไม่ส่งภาพออก</b><span>ประมวลผลในเครื่อง</span></div>
           <div><b>ไม่ยุ่งกับราคาและการเคลม</b><span>ผลตรวจใช้เฝ้าระวังอย่างเดียว</span></div>
           <div><b>มนุษย์ตัดสิน</b><span>AI ไม่อนุมัติเคสเอง</span></div>
-          <div><b>ใช้ออฟไลน์ได้</b><span>ติดตั้งเป็นแอป</span></div>
+          <button type="button" id="csInstall"><b>ใช้ออฟไลน์ได้</b><span>ติดตั้งเป็นแอป &rsaquo;</span></button>
         </div>
       </div>
       <div class="illus" aria-hidden="true">
@@ -496,6 +510,98 @@ var VALID = ["intro","member","care","expert","insurer"];
 function fromHash(){ var h = (location.hash || "#intro").slice(1); show(VALID.indexOf(h) >= 0 ? h : "intro", false); }
 window.addEventListener("hashchange", fromHash);
 fromHash();
+
+/* ============================================================
+   ติดตั้งเป็นแอป (PWA)
+   ------------------------------------------------------------
+   ปัญหาที่แก้: หน้านี้เขียนคำว่า "ติดตั้งเป็นแอป" ไว้ในการ์ดคำมั่น แต่เป็น
+   ข้อความประดับ ไม่ใช่ปุ่ม ผู้ใช้กดแล้วไม่มีอะไรเกิดขึ้น และทั้งหน้าไม่มี
+   ทางติดตั้งเลย จึงเข้าใจว่าระบบติดตั้งไม่ได้
+
+   หลักที่ยึด: กดแล้วต้องได้คำตอบเสมอ ทุกเครื่องทุกเบราว์เซอร์
+   เบราว์เซอร์ที่ฝังในแอปแชท (LINE · Facebook) ติดตั้งเว็บแอปไม่ได้เลย
+   ซึ่งเป็นทางที่คนไทยเปิดลิงก์กันมากที่สุด จึงต้องบอกให้ไปเปิดในเบราว์เซอร์
+   จริงก่อน ไม่ใช่ปล่อยให้กดแล้วเงียบ
+   ============================================================ */
+(function(){
+  var btn = document.getElementById("csInstall");
+  if (!btn) return;
+  var ua = navigator.userAgent;
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  /* เบราว์เซอร์ที่ฝังมากับแอปอื่น — ไม่มีทั้ง API ติดตั้งและเมนูติดตั้ง */
+  var inApp = /\bLine\/|FB_IAB|FBAN|FBAV|Instagram|Messenger|MicroMessenger|TikTok/i.test(ua);
+  var defer = null;
+
+  function installed(){
+    try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
+    catch (e) { return false; }
+  }
+
+  function sheet(title, body){
+    var o = document.createElement("div");
+    o.className = "isheet";
+    o.innerHTML = '<div class="isheet-card" role="dialog" aria-modal="true">' +
+      '<h3>' + title + '</h3><div class="isheet-body">' + body + '</div>' +
+      '<button type="button" class="isheet-ok">เข้าใจแล้ว</button></div>';
+    document.body.appendChild(o);
+    var ok = o.querySelector(".isheet-ok");
+    function close(){ o.remove(); document.removeEventListener("keydown", esc); try { btn.focus(); } catch (e) {} }
+    function esc(e){ if (e.key === "Escape") close(); }
+    ok.addEventListener("click", close);
+    o.addEventListener("click", function(e){ if (e.target === o) close(); });
+    document.addEventListener("keydown", esc);
+    ok.focus();
+  }
+
+  /* เบราว์เซอร์ไม่ให้ปุ่มติดตั้งอัตโนมัติ — บอกวิธีทำมือตามเครื่องที่ใช้จริง */
+  function howto(){
+    if (installed())
+      return sheet("ติดตั้งไว้แล้ว",
+        "ตอนนี้คุณกำลังเปิดจากแอปที่ติดตั้งไว้อยู่แล้ว ใช้งานได้แม้ไม่มีอินเทอร์เน็ต");
+    if (inApp)
+      return sheet("เปิดในเบราว์เซอร์ก่อน",
+        "หน้านี้เปิดอยู่ในเบราว์เซอร์ที่ฝังมากับแอปแชท ซึ่ง<b>ติดตั้งแอปไม่ได้</b>" +
+        "<ol><li>แตะปุ่ม <b>⋯</b> หรือ <b>⋮</b> ที่มุมขวาบน</li>" +
+        "<li>เลือก <b>เปิดในเบราว์เซอร์</b> (Chrome หรือ Safari)</li>" +
+        "<li>กด <b>ติดตั้งเป็นแอป</b> อีกครั้งในหน้านั้น</li></ol>");
+    if (isIOS)
+      return sheet("ติดตั้งบน iPhone / iPad",
+        "<ol><li>แตะปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรชี้ขึ้น) ที่แถบล่างของ Safari</li>" +
+        "<li>เลื่อนลงหา <b>เพิ่มลงในหน้าจอโฮม</b></li>" +
+        "<li>แตะ <b>เพิ่ม</b> — ไอคอน CareSignal จะอยู่บนหน้าจอเหมือนแอปทั่วไป</li></ol>" +
+        '<p class="isheet-note">iPhone ติดตั้งเว็บแอปได้จาก Safari เท่านั้น ถ้าเปิดอยู่ด้วย Chrome ให้เปลี่ยนมาเปิดใน Safari ก่อน</p>');
+    if (isAndroid)
+      return sheet("ติดตั้งบน Android",
+        "<ol><li>แตะปุ่ม <b>⋮</b> ที่มุมขวาบนของ Chrome</li>" +
+        "<li>เลือก <b>ติดตั้งแอป</b> หรือ <b>เพิ่มลงในหน้าจอหลัก</b></li>" +
+        "<li>แตะ <b>ติดตั้ง</b></li></ol>" +
+        '<p class="isheet-note">ถ้ายังไม่เห็นเมนูนี้ ให้เปิดหน้านี้ค้างไว้สักครู่แล้วลองใหม่ — Chrome จะเสนอให้ติดตั้งเมื่ออยู่บนเว็บนานพอ</p>');
+    return sheet("ติดตั้งบนคอมพิวเตอร์",
+      "<ol><li>ดูที่แถบที่อยู่เว็บด้านบน จะมีไอคอนรูปจอที่มีลูกศรลง หรือเครื่องหมาย <b>+</b></li>" +
+      "<li>คลิกแล้วเลือก <b>ติดตั้ง</b></li></ol>" +
+      '<p class="isheet-note">ใช้ได้กับ Chrome และ Edge · Firefox กับ Safari บนคอมพิวเตอร์ยังไม่รองรับการติดตั้งเว็บแอป</p>');
+  }
+
+  btn.addEventListener("click", function(){
+    /* มีปุ่มติดตั้งของเบราว์เซอร์ให้ใช้ = เรียกเลย ผู้ใช้ไม่ต้องทำเอง */
+    if (defer){
+      defer.prompt();
+      defer.userChoice.then(function(){ defer = null; }, function(){ defer = null; });
+      return;
+    }
+    howto();
+  });
+
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); defer = e; });
+  window.addEventListener("appinstalled", function(){
+    defer = null; btn.hidden = true;
+    sheet("ติดตั้งเรียบร้อยแล้ว",
+      "เปิด CareSignal จากไอคอนบนหน้าจอได้เลย ครั้งต่อไปใช้งานได้แม้ไม่มีอินเทอร์เน็ต");
+  });
+
+  if (installed()) btn.hidden = true;
+})();
 
 /* ---------- Service Worker: ใช้ออฟไลน์ได้และอัปเดตเงียบ ---------- */
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
