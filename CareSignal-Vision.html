@@ -2086,9 +2086,61 @@ document.addEventListener("keydown",function(e){
   if(!STEP.id)return;
   var t=e.target, tag=t&&t.tagName;
   if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable))return;
-  if(!REMOTE_KEYS[e.key])return;
+  /* รับทั้งปุ่มมาตรฐานที่รีโมตนำเสนอส่งกันบ่อย และปุ่มที่ผู้ใช้สอนไว้เอง */
+  if(!REMOTE_KEYS[e.key]&&!remoteKeyMatch(e))return;
   if(remoteFire("key")){e.preventDefault()}
 });
+
+/* ---- สอนปุ่มรีโมตให้ระบบรู้จัก ----
+   รีโมตชัตเตอร์ราคาถูกแต่ละรุ่นส่งปุ่มไม่เหมือนกัน บางรุ่นส่ง Enter
+   บางรุ่นส่ง Volume Up ซึ่ง Android ไม่ส่งต่อให้หน้าเว็บเลย เดาแทนผู้ใช้ไม่ได้
+   จึงให้กดปุ่มจริงแล้วดูว่าเบราว์เซอร์ได้รับอะไร แล้วจำค่านั้นไว้ */
+function remoteKeySaved(){
+  try{return localStorage.getItem("cs:rkey")||""}catch(e){return ""}
+}
+function remoteKeyMatch(e){
+  var k=remoteKeySaved();
+  if(!k)return false;
+  return e.key===k||e.code===k;
+}
+function remoteLearn(){
+  var got=null, done=false;
+  function onKey(ev){
+    if(done)return;
+    /* ปุ่มที่ระบบใช้ปิดกล่องอยู่แล้ว ไม่เอามาเป็นปุ่มรีโมต */
+    if(ev.key==="Escape"||ev.key==="Tab")return;
+    ev.preventDefault(); ev.stopPropagation();
+    got=ev.key===" "?" ":(ev.key||ev.code);
+    var lab=document.getElementById("rkGot");
+    if(lab)lab.textContent="ได้รับปุ่ม: "+(got===" "?"Space":got);
+    var ok=document.getElementById("dlgOk");
+    if(ok){ok.textContent="จำปุ่มนี้ไว้";ok.disabled=false}
+  }
+  document.addEventListener("keydown",onKey,true);
+  dialog({
+    title:"สอนปุ่มรีโมตให้ระบบรู้จัก",
+    body:'กดปุ่มบนรีโมตของท่าน<b>หนึ่งครั้ง</b>ตอนนี้'+
+         '<br><span id="rkGot" style="display:inline-block;margin-top:10px;font-size:17px;color:#2563EB">ยังไม่ได้รับสัญญาณ…</span>'+
+         '<br><span style="font-size:15.5px;color:#8090AA">ถ้ากดแล้วยังขึ้นว่ายังไม่ได้รับ แปลว่ารีโมตรุ่นนี้ส่งปุ่มเสียง '+
+         'ซึ่งเบราว์เซอร์ไม่ได้รับ ใช้กับแอปนี้ไม่ได้ — ต้องใช้รีโมตนำเสนอสไลด์แทน</span>',
+    ok:"รอกดปุ่ม…",cancel:"ปิด",
+    onOk:function(){
+      done=true; document.removeEventListener("keydown",onKey,true);
+      if(!got){toast("ยังไม่ได้รับปุ่มจากรีโมต");return}
+      try{localStorage.setItem("cs:rkey",got)}catch(e){}
+      toast("จำปุ่มรีโมตแล้ว — ใช้กดแทนการพูดได้เลย");
+      audit("ตั้งค่าปุ่มรีโมต","ผู้ใช้สอนปุ่ม "+(got===" "?"Space":got)+" ให้ใช้แทนคำสั่งเสียง");
+      render();
+    },
+    onCancel:function(){done=true;document.removeEventListener("keydown",onKey,true)}
+  });
+  var ok=document.getElementById("dlgOk");
+  if(ok)ok.disabled=true;
+}
+function remoteForget(){
+  try{localStorage.removeItem("cs:rkey")}catch(e){}
+  toast("ลืมปุ่มรีโมตแล้ว");render();
+}
 
 function vcStart(handler){
   VC.handler=handler;
