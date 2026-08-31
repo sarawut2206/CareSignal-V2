@@ -1512,9 +1512,16 @@ function layer7() {
      ทั้งสองทางต้องต่อเข้าลูปกล้องครบทุกหน้า และต้องกันสั่งซ้อนตอนนับถอยหลัง */
   {
     const bad = APP_PAIR.filter(([f, t]) => {
-      for (const re of [/function\s+handRaised\s*\(/, /function\s+gestureTick\s*\(/,
-                        /function\s+stepPrimary\s*\(/, /function\s+remoteFire\s*\(/])
+      for (const re of [/function\s+handsUp\s*\(/, /function\s+gestureTick\s*\(/,
+                        /function\s+stepPrimary\s*\(/, /function\s+stepSecondary\s*\(/,
+                        /function\s+gestureHint\s*\(/, /function\s+remoteFire\s*\(/])
         if (!re.test(t)) return true;
+      /* ต้องแยกความหมายด้วยจำนวนมือจริง ไม่ใช่ยกมือแล้วทำอย่างเดียวทุกกรณี
+         มือเดียว = คำสั่งหลัก · สองมือ = คำสั่งตรงข้าม (ไม่ผ่าน/ทำใหม่/หยุด) */
+      if (!/n===1\?stepPrimary\(\):stepSecondary\(\)/.test(t)) return true;
+      /* จำนวนมือต้องคงที่ครบเวลาก่อนถึงนับ ไม่งั้นคนยกสองมือไม่พร้อมกัน
+         จะถูกอ่านเป็นคำสั่งมือเดียวไปก่อน ซึ่งอาจบันทึกผลตรงข้ามกับที่ตั้งใจ */
+      if (!/if\(n!==HAND\.n\)\{HAND\.n=n;/.test(t)) return true;
       /* ต้องต่อเข้าลูปกล้องครบทั้งสี่หน้า ไม่ใช่มีฟังก์ชันลอยอยู่เฉย ๆ */
       if ((t.match(/\n\s*gestureTick\(lm\);/g) || []).length < 4) return true;
       /* ปุ่มรีโมตต้องผูกไว้จริง */

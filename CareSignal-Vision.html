@@ -1943,7 +1943,7 @@ function vcRender(){
   /* อยู่ในขั้นตอน = บอกทั้งคำที่ต้องพูด และคำล่าสุดที่ไมค์ได้ยิน
      ถ้าไม่บอกสิ่งที่ได้ยิน ผู้ใช้แยกไม่ออกว่าไมค์ไม่ทำงาน หรือได้ยินแล้วแต่ไม่เข้าใจ */
   if(STEP.id&&STEP.say){
-    b.textContent="🎤 พูดว่า “"+STEP.say+"” หรือยกมือ"+
+    b.textContent="🎤 “"+STEP.say+"” · "+gestureHint()+
       (VC.live?" · "+VC.live:(VC.lastHeard?" · ได้ยิน: "+VC.lastHeard:""));
     return;
   }
@@ -2031,34 +2031,55 @@ function cdStart(opts){
    คือถ้ากำลังนับถอยหลังอยู่ ให้ยกเลิกการนับ ไม่ใช่สั่งซ้อน
    ============================================================ */
 var WRIST={L:15,R:16};
-var HAND={since:0,fired:0};
+var HAND={since:0,fired:0,n:0};
 
-/* ยกมือข้างใดข้างหนึ่งสูงกว่าหัวไหล่ฝั่งเดียวกันหรือไม่ (y เพิ่มลงล่าง) */
-function handRaised(lm){
-  if(!lm)return false;
-  var pairs=[[WRIST.L,LM.LSH],[WRIST.R,LM.RSH]];
+/* นับว่าตอนนี้ยกมือสูงกว่าหัวไหล่ฝั่งเดียวกันอยู่กี่ข้าง (y เพิ่มลงล่าง) */
+function handsUp(lm){
+  if(!lm)return 0;
+  var n=0, pairs=[[WRIST.L,LM.LSH],[WRIST.R,LM.RSH]];
   for(var i=0;i<pairs.length;i++){
     var w=lm[pairs[i][0]], s=lm[pairs[i][1]];
     if(!w||!s)continue;
     if(w.visibility!==undefined&&w.visibility<0.6)continue;
     if(s.visibility!==undefined&&s.visibility<0.5)continue;
     /* ต้องสูงกว่าหัวไหล่ชัด ๆ ไม่ใช่แค่เสมอกัน กันมือแกว่งตอนเดิน */
-    if(s.y-w.y>0.06)return true;
+    if(s.y-w.y>0.06)n++;
   }
-  return false;
+  return n;
 }
+/* เก็บไว้ให้โค้ดเดิมที่ถามแค่ว่า "ยกมือไหม" ยังใช้ได้ */
+function handRaised(lm){return handsUp(lm)>0}
 
-/* คำสั่งหลักของขั้นตอนที่กำลังรออยู่ — อันเดียวกับที่พูดคำหลักแล้วได้ */
+/* คำสั่งหลักของขั้นตอนที่กำลังรออยู่ = ยกมือข้างเดียว */
 function stepPrimary(){
   if(!STEP.id||!STEP.on)return null;
   var order=["record","start","pass","next"];
   for(var i=0;i<order.length;i++)if(STEP.on[order[i]])return order[i];
   return null;
 }
-function remoteFire(how){
+/* คำสั่งตรงข้ามของขั้นตอนนั้น = ยกสองมือ
+   ไม่ผ่าน มาก่อน ทำใหม่ มาก่อน หยุด เพราะเจาะจงกว่าตามลำดับ */
+function stepSecondary(){
+  if(!STEP.id||!STEP.on)return null;
+  var order=["fail","redo","stop"];
+  for(var i=0;i<order.length;i++)if(STEP.on[order[i]])return order[i];
+  return null;
+}
+/* ชื่อท่าทางที่ใช้ได้ตอนนี้ ไว้แสดงบนจอให้ผู้ใช้รู้ว่าทำอะไรได้บ้าง */
+var VC_NM={record:"บันทึก",start:"เริ่ม",pass:"ผ่าน",next:"ต่อไป",
+           fail:"ไม่ผ่าน",redo:"ทำใหม่",stop:"หยุด"};
+function gestureHint(){
+  var a=stepPrimary(), b=stepSecondary(), out=[];
+  if(a)out.push("ยกมือ = "+(VC_NM[a]||a));
+  if(b)out.push("ยกสองมือ = "+(VC_NM[b]||b));
+  return out.join(" · ");
+}
+
+function remoteFire(how,k){
   /* กำลังนับถอยหลังอยู่ = สั่งอีกทีแปลว่าขอหยุดก่อน ไม่ใช่สั่งซ้อน */
   if(cdRunning()){cdCancel();return "cancel"}
-  var k=stepPrimary(); if(!k)return null;
+  if(!k)k=stepPrimary();
+  if(!k||!STEP.on||!STEP.on[k])return null;
   var now=Date.now();
   if(now-(HAND.fired||0)<1500)return null;   /* กันสั่งรัวจากเฟรมติด ๆ กัน */
   HAND.fired=now;
@@ -2067,15 +2088,18 @@ function remoteFire(how){
   return how+":"+k;
 }
 
-/* เรียกจากลูปกล้องทุกเฟรม */
+/* เรียกจากลูปกล้องทุกเฟรม
+   จำนวนมือต้องคงที่ครบ 800 มิลลิวินาทีถึงนับเป็นคำสั่ง
+   พอจำนวนเปลี่ยน ตัวจับเวลาเริ่มใหม่ คนที่ตั้งใจยกสองมือแต่ยกไม่พร้อมกัน
+   จึงไม่ถูกอ่านเป็นคำสั่งมือเดียวไปก่อน */
 function gestureTick(lm){
-  if(!STEP.id){HAND.since=0;return}
-  if(!handRaised(lm)){HAND.since=0;return}
-  var now=Date.now();
-  if(!HAND.since){HAND.since=now;return}
-  if(now-HAND.since<700)return;
+  if(!STEP.id){HAND.n=0;HAND.since=0;return}
+  var n=handsUp(lm);
+  if(n!==HAND.n){HAND.n=n;HAND.since=n?Date.now():0;return}
+  if(!n||!HAND.since)return;
+  if(Date.now()-HAND.since<800)return;
   HAND.since=0;
-  remoteFire("hand");
+  remoteFire(n===1?"hand1":"hand2", n===1?stepPrimary():stepSecondary());
 }
 
 /* ปุ่มจากรีโมต Bluetooth — รับเฉพาะปุ่มที่รีโมตนำเสนอส่งกันบ่อย
