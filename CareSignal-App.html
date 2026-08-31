@@ -43,6 +43,14 @@ body{background:#D9DEE2;font-family:var(--sans);color:var(--ink);font-size:17px;
   .phone{width:100%;height:100dvh;max-height:none;border-radius:0;box-shadow:none}
 }
 .bar .brandrow{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+/* การ์ดเลือกบทบาท — ไอคอนอยู่ซ้ายของข้อความ ไม่วางซ้อนบนหัวซึ่งดันความสูงขึ้นเท่าตัว
+   เป้าหมายคือให้เห็นทางเลือกครบทั้งสองอันในจอเดียว ผู้สูงอายุไม่ต้องเลื่อนหา */
+.rolecard{width:100%;text-align:left;font-family:inherit;cursor:pointer;
+  display:grid;grid-template-columns:auto 1fr;column-gap:15px;row-gap:2px;align-items:center;
+  border:2px solid var(--line)}
+.rolecard svg{grid-row:1/3;flex:none}
+.rolecard b{font-size:20px;align-self:end}
+.rolecard .sub{font-size:15.5px;align-self:start;margin:0}
 .bar .brandrow svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.18))}
 .bar{flex:none;background:linear-gradient(135deg,var(--brand2),var(--brand) 62%,#3B82F6);color:#fff;padding:calc(env(safe-area-inset-top) + 16px) 20px 16px;position:relative}
 .bar .kick{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#FCD34D;opacity:.95}
@@ -377,7 +385,7 @@ try{if(window.self!==window.top)document.documentElement.setAttribute("data-embe
 <script src="./cs-backend.js?v=4"></script>
 <script src="./cs-meds.js?v=4"></script>
 <script>
-var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none"><defs><linearGradient id="lgAg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1D4ED8"/><stop offset=".55" stop-color="#2563EB"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="lgAa" x1="42" y1="8" x2="58" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient></defs><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="url(#lgAg)" stroke-width="4" stroke-linejoin="round"/><path d="M32 27.5c-2.6-4.2-8.4-5.6-11.6-1.9-3 3.5-1.5 9 3.1 13.1L32 46l8.5-7.3c4.6-4.1 6.1-9.6 3.1-13.1-3.2-3.7-9-2.3-11.6 1.9Z" stroke="url(#lgAg)" stroke-width="3.6" stroke-linejoin="round"/><path d="M17 35h7.5l3-6.5 4.5 11 3-4.5H47" stroke="url(#lgAg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M46.5 9.5a13.5 13.5 0 0 1 8.6 8.4" stroke="url(#lgAa)" stroke-width="3.6" stroke-linecap="round"/><path d="M44.5 15.2a7.5 7.5 0 0 1 4.9 4.7" stroke="url(#lgAa)" stroke-width="3.4" stroke-linecap="round"/><circle cx="42.6" cy="21.2" r="2.6" fill="url(#lgAa)"/></svg>';
+var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none;color:#fff"><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round"/><rect x="19.5" y="33" width="7" height="11" rx="3.5" fill="currentColor" opacity=".75"/><rect x="28.5" y="26" width="7" height="18" rx="3.5" fill="currentColor" opacity=".88"/><rect x="37.5" y="18" width="7" height="26" rx="3.5" fill="#FCD34D"/></svg>';
 
 /* ============================================================
    ฐานข้อมูล — Storage adapter 3 ชั้น
@@ -2814,16 +2822,18 @@ function setPortal(p){try{localStorage.setItem("csPortal",p)}catch(e){}}
 function getPortal(){try{return localStorage.getItem("csPortal")}catch(e){return null}}
 function clearPortal(){try{localStorage.removeItem("csPortal")}catch(e){}}
 function portalV(){
-  head("CARESIGNAL","รู้ก่อนพึ่งพิง · ป้องกันก่อนเคลม","ท่านคือใคร");
+  /* หัวแถบสั้นที่สุดในหน้านี้ — โลโก้บนแถบบอกชื่อแบรนด์อยู่แล้ว
+     ไม่ต้องเขียนชื่อซ้ำอีกให้กินที่ จนทางเลือกตกขอบจอ */
+  head("","ท่านคือใคร","เลือกให้ตรงกับตัวท่าน แล้วระบบจะพาไปต่อเอง");
   V.innerHTML='<div class="anim senior">'+
-    '<button class="card" id="pMember" style="width:100%;text-align:left;border:2px solid var(--brand);font-family:inherit;cursor:pointer;display:block">'+
-    '<div style="font-size:44px;line-height:1">👤</div>'+
-    '<b style="font-size:21px;display:block;margin:6px 0 4px">ผู้เอาประกัน / สมาชิก</b>'+
-    '<span class="sub" style="font-size:16px">ประเมินสมรรถภาพและติดตามสุขภาพของฉัน</span></button>'+
-    '<button class="card" id="pCarer" style="width:100%;text-align:left;border:2px solid var(--line);font-family:inherit;cursor:pointer;display:block">'+
-    '<div style="font-size:44px;line-height:1">👥</div>'+
-    '<b style="font-size:21px;display:block;margin:6px 0 4px">ครอบครัว / ผู้ดูแล</b>'+
-    '<span class="sub" style="font-size:16px">ติดตามสมาชิกที่อนุญาตให้ฉันดูแล</span></button>'+
+    '<button class="card rolecard" id="pMember" style="border-color:var(--brand)">'+
+    '<svg viewBox="0 0 44 44" width="40" height="40" fill="none" aria-hidden="true"><circle cx="22" cy="14" r="7.5" stroke="var(--brand)" stroke-width="2.6"/><path d="M7.5 38c0-7.5 6.5-12 14.5-12s14.5 4.5 14.5 12" stroke="var(--brand)" stroke-width="2.6" stroke-linecap="round"/></svg>'+
+    '<b>ผู้เอาประกัน / สมาชิก</b>'+
+    '<span class="sub">ประเมินสมรรถภาพและติดตามสุขภาพของฉัน</span></button>'+
+    '<button class="card rolecard" id="pCarer">'+
+    '<svg viewBox="0 0 52 44" width="46" height="40" fill="none" aria-hidden="true"><circle cx="18" cy="14" r="7" stroke="var(--brand)" stroke-width="2.6"/><circle cx="37" cy="16" r="5.6" stroke="#94A7C4" stroke-width="2.4"/><path d="M4 38c0-7 6-11.5 14-11.5S32 31 32 38" stroke="var(--brand)" stroke-width="2.6" stroke-linecap="round"/><path d="M34 27.5c7 .4 12 4.4 12 10.5" stroke="#94A7C4" stroke-width="2.4" stroke-linecap="round"/></svg>'+
+    '<b>ครอบครัว / ผู้ดูแล</b>'+
+    '<span class="sub">ติดตามสมาชิกที่อนุญาตให้ฉันดูแล</span></button>'+
     '<div class="notice">เจ้าหน้าที่ประกัน พยาบาล และ Care Manager ใช้<b>แอปเจ้าหน้าที่แยกต่างหาก</b> ไม่ได้อยู่ในแอปนี้</div></div>';
   document.getElementById("pMember").addEventListener("click",function(){setPortal("member");go("welcome")});
   document.getElementById("pCarer").addEventListener("click",function(){setPortal("carer");go("carerAuth")});

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-31 15:00 |
+| วันที่ตรวจ | 2026-08-31 15:20 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -33,12 +33,12 @@
 
 | รหัส | ข้อกำหนด | สถานะ | หลักฐาน |
 |---|---|---|---|
-| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:193 · CareSignal-Vision.html:174 · cs-backend.js:177 |
-| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1642 · CareSignal-Vision.html:531 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3520 · CareSignal-Vision.html:4279 · CareSignal-App.html:3818 |
-| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1618 · CareSignal-Vision.html:507 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4076 · CareSignal-Vision.html:4153 · CareSignal-App.html:2702 |
-| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1911 · CareSignal-Vision.html:783 · CareSignal-App.html:1706 |
+| F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:201 · CareSignal-Vision.html:174 · cs-backend.js:177 |
+| F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1650 · CareSignal-Vision.html:525 · supabase/07_closed_loop.sql:17 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3530 · CareSignal-Vision.html:4273 · CareSignal-App.html:3828 |
+| F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1626 · CareSignal-Vision.html:501 · supabase/01_schema.sql:79 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4086 · CareSignal-Vision.html:4147 · CareSignal-App.html:2710 |
+| F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1919 · CareSignal-Vision.html:777 · CareSignal-App.html:1714 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:452 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |

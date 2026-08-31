@@ -101,18 +101,20 @@ body[data-sec="work"]{overflow:hidden}
 
 /* ---------- ส่วนที่ 1: แนะนำ ---------- */
 .hero{background:radial-gradient(120% 90% at 50% 20%,var(--navy2) 0%,var(--navy) 60%,#0A1E45 100%);color:#fff;padding:56px 0 48px}
-.hero .wrap{display:grid;grid-template-columns:1.05fr .82fr .92fr;gap:30px;align-items:start}
+.hero .wrap{display:grid;grid-template-columns:1.3fr .62fr .92fr;gap:28px;align-items:start}
 .illus{display:flex;align-items:center;justify-content:center;padding-top:6px}
 .illus svg{width:100%;max-width:280px;height:auto}
 @media(max-width:1120px){.hero .wrap{grid-template-columns:1.15fr .95fr}.illus{display:none}}
 .eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(245,185,62,.5);border-radius:99px;padding:5px 13px;font-weight:600;margin-bottom:16px}
-h1{font-size:clamp(28px,4vw,44px);line-height:1.2;letter-spacing:-.02em;margin:0 0 16px}
+h1{font-size:clamp(28px,3.6vw,42px);line-height:1.22;letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
 h1 em{color:var(--gold);font-style:normal}
 .hero p.lead{font-size:16.5px;color:#DCE7FA;max-width:600px;margin:0 0 22px}
 .hero p.lead b{color:#fff}
 .cta{display:inline-block;border:0;border-radius:14px;padding:14px 22px;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none}
 .cta.p{background:var(--brand);color:#fff;box-shadow:0 8px 24px rgba(37,99,235,.35)}
-.cta.g{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.28);margin-left:8px}
+.cta.g{background:transparent;color:#C7D6F5;border:1px solid rgba(255,255,255,.22);margin-left:8px;font-weight:600}
+.cta.g:hover{background:rgba(255,255,255,.08);color:#fff}
+.cta.p{position:relative}
 .vows{display:flex;gap:26px;flex-wrap:wrap;margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.16)}
 .vows div b{display:block;font-size:14.5px}
 .vows div span{font-size:12px;color:#B9C7E8}
@@ -136,6 +138,19 @@ h1 em{color:var(--gold);font-style:normal}
 .spec .r:last-child{border:0}
 .spec .r span:first-child{color:#B9C7E8}
 .spec .r b{color:#fff;text-align:right}
+/* หมวดพับได้ — เก็บข้อมูลไว้ครบสำหรับกรรมการ แต่ไม่เทใส่หน้าแรกทีเดียว 15 แถว */
+.spec details{border-top:1px solid rgba(255,255,255,.13)}
+.spec details:first-of-type{border-top:0}
+.spec summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;
+  align-items:center;gap:10px;padding:11px 0;font-size:14px;font-weight:600;color:#fff}
+.spec summary::-webkit-details-marker{display:none}
+.spec summary::after{content:"▾";color:#8FB8FF;font-size:12px;transition:transform .18s}
+.spec details[open] summary::after{transform:rotate(180deg)}
+.spec summary .cnt{margin-left:auto;margin-right:6px;font-weight:500;font-size:12px;color:#8FB8FF}
+.spec details .r:first-of-type{border-top:1px dashed rgba(255,255,255,.14)}
+.spec details .r{padding:8px 0}
+/* ย่อหน้ารองใต้ประโยคหลัก — เล็กและจางกว่า เพื่อให้ตาไปที่ประโยคหลักก่อน */
+.lead.sub2{font-size:15px;color:#B9C7E8;margin-top:10px}
 .spec .r b.y{color:var(--gold)}
 .spec .r b.g{color:#4ADE80}
 
@@ -264,8 +279,9 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
     <div class="wrap">
       <div>
         <span class="eyebrow">Insurance-Embedded Risk Monitoring &amp; Care Coordination</span>
-        <h1>แพลตฟอร์มเฝ้าระวังความเสี่ยงผู้สูงอายุ ที่บริษัทประกัน<em>พ่วงกับกรมธรรม์</em>ที่มีอยู่</h1>
-        <p class="lead">CareSignal ไม่ได้ขายประกัน — เราคือระบบที่บริษัทประกันนำไปพ่วงกับประกันผู้สูงอายุ สุขภาพ หรือดูแลระยะยาว เพื่อ<b>คัดกรอง</b>สัญญาณเสี่ยงหกล้มด้วยกล้องมือถือที่บ้าน <b>ติดตาม</b>ตามระดับความเสี่ยง และ<b>ประสานการส่งต่อ</b>ก่อนเกิดเคลม · ผู้ถือกรมธรรม์ใช้ฟรี ไม่จ่ายเพิ่ม</p>
+        <h1>เฝ้าระวังความเสี่ยงหกล้มในผู้สูงอายุ <em>พ่วงไปกับกรมธรรม์ที่มีอยู่</em></h1>
+        <p class="lead">คัดกรองสัญญาณเสี่ยงหกล้ม<b>ด้วยกล้องมือถือที่บ้าน</b> แล้วประสานทีมดูแลก่อนเกิดเคลม</p>
+        <p class="lead sub2">บริษัทประกันนำไปพ่วงกับกรมธรรม์ผู้สูงอายุ สุขภาพ หรือดูแลระยะยาว · <b>เราไม่ขายประกัน</b> · ผู้ถือกรมธรรม์ใช้ฟรี ไม่จ่ายเพิ่ม</p>
         <button class="cta p" data-go="member">เริ่มใช้งาน · ผู้เอาประกัน</button>
         <button class="cta g" data-go="care">เข้าสู่ระบบเจ้าหน้าที่</button>
         <div class="vows">
@@ -322,19 +338,34 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
         </svg>
       </div>
       <aside class="spec">
-        <h3>สิ่งที่ระบบวัดและบันทึก</h3>
-        <div class="r"><span>ทดสอบลุกนั่ง 5 ครั้ง (FTSST)</span><b>อัตโนมัติ</b></div>
-        <div class="r"><span>ลุกเดิน 3 เมตร (TUG)</span><b>ตรวจเดินครบรอบ</b></div>
-        <div class="r"><span>ทรงตัว 4 ท่า (CDC STEADI)</span><b>ผู้ดูแลยืนยันผล</b></div>
-        <div class="r"><span>ประวัติหกล้ม · ยา · กิจวัตร (ADL)</span><b>ทุก 3 เดือน</b></div>
-        <div class="r"><span>ความปลอดภัยในบ้าน (CDC STEADI)</span><b>7 ข้อ · ไม่เข้าคะแนน</b></div>
-        <div class="r"><span>ยาที่ใช้ — ถ่ายฉลาก อ่านชื่อ จับคู่กลุ่มเสี่ยง</span><b>ฐาน 170 ตัวยา + ทะเบียน อย.</b></div>
-        <div class="r"><span>สั่งงานด้วยเสียงภาษาไทย</span><b>สั่งงานและถามตอบได้</b></div><div class="r"><span>ยาที่ฐานในเครื่องไม่รู้จัก</span><b>ค้นทะเบียนตำรับยา อย.</b></div><div class="r"><span>ยาที่ทะเบียนก็ตอบไม่ได้</span><b class="y">เข้าคิวเภสัชกรพร้อมรูป</b></div>
-        <div class="r"><span>เกณฑ์เวลาประชากรไทย</span><b>10.0–12.1 วิ</b></div>
-        <div class="r"><span>ภาพและวิดีโอจากการตรวจร่างกาย</span><b class="g">ไม่ส่งออกเลย</b></div><div class="r"><span>รูปฉลากยา</span><b class="y">เก็บเมื่อผู้ใช้ติ๊กยินยอม</b></div>
-        <div class="r"><span>ผู้เชี่ยวชาญขอดูข้อมูลคลินิก</span><b class="y">ต้องขออนุญาตทุกครั้ง</b></div>
-        <div class="r"><span>การประเมินแบ่งเป็น</span><b class="y">8 หัวข้อ · ยืนยันทีละขั้น</b></div>
-        <div class="r"><span>สัญญาณเสี่ยงที่ระบบเปิดเคสให้</span><b class="y">7 ประเภท</b></div>
+        <h3>ระบบนี้ทำอะไรได้จริงบ้าง</h3>
+
+        <details open>
+          <summary>สิ่งที่ระบบวัด <span class="cnt">7 อย่าง</span></summary>
+          <div class="r"><span>ทดสอบลุกนั่ง 5 ครั้ง (FTSST)</span><b>อัตโนมัติ</b></div>
+          <div class="r"><span>ลุกเดิน 3 เมตร (TUG)</span><b>ตรวจเดินครบรอบ</b></div>
+          <div class="r"><span>ทรงตัว 4 ท่า (CDC STEADI)</span><b>ผู้ดูแลยืนยันผล</b></div>
+          <div class="r"><span>ประวัติหกล้ม · ยา · กิจวัตร (ADL)</span><b>ทุก 3 เดือน</b></div>
+          <div class="r"><span>ความปลอดภัยในบ้าน (CDC STEADI)</span><b>7 ข้อ · ไม่เข้าคะแนน</b></div>
+          <div class="r"><span>เกณฑ์เวลาประชากรไทย</span><b>10.0–12.1 วิ</b></div>
+          <div class="r"><span>สัญญาณเสี่ยงที่ระบบเปิดเคสให้</span><b class="y">7 ประเภท</b></div>
+        </details>
+
+        <details>
+          <summary>ยาที่ใช้อยู่ — สามชั้น <span class="cnt">กดดู</span></summary>
+          <div class="r"><span>ถ่ายฉลาก อ่านชื่อ จับคู่กลุ่มเสี่ยง</span><b>ฐาน 170 ตัวยา</b></div>
+          <div class="r"><span>ยาที่ฐานในเครื่องไม่รู้จัก</span><b>ค้นทะเบียนตำรับยา อย.</b></div>
+          <div class="r"><span>ยาที่ทะเบียนก็ตอบไม่ได้</span><b class="y">เข้าคิวเภสัชกรพร้อมรูป</b></div>
+        </details>
+
+        <details>
+          <summary>ข้อมูลของผู้ใช้ถูกดูแลอย่างไร <span class="cnt">กดดู</span></summary>
+          <div class="r"><span>ภาพและวิดีโอจากการตรวจร่างกาย</span><b class="g">ไม่ส่งออกเลย</b></div>
+          <div class="r"><span>รูปฉลากยา</span><b class="y">เก็บเมื่อผู้ใช้ติ๊กยินยอม</b></div>
+          <div class="r"><span>ผู้เชี่ยวชาญขอดูข้อมูลคลินิก</span><b class="y">ต้องขออนุญาตทุกครั้ง</b></div>
+          <div class="r"><span>การประเมินแบ่งเป็น</span><b class="y">8 หัวข้อ · ยืนยันทีละขั้น</b></div>
+          <div class="r"><span>สั่งงานด้วยเสียง ยกมือ หรือรีโมต</span><b>ไม่ต้องเดินมากดจอ</b></div>
+        </details>
       </aside>
     </div>
   </div>
