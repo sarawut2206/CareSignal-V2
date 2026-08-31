@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-08-31 15:20 |
+| วันที่ตรวจ | 2026-08-31 15:54 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 163 |
+| PASS | 164 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -35,9 +35,9 @@
 |---|---|---|---|
 | F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:201 · CareSignal-Vision.html:174 · cs-backend.js:177 |
 | F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:1650 · CareSignal-Vision.html:525 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3530 · CareSignal-Vision.html:4273 · CareSignal-App.html:3828 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:3530 · CareSignal-Vision.html:4404 · CareSignal-App.html:3828 |
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1626 · CareSignal-Vision.html:501 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4086 · CareSignal-Vision.html:4147 · CareSignal-App.html:2710 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4086 · CareSignal-Vision.html:4278 · CareSignal-App.html:2710 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:1919 · CareSignal-Vision.html:777 · CareSignal-App.html:1714 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:452 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
@@ -228,6 +228,7 @@
 | X-109 | ติดตั้งแล้วกดไอคอนเข้าตัวแอปเลย ไม่ผ่านหน้าเว็บนำเสนอ | PASS | start_url ชี้ตัวแอป เต็มจอทั้งสองระบบ และมีตัวพาเข้าแอปสำหรับเครื่องที่ติดตั้งไว้ก่อน |
 | X-110 | การตรวจเดินหน้าได้ด้วยกล้อง แม้คำสั่งเสียงใช้ไม่ได้เลย | PASS | ทั้งสี่หน้าวัดผลนับถอยหลังเอง ยกเลิกได้ด้วยเสียง ปุ่ม และแตะจอ |
 | X-111 | สั่งงานระยะไกลได้โดยไม่ต้องพูด (ยกมือ · ปุ่มรีโมต) | PASS | ยกมือและปุ่มรีโมตใช้ได้ทุกหน้า และไม่สั่งซ้อนตอนนับถอยหลัง |
+| X-112 | วัดทรงตัวด้วยเซ็นเซอร์ในมือถือ โดยยังถอยไปใช้กล้องได้ | PASS | เซ็นเซอร์เสริมกล้อง ขออนุญาตผ่านปุ่มจริง และปิดตัวจับทุกทางออก |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

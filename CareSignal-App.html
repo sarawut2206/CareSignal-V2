@@ -4767,6 +4767,91 @@ function shoulderWidth(lm){
   return Math.hypot(lm[LM.LSH].x-lm[LM.RSH].x, lm[LM.LSH].y-lm[LM.RSH].y);
 }
 /* ค่าโคลงเคลง = ส่วนเบี่ยงเบนมาตรฐานของตำแหน่งลำตัว หารความกว้างไหล่ */
+/* ============================================================
+   วัดการทรงตัวด้วยเซ็นเซอร์ความเร่งในมือถือ
+   ------------------------------------------------------------
+   ใช้คู่กับกล้อง ไม่ได้แทนกล้องทั้งหมด แบ่งหน้าที่กันตามที่แต่ละอย่างถนัด
+     กล้อง     — ตรวจว่าวางเท้าถูกท่าไหม ตอนผู้ใช้ยังยืนนิ่ง (กล้องทำได้ดี)
+     เซ็นเซอร์ — วัดการแกว่งและจับการก้าวเท้า ตอนจับเวลา (กล้องทำได้แย่
+                 เพราะต้องเห็นเท้าเล็ก ๆ ที่พื้นจากระยะ 2-3 เมตร)
+
+   ผู้ใช้ถือมือถือแนบอกหรือใส่กระเป๋าเสื้อ แล้วระบบอ่านความเร่งตรง ๆ
+   ไม่ต้องซื้ออุปกรณ์เพิ่ม ไม่ต้องต่อบลูทูธ ไม่ต้องใช้เน็ต
+
+   accelerationIncludingGravity เพราะ acceleration ที่หักแรงโน้มถ่วงแล้ว
+   คืนค่าว่างบนเครื่อง Android จำนวนมาก ส่วนตัวที่รวมแรงโน้มถ่วงมีทุกเครื่อง
+   วิธีคิด: เอาขนาดความเร่งรวมมาลบค่าเฉลี่ยของตัวเอง เหลือแต่ส่วนที่สั่น
+   ซึ่งตัดแรงโน้มถ่วงออกไปเองโดยไม่ต้องรู้ว่าถือมือถือเอียงกี่องศา
+   ============================================================ */
+var IMU={on:false,ok:false,denied:false,samples:[],spikes:0,h:null,last:0};
+
+function imuSupported(){
+  return typeof window!=="undefined"&&typeof window.DeviceMotionEvent!=="undefined";
+}
+/* iOS 13 ขึ้นไปต้องขออนุญาต และต้องเรียกจากการกดของผู้ใช้เท่านั้น */
+function imuNeedsAsk(){
+  return imuSupported()&&typeof DeviceMotionEvent.requestPermission==="function";
+}
+function imuAsk(){
+  if(!imuSupported())return Promise.resolve(false);
+  if(!imuNeedsAsk())return Promise.resolve(true);
+  try{
+    return DeviceMotionEvent.requestPermission().then(function(r){
+      IMU.denied=(r!=="granted"); return r==="granted";
+    }).catch(function(){IMU.denied=true;return false});
+  }catch(e){IMU.denied=true;return Promise.resolve(false)}
+}
+function imuStart(){
+  if(IMU.on||!imuSupported())return false;
+  IMU.samples=[]; IMU.spikes=0; IMU.ok=false; IMU.last=0;
+  IMU.h=function(ev){
+    var a=ev.accelerationIncludingGravity||ev.acceleration;
+    if(!a||a.x==null)return;
+    var m=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
+    if(!isFinite(m))return;
+    IMU.samples.push(m);
+    if(IMU.samples.length>1200)IMU.samples.shift();
+    IMU.ok=IMU.samples.length>=20;   /* ได้ข้อมูลจริงแล้ว ไม่ใช่แค่เปิดตัวจับ */
+  };
+  window.addEventListener("devicemotion",IMU.h);
+  IMU.on=true; return true;
+}
+function imuStop(){
+  if(IMU.h)window.removeEventListener("devicemotion",IMU.h);
+  IMU.h=null; IMU.on=false;
+}
+/* ส่วนเบี่ยงเบนมาตรฐานของขนาดความเร่ง = ปริมาณการแกว่ง หน่วยเมตรต่อวินาทีกำลังสอง
+   ตัดแรงโน้มถ่วงออกด้วยการลบค่าเฉลี่ย จึงไม่ต้องรู้ว่าถือมือถือเอียงกี่องศา */
+function imuSway(win){
+  var a=win?IMU.samples.slice(-win):IMU.samples;
+  if(a.length<20)return null;
+  var s=0,i; for(i=0;i<a.length;i++)s+=a[i];
+  var m=s/a.length, v=0;
+  for(i=0;i<a.length;i++)v+=(a[i]-m)*(a[i]-m);
+  return Math.sqrt(v/a.length);
+}
+/* ก้าวเท้าหรือเซ = ความเร่งพุ่งฉับพลันเกินระดับพื้นฐานของคนคนนั้นมาก
+   เทียบกับค่าของตัวเองไม่ใช่ค่าคงที่ เพราะคนตัวใหญ่กับคนตัวเล็กสั่นไม่เท่ากัน */
+function imuLurch(){
+  if(IMU.samples.length<40)return false;
+  var base=imuSway(400); if(base==null)return false;
+  var recent=IMU.samples.slice(-6);
+  var s=0,i; for(i=0;i<IMU.samples.length;i++)s+=IMU.samples[i];
+  var m=s/IMU.samples.length;
+  for(i=0;i<recent.length;i++)
+    if(Math.abs(recent[i]-m)>Math.max(2.2,base*4))return true;
+  return false;
+}
+/* แปลงค่าจากเซ็นเซอร์เป็นข้อสังเกตสามระดับ — เกณฑ์คนละชุดกับของกล้อง
+   เพราะคนละหน่วย กล้องใช้สัดส่วนลำตัว เซ็นเซอร์ใช้เมตรต่อวินาทีกำลังสอง */
+function imuLabel(v){
+  if(v==null)return {nm:"วัดไม่ได้", cls:"", hint:"เซ็นเซอร์ส่งข้อมูลไม่พอตลอด 10 วินาที"};
+  if(v<0.18)return {nm:"นิ่งมาก", cls:"t4", hint:"แทบไม่มีการโคลง"};
+  if(v<0.40)return {nm:"โคลงเล็กน้อย", cls:"t3", hint:"มีการแกว่งบ้างตามปกติ"};
+  if(v<0.75)return {nm:"โคลงปานกลาง", cls:"t2", hint:"แกว่งชัดเจน ควรมีที่จับใกล้มือ"};
+  return {nm:"โคลงมาก", cls:"t1", hint:"แกว่งมาก ควรมีคนอยู่ข้าง ๆ เสมอ"};
+}
+
 function swayScore(samples){
   if(samples.length<8)return null;
   var n=samples.length, mx=0, my=0;
@@ -5312,6 +5397,9 @@ function balanceV(){
   '<div class="track"><i id="btrk" style="width:0%"></i></div>'+
   '<div class="coach" id="coach">กำลังเปิดกล้อง…</div></div></div></div>'+
   statusHTML()+
+  '<div class="card" id="imuCard" hidden><h3 style="margin:0 0 6px">ถือมือถือไว้ วัดได้แม่นขึ้น</h3>'+
+  '<p class="sub" style="margin:0 0 12px">กล้องมองเท้าที่พื้นได้ไม่ชัดตอนท่านกำลังแกว่ง แต่<b>เซ็นเซอร์ในมือถือวัดการโคลงได้ตรง ๆ</b> — ถือมือถือแนบอกหรือใส่กระเป๋าเสื้อไว้ ระบบจะบอกด้วยเสียงว่าเหลืออีกกี่วินาที ไม่ต้องมองจอ<br><span style="color:#8090AA">ไม่ต้องซื้ออุปกรณ์เพิ่ม ไม่ต้องต่อบลูทูธ ไม่ต้องใช้เน็ต · ถ้าไม่เปิด ระบบจะใช้กล้องอย่างเดียวเหมือนเดิม</span></p>'+
+  '<button class="cta" id="imuOn" style="width:100%">เปิดเซ็นเซอร์วัดการทรงตัว</button></div>'+
   '<div class="card" id="bConfirm" hidden style="border:2px solid var(--accent2,#F59E0B)">'+
     '<h3 style="margin:0 0 6px" id="bcQ">ยืนครบ 10 วินาทีหรือไม่</h3>'+
     '<p class="sub" style="margin:0 0 10px">เกณฑ์ CDC: ยืนในท่าที่กำหนดครบ 10 วินาที <b>โดยไม่ขยับเท้าและไม่ต้องจับพยุง</b></p>'+
@@ -5407,6 +5495,9 @@ async function startBalancePipeline(){
     confirmBox.hidden=true;
     coach.innerHTML='<b>'+esc(BAL_STAGES[stage].nm)+'</b> — ยืนนิ่ง ๆ อย่าขยับเท้า';
     setStatus("green","กำลังจับเวลา — ยืนนิ่ง 10 วินาที ลืมตาไว้",false);
+    /* เปิดตัวจับความเร่งพร้อมกับเริ่มนับ — วัดการแกว่งได้ตรงกว่ากล้องมาก
+       เพราะกล้องต้องเห็นเท้าเล็ก ๆ ที่พื้นจากระยะสองถึงสามเมตรตอนคนกำลังแกว่ง */
+    imuStart();
     speak("เริ่มจับเวลา ยืนนิ่ง ๆ สิบวินาที");
     if(BAL_ASK)BAL_ASK("holding");
   }
@@ -5418,7 +5509,15 @@ async function startBalancePipeline(){
   function endStage(held,reason){
     if(phase!=="holding")return;
     phase="confirm"; clearCd();
+    /* เก็บค่าจากเซ็นเซอร์ก่อนปิดตัวจับ แล้วผนวกเข้ากับสิ่งที่กล้องสังเกตเห็น
+       บอกให้ชัดว่าค่ามาจากไหน เพราะสองแหล่งใช้หน่วยคนละแบบ เทียบกันตรง ๆ ไม่ได้ */
+    var imuV=IMU.ok?imuSway():null, imuSpikes=IMU.spikes;
+    imuStop();
     var o=ENG.observe();
+    if(imuV!=null){
+      o.obs.push("เซ็นเซอร์ในมือถือวัดการแกว่งได้ "+imuV.toFixed(2)+" — "+imuLabel(imuV).nm);
+      if(imuSpikes>0)o.obs.push("เซ็นเซอร์จับจังหวะเสียหลักได้ "+imuSpikes+" ครั้ง");
+    }
     if(extraN>20)o.obs.push("เห็นคนมากกว่าหนึ่งคนในภาพ — หากมีการช่วยพยุงถือว่าไม่ผ่าน");
     pending={held:Math.round(held*10)/10, reason:reason||null, o:o};
     startBtn.hidden=true; retryBtn.hidden=true;
@@ -5501,7 +5600,9 @@ async function startBalancePipeline(){
   var pendingRetry=null, pendingNext=null;
 
   /* หยุดเพื่อความปลอดภัย — จบทั้งชุดทันที ไม่ต้องทำท่าที่เหลือ */
+  /* ออกจากหน้านี้ทางไหนก็ต้องปิดตัวจับ ไม่งั้นค้างอ่านเซ็นเซอร์กินแบตต่อ */
   function haltSafe(){
+    imuStop();
     if(askTimer){clearTimeout(askTimer);askTimer=null}
     clearCd(); confirmBox.hidden=true;
     if(pending){
@@ -5580,7 +5681,16 @@ async function startBalancePipeline(){
       var el=(performance.now()-t0)/1000;
       secEl.textContent=Math.max(0,BAL_SECONDS-el).toFixed(0);
       trk.style.width=Math.min(100,el/BAL_SECONDS*100)+"%";
-      if(h.sway!=null)swayEl.textContent="สังเกต: "+swayLabel(h.sway).nm;
+      /* เซ็นเซอร์มาก่อนกล้องถ้ามีข้อมูลจริง เพราะวัดการแกว่งได้ตรงกว่า
+         ถ้าเซ็นเซอร์ใช้ไม่ได้ (ไม่มีสิทธิ์ ไม่มีเซ็นเซอร์ วางมือถือไว้เฉย ๆ)
+         ก็ถอยไปใช้ค่าจากกล้องเหมือนเดิม ไม่ทำให้อะไรพัง */
+      var iv=IMU.ok?imuSway(600):null;
+      if(iv!=null)swayEl.textContent="สังเกต: "+imuLabel(iv).nm+" (เซ็นเซอร์)";
+      else if(h.sway!=null)swayEl.textContent="สังเกต: "+swayLabel(h.sway).nm;
+      /* ก้าวเท้าหรือเซ = ความเร่งพุ่งฉับพลัน กล้องจับจังหวะนี้แทบไม่ได้เลย */
+      if(IMU.ok&&imuLurch()){IMU.spikes++;
+        if(IMU.spikes>=3){endStage(Math.min(el,BAL_SECONDS),"เซ็นเซอร์จับได้ว่ามีการก้าวเท้าหรือเสียหลัก");return}
+      }
       if(POSE_COUNT>1)extraN++;
       if(h.remind)speak(h.remind);
       if(!halfWarned&&el>=BAL_SECONDS/2){halfWarned=true;speak("เหลืออีก ห้า วินาที")}
@@ -5602,6 +5712,27 @@ async function startBalancePipeline(){
     else if(phase==="setup"||phase==="holding"){clearCd();announce(true)}
   });
   document.getElementById("bHelp").addEventListener("click",function(){speak(STEP.hint||VC_HELP,{force:true})});
+  /* แสดงการ์ดเฉพาะเครื่องที่มีเซ็นเซอร์จริง และยังไม่ได้เปิด */
+  (function(){
+    var card=document.getElementById("imuCard"), btn=document.getElementById("imuOn");
+    if(!card||!btn||!imuSupported()||IMU.denied)return;
+    card.hidden=false;
+    btn.addEventListener("click",function(){
+      imuAsk().then(function(ok){
+        if(!ok){
+          card.innerHTML='<h3 style="margin:0 0 6px">ใช้กล้องอย่างเดียว</h3>'+
+            '<p class="sub" style="margin:0">เครื่องนี้ไม่ให้สิทธิ์อ่านเซ็นเซอร์ ระบบจะวัดด้วยกล้องเหมือนเดิม '+
+            'ผลยังใช้ได้ แต่การจับจังหวะเสียหลักจะไวน้อยกว่า</p>';
+          return;
+        }
+        card.innerHTML='<h3 style="margin:0 0 6px">เปิดเซ็นเซอร์แล้ว</h3>'+
+          '<p class="sub" style="margin:0">ถือมือถือแนบอกหรือใส่กระเป๋าเสื้อไว้ตลอดการทดสอบ '+
+          'ระบบจะบอกด้วยเสียงว่าเหลืออีกกี่วินาที</p>';
+        speak("เปิดเซ็นเซอร์แล้ว ถือมือถือแนบอกไว้ ระบบจะบอกด้วยเสียง",{force:true});
+        audit("เปิดเซ็นเซอร์วัดการทรงตัว","ผู้ใช้อนุญาตให้อ่านเซ็นเซอร์ความเร่งของมือถือ");
+      });
+    });
+  })();
   /* คำสั่งเสียงครบชุด — ทุกคำมีปุ่มบนจอทดแทนได้เสมอ */
   vcStart(function(){});
   /* หน้าทรงตัวมีหลายจังหวะ แต่ละจังหวะรับคำต่างกัน จึงประกาศขั้นตอนใหม่ทุกครั้ง
