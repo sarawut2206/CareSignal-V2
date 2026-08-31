@@ -916,7 +916,7 @@ function vcRender(){
   /* อยู่ในขั้นตอน = บอกทั้งคำที่ต้องพูด และคำล่าสุดที่ไมค์ได้ยิน
      ถ้าไม่บอกสิ่งที่ได้ยิน ผู้ใช้แยกไม่ออกว่าไมค์ไม่ทำงาน หรือได้ยินแล้วแต่ไม่เข้าใจ */
   if(STEP.id&&STEP.say){
-    b.textContent="🎤 พูดว่า “"+STEP.say+"”"+
+    b.textContent="🎤 พูดว่า “"+STEP.say+"” หรือยกมือ"+
       (VC.live?" · "+VC.live:(VC.lastHeard?" · ได้ยิน: "+VC.lastHeard:""));
     return;
   }
@@ -987,6 +987,81 @@ function cdStart(opts){
     var f=CD.fire; cdCancel(true); if(f)try{f()}catch(e){}
   },1000);
 }
+
+/* ============================================================
+   สั่งงานระยะไกลโดยไม่ต้องพูด
+   ------------------------------------------------------------
+   ผู้ใช้ยืนห่างจอ 2-3 เมตร กดปุ่มบนจอไม่ถึง ส่วนเสียงต้องวิ่งไปถอดความ
+   ที่เซิร์ฟเวอร์จึงไม่นิ่งโดยธรรมชาติ ทั้งสองทางนี้ทำงานในเครื่องล้วน
+
+   ยกมือ    — MediaPipe ส่งตำแหน่งข้อมือมาอยู่แล้ว (จุดที่ 15 และ 16)
+              ยกข้อมือข้างใดข้างหนึ่งสูงกว่าหัวไหล่ ค้างไว้ราว 0.7 วินาที
+              ที่ต้องค้าง เพราะกันการยกมือผ่าน ๆ ตอนขยับตัวหรือจัดท่า
+   ปุ่มรีโมต — รีโมตนำเสนอสไลด์ราคาไม่กี่ร้อยบาทส่งปุ่มลูกศร/PageUp/PageDown
+              ซึ่งเบราว์เซอร์รับได้ตามปกติ ถือไว้ในมือแล้วกดได้เลย
+
+   ทั้งสองทางทำสิ่งเดียวกับที่พูดคำหลักของขั้นตอนนั้น และเคารพด่านเดียวกัน
+   คือถ้ากำลังนับถอยหลังอยู่ ให้ยกเลิกการนับ ไม่ใช่สั่งซ้อน
+   ============================================================ */
+var WRIST={L:15,R:16};
+var HAND={since:0,fired:0};
+
+/* ยกมือข้างใดข้างหนึ่งสูงกว่าหัวไหล่ฝั่งเดียวกันหรือไม่ (y เพิ่มลงล่าง) */
+function handRaised(lm){
+  if(!lm)return false;
+  var pairs=[[WRIST.L,LM.LSH],[WRIST.R,LM.RSH]];
+  for(var i=0;i<pairs.length;i++){
+    var w=lm[pairs[i][0]], s=lm[pairs[i][1]];
+    if(!w||!s)continue;
+    if(w.visibility!==undefined&&w.visibility<0.6)continue;
+    if(s.visibility!==undefined&&s.visibility<0.5)continue;
+    /* ต้องสูงกว่าหัวไหล่ชัด ๆ ไม่ใช่แค่เสมอกัน กันมือแกว่งตอนเดิน */
+    if(s.y-w.y>0.06)return true;
+  }
+  return false;
+}
+
+/* คำสั่งหลักของขั้นตอนที่กำลังรออยู่ — อันเดียวกับที่พูดคำหลักแล้วได้ */
+function stepPrimary(){
+  if(!STEP.id||!STEP.on)return null;
+  var order=["record","start","pass","next"];
+  for(var i=0;i<order.length;i++)if(STEP.on[order[i]])return order[i];
+  return null;
+}
+function remoteFire(how){
+  /* กำลังนับถอยหลังอยู่ = สั่งอีกทีแปลว่าขอหยุดก่อน ไม่ใช่สั่งซ้อน */
+  if(cdRunning()){cdCancel();return "cancel"}
+  var k=stepPrimary(); if(!k)return null;
+  var now=Date.now();
+  if(now-(HAND.fired||0)<1500)return null;   /* กันสั่งรัวจากเฟรมติด ๆ กัน */
+  HAND.fired=now;
+  STEP.t0=now; STEP.nudges=0;
+  try{STEP.on[k]()}catch(e){}
+  return how+":"+k;
+}
+
+/* เรียกจากลูปกล้องทุกเฟรม */
+function gestureTick(lm){
+  if(!STEP.id){HAND.since=0;return}
+  if(!handRaised(lm)){HAND.since=0;return}
+  var now=Date.now();
+  if(!HAND.since){HAND.since=now;return}
+  if(now-HAND.since<700)return;
+  HAND.since=0;
+  remoteFire("hand");
+}
+
+/* ปุ่มจากรีโมต Bluetooth — รับเฉพาะปุ่มที่รีโมตนำเสนอส่งกันบ่อย
+   และเลี่ยงปุ่มที่หน้าเว็บใช้อยู่ (Tab, Escape) กับตอนที่ผู้ใช้กำลังพิมพ์ */
+var REMOTE_KEYS={PageDown:1,PageUp:1,ArrowRight:1,ArrowLeft:1,ArrowUp:1,ArrowDown:1,
+                 Enter:1," ":1,MediaPlayPause:1,AudioVolumeUp:1};
+document.addEventListener("keydown",function(e){
+  if(!STEP.id)return;
+  var t=e.target, tag=t&&t.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable))return;
+  if(!REMOTE_KEYS[e.key])return;
+  if(remoteFire("key")){e.preventDefault()}
+});
 
 function vcStart(handler){
   VC.handler=handler;
@@ -4338,6 +4413,7 @@ function setupCalib(video,canvas,ctx){
     if(S.screen!=="calib"){return}
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
+    gestureTick(lm);
     var ok=false;
     if(lm){
       var q=visOK(lm), m=hipRatio(lm);
@@ -4457,6 +4533,7 @@ function setupTest(video,canvas,ctx){
     if(S.screen!=="camtest")return;
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
+    gestureTick(lm);
     frameN++;
     /* ตรวจใบหน้าทุก ~2 วินาที ระหว่างทดสอบ (ไม่ทุกเฟรม เพื่อไม่ให้เครื่องหน่วง) */
     if(faceRef&&running&&FACE&&frameN%60===0){
@@ -5050,6 +5127,7 @@ async function startTugPipeline(){
     if(S.screen!=="tug")return;
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
+    gestureTick(lm);
     var m=lm?hipRatio(lm):null;
 
     if(phase==="waitSit"){
@@ -5388,6 +5466,7 @@ async function startBalancePipeline(){
     if(S.screen!=="balance")return;
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
+    gestureTick(lm);
 
     if(phase==="setup"&&ENG){
       var g=ENG.frame(lm);
