@@ -2160,6 +2160,406 @@ function remoteForget(){
   toast("ลืมปุ่มรีโมตแล้ว");render();
 }
 
+/* ============================================================
+   โมดูลเรดาร์คลื่นมิลลิเมตร (mmWave) — วัดสมรรถภาพโดยไม่ต้องใช้กล้อง
+   ------------------------------------------------------------
+   ใช้กับโมดูล HLK-LD2410 (24GHz FMCW) ต่อผ่านเกตเวย์ที่ส่งข้อมูลมาทาง
+   WebSocket ซึ่งเป็นสถาปัตยกรรมเดียวกับที่ García-Gutiérrez และคณะ
+   (Sensors 2026;26:681) ใช้ในบ้านพักคนชราจริง
+
+   สิ่งที่โมดูลส่งมาต่อเฟรม
+     d  ระยะของเป้าหมายที่กำลังเคลื่อนไหว หน่วยเซนติเมตร
+     e  พลังงานการเคลื่อนไหว 0-100
+     sd ระยะของเป้าหมายที่อยู่นิ่ง หน่วยเซนติเมตร
+     se พลังงานของเป้าหมายที่อยู่นิ่ง 0-100
+
+   ข้อจำกัดที่ต้องประกาศไว้ เพราะมีผลต่อการตีความผลโดยตรง
+     * เรดาร์ตัวนี้ไม่มีความละเอียดเชิงมุม รู้แค่ว่าไกลเท่าไร ไม่รู้ว่าอยู่ทางไหน
+       การวัดความเร็วเดินจึงต้องเดินตรงเข้าหาหรือออกจากเรดาร์เท่านั้น
+       ถ้าเดินเฉียง ค่าที่ได้จะต่ำกว่าความจริงตามโคไซน์ของมุม
+     * การลุกนั่งเป็นการเคลื่อนที่แนวดิ่ง ส่วนเรดาร์วัดระยะแนวราบ จึงนับจำนวน
+       ครั้งจากจังหวะพลังงานที่ขึ้นลงเป็นคาบ ไม่ได้วัดว่าลุกขึ้นสูงแค่ไหน
+     * ท่าทรงตัวจับ "ก้าวเท้าออกจากท่า" จากระยะที่กระโดดและพลังงานที่พุ่ง
+       ซึ่งเป็นตัวแทนของเกณฑ์ CDC STEADI ที่ถามว่ายืนครบ 10 วินาทีหรือไม่
+       แต่ยืนยันไม่ได้ว่าวางเท้าถูกท่าตั้งแต่แรก ต้องให้กล้องหรือคนตรวจ
+     * ผลจากเรดาร์ยังไม่เคยวัดคู่ขนานกับนักกายภาพบำบัด จึงต้องแสดงที่มาเสมอ
+       และห้ามนำไปแทนผลจากกล้องโดยไม่บอกผู้ใช้
+
+   ตัววิเคราะห์ทั้งสี่เขียนเป็นฟังก์ชันบริสุทธิ์ รับอาร์เรย์เฟรมแล้วคืนผล
+   จึงทดสอบได้ครบโดยไม่ต้องมีฮาร์ดแวร์ และเปลี่ยนแหล่งข้อมูลได้ในอนาคต
+   ============================================================ */
+var RADAR={ws:null,url:"",on:false,live:false,sim:null,frames:[],err:"",onFrame:null};
+
+function radarUrl(){
+  try{return localStorage.getItem("cs:radar")||""}catch(e){return ""}
+}
+function radarSaveUrl(u){
+  try{ if(u)localStorage.setItem("cs:radar",u); else localStorage.removeItem("cs:radar"); }catch(e){}
+}
+function radarDisconnect(){
+  if(RADAR.sim){clearInterval(RADAR.sim);RADAR.sim=null}
+  try{ if(RADAR.ws)RADAR.ws.close(); }catch(e){}
+  RADAR.ws=null;RADAR.on=false;RADAR.live=false;
+}
+function radarConnect(url,cb){
+  radarDisconnect();
+  RADAR.url=url||radarUrl(); RADAR.err="";
+  if(!RADAR.url){RADAR.err="ยังไม่ได้ตั้งที่อยู่เกตเวย์";if(cb)cb(false);return false}
+  if(typeof WebSocket==="undefined"){RADAR.err="เบราว์เซอร์นี้ต่อ WebSocket ไม่ได้";if(cb)cb(false);return false}
+  try{
+    RADAR.ws=new WebSocket(RADAR.url);
+    RADAR.ws.onopen=function(){RADAR.on=true;if(cb)cb(true)};
+    RADAR.ws.onmessage=function(ev){radarIngest(ev.data)};
+    RADAR.ws.onerror=function(){RADAR.err="ต่อเกตเวย์ไม่สำเร็จ"};
+    RADAR.ws.onclose=function(){RADAR.on=false;RADAR.live=false};
+    return true;
+  }catch(e){RADAR.err="ต่อเกตเวย์ไม่สำเร็จ";if(cb)cb(false);return false}
+}
+/* รับข้อมูลดิบ — รองรับทั้งชื่อฟิลด์ยาวของ RoomSense IQ และชื่อย่อ
+   เพราะเกตเวย์แต่ละเจ้าตั้งชื่อไม่เหมือนกัน และเราคุมฝั่งนั้นไม่ได้ */
+function radarIngest(raw){
+  var o;
+  try{ o=(typeof raw==="string")?JSON.parse(raw):raw; }catch(e){ return null }
+  if(!o||typeof o!=="object")return null;
+  function num(v){ var n=Number(v); return isFinite(n)?n:null }
+  function pick(a,b,c){ return o[a]!=null?o[a]:(o[b]!=null?o[b]:o[c]) }
+  var f={ t:(o.t!=null?Number(o.t):Date.now()),
+          d:num(pick("d","moving_distance","movingDistance")),
+          e:num(pick("e","moving_energy","movingEnergy")),
+          sd:num(pick("sd","still_distance","stillDistance")),
+          se:num(pick("se","still_energy","stillEnergy")) };
+  if(f.d==null&&f.sd==null)return null;
+  RADAR.live=true;
+  RADAR.frames.push(f);
+  if(RADAR.frames.length>3000)RADAR.frames.shift();
+  if(RADAR.onFrame)try{RADAR.onFrame(f)}catch(e){}
+  return f;
+}
+function radarClear(){
+  RADAR.frames=[];
+  /* ธงมีสัญญาณสด ต้องล้างพร้อมเฟรม ไม่งั้นการวัดรอบถัดไปเข้าใจผิด
+     ว่ายังมีของจริงส่งอยู่ แล้วไม่ยอมเริ่มตัวจำลอง (บั๊กที่เจอตอนรันครบวงจร) */
+  if(!RADAR.ws)RADAR.live=false;
+}
+
+/* ============================================================
+   ตัววิเคราะห์ทั้งสี่ — ฟังก์ชันบริสุทธิ์ ทดสอบได้โดยไม่ต้องมีฮาร์ดแวร์
+   ============================================================ */
+
+/* หาช่วงที่เดินจริง: พลังงานเกินเกณฑ์ และระยะเปลี่ยนไปทางเดียวกันต่อเนื่อง
+   ถ้าเปลี่ยนทิศถือว่าจบช่วงเดิน ไม่เอามารวมกัน ไม่งั้นระยะสุทธิจะหักล้างกัน
+   จนความเร็วที่คำนวณได้ต่ำกว่าความจริงมาก */
+function radarWalk(fr,minE){
+  minE=minE||20;
+  var best=null,cur=null,i,f,delta,dir;
+  function keep(){ if(cur&&(!best||(cur.b-cur.a)>(best.b-best.a)))best=cur }
+  for(i=0;i<fr.length;i++){
+    f=fr[i];
+    /* พลังงานตก = จบช่วงเดิน ต้องเก็บช่วงที่จบไปเทียบก่อนทิ้ง
+       ไม่งั้นช่วงเดินที่ตามด้วยการยืนนิ่งจะหายไปทั้งช่วง */
+    if(f.d==null||f.e==null||f.e<minE){ keep(); cur=null; continue }
+    if(!cur){ cur={a:i,b:i,dir:0}; continue }
+    delta=f.d-fr[cur.b].d;
+    dir=delta>0?1:(delta<0?-1:0);
+    if(cur.dir===0&&dir!==0)cur.dir=dir;
+    if(cur.dir!==0&&dir!==0&&dir!==cur.dir){
+      keep();
+      cur={a:i,b:i,dir:0}; continue;
+    }
+    cur.b=i;
+  }
+  keep();
+  if(!best||best.b-best.a<3)return null;
+  return {i0:best.a,i1:best.b,d0:fr[best.a].d,d1:fr[best.b].d,
+          t0:fr[best.a].t,t1:fr[best.b].t};
+}
+
+/* ---------- 1. ความเร็วในการเดิน (Gait Speed Test) ---------- */
+function radarGaitSpeed(fr){
+  var w=radarWalk(fr); if(!w)return null;
+  var distM=Math.abs(w.d1-w.d0)/100, sec=(w.t1-w.t0)/1000;
+  /* สั้นกว่านี้เชื่อไม่ได้ เกณฑ์มาตรฐานใช้ทางเดิน 4 เมตร */
+  if(sec<1||distM<1.5)return null;
+  return {mps:Math.round(distM/sec*100)/100, distM:Math.round(distM*100)/100,
+          sec:Math.round(sec*10)/10, src:"radar"};
+}
+/* ต่ำกว่า 0.8 เมตรต่อวินาที สัมพันธ์กับความเสี่ยงหกล้มและการเสียชีวิต
+   ในผู้สูงอายุ (Studenski 2011, JAMA) */
+function radarGaitLabel(mps){
+  if(mps==null)return {nm:"วัดไม่ได้",cls:""};
+  if(mps>=1.0)return {nm:"ปกติ",cls:"t4"};
+  if(mps>=0.8)return {nm:"เริ่มช้า",cls:"t3"};
+  if(mps>=0.6)return {nm:"ช้า",cls:"t2"};
+  return {nm:"ช้ามาก",cls:"t1"};
+}
+
+/* ---------- 2. ลุกเดิน 3 เมตร (Timed Up and Go) ---------- */
+function radarTUG(fr,minE){
+  minE=minE||20;
+  if(!fr||!fr.length)return null;
+  var i,s=-1,e=-1;
+  for(i=0;i<fr.length;i++)if(fr[i].e!=null&&fr[i].e>=minE){s=i;break}
+  if(s<0)return null;
+  for(i=fr.length-1;i>=0;i--)if(fr[i].e!=null&&fr[i].e>=minE){e=i;break}
+  if(e<=s)return null;
+  /* จุดไกลสุด = จุดกลับตัว ใช้ยืนยันว่าเดินออกไปแล้วกลับมาจริง
+     ไม่ใช่แค่ขยับอยู่กับที่แล้วนับเป็นการทดสอบ */
+  var far=-1,fd=-1,d0=null;
+  for(i=s;i<=e;i++){
+    if(fr[i].d==null)continue;
+    if(d0==null)d0=fr[i].d;
+    if(fr[i].d>fd){fd=fr[i].d;far=i}
+  }
+  if(d0==null||far<0)return null;
+  var outM=(fd-d0)/100;
+  if(outM<1.0)return null;
+  return {sec:Math.round((fr[e].t-fr[s].t)/100)/10,
+          outM:Math.round(outM*100)/100,
+          turnSec:Math.round((fr[far].t-fr[s].t)/100)/10, src:"radar"};
+}
+/* เกณฑ์ TUG ที่ระบบใช้อยู่แล้วคือ 12 วินาที (CDC STEADI) */
+function radarTUGLabel(sec){
+  if(sec==null)return {nm:"วัดไม่ได้",cls:""};
+  return sec>=12?{nm:"ช้ากว่าเกณฑ์ 12 วินาที",cls:"t2"}:{nm:"อยู่ในเกณฑ์",cls:"t4"};
+}
+
+/* ---------- 3. ลุกนั่ง 30 วินาที (30-Second Chair Stand) ----------
+   นับจากจังหวะพลังงานที่ขึ้นลงเป็นคาบ ไม่ได้วัดความสูงที่ลุกขึ้น
+   ต้องตกลงต่ำกว่าครึ่งของเกณฑ์ก่อน จึงจะนับครั้งใหม่ กันนับซ้ำจากยอดเดียว
+   และต้องห่างกันอย่างน้อย 0.7 วินาที เพราะผู้สูงอายุลุกนั่งเร็วกว่านั้นไม่ได้ */
+function radarChairStand(fr,minE,gapMs){
+  minE=minE||30; gapMs=gapMs||700;
+  var reps=0,last=null,up=false,i,f,marks=[];
+  for(i=0;i<fr.length;i++){
+    f=fr[i]; if(f.e==null)continue;
+    if(!up&&f.e>=minE){
+      if(last==null||f.t-last>=gapMs){reps++;last=f.t;marks.push(f.t)}
+      up=true;
+    }else if(up&&f.e<minE*0.5){ up=false }
+  }
+  var sec=fr.length?(fr[fr.length-1].t-fr[0].t)/1000:0;
+  return {reps:reps,sec:Math.round(sec*10)/10,marks:marks,src:"radar"};
+}
+/* เกณฑ์ตามอายุและเพศจาก Rikli & Jones ซึ่ง CDC STEADI อ้างอิง */
+function radarChairLabel(reps,age,sex){
+  if(reps==null)return {nm:"วัดไม่ได้",cls:""};
+  var a=Number(age)||70;
+  var cut = sex==="f"
+    ? (a<65?15:(a<70?14:(a<75?12:(a<80?11:(a<85?10:8)))))
+    : (a<65?17:(a<70?15:(a<75?14:(a<80?12:(a<85?11:10)))));
+  return reps<cut ? {nm:"ต่ำกว่าเกณฑ์อายุ",cls:"t2",cut:cut}
+                  : {nm:"ผ่านเกณฑ์อายุ",cls:"t4",cut:cut};
+}
+
+/* ---------- 4. ทรงตัว 4 ท่า (4-Stage Balance) ----------
+   เกณฑ์ CDC STEADI ถามแค่ว่ายืนครบ 10 วินาทีหรือไม่ ไม่ได้ขอค่าการแกว่ง
+   จึงจับ "ก้าวเท้าออกจากท่า" เป็นหลัก คือระยะกระโดดเกินเกณฑ์
+   หรือพลังงานพุ่งเกินเกณฑ์ ซึ่งสองอย่างนี้เกิดพร้อมกันเวลาคนเสียหลักจริง */
+function radarBalance(fr,holdSec,jumpCm,minE){
+  holdSec=holdSec||10; jumpCm=jumpCm||15; minE=minE||45;
+  if(!fr||!fr.length)return null;
+  var t0=fr[0].t,i,f,prev=null,stepAt=null;
+  for(i=0;i<fr.length;i++){
+    f=fr[i];
+    var moved=(prev!=null&&f.d!=null&&Math.abs(f.d-prev)>=jumpCm);
+    var burst=(f.e!=null&&f.e>=minE);
+    if(moved||burst){ stepAt=(f.t-t0)/1000; break }
+    if(f.d!=null)prev=f.d;
+  }
+  var span=(fr[fr.length-1].t-t0)/1000;
+  var held=(stepAt==null)?Math.min(span,holdSec):stepAt;
+  /* ค่าการแกว่งจากพลังงานของเป้าหมายนิ่ง เป็นข้อสังเกตประกอบ ไม่ใช่เกณฑ์ตัดสิน */
+  var se=[],sum=0;
+  for(i=0;i<fr.length;i++)if(fr[i].se!=null){se.push(fr[i].se);sum+=fr[i].se}
+  var sway=null;
+  if(se.length>=8){
+    var m=sum/se.length,v=0;
+    for(i=0;i<se.length;i++)v+=(se[i]-m)*(se[i]-m);
+    sway=Math.round(Math.sqrt(v/se.length)*100)/100;
+  }
+  return {pass:(stepAt==null&&span>=holdSec-0.3), heldSec:Math.round(held*10)/10,
+          steppedAtSec:(stepAt==null?null:Math.round(stepAt*10)/10),
+          sway:sway, src:"radar"};
+}
+
+/* ============================================================
+   ตัวจำลองสัญญาณ — ให้สาธิตและทดสอบได้โดยไม่ต้องมีฮาร์ดแวร์
+   จำเป็นเพราะโค้ดฝั่งอุปกรณ์ยังไม่เคยรันกับเรดาร์จริง การมีตัวจำลอง
+   ทำให้พิสูจน์ได้ว่าตัววิเคราะห์ถูกต้อง ก่อนจะไปเจอของจริง
+   ============================================================ */
+function radarSimFrames(kind,opt){
+  opt=opt||{};
+  var hz=opt.hz||10, dt=1000/hz, t=opt.t0||0, out=[], i;
+  function push(d,e,se){ out.push({t:t,d:Math.round(d),e:e,sd:Math.round(d),se:se}); t+=dt }
+  if(kind==="gait"){
+    var mps=opt.mps||0.9, from=opt.from||500, to=opt.to||150, step=mps*100/hz;
+    for(i=0;i<hz;i++)push(from,5,30);
+    var d=from;
+    while(d-step>to){ d-=step; push(d,55,20) }
+    for(i=0;i<hz;i++)push(d,5,30);
+  }else if(kind==="tug"){
+    var outM=opt.outM||3, sec=opt.sec||12, d0=opt.d0||100;
+    var half=Math.max(1,Math.round(sec*hz/2)), far=d0+outM*100;
+    for(i=0;i<hz;i++)push(d0,5,30);
+    for(i=0;i<half;i++)push(d0+(far-d0)*i/half,50,20);
+    for(i=0;i<half;i++)push(far-(far-d0)*i/half,50,20);
+    for(i=0;i<hz;i++)push(d0,5,30);
+  }else if(kind==="chair"){
+    var reps=opt.reps||12, secs=opt.sec||30, per=Math.max(3,Math.round(secs*hz/reps));
+    var hi=Math.max(2,Math.round(per*0.35));
+    for(i=0;i<secs*hz;i++)push(opt.d0||120,(i%per)<hi?60:8,25);
+  }else if(kind==="balance"){
+    var hold=opt.sec||10, stepAt=(opt.stepAt==null?null:opt.stepAt), dd=opt.d0||150;
+    for(i=0;i<hold*hz;i++){
+      var s=i/hz;
+      if(stepAt!=null&&s>=stepAt)push(dd+20,60,40);
+      else push(dd+(i%3===0?1:0),8,20+(i%5));
+    }
+  }
+  return out;
+}
+/* เดินตัวจำลองแบบเรียลไทม์เข้าท่อเดียวกับของจริง เพื่อให้ UI ทำงานเหมือนกันทุกอย่าง */
+function radarSimStart(kind,opt,done){
+  radarDisconnect(); radarClear();
+  var fr=radarSimFrames(kind,opt), i=0, base=Date.now();
+  RADAR.on=true;
+  RADAR.sim=setInterval(function(){
+    if(i>=fr.length){ clearInterval(RADAR.sim); RADAR.sim=null; if(done)done(); return }
+    var f=fr[i++];
+    radarIngest({t:base+f.t,d:f.d,e:f.e,sd:f.sd,se:f.se});
+  }, Math.max(10,(opt&&opt.speed)||20));
+  return fr.length;
+}
+
+
+/* ============================================================
+   หน้าวัดสมรรถภาพด้วยเรดาร์ mmWave — ทางเลือกเมื่อไม่สะดวกใช้กล้อง
+   ครอบคลุมสี่การทดสอบ: ความเร็วเดิน · ลุกเดิน 3 เมตร · ลุกนั่ง 30 วินาที
+   · ทรงตัว 4 ท่า โดยแต่ละผลติดป้ายว่ามาจากเรดาร์เสมอ
+   ============================================================ */
+var RDV={mode:null,busy:false,timer:null};
+function radarV(){
+  head("วัดด้วยเรดาร์","วัดสมรรถภาพด้วยเรดาร์ mmWave",
+       "ทางเลือกเมื่อไม่สะดวกใช้กล้อง เช่น แสงน้อยหรือไม่ต้องการเปิดกล้อง","me");
+  var hasUrl=!!radarUrl();
+  V.innerHTML='<div class="anim">'+
+  '<div class="card"><h3>อุปกรณ์</h3>'+
+  '<p class="sub" style="margin:0 0 10px">ใช้โมดูลเรดาร์ 24GHz (HLK-LD2410 หรือ RoomSense IQ ราวหลักร้อยบาท) '+
+  'ต่อผ่านเกตเวย์ที่ส่งข้อมูลทาง WebSocket ในบ้านเดียวกัน · ข้อมูลเป็นตัวเลขระยะกับพลังงานเท่านั้น '+
+  '<b>ไม่มีภาพใด ๆ</b> · ถ้ายังไม่มีอุปกรณ์ กดใช้ตัวจำลองเพื่อดูการทำงานได้</p>'+
+  '<div class="field"><label>ที่อยู่เกตเวย์ (ws://...)</label>'+
+  '<input id="rdUrl" value="'+esc(radarUrl())+'" placeholder="เช่น ws://192.168.1.50:8080"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<button class="ghostb" id="rdConn" style="flex:1;margin:0">'+(hasUrl?"เชื่อมต่อ":"บันทึกและเชื่อมต่อ")+'</button>'+
+  '<button class="ghostb" id="rdSim" style="flex:1;margin:0">ใช้ตัวจำลอง</button></div>'+
+  '<p class="sub" id="rdSt" style="margin:10px 0 0">ยังไม่ได้เชื่อมต่อ</p></div>'+
+  '<div class="card"><h3>เลือกการทดสอบ</h3>'+
+  [["gait","ความเร็วในการเดิน","เดินตรงเข้าหาเรดาร์อย่างน้อย 4 เมตร"],
+   ["tug","ลุกเดิน 3 เมตร (TUG)","วางเรดาร์ที่เก้าอี้ หันไปทางเดิน"],
+   ["chair","ลุกนั่ง 30 วินาที","นั่งห่างเรดาร์ราว 1 เมตร ลุกนั่งให้เต็มที่"],
+   ["balance","ทรงตัว 4 ท่า","ยืนนิ่งหน้าเรดาร์ ระบบจับการก้าวเท้า"]].map(function(x){
+    return '<button class="ghostb rd-go" data-rd="'+x[0]+'" style="text-align:left">'+
+           '<b style="display:block">'+x[1]+'</b><span class="sub" style="font-size:14px">'+x[2]+'</span></button>';
+  }).join("")+'</div>'+
+  '<div class="card" id="rdRun" hidden><h3 id="rdTitle"></h3>'+
+  '<div class="counter" style="margin:6px 0"><span class="n" id="rdBig">—</span><span class="of" id="rdUnit"></span></div>'+
+  '<p class="sub" id="rdLive" style="margin:0 0 10px">รอสัญญาณ…</p>'+
+  '<button class="cta" id="rdStop" style="width:100%">จบการวัดและดูผล</button></div>'+
+  '<div class="card" id="rdOut" hidden><h3>ผลที่วัดได้ <span class="hudtag" style="background:#EEF4FF;color:#2563EB">จากเรดาร์</span></h3>'+
+  '<div id="rdRes"></div>'+
+  '<p class="sub" style="margin:10px 0 0">ผลจากเรดาร์เป็นการวัดทางเลือก ยังไม่เคยเทียบคู่ขนานกับนักกายภาพบำบัด '+
+  'ใช้ติดตามแนวโน้มของตัวเองได้ แต่การประเมินอย่างเป็นทางการยังใช้กล้องหรือผู้ดูแลจับเวลา</p></div>'+
+  '<div class="notice">ข้อจำกัดที่ควรรู้: เรดาร์รู้ระยะแต่ไม่รู้ทิศ การเดินต้องตรงแนวเรดาร์ · '+
+  'การนับลุกนั่งอ่านจากจังหวะการเคลื่อนไหว ไม่ได้เห็นท่าจริง · ควรมีคนอยู่ด้วยเสมอเมื่อทำท่าทรงตัว</div></div>';
+
+  document.getElementById("rdConn").addEventListener("click",function(){
+    var u=document.getElementById("rdUrl").value.trim();
+    if(u)radarSaveUrl(u);
+    setRd("กำลังเชื่อมต่อ…");
+    radarConnect(u,function(ok2){setRd(ok2?"เชื่อมต่อแล้ว รอสัญญาณจากเรดาร์":("ไม่สำเร็จ — "+RADAR.err))});
+  });
+  document.getElementById("rdSim").addEventListener("click",function(){
+    RDV.simArmed=true; setRd("โหมดจำลองพร้อม — เลือกการทดสอบด้านล่างได้เลย");
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".rd-go"),function(b){
+    b.addEventListener("click",function(){rdBegin(b.getAttribute("data-rd"))});
+  });
+  document.getElementById("rdStop").addEventListener("click",rdFinish);
+  function setRd(m){var el=document.getElementById("rdSt");if(el)el.textContent=m}
+}
+var RD_NM={gait:"ความเร็วในการเดิน",tug:"ลุกเดิน 3 เมตร",chair:"ลุกนั่ง 30 วินาที",balance:"ทรงตัว 4 ท่า"};
+function rdBegin(mode){
+  RDV.mode=mode; RDV.busy=true;
+  radarClear();
+  var run=document.getElementById("rdRun"),out=document.getElementById("rdOut");
+  if(out)out.hidden=true;
+  if(run){run.hidden=false;document.getElementById("rdTitle").textContent=RD_NM[mode]||mode}
+  var big=document.getElementById("rdBig"),unit=document.getElementById("rdUnit"),live=document.getElementById("rdLive");
+  RADAR.onFrame=function(f){
+    if(live)live.textContent="ระยะ "+(f.d!=null?f.d+" ซม.":"—")+" · พลังงาน "+(f.e!=null?f.e:"—");
+  };
+  var t0=Date.now();
+  if(RDV.timer)clearInterval(RDV.timer);
+  RDV.timer=setInterval(function(){
+    if(big)big.textContent=Math.round((Date.now()-t0)/1000);
+    if(unit)unit.textContent="วินาที";
+  },250);
+  if(RDV.simArmed&&!RADAR.ws){
+    /* ตัวจำลองใช้ค่ากลาง ๆ ที่สมจริง เพื่อสาธิตการทำงานให้ดูได้ */
+    var opt={gait:{mps:0.85},tug:{sec:11,outM:3},chair:{reps:11,sec:30},balance:{sec:10,stepAt:(mode==="balance"?null:null)}}[mode]||{};
+    radarSimStart(mode,opt,function(){rdFinish()});
+  }
+  speak("เริ่มวัด "+(RD_NM[mode]||"")+" ด้วยเรดาร์",{force:true});
+  audit("เริ่มวัดด้วยเรดาร์",RD_NM[mode]||mode);
+}
+function rdFinish(){
+  if(!RDV.busy)return;
+  RDV.busy=false;
+  if(RDV.timer){clearInterval(RDV.timer);RDV.timer=null}
+  RADAR.onFrame=null;
+  var fr=RADAR.frames.slice(), mode=RDV.mode, res=document.getElementById("rdRes");
+  var run=document.getElementById("rdRun"),out=document.getElementById("rdOut");
+  if(run)run.hidden=true;
+  if(out)out.hidden=false;
+  var age=(S.data&&S.data.profile&&S.data.profile.age)||70;
+  var sex=(S.data&&S.data.profile&&S.data.profile.sex)||"f";
+  var html="",why="";
+  function row(k,v){return '<div class="rowline"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'}
+  if(mode==="gait"){
+    var g=radarGaitSpeed(fr);
+    if(g){var gl=radarGaitLabel(g.mps);
+      html=row("ความเร็ว",g.mps+" ม./วินาที")+row("ระยะที่ใช้วัด",g.distM+" ม. ใน "+g.sec+" วิ")+row("การแปลผล",gl.nm);
+      why="เกณฑ์ 0.8 ม./วินาที (Studenski 2011)";
+      audit("วัดความเร็วเดินด้วยเรดาร์",g.mps+" ม./วินาที — "+gl.nm);
+    }else why="ยังจับช่วงเดินตรงแนวเรดาร์ได้ไม่พอ ลองเดินตรงเข้าหาเครื่องอย่างน้อย 4 เมตร";
+  }else if(mode==="tug"){
+    var tg=radarTUG(fr);
+    if(tg){var tl=radarTUGLabel(tg.sec);
+      html=row("เวลา",tg.sec+" วินาที")+row("ระยะที่เดินออกไป",tg.outM+" ม.")+row("กลับตัวที่วินาที",tg.turnSec)+row("การแปลผล",tl.nm);
+      why="เกณฑ์ 12 วินาที (CDC STEADI)";
+      audit("วัด TUG ด้วยเรดาร์",tg.sec+" วินาที — "+tl.nm);
+    }else why="ยังไม่เห็นการเดินออกและกลับที่ชัดพอ วางเรดาร์ให้หันตรงแนวทางเดิน";
+  }else if(mode==="chair"){
+    var c=radarChairStand(fr);
+    var cl=radarChairLabel(c.reps,age,sex);
+    html=row("จำนวนครั้ง",c.reps+" ครั้ง ใน "+c.sec+" วิ")+row("เกณฑ์ช่วงอายุของท่าน",cl.cut+" ครั้ง")+row("การแปลผล",cl.nm);
+    why="เกณฑ์ตามอายุและเพศ (Rikli & Jones · CDC STEADI)";
+    audit("วัดลุกนั่ง 30 วินาทีด้วยเรดาร์",c.reps+" ครั้ง — "+cl.nm);
+  }else if(mode==="balance"){
+    var b=radarBalance(fr);
+    if(b){
+      html=row("ยืนได้",b.heldSec+" วินาที")+
+           row("การก้าวเท้า",b.steppedAtSec==null?"ไม่พบ":("พบที่วินาที "+b.steppedAtSec))+
+           (b.sway!=null?row("ความสั่นไหว (ประกอบ)",b.sway):"")+
+           row("การแปลผล",b.pass?"ยืนครบ 10 วินาที":"ยืนไม่ครบ");
+      why="เกณฑ์ยืนครบ 10 วินาที (CDC STEADI) · เรดาร์ยืนยันท่าวางเท้าไม่ได้ ควรมีผู้ดูแลตรวจท่า";
+      audit("วัดทรงตัวด้วยเรดาร์",(b.pass?"ครบ":"ไม่ครบ")+" — ยืนได้ "+b.heldSec+" วิ");
+    }else why="ยังไม่มีสัญญาณพอ";
+  }
+  if(res)res.innerHTML=(html||'<p class="sub" style="margin:0">วัดไม่สำเร็จ</p>')+
+    '<p class="sub" style="margin:8px 0 0">'+esc(why)+'</p>';
+}
+
 function vcStart(handler){
   VC.handler=handler;
   if(!VC.supported)return false;
