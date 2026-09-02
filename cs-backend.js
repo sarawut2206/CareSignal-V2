@@ -364,6 +364,46 @@ var CSBackend = (function () {
     return r.data;
   }
 
+
+  /* ============================================================
+     รหัสเชิญเจ้าหน้าที่ — ผู้ดูแลระบบออกรหัส แล้วส่งให้เจ้าตัวไปแลก
+     ------------------------------------------------------------
+     ตัวรหัสจริงมีให้เห็นครั้งเดียวตอนออก ฐานข้อมูลเก็บแต่แฮช
+     การตรวจสิทธิ์ทั้งหมดอยู่ที่ฐานข้อมูล ไม่ใช่ที่หน้าเว็บ
+     แก้โค้ดฝั่งนี้ก็ยังออกรหัสหรือยกระดับตัวเองไม่ได้
+     ============================================================ */
+  async function issueInvite(username, role, displayName, note, days) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("issue_staff_invite", {
+      p_username: username, p_role: role,
+      p_display_name: displayName || null, p_note: note || null,
+      p_days: days || 30
+    });
+    if (r.error) throw r.error;
+    /* ฟังก์ชันคืนเป็นตาราง จึงได้อาร์เรย์กลับมา */
+    return Array.isArray(r.data) ? r.data[0] : r.data;
+  }
+  async function listInvites() {
+    if (!isCloud()) return [];
+    var r = await sb.rpc("list_staff_invites");
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function revokeInvite(id) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("revoke_staff_invite", { p_id: id });
+    if (r.error) throw r.error;
+    return r.data === true;
+  }
+  async function redeemStaffInvite(code) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("redeem_staff_invite", { p_code: code });
+    if (r.error) throw r.error;
+    var out = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (out && out.ok) await loadProfile();   /* บทบาทเปลี่ยนแล้ว ต้องโหลดโปรไฟล์ใหม่ */
+    return out || { ok: false, msg: "ไม่ทราบผล" };
+  }
+
   /* ============================================================
      ความยินยอมรายครั้ง — รับแนวจากระบบ Health Link
      ------------------------------------------------------------
@@ -1221,6 +1261,8 @@ var CSBackend = (function () {
     checkMembership: checkMembership,
     myAccessRequests: myAccessRequests, decideAccess: decideAccess, myAccessLog: myAccessLog,
     listStaff: listStaff, setRole: setRole,
+    issueInvite: issueInvite, listInvites: listInvites,
+    revokeInvite: revokeInvite, redeemStaffInvite: redeemStaffInvite,
     createReferralFor: createReferralFor,
     insurerFunnel: insurerFunnel, insurerStrata: insurerStrata, insurerSignals: insurerSignals,
     listMeds: listMeds, saveMed: saveMed, retireMed: retireMed,

@@ -1699,6 +1699,72 @@ function layer7() {
       bad.join(" · "), "ให้มุมมองวอร์ดอ่านจาก WL.rows และสร้างแถบวงจรจาก STAGES เสมอ");
   }
 
+  /* ---- X-116: ประตูเข้าคอนโซลด้วยรหัสที่ผู้ดูแลระบบออก ----
+     ปลายทางของคอนโซลคือข้อมูลสุขภาพรายบุคคล การสมัครเองแล้วรอกำหนดบทบาท
+     ทีหลังจึงไม่พอ กฎนี้บังคับให้เส้นทางเดียวที่ได้บทบาทคือการแลกรหัส
+     และบังคับสามอย่างที่พังเงียบได้ง่าย
+       1. รหัสเก็บเป็นแฮชเท่านั้น ฐานข้อมูลที่หลุดต้องไม่กลายเป็นกุญแจ
+       2. บทบาทมาจากแถวของรหัส ไม่ใช่จากค่าที่ผู้เรียกส่งมา ไม่งั้นยกระดับตัวเองได้
+       3. หน้าเว็บต้องพาบัญชีที่ยังไม่มีบทบาทไปหน้ากรอกรหัส ไม่ใช่ปล่อยผ่าน
+     ย้ำว่าหน้าเว็บเป็นแค่การนำทาง จุดตัดสินจริงอยู่ที่ RLS และฟังก์ชัน
+     security definer ในฐานข้อมูล */
+  {
+    const bad = [];
+    const sql = read("supabase/18_staff_invite.sql");
+    if (!sql) bad.push("ไม่มี supabase/18_staff_invite.sql");
+    else {
+      if (!/values \(encode\(extensions\.digest\(v_code,'sha256'\),'hex'\)/.test(sql))
+        bad.push("รหัสไม่ได้ถูกแปลงเป็นแฮชก่อนบันทึก");
+      if (/^\s*code\s+text/m.test(sql))
+        bad.push("ตารางมีคอลัมน์เก็บตัวรหัสจริง");
+      if (!sql.includes("extensions.digest"))
+        bad.push("ไม่ได้อ้าง extensions.digest แบบเต็ม (เสี่ยงถูกสลับด้วย search_path)");
+      /* ต้องตรวจ "ทุกฟังก์ชัน" ไม่ใช่แค่มีสักตัวที่ล็อก search_path
+         เพราะตัวที่หลุดตัวเดียวก็ถูกสลับฟังก์ชันด้วย search_path ของผู้เรียกได้ */
+      const defs = sql.match(/language \w+ security definer[^\n]*/g) || [];
+      if (!defs.length || defs.some(d => !/set search_path = public/.test(d)))
+        bad.push("มีฟังก์ชัน security definer ที่ไม่ได้ล็อก search_path");
+      if (!/set role = v\.role/.test(sql))
+        bad.push("บทบาทไม่ได้มาจากแถวของรหัส");
+      /* ตรวจแยกรายฟังก์ชัน ไม่ใช่ทั้งไฟล์ ไม่งั้นตัวหนึ่งที่ยังมีเงื่อนไข
+         จะบังตัวที่ถูกถอดเงื่อนไขออกไปแล้ว */
+      const body = (nm) => (sql.split("function public." + nm)[1] || "").split("$fn$;")[0];
+      if (!/cs_role\(\) <> 'admin'/.test(body("issue_staff_invite")))
+        bad.push("การออกรหัสไม่ได้จำกัดไว้ที่ผู้ดูแลระบบ");
+      if (!/cs_role\(\) <> 'admin'/.test(body("revoke_staff_invite")))
+        bad.push("การยกเลิกรหัสไม่ได้จำกัดไว้ที่ผู้ดูแลระบบ");
+      if (!/cs_role\(\) = 'admin'/.test(body("list_staff_invites")))
+        bad.push("รายการรหัสไม่ได้จำกัดไว้ที่ผู้ดูแลระบบ");
+    }
+    const be = read("cs-backend.js");
+    /* ชื่อฟังก์ชันซ้ำในสโคปเดียวกันจะทับกันเงียบ ๆ — ฝั่งครอบครัวมี redeemInvite อยู่ก่อน */
+    if ((be.match(/async function redeemInvite\(/g) || []).length > 1)
+      bad.push("cs-backend.js มี redeemInvite ซ้ำชื่อ ตัวหลังจะทับตัวแรก");
+    if (!/redeemStaffInvite: redeemStaffInvite/.test(be))
+      bad.push("cs-backend.js ไม่ได้ส่งออก redeemStaffInvite");
+
+    const st = read("CareSignal-Staff.html");
+    if (!/function redeemV\(/.test(st)) bad.push("ไม่มีหน้ากรอกรหัสในคอนโซล");
+    if (!/if\(!mayConsole\(pr\.role\)\)\{[\s\S]{0,160}redeemV\(em\); return;/.test(st))
+      bad.push("ทางล็อกอินไม่ได้พาบัญชีที่ยังไม่มีบทบาทไปหน้ากรอกรหัส");
+    if (!/redeemV\(u\.email\)/.test(st))
+      bad.push("ทางเปิดแอปซ้ำไม่ได้พาไปหน้ากรอกรหัส");
+    if (!/CSBackend\.issueInvite\(/.test(st) || !/CSBackend\.revokeInvite\(/.test(st))
+      bad.push("หน้าผู้ดูแลระบบออกหรือยกเลิกรหัสไม่ได้");
+    if (st.includes("แล้วกลับมาที่หน้านี้เพื่อกำหนดบทบาท"))
+      bad.push("ยังมีคำแนะนำเดิมที่บอกให้สมัครเองแล้วรอกำหนดบทบาท");
+    if (!/ปิดหน้านี้แล้วจะไม่เห็นรหัสนี้อีก/.test(st))
+      bad.push("ไม่ได้เตือนว่ารหัสแสดงครั้งเดียว");
+
+    req(7, "X-116", "บทบาทเจ้าหน้าที่มาจากรหัสที่ผู้ดูแลระบบออก และเก็บเป็นแฮชเท่านั้น",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ")
+                   : "ออกรหัสได้เฉพาะผู้ดูแลระบบ · เก็บเป็นแฮช · บทบาทมาจากแถวของรหัส · บัญชีที่ยังไม่แลกรหัสถูกพาไปหน้ากรอกรหัส");
+    if (bad.length) finding("HIGH", "X-116", "ประตูเข้าคอนโซลไม่รัดกุม",
+      "ถ้าบทบาทมาจากค่าที่ผู้เรียกส่งมา หรือรหัสถูกเก็บเป็นข้อความธรรมดา ผู้ไม่มีสิทธิ์จะเข้าถึงข้อมูลสุขภาพรายบุคคลของผู้สูงอายุได้",
+      bad.join(" · "), "ให้บทบาทมาจากแถวของรหัสเสมอ เก็บเฉพาะแฮช และบังคับสิทธิ์ที่ฐานข้อมูล ไม่ใช่ที่หน้าจอ");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],
