@@ -106,20 +106,65 @@ var CSBackend = (function () {
     return r.data.user;
   }
 
-  async function signInStaff(email, password) {
+  /* ============================================================
+     การเข้าระบบของเจ้าหน้าที่
+     ------------------------------------------------------------
+     เจ้าหน้าที่และผู้เชี่ยวชาญไม่มีอีเมลในระบบนี้ ใช้ "ชื่อผู้ใช้" ที่ผู้ดูแล
+     ระบบตั้งให้ตอนออกรหัส · Supabase Auth ต้องการอีเมลเป็นกุญแจ เราจึง
+     ประกอบอีเมลภายในขึ้นจากชื่อผู้ใช้ โดเมนนี้ไม่มีอยู่จริงและไม่เคยมี
+     จดหมายส่งไปถึง — เป็นแค่รูปแบบกุญแจ ไม่ใช่ช่องทางติดต่อ
+
+     ผู้ดูแลระบบยังเข้าด้วยอีเมลจริงได้ตามเดิม ฟังก์ชันจึงดูที่ "@"
+     ถ้ามี ถือว่าเป็นอีเมล ถ้าไม่มี ถือว่าเป็นชื่อผู้ใช้
+     ============================================================ */
+  var STAFF_DOMAIN = "staff.caresignal.local";
+  function staffEmail(id) {
+    var v = String(id || "").trim();
+    return v.indexOf("@") >= 0 ? v.toLowerCase() : v.toLowerCase() + "@" + STAFF_DOMAIN;
+  }
+
+  async function signInStaff(idOrEmail, password) {
     if (!isCloud()) throw new Error("offline");
-    var r = await sb.auth.signInWithPassword({ email: email, password: password });
+    var r = await sb.auth.signInWithPassword({ email: staffEmail(idOrEmail), password: password });
     if (r.error) throw r.error;
     await loadProfile();
     return r.data.user;
   }
 
-  async function signUpStaff(email, password) {
+  /* เปิดใช้งานบัญชีครั้งแรกด้วยรหัสจากผู้ดูแลระบบ
+     การสร้างบัญชีทำที่ Edge Function เพราะต้องใช้สิทธิ์ที่ห้ามอยู่ในหน้าเว็บ
+     ฟังก์ชันนั้นตรวจรหัสก่อนสร้างบัญชี จึงไม่มีบัญชีใดเกิดโดยไม่มีรหัส */
+  async function activateStaff(username, code) {
     if (!isCloud()) throw new Error("offline");
-    var r = await sb.auth.signUp({ email: email, password: password,
-      options: { data: { kind: "staff" } } });
+    var r = await sb.functions.invoke("staff-activate",
+      { body: { username: username, code: code } });
+    /* ฟังก์ชันตอบสถานะ 400 พร้อมเหตุผลที่อ่านได้ — ต้องอ่านจากตัว response
+       ไม่ใช่โยน error ทิ้ง มิฉะนั้นผู้ใช้จะเห็นแต่คำว่าล้มเหลว */
+    if (r.error) {
+      var m = null;
+      try { m = (await r.error.context.json()).msg } catch (e) {}
+      return { ok: false, msg: m || "เปิดใช้งานไม่สำเร็จ" };
+    }
+    return r.data || { ok: false, msg: "ไม่ทราบผล" };
+  }
+
+  /* ตั้งรหัสผ่านของตัวเอง — ตัวรหัสผ่านไปที่ Supabase Auth โดยตรง
+     ฐานข้อมูลของเราเก็บแค่ธงว่าผ่านขั้นตอนนี้แล้ว */
+  async function setOwnPassword(pw) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.auth.updateUser({ password: pw });
     if (r.error) throw r.error;
-    return r.data.user;
+    var c = await sb.rpc("clear_must_set_password");
+    if (c.error) throw c.error;
+    await loadProfile();
+    return true;
+  }
+
+  async function forcePasswordReset(uid) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("admin_force_password_reset", { p_uid: uid });
+    if (r.error) throw r.error;
+    return r.data === true;
   }
 
   async function signOut() { if (isCloud()) await sb.auth.signOut(); profile = null; }
@@ -356,14 +401,53 @@ var CSBackend = (function () {
     if (r.error) { console.warn(r.error); return []; }
     return r.data || [];
   }
+  /* คอลัมน์ role ถูกถอดสิทธิ์ UPDATE ออกจากฝั่งเบราว์เซอร์แล้ว
+     ทางเดียวที่เหลือคือฟังก์ชันฝั่งฐานข้อมูล ซึ่งตรวจสิทธิ์ กันไม่ให้เปลี่ยน
+     ของตัวเอง กันไม่ให้ผู้ดูแลระบบคนสุดท้ายหายไป และบันทึกทุกครั้ง */
   async function setRole(id, role) {
     if (!isCloud()) throw new Error("offline");
-    var r = await sb.from("profiles").update({ role: role }).eq("id", id).select().single();
+    var r = await sb.rpc("admin_set_role", { p_uid: id, p_role: role });
     if (r.error) throw r.error;
-    await audit("set_role", id, "เปลี่ยนบทบาทเป็น " + role);
-    return r.data;
+    return r.data === true;
   }
 
+
+  /* ============================================================
+     เครื่องมือจัดการข้อมูลของผู้ดูแลระบบ
+     ------------------------------------------------------------
+     การลบทั้งหมดเกิดที่ฐานข้อมูลในฟังก์ชันที่ตรวจสิทธิ์เอง ฝั่งเบราว์เซอร์
+     ทำได้แค่ขอให้ลบ · บันทึกตรวจสอบไม่เคยถูกลบไม่ว่าเรียกทางไหน
+     ============================================================ */
+  async function dataSummary() {
+    if (!isCloud()) return [];
+    var r = await sb.rpc("admin_data_summary");
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function listAccounts() {
+    if (!isCloud()) return [];
+    var r = await sb.rpc("admin_list_accounts");
+    if (r.error) { console.warn(r.error); return []; }
+    return r.data || [];
+  }
+  async function purgeMemberData(uid) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("admin_purge_member_data", { p_uid: uid });
+    if (r.error) throw r.error;
+    return r.data || {};
+  }
+  async function deleteAccount(uid) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("admin_delete_account", { p_uid: uid });
+    if (r.error) throw r.error;
+    return r.data || {};
+  }
+  async function revokeStaff(uid) {
+    if (!isCloud()) throw new Error("offline");
+    var r = await sb.rpc("admin_revoke_staff", { p_uid: uid });
+    if (r.error) throw r.error;
+    return r.data === true;
+  }
 
   /* ============================================================
      รหัสเชิญเจ้าหน้าที่ — ผู้ดูแลระบบออกรหัส แล้วส่งให้เจ้าตัวไปแลก
@@ -1242,7 +1326,7 @@ var CSBackend = (function () {
   return {
     init: init, isCloud: isCloud, mode: getMode, client: client,
     signUpUser: signUpUser, signInUser: signInUser,
-    signUpStaff: signUpStaff, signInStaff: signInStaff,
+     signInStaff: signInStaff,
     signOut: signOut, currentUser: currentUser,
     mfaEnroll: mfaEnroll, mfaVerify: mfaVerify, mfaFactors: mfaFactors,
     loadProfile: loadProfile, getProfile: getProfile, updateProfile: updateProfile,
@@ -1263,6 +1347,10 @@ var CSBackend = (function () {
     listStaff: listStaff, setRole: setRole,
     issueInvite: issueInvite, listInvites: listInvites,
     revokeInvite: revokeInvite, redeemStaffInvite: redeemStaffInvite,
+    activateStaff: activateStaff, setOwnPassword: setOwnPassword,
+    dataSummary: dataSummary, listAccounts: listAccounts,
+    purgeMemberData: purgeMemberData, deleteAccount: deleteAccount, revokeStaff: revokeStaff,
+    forcePasswordReset: forcePasswordReset, staffEmail: staffEmail,
     createReferralFor: createReferralFor,
     insurerFunnel: insurerFunnel, insurerStrata: insurerStrata, insurerSignals: insurerSignals,
     listMeds: listMeds, saveMed: saveMed, retireMed: retireMed,

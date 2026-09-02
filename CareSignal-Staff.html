@@ -385,6 +385,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
     <div class="sgrp">ระบบ</div>
     <button data-go="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c1-3 3.2-4.6 6.5-4.6S14.5 17 15.5 20"/><circle cx="17.5" cy="9" r="2.4"/><path d="M16 20c.4-1.9 1.4-3 2.8-3.5"/></svg><span>จัดการผู้ใช้</span></button>
     <div class="sgrp">บัญชี</div>
+    <button data-go="data"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg><span>จัดการข้อมูล</span></button>
     <button data-go="me"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.4-3.4 4-5 7-5s5.6 1.6 7 5"/></svg><span>บัญชีของฉัน</span><span class="cnt" data-cnt="me" hidden></span></button>
   </nav>
   <div class="view" id="view"></div>
@@ -401,7 +402,6 @@ td.num{font-family:var(--mono);white-space:nowrap}
 </div>
 
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
-<script src="./cs-demo.js?v=2"></script>
 <script src="./cs-backend.js?v=4"></script>
 <script src="./cs-meds.js?v=4"></script>
 <script>
@@ -482,6 +482,7 @@ function redeemV(em){
       if(r&&r.ok&&mayConsole(r.role)){
         toast("ยืนยันแล้ว · บทบาท "+(ROLE_NM[r.role]||r.role));
         var pr=null; try{ pr=await CSBackend.loadProfile() }catch(e){}
+        if(pr&&pr.must_set_password){ setPwV(); return; }
         await enterConsole(r.role, ST.email, pr&&pr.display_name);
         return;
       }
@@ -521,48 +522,99 @@ function mfaPrompt(){
    ช่วยให้ผู้ใช้รู้ตั้งแต่ต้นว่ากำลังเข้าในฐานะอะไร และเห็นว่าจะเข้าถึงอะไรได้
    หมายเหตุ: หมวดที่เลือกเป็นเพียงการนำทางบนหน้าจอ — บทบาทจริงอ่านจากฐานข้อมูล
    หลังเข้าสู่ระบบ เลือกผิดก็ไม่ได้สิทธิ์เพิ่ม */
-var LOGIN_CATS=[
-  {k:"care_manager",nm:"Care Manager / ผู้ประสานงาน",d:"รับสัญญาณเสี่ยง ติดตาม ส่งต่อ ปิดเคส"},
-  {k:"pharmacist",  nm:"เภสัชกร",                    d:"ทบทวนรายการยาที่ส่งมาถึงท่าน"},
-  {k:"nurse",       nm:"พยาบาล",                     d:"ยืนยันผลและให้คำแนะนำตามที่ส่งต่อ"},
-  {k:"physio",      nm:"นักกายภาพบำบัด",              d:"ประเมินการเดินและการทรงตัว"},
-  {k:"doctor",      nm:"แพทย์",                       d:"พิจารณาเคสที่ส่งต่อมา"},
-  {k:"insurer",     nm:"เจ้าหน้าที่บริษัทประกัน",       d:"ภาพรวมระดับกลุ่มเท่านั้น"},
-  {k:"admin",       nm:"ผู้ดูแลระบบ",                  d:"จัดการผู้ใช้และสิทธิ์"}
-];
+/* ============================================================
+   เข้าสู่ระบบ
+   ------------------------------------------------------------
+   เจ้าหน้าที่และผู้เชี่ยวชาญไม่มีรหัสผ่านของตัวเองจนกว่าจะเปิดใช้งานบัญชี
+   ครั้งแรก · ผู้ดูแลระบบออก "ชื่อผู้ใช้ + รหัสเปิดใช้งาน" ให้หนึ่งชุด
+   กรอกชุดนั้นที่หน้านี้ ระบบสร้างบัญชีให้แล้วบังคับตั้งรหัสผ่านของตัวเองทันที
+
+   ทำไมต้องบังคับตั้งรหัสผ่าน ไม่ใช้รหัสเปิดใช้งานต่อไปเรื่อย ๆ
+     รหัสเปิดใช้งานผ่านมือผู้ดูแลระบบ กระดาษ หรือแชต ถ้าปล่อยให้เป็น
+     รหัสผ่านถาวร ใครที่เคยเห็นก็เข้าได้ตลอดไป และ audit log จะตอบไม่ได้
+     ว่าคนที่ลงมือคือเจ้าของบัญชีจริงหรือไม่
+
+   ช่องแรกรับได้ทั้งชื่อผู้ใช้และอีเมล เพราะผู้ดูแลระบบยังใช้อีเมลจริง
+   ระบบดูที่เครื่องหมาย @ เป็นตัวแยก ไม่ต้องให้ผู้ใช้เลือกหมวดเองอีก
+   ============================================================ */
 function loginV(){
   ST.screen="login"; TABS.hidden=true; if(typeof SIDE!=="undefined"&&SIDE) SIDE.hidden=true;
-  head("เข้าสู่ระบบ","เลือกหมวดผู้ให้บริการของท่าน แล้วเข้าสู่ระบบด้วยบัญชีที่ได้รับสิทธิ์");
+  head("เข้าสู่ระบบ","สำหรับเจ้าหน้าที่และผู้เชี่ยวชาญที่ได้รับรหัสจากผู้ดูแลระบบ");
   V.innerHTML='<div class="card">'+
-    '<div class="field"><label>หมวดผู้ให้บริการ</label>'+
-      '<select id="lCat" style="width:100%;font-family:inherit;font-size:16px;padding:13px;'+
-      'border:1.5px solid var(--line);border-radius:13px;background:rgba(0,14,50,.35);color:#fff">'+
-      '<option value="">— เลือกหมวด —</option>'+
-      LOGIN_CATS.map(function(c){return '<option value="'+c.k+'">'+esc(c.nm)+'</option>'}).join("")+
-      '</select><p class="sub" id="lCatD" style="margin:6px 0 0;font-size:12.5px"></p></div>'+
-    '<div class="field"><label>อีเมลเจ้าหน้าที่</label><input id="lEm" type="email" autocomplete="username" placeholder="name@company.com"></div>'+
-    '<div class="field"><label>รหัสผ่าน</label><input id="lPw" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
+    '<div class="field"><label>ชื่อผู้ใช้</label>'+
+      '<input id="lEm" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="เช่น nurse01"></div>'+
+    '<p class="tiny" style="margin:-6px 0 12px">บัญชีผู้ดูแลระบบที่เปิดไว้ก่อนหน้านี้ใช้อีเมลเข้าระบบได้ตามเดิม</p>'+
+    '<div class="field"><label>รหัสผ่าน หรือรหัสเปิดใช้งานครั้งแรก</label>'+
+      '<input id="lPw" type="password" autocomplete="current-password" placeholder="••••••••"></div>'+
     '<button class="cta" id="lGo">เข้าสู่ระบบ</button></div>'+
-    '<div class="notice"><b>สำหรับเจ้าหน้าที่เท่านั้น</b> — ผู้เอาประกันและครอบครัวใช้แอป CareSignal (แอปสมาชิก) ไม่ใช่แอปนี้ · บัญชีใหม่ต้องให้ผู้ดูแลระบบกำหนดบทบาทก่อนจึงเข้าได้ (ฐานข้อมูลบล็อกการเลื่อนบทบาทด้วยตนเอง)</div>'+
+    '<div class="notice"><b>ยังไม่มีชื่อผู้ใช้?</b> — ระบบนี้ไม่เปิดให้สมัครเอง '+
+    'ผู้ดูแลระบบขององค์กรท่านจะออกชื่อผู้ใช้พร้อมรหัสเปิดใช้งานให้หนึ่งชุด '+
+    'กรอกชุดนั้นที่ช่องด้านบนได้เลยในการเข้าครั้งแรก แล้วระบบจะให้ท่านตั้งรหัสผ่านของตัวเอง<br>'+
+    '<span class="tiny" style="display:block;margin-top:6px">ผู้เอาประกันและครอบครัวใช้แอป CareSignal (แอปสมาชิก) ไม่ใช่หน้านี้</span></div>'+
     '<div class="card"><h3>ความปลอดภัย</h3>'+
-    '<p class="sub" style="margin:0">สิทธิ์ข้อมูลบังคับด้วย Row Level Security บนฐานข้อมูล · ทุกการเปิดดูและการตัดสินเคสถูกบันทึกลง audit log ที่แก้ไขไม่ได้ · รองรับ MFA (ตั้งค่าจากแดชบอร์ดบนเว็บ)</p></div>';
-  var cat=document.getElementById("lCat"), catD=document.getElementById("lCatD");
-  cat.addEventListener("change",function(){
-    var c=LOGIN_CATS.filter(function(x){return x.k===cat.value})[0];
-    catD.textContent=c?("หมวดนี้เห็น: "+c.d):"";
-    ST.pickedCat=cat.value||null;
-  });
+    '<p class="sub" style="margin:0">สิทธิ์ข้อมูลบังคับด้วย Row Level Security บนฐานข้อมูล · '+
+    'ทุกการเปิดดูและการตัดสินเคสถูกบันทึกลง audit log ที่แก้ไขไม่ได้ · '+
+    'รหัสเปิดใช้งานใช้ได้ครั้งเดียวและมีวันหมดอายุ · รองรับ MFA (ตั้งค่าจากแดชบอร์ดบนเว็บ)</p></div>';
   document.getElementById("lGo").addEventListener("click",doLogin);
   document.getElementById("lPw").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin()});
 }
+
+/* ตั้งรหัสผ่านของตัวเอง — ขวางทุกอย่างจนกว่าจะทำเสร็จ
+   ไม่ปล่อยให้ข้ามไปดูข้อมูลก่อน เพราะจุดประสงค์ทั้งหมดคือให้บัญชีมีเจ้าของจริง */
+function setPwV(){
+  ST.screen="setpw"; TABS.hidden=true; if(typeof SIDE!=="undefined"&&SIDE) SIDE.hidden=true;
+  head("ตั้งรหัสผ่านของท่าน","ขั้นตอนนี้ทำครั้งเดียว — หลังจากนี้ใช้รหัสผ่านที่ท่านตั้งเอง");
+  V.innerHTML='<div class="card">'+
+    '<p class="sub" style="margin:0 0 14px">รหัสที่ผู้ดูแลระบบให้มาใช้ได้ครั้งเดียวเท่านั้น '+
+    'ตั้งรหัสผ่านของท่านเองตอนนี้ เพื่อให้ระบบยืนยันได้ว่าการกระทำในบันทึกตรวจสอบเป็นของท่านจริง '+
+    '<b>ผู้ดูแลระบบจะไม่เห็นรหัสผ่านนี้</b></p>'+
+    '<div class="field"><label>รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)</label>'+
+      '<input id="pw1" type="password" autocomplete="new-password"></div>'+
+    '<div class="field"><label>พิมพ์อีกครั้งเพื่อยืนยัน</label>'+
+      '<input id="pw2" type="password" autocomplete="new-password"></div>'+
+    '<button class="cta" id="pwGo">บันทึกรหัสผ่าน</button></div>'+
+    '<button class="ghostb" id="pwOut">ออกจากระบบ</button>';
+  document.getElementById("pwOut").addEventListener("click",async function(){
+    try{ await CSBackend.signOut() }catch(e){}
+    ST.role=null; ST.email=null; ST.name=null; chip(); loginV();
+  });
+  var b=document.getElementById("pwGo");
+  b.addEventListener("click",async function(){
+    var a=document.getElementById("pw1").value||"", c=document.getElementById("pw2").value||"";
+    if(a.length<8){ toast("รหัสผ่านต้องยาวอย่างน้อย 8 ตัว"); return }
+    if(a!==c){ toast("รหัสผ่านสองช่องไม่ตรงกัน"); return }
+    b.disabled=true; b.textContent="กำลังบันทึก…";
+    try{
+      await CSBackend.setOwnPassword(a);
+      toast("ตั้งรหัสผ่านแล้ว");
+      var pr=await CSBackend.loadProfile();
+      await enterConsole(pr.role, ST.email, pr.display_name);
+      return;
+    }catch(e){ toast("บันทึกไม่สำเร็จ: "+(e.message||e)) }
+    b.disabled=false; b.textContent="บันทึกรหัสผ่าน";
+  });
+}
+
 async function doLogin(){
-  var em=(document.getElementById("lEm").value||"").trim();
+  var id=(document.getElementById("lEm").value||"").trim();
   var pw=document.getElementById("lPw").value||"";
-  if(!em||!pw){toast("กรอกอีเมลและรหัสผ่าน");return}
+  if(!id||!pw){toast("กรอกชื่อผู้ใช้และรหัสผ่าน");return}
   var b=document.getElementById("lGo"); b.disabled=true; b.textContent="กำลังตรวจสอบ…";
   try{
     try{await CSBackend.signOut()}catch(e0){}
-    await CSBackend.signInStaff(em,pw);
+    try{
+      await CSBackend.signInStaff(id,pw);
+    }catch(e1){
+      /* เข้าไม่ได้ด้วยรหัสผ่าน — อาจเป็นการเข้าครั้งแรกด้วยรหัสเปิดใช้งาน
+         ลองเส้นทางเปิดใช้งานเฉพาะเมื่อกรอกเป็นชื่อผู้ใช้ ไม่ใช่อีเมล
+         เพราะบัญชีอีเมลคือผู้ดูแลระบบซึ่งไม่ได้มาทางรหัสเปิดใช้งาน */
+      if(id.indexOf("@")>=0) throw e1;
+      var act=await CSBackend.activateStaff(id,pw);
+      if(!act||!act.ok){ toast(act&&act.msg?act.msg:"ชื่อผู้ใช้หรือรหัสไม่ถูกต้อง");
+        b.disabled=false; b.textContent="เข้าสู่ระบบ"; return }
+      await CSBackend.signInStaff(id,pw);
+      toast("เปิดใช้งานบัญชีแล้ว — ตั้งรหัสผ่านของท่าน");
+    }
     var f=await CSBackend.mfaFactors();
     var vf=(f.totp||[]).filter(function(x){return x.status==="verified"});
     if(vf.length){
@@ -573,28 +625,23 @@ async function doLogin(){
     var pr=await CSBackend.loadProfile();
     var cu=await CSBackend.currentUser();
     if(!pr||!cu||pr.id!==cu.id){
-      try{await CSBackend.signOut()}catch(e1){}
+      try{await CSBackend.signOut()}catch(e2){}
       toast("พบ session ซ้อนจากแท็บอื่น — ปิดแท็บอื่นแล้วลองใหม่");loginV();return;
     }
+    ST.email=pr.username||cu.email; ST.name=pr.display_name||ST.email;
+
     /* ยังไม่มีบทบาทเจ้าหน้าที่ = ยังไม่ได้แลกรหัสที่ผู้ดูแลระบบออกให้
-       ไม่ตัด session ทิ้งตรงนี้ เพราะการแลกรหัสต้องทำในนามบัญชีที่เข้าสู่ระบบแล้ว
-       แต่ยังไม่เปิดเมนูใดให้จนกว่ารหัสจะตรง */
-    if(!mayConsole(pr.role)){
-      ST.email=em; ST.name=pr.display_name||em;
-      redeemV(em); return;
-    }
-    ST.role=pr.role; ST.email=em; ST.name=pr.display_name||em;
-    /* หมวดที่เลือกเป็นการนำทาง — ถ้าไม่ตรงกับบทบาทจริงในฐานข้อมูล ให้บอกตรง ๆ
-       ไม่ใช่ปล่อยให้ผู้ใช้งงว่าทำไมเมนูไม่เหมือนที่คาด */
-    if(ST.pickedCat&&ST.pickedCat!==ST.role){
-      toast("บัญชีนี้มีบทบาทจริงเป็น "+(ROLE_NM[ST.role]||ST.role)+" — ระบบใช้บทบาทจากฐานข้อมูล");
-    }else{
-      toast("เข้าสู่ระบบแล้ว · "+(ROLE_NM[ST.role]||ST.role)+(vf.length?" · ผ่าน MFA":""));
-    }
+       ไม่ตัด session ทิ้งตรงนี้ เพราะการแลกรหัสต้องทำในนามบัญชีที่เข้าสู่ระบบแล้ว */
+    if(!mayConsole(pr.role)){ redeemV(ST.email); return; }
+    /* รหัสผ่านยังเป็นรหัสที่ผู้ดูแลระบบออกให้ ต้องเปลี่ยนก่อนแตะข้อมูลใด ๆ */
+    if(pr.must_set_password){ setPwV(); return; }
+
+    ST.role=pr.role;
+    toast("เข้าสู่ระบบแล้ว · "+(ROLE_NM[ST.role]||ST.role)+(vf.length?" · ผ่าน MFA":""));
     /* หน่วยบริการและการกรองเมนูอยู่ในเส้นทางร่วม ไม่ทำซ้ำที่นี่ */
-    await enterConsole(pr.role, em, pr.display_name);
+    await enterConsole(pr.role, ST.email, pr.display_name);
   }catch(e){
-    toast("เข้าสู่ระบบไม่สำเร็จ: "+(e.message||""));
+    toast("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
     b.disabled=false; b.textContent="เข้าสู่ระบบ";
   }
 }
@@ -1246,10 +1293,18 @@ function outcomeCard(o){
 /* ---------- ฉัน ---------- */
 function meV(){
   head("บัญชีของฉัน",ST.email||"");
+  /* งานของผู้ดูแลระบบอยู่ในแถบเมนูข้าง ซึ่งแสดงเฉพาะจอกว้าง
+     บนมือถือจึงต้องมีทางเข้าอีกทาง ไม่งั้นออกรหัสให้เจ้าหน้าที่จากมือถือไม่ได้เลย */
+  var adminTools = ST.role==="admin"
+    ? '<div class="card"><h3>งานของผู้ดูแลระบบ</h3>'+
+      '<button class="ghostb" data-go="users" style="margin-top:0">ออกรหัสและจัดการผู้ใช้</button>'+
+      '<button class="ghostb" data-go="data">จัดการข้อมูลในระบบ</button></div>'
+    : '';
   V.innerHTML='<div class="card"><h3>บัญชีเจ้าหน้าที่</h3>'+
     '<div class="rowline"><span class="k">ชื่อ</span><span class="v">'+esc(ST.name||"—")+'</span></div>'+
-    '<div class="rowline"><span class="k">อีเมล</span><span class="v" style="font-size:11.5px">'+esc(ST.email||"—")+'</span></div>'+
+    '<div class="rowline"><span class="k">ชื่อผู้ใช้</span><span class="v" style="font-size:11.5px">'+esc(ST.email||"—")+'</span></div>'+
     '<div class="rowline"><span class="k">บทบาท</span><span class="v">'+esc(ROLE_NM[ST.role]||ST.role||"—")+'</span></div></div>'+
+    adminTools+
     '<div class="card"><h3>เครื่องมือเพิ่มเติม (บนเว็บ)</h3>'+
     '<p class="sub">เปิดคอนโซลนี้บนคอมพิวเตอร์เพื่อใช้แถบเมนูข้างและตารางเต็มจอ — ไม่ต้องไปหน้าอื่น</p></div>'+
     '<button class="cta" id="out" style="background:rgba(240,82,76,.9);color:#fff">ออกจากระบบ</button>'+
@@ -1766,109 +1821,6 @@ function timelineHTML(rows){
 }
 
 
-/* ============================================================
-   โหมดสาธิตฝั่งคอนโซล
-   ------------------------------------------------------------
-   จำลอง "การตอบกลับของคน" เท่านั้น — ผู้เชี่ยวชาญรับเคส ทบทวน ส่งผลกลับ
-   การตัดสินว่าเคสนี้ระดับใดยังมาจากเอนจินจริงที่ฝั่งผู้เอาประกัน
-   ไม่มีการเขียนฐานข้อมูลใด ๆ ในโหมดนี้
-   ============================================================ */
-function demoOn(){ return !!(window.CSDemo && CSDemo.on()) }
-
-/* แปลงสถานการณ์เป็นเคสหน้าตาเหมือนของจริง เพื่อให้หน้าจอเดิมใช้ได้ทันที */
-function demoCase(){
-  var sc = CSDemo.current(); if(!sc) return null;
-  var st = CSDemo.state();
-  var last = sc.assessments[sc.assessments.length-1];
-  var lvl  = sc.key==="red" ? "urgent" : sc.key==="yellow" ? "watch"
-           : sc.key==="safety" ? "urgent" : "stable";
-  var sig  = sc.key==="red"    ? [{k:"S2",nm:"หกล้มซ้ำ"},{k:"S3",nm:"ความเสี่ยงจากยา"},
-                                  {k:"S5",nm:"การเคลื่อนไหวถดถอย"},{k:"S7",nm:"ธงความปลอดภัย (บ้าน)"}]
-           : sc.key==="yellow" ? [{k:"S7",nm:"รู้สึกไม่มั่นคง เกือบหกล้ม"}]
-           : sc.key==="safety" ? [{k:"S7",nm:"หยุดการทดสอบเพื่อความปลอดภัย"}] : [];
-  var refNm = {none:"ยังไม่ส่งต่อ",requested:"ส่งคำขอแล้ว",accepted:"ปลายทางรับเคสแล้ว",reviewed:"ผลทบทวนส่งกลับแล้ว"};
-  return {
-    id:"CS-DEMO-"+sc.key.toUpperCase(), user_id:"demo-"+sc.key, demo:true,
-    pseudonym:"P-DEMO", display_name:sc.member.name, age:sc.member.age,
-    level:lvl, status: st.refStatus==="reviewed" ? "intervention"
-                     : st.refStatus!=="none" ? "referred" : "reviewing",
-    signals:sig, opened_at:last.at, due_at:new Date(Date.now()+ (lvl==="urgent"?24:72)*36e5).toISOString(),
-    sla_hours: lvl==="urgent"?24:72, attempts:0, unreachable:false,
-    next_action: st.refStatus==="reviewed" ? "ปรับแผนดูแลตามผลที่ผู้เชี่ยวชาญส่งกลับ"
-               : st.refStatus!=="none" ? "รอ"+refNm[st.refStatus]
-               : "ทบทวนสัญญาณและติดต่อผู้เอาประกัน",
-    refStatus: st.refStatus, review: st.review, scenario: sc
-  };
-}
-
-/* แผงควบคุม — ให้ผู้สาธิตเดินเรื่องได้โดยไม่ต้องรอฝั่งอื่นตอบจริง */
-function demoPanelHTML(){
-  if(!demoOn()) return "";
-  var c = demoCase();
-  if(!c) return '<div class="demopanel"><h3>โหมดสาธิต</h3>'+
-    '<p class="tiny" style="margin:0">ยังไม่ได้เลือกสถานการณ์ — เปิดแอปสมาชิกในโหมดสาธิตแล้วเลือกก่อน '+
-    'หรือกดปุ่มด้านล่างเพื่อโหลดเคสแดง (เส้นทางหลักของการนำเสนอ)</p>'+
-    '<div class="btnrow"><button class="ok" data-dload="red">โหลดเคสแดง</button>'+
-    '<button class="no" data-dload="yellow">เคสเหลือง</button></div></div>';
-  var st = c.refStatus;
-  return '<div class="demopanel"><h3>โหมดสาธิต · '+esc(c.scenario.label)+'</h3>'+
-    '<p class="tiny" style="margin:0">'+esc(c.display_name)+' · '+c.age+' ปี · '+
-    'สถานะการส่งต่อ: <b style="color:#fff">'+
-      ({none:"ยังไม่ส่ง",requested:"ส่งคำขอแล้ว รอปลายทางรับ",accepted:"ปลายทางรับเคสแล้ว",
-        reviewed:"ผลทบทวนส่งกลับแล้ว"}[st])+'</b></p>'+
-    '<div class="btnrow" style="flex-wrap:wrap">'+
-      (st==="none"      ? '<button class="ok" data-dnext>ส่งต่อเภสัชกร (จำลอง)</button>' : '')+
-      (st==="requested" ? '<button class="ok" data-dnext>จำลองเภสัชกรรับเคส</button>' : '')+
-      (st==="accepted"  ? '<button class="ok" data-dnext>จำลองผลทบทวนส่งกลับ</button>' : '')+
-      (st==="reviewed"  ? '<button class="ok" data-doutcome>แสดงผลลัพธ์หลังติดตาม</button>' : '')+
-      '<button class="no" data-dreset>เริ่มสาธิตใหม่</button>'+
-    '</div>'+
-    '<p class="tiny" style="margin:8px 0 0">ปุ่มเหล่านี้จำลองเฉพาะการตอบกลับของคน — '+
-    'ระดับความเสี่ยงและปลายทางมาจากเอนจินจริง · ไม่มีการบันทึกลงฐานข้อมูล</p></div>';
-}
-function bindDemoPanel(reRender){
-  V.querySelectorAll("[data-dload]").forEach(function(b){b.addEventListener("click",function(){
-    CSDemo.load(b.dataset.dload); CSDemo.step("review"); toast("โหลดแล้ว"); reRender();
-  })});
-  var n=V.querySelector("[data-dnext]");
-  if(n) n.addEventListener("click",function(){
-    var st=CSDemo.advanceReferral();
-    toast({requested:"ส่งคำขอไปเภสัชกรแล้ว",accepted:"เภสัชกรรับเคสแล้ว",
-           reviewed:"ผลทบทวนส่งกลับแล้ว — ผู้ประสานงานต้องปรับแผน"}[st]||st);
-    reRender();
-  });
-  var o=V.querySelector("[data-doutcome]");
-  if(o) o.addEventListener("click",function(){ demoOutcomeSheet() });
-  var r=V.querySelector("[data-dreset]");
-  if(r) r.addEventListener("click",function(){ CSDemo.reset(); toast("ล้างข้อมูลสาธิตแล้ว"); reRender() });
-}
-
-/* ผลลัพธ์หลังติดตาม — ต้องติดป้ายว่าเป็นตัวอย่าง ไม่ใช่ผลการศึกษา */
-function demoOutcomeSheet(){
-  var o = CSDemo.outcome(); if(!o){ toast("ผลลัพธ์ตัวอย่างมีเฉพาะเคสแดง"); return }
-  function row(l,a,b,better){
-    var good = better==="down" ? b<a : b>a;
-    return '<div class="rowline"><span class="k">'+esc(l)+'</span><span class="v">'+a+' → '+
-      '<b style="color:'+(good?"var(--c4)":"var(--c2)")+'">'+b+'</b></span></div>';
-  }
-  var w=document.createElement("div"); w.className="sheet";
-  w.innerHTML='<div class="card"><div class="kick">ผลลัพธ์หลังการดูแล — ตัวอย่าง</div>'+
-    '<h3>เทียบก่อนและหลัง</h3>'+
-    '<div class="warnbox" style="margin:8px 0 12px">ตัวเลขชุดนี้เป็น<b>ตัวอย่างเพื่อแสดงว่าระบบติดตามผลได้</b> '+
-    'ไม่ใช่ผลการศึกษา และไม่ใช่หลักฐานว่าระบบลดการหกล้มได้</div>'+
-    row("ลุกเดิน 3 เมตร (วินาที)",o.before.tug,o.after.tug,"down")+
-    row("ลุกนั่ง 5 ครั้ง (วินาที)",o.before.ftsst,o.after.ftsst,"down")+
-    row("กิจวัตรประจำวัน (Barthel)",o.before.barthel,o.after.barthel,"up")+
-    '<div class="rowline"><span class="k">หกล้มหลังเริ่มดูแล</span><span class="v">'+o.after.fallsSince+' ครั้ง</span></div>'+
-    '<h3 style="margin:14px 0 6px;font-size:14px">สิ่งที่ทีมดูแลทำไปแล้ว</h3>'+
-    '<ul style="margin:0 0 10px 18px;font-size:13.5px;color:var(--ink2)">'+
-      o.done.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul>'+
-    '<p class="tiny">'+esc(o.caveat)+'</p>'+
-    '<button class="cta" id="doClose" style="margin-top:10px">ปิด</button></div>';
-  document.body.appendChild(w);
-  w.querySelector("#doClose").addEventListener("click",function(){ w.remove() });
-}
-
 async function mineV(){
   var rn=ROLE_NM[ST.role]||ST.role;
   head("งานของฉัน", isClinician()
@@ -1881,22 +1833,12 @@ async function mineV(){
   V.innerHTML='<div class="empty">กำลังโหลด…</div>';
   var rows=[]; try{ rows=await CSBackend.myWork() }catch(e){}
 
-  /* โหมดสาธิต: ใส่เคสจำลองไว้หัวรายการ ไม่แตะฐานข้อมูล */
-  if(demoOn()){
-    var dc=demoCase();
-    if(dc) rows=[{kind:"case",ref_id:dc.id,user_id:dc.user_id,pseudonym:dc.pseudonym,
-      display_name:dc.display_name,level:dc.level,status:dc.status,task:dc.next_action,
-      due_at:dc.due_at,assigned_to:null,unclaimed:false,overdue:false,signals:dc.signals,demo:true}].concat(rows);
-  }
-
   if(!rows.length){
-    V.innerHTML=(demoOn()?CSDemo.progressHTML()+demoPanelHTML():"")+
-      '<div class="card"><div class="empty">ไม่มีงานค้างในความรับผิดชอบของท่าน 🎉</div></div>'+
+    V.innerHTML='<div class="card"><div class="empty">ไม่มีงานค้างในความรับผิดชอบของท่าน 🎉</div></div>'+
       '<div class="notice">'+(isClinician()
         ? 'เมื่อผู้ประสานงานส่งเคสมาถึง<b>'+esc(rn)+'</b> รายการจะขึ้นที่นี่ทันที ท่านกด <b>รับเคส</b> เพื่อบันทึกว่าท่านเป็นผู้ดำเนินการ'
         : 'เคสจะขึ้นที่นี่เมื่อระบบพบสัญญาณเสี่ยง — ดูเคสทั้งพอร์ตได้ที่เมนู <b>คิวงาน</b>')+
       '</div>';
-    if(demoOn()) bindDemoPanel(mineV);
     return;
   }
 
@@ -1933,7 +1875,7 @@ async function mineV(){
     '</div>';
   }
 
-  var html=(demoOn()?CSDemo.progressHTML()+demoPanelHTML():"")+orgBarHTML()+'<div class="pipe">'+
+  var html=orgBarHTML()+'<div class="pipe">'+
     '<div class="pn" data-alert="'+(late.length?1:0)+'"><div class="pl">เกินกำหนด</div>'+
       '<div class="pv">'+late.length+'</div><div class="pt">ต้องจัดการก่อน</div></div>'+
     '<div class="pn"><div class="pl">ครบกำหนดวันนี้</div>'+
@@ -1950,7 +1892,6 @@ async function mineV(){
   html+='<p class="tiny">รายการนี้กรองที่ฐานข้อมูลด้วยบัญชีที่ล็อกอิน — '+
     'ท่านเห็นเฉพาะงานในความรับผิดชอบของท่าน ไม่ใช่การซ่อนไว้ที่หน้าจอ</p>';
   V.innerHTML=html; bindOrgBar();
-  if(demoOn()) bindDemoPanel(mineV);
 
   /* กดรับเคส */
   V.querySelectorAll("[data-claim]").forEach(function(b){
@@ -2077,6 +2018,117 @@ function showLastInvite(){
   });
   document.getElementById("ivDone").addEventListener("click",function(){
     ST.lastInvite=null; box.innerHTML="";
+  });
+}
+
+/* ============================================================
+   จัดการข้อมูลในระบบ (เฉพาะผู้ดูแลระบบ)
+   ------------------------------------------------------------
+   ระบบเก็บข้อมูลสุขภาพของคนจริง จึงต้องมีทางลบที่เห็นได้และตรวจย้อนได้
+   ไม่ใช่ต้องเข้าไปพิมพ์คำสั่งที่หลังบ้านซึ่งไม่มีใครรู้ว่าใครลบอะไร
+
+   สามอย่างที่หน้านี้ไม่ยอมให้ทำ และเหตุผล
+     · ลบบันทึกตรวจสอบ — ระบบประกาศกับผู้ใช้ว่าแก้ย้อนหลังไม่ได้
+       ถ้าผู้ดูแลระบบลบได้ คำประกาศนั้นก็ไม่จริง
+     · ลบบัญชีเจ้าหน้าที่ที่เคยลงมือทำงาน — เคสและรายการส่งต่ออ้างถึงว่า
+       ใครเป็นคนทำ ลบทิ้งแล้วจะเหลือประวัติที่ไม่มีผู้รับผิดชอบ
+       ใช้ "ถอนสิทธิ์" แทน เข้าระบบไม่ได้อีกแต่ประวัติยังอ้างถึงได้
+     · ลบบัญชีของตัวเอง หรือลบผู้ดูแลระบบคนสุดท้าย — จะไม่เหลือใครกู้ระบบ
+   ทั้งสามข้อบังคับที่ฐานข้อมูล ไม่ใช่แค่ซ่อนปุ่ม
+   ============================================================ */
+async function dataV(){
+  head("จัดการข้อมูล","ดูว่ามีข้อมูลอะไรอยู่เท่าไร และเลือกลบเป็นรายบัญชี");
+  if(ST.role!=="admin"){
+    V.innerHTML='<div class="warnbox"><b>หน้านี้เฉพาะผู้ดูแลระบบ</b><br>'+
+      'ข้อจำกัดนี้บังคับที่ฐานข้อมูล ไม่ใช่แค่ซ่อนหน้าจอ</div>';
+    return;
+  }
+  V.innerHTML='<div class="empty">กำลังโหลด…</div>';
+  var sum=[],accs=[];
+  try{ sum=await CSBackend.dataSummary(); accs=await CSBackend.listAccounts() }catch(e){}
+
+  var html='<div class="notice"><b>บันทึกตรวจสอบลบไม่ได้</b> — ทุกการลบในหน้านี้ถูกบันทึกไว้เอง '+
+    'พร้อมชื่อผู้ทำและจำนวนที่ลบ · ลบบัญชีแล้วบันทึกเก่าของบัญชีนั้นยังอยู่ครบ '+
+    'เพียงแต่ไม่ผูกกับบัญชีที่ถูกลบอีกต่อไป<br>'+
+    '<span class="tiny" style="display:block;margin-top:6px">ทะเบียนยาของ อย. เป็นข้อมูลอ้างอิง ไม่ใช่ข้อมูลผู้ใช้ จึงไม่มีปุ่มลบ</span></div>';
+
+  html+='<div class="card"><h3>ข้อมูลในระบบตอนนี้</h3><div class="kpis">'+
+    sum.map(function(r){
+      return '<div class="kpi" style="cursor:default">'+
+        '<b style="color:'+(r.deletable?(r.n?"#fff":"var(--ink3)"):"var(--gold)")+'">'+r.n+'</b>'+
+        '<span>'+esc(r.nm)+(r.deletable?"":" · เก็บถาวร")+'</span></div>';
+    }).join("")+'</div></div>';
+
+  if(!accs.length){
+    html+='<div class="card"><div class="empty">ยังไม่มีบัญชีในระบบ</div></div>';
+  }else{
+    var mem=accs.filter(function(a){return a.role==="user"});
+    var stf=accs.filter(function(a){return a.role!=="user"});
+    html+=acctCard("บัญชีผู้เอาประกัน",mem,true)+acctCard("บัญชีเจ้าหน้าที่",stf,false);
+  }
+  V.innerHTML=html;
+  bindDataActions();
+}
+
+function acctCard(title,rows,isMember){
+  if(!rows.length) return '<div class="card"><h3>'+title+'</h3><div class="empty">ไม่มี</div></div>';
+  return '<div class="card"><h3>'+title+' ('+rows.length+')</h3>'+
+    rows.map(function(a){
+      var nm=a.display_name||a.username||"—";
+      var n=a.n_assess+a.n_cases+a.n_meds;
+      return '<div class="case">'+
+        '<div class="top"><b style="color:#fff">'+esc(nm)+'</b>'+
+        '<span class="who">'+esc(a.username||"ไม่มีชื่อผู้ใช้")+' · '+esc(ROLE_NM[a.role]||a.role)+'</span>'+
+        (a.is_self?'<span style="margin-left:auto;font-size:11.5px;color:var(--gold)">บัญชีของท่าน</span>':'')+
+        '</div>'+
+        '<div class="rowline"><span class="k">ข้อมูลที่ผูกอยู่</span><span class="v">'+
+          'ประเมิน '+a.n_assess+' · เคส '+a.n_cases+' · ยา '+a.n_meds+'</span></div>'+
+        '<div class="rowline"><span class="k">สร้างเมื่อ</span><span class="v">'+thDate(a.created_at)+'</span></div>'+
+        (a.has_history?'<div class="flag">บัญชีนี้เคยลงมือทำงานในระบบ (ส่งต่อ ทบทวน หรือรับเคส) '+
+          'จึงลบไม่ได้ เพราะประวัติเหล่านั้นต้องมีผู้รับผิดชอบ</div>':'')+
+        (a.is_self?'' :
+          '<div class="btnrow" style="flex-wrap:wrap">'+
+          (n?'<button class="no" data-purge="'+esc(a.id)+'" data-nm="'+esc(nm)+'" style="flex:1 1 100%">ลบข้อมูลสุขภาพ เก็บบัญชีไว้</button>':'')+
+          (isMember?'' :'<button class="no" data-revoke2="'+esc(a.id)+'" data-nm="'+esc(nm)+'" style="flex:1 1 45%">ถอนสิทธิ์</button>')+
+          (a.has_history?'' :'<button class="no" data-del="'+esc(a.id)+'" data-nm="'+esc(nm)+'" style="flex:1 1 45%;color:var(--c1)">ลบบัญชีทั้งหมด</button>')+
+          '</div>')+
+      '</div>';
+    }).join("")+'</div>';
+}
+
+/* การลบข้อมูลสุขภาพย้อนกลับไม่ได้ จึงให้พิมพ์ชื่อยืนยัน ไม่ใช่แค่กด ตกลง
+   กล่อง confirm กดผ่านด้วยความเคยชินได้ง่ายเกินไปสำหรับการกระทำแบบนี้ */
+function askExact(word,what){
+  var t=prompt(what+"\n\nพิมพ์ \""+word+"\" เพื่อยืนยัน");
+  return t!==null && t.trim()===word;
+}
+function bindDataActions(){
+  V.querySelectorAll("[data-purge]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      if(!askExact("ลบข้อมูล","ลบแบบประเมิน เคส ยา สัญญาณเสี่ยง และคำยินยอมของ "+
+        b.dataset.nm+" ทั้งหมด · บัญชียังอยู่ · ย้อนกลับไม่ได้"))return;
+      b.disabled=true;
+      try{ var c=await CSBackend.purgeMemberData(b.dataset.purge);
+        toast("ลบแล้ว "+Object.keys(c).reduce(function(t,k){return t+c[k]},0)+" รายการ"); dataV() }
+      catch(e){ toast("ลบไม่สำเร็จ: "+(e.message||e)); b.disabled=false }
+    });
+  });
+  V.querySelectorAll("[data-del]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      if(!askExact("ลบบัญชี","ลบบัญชี "+b.dataset.nm+" และข้อมูลทั้งหมดของบัญชีนี้ · "+
+        "บันทึกตรวจสอบจะยังอยู่ · ย้อนกลับไม่ได้"))return;
+      b.disabled=true;
+      try{ await CSBackend.deleteAccount(b.dataset.del); toast("ลบบัญชีแล้ว"); dataV() }
+      catch(e){ toast(e.message||"ลบไม่สำเร็จ"); b.disabled=false }
+    });
+  });
+  V.querySelectorAll("[data-revoke2]").forEach(function(b){
+    b.addEventListener("click",async function(){
+      if(!confirm("ถอนสิทธิ์ "+b.dataset.nm+" ?\nบัญชีจะเข้าคอนโซลไม่ได้อีก แต่ประวัติการทำงานยังอยู่ครบ\nคืนสิทธิ์ได้ด้วยการออกรหัสใหม่"))return;
+      b.disabled=true;
+      try{ await CSBackend.revokeStaff(b.dataset.revoke2); toast("ถอนสิทธิ์แล้ว"); dataV() }
+      catch(e){ toast(e.message||"ถอนสิทธิ์ไม่สำเร็จ"); b.disabled=false }
+    });
   });
 }
 
@@ -2362,7 +2414,7 @@ async function auditV(){
 }
 
 var FN={login:loginV,ward:wardScreenV,mine:mineV,queue:queueV,refer:referV,meds:medsV,port:portV,
-        reports:reportsV,audit:auditV,users:usersV,me:meV};
+        reports:reportsV,audit:auditV,users:usersV,data:dataV,me:meV};
 var SIDE=document.getElementById("side");
 function go(sc){
   /* โอเวอร์เลย์บอร์ดอยู่เหนือทุกอย่าง ถ้าไม่ปิดก่อนย้ายหน้า จะบังหน้าถัดไปทั้งหน้า */
@@ -2375,6 +2427,12 @@ function go(sc){
 }
 [TABS,SIDE].forEach(function(nav){
   nav.addEventListener("click",function(e){var b=e.target.closest("[data-go]");if(b)go(b.dataset.go)});
+});
+/* ปุ่ม data-go ที่อยู่ในเนื้อหน้า เช่น ทางลัดงานผู้ดูแลระบบในหน้าบัญชีของฉัน
+   ต้องใช้ได้ด้วย ไม่งั้นบนมือถือจะกดแล้วไม่เกิดอะไรขึ้น */
+V.addEventListener("click",function(e){
+  var b=e.target.closest("[data-go]");
+  if(b&&V.contains(b))go(b.dataset.go);
 });
 /* ============================================================
    เข้าตรงที่เคส — เทียบเคียงกรณีที่ 1 ของ Health Link
@@ -2393,7 +2451,7 @@ function deepLink(){
 var NAV_BY_ROLE={
   /* ผู้ประสานงานเห็นทั้งพอร์ตเพราะต้องจัดสรรงานและติดตามภาพรวม */
   care_manager:["ward","mine","queue","refer","meds","port","reports","audit","me"],
-  admin:       ["ward","mine","queue","refer","meds","port","reports","audit","users","me"],
+  admin:       ["ward","mine","queue","refer","meds","port","reports","audit","users","data","me"],
   /* บริษัทประกันเห็นเฉพาะภาพรวมระดับกลุ่ม ไม่มีเมนูรายบุคคลเลย */
   insurer:     ["port","me"],
   /* วิชาชีพเห็นเฉพาะงานที่ส่งมาถึงตน ไม่มีคิวรวมทั้งพอร์ต
@@ -2455,9 +2513,6 @@ function resetIdle(){
   window.addEventListener(ev, resetIdle, {passive:true});
 });
 
-/* แถบกำกับโหมดสาธิต — ต้องเห็นทุกหน้าจอของคอนโซลด้วย ไม่ใช่เฉพาะแอปสมาชิก */
-if(window.CSDemo&&CSDemo.on()){ CSDemo.restore(); CSDemo.banner(); }
-
 /* ---------- บูต ---------- */
 (async function(){
   loginV();
@@ -2467,15 +2522,18 @@ if(window.CSDemo&&CSDemo.on()){ CSDemo.restore(); CSDemo.banner(); }
     var u=await CSBackend.currentUser();
     if(u){
       var p=await CSBackend.loadProfile();
-      if(p&&p.id===u.id&&mayConsole(p.role)){
+      if(p&&p.id===u.id&&p.must_set_password){
+        /* ค้างอยู่ที่ขั้นตั้งรหัสผ่าน — กลับมาทำต่อได้ ไม่ต้องเข้าใหม่ */
+        ST.email=p.username||u.email; ST.name=p.display_name||ST.email; setPwV();
+      }else if(p&&p.id===u.id&&mayConsole(p.role)){
         /* ลิงก์เข้าตรงเคส — ถ้ามี #ref=... ให้ไปหน้าติดตามการส่งต่อทันที
            เทียบเคียงกับปุ่ม Health Link ในระบบ HIS ที่พาเข้าตรงหน้าประวัติคนไข้ */
         var dl=deepLink();
         if(dl) ST.focusRef=dl;
-        await enterConsole(p.role, u.email, p.display_name, dl?"refer":null);
+        await enterConsole(p.role, p.username||u.email, p.display_name, dl?"refer":null);
       }else if(p&&p.id===u.id){
         /* บัญชีจริงที่ยังไม่ได้แลกรหัส — ให้กรอกรหัสต่อได้เลย ไม่ต้องล็อกอินใหม่ */
-        ST.email=u.email; ST.name=p.display_name||u.email; redeemV(u.email);
+        ST.email=p.username||u.email; ST.name=p.display_name||ST.email; redeemV(ST.email);
       }else{try{await CSBackend.signOut()}catch(e){}}
     }
   }catch(e){}

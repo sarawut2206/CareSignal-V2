@@ -892,53 +892,32 @@ function layer7() {
       hits.slice(0, 3).join(" · "), "ย้ายบล็อกที่แทรกไปไว้หลัง selector ที่สมบูรณ์");
   }
 
-  /* ---- โหมดสาธิต ---- */
-  const demoJs = read("cs-demo.js") || "";
-  const demoChecks = [
-    ["X-61", "มีโหมดสาธิตพร้อมสถานการณ์ครบ 4 แบบ",
-      () => ({ ok: /green:\s*\{/.test(demoJs) && /yellow:\s*\{/.test(demoJs)
-                && /red:\s*\{/.test(demoJs) && /safety:\s*\{/.test(demoJs)
-                && /function demoV\(/.test(appAll),
-               ev: "cs-demo.js มี 4 สถานการณ์ + หน้าเลือกในแอปสมาชิก" })],
-    ["X-62", "ข้อมูลสาธิตไม่ถูกบันทึกลงฐานข้อมูล",
-      () => {
-        /* ห้ามเรียกฟังก์ชันที่เขียนฐานข้อมูลจากไฟล์โหมดสาธิต */
-        const writes = /saveAssessment|saveRiskSignal|saveMed|sendReferral|CSBackend\./.test(demoJs);
-        return { ok: !writes && /ไม่บันทึกลงฐานข้อมูล/.test(demoJs),
-                 ev: writes ? "พบการเรียกฟังก์ชันเขียนฐานข้อมูลใน cs-demo.js"
-                            : "cs-demo.js ไม่เรียก CSBackend เลย" };
-      }],
-    ["X-63", "โหมดสาธิตใช้เอนจินจริง ไม่ใช่ผลที่เขียนไว้ล่วงหน้า",
-      () => {
-        /* ห้ามฝังคำตอบสำเร็จรูป เช่น level:"urgent" ไว้ในไฟล์สถานการณ์ */
-        const canned = /level\s*:\s*["'](urgent|decline|watch|stable)["']/.test(demoJs);
-        return { ok: !canned && /ให้เอนจินตัวเดียวกับระบบจริงคำนวณ/.test(appAll),
-                 ev: canned ? "พบระดับความเสี่ยงที่เขียนตายตัวใน cs-demo.js"
-                            : "สถานการณ์เก็บเฉพาะข้อมูลดิบ ระดับมาจากเอนจิน" };
-      }],
-    ["X-64", "มีแถบกำกับโหมดสาธิตทุกแอป",
-      () => ({ ok: /function banner\(/.test(demoJs)
-                && /CSDemo\.banner\(\)/.test(appAll) && /CSDemo\.banner\(\)/.test(staff),
-               ev: "แถบกำกับถูกเรียกทั้งแอปสมาชิกและคอนโซล" })],
-    ["X-65", "หน้าบริษัทประกันประกาศชัดว่าข้อมูลสาธิตไม่เข้ารายงาน",
-      () => ({ ok: /ไม่มีทางปะปนเข้ามาในรายงานนี้/.test(read("CareSignal-Portfolio-Dashboard.html") || ""),
-               ev: "ข้อความยืนยันบนหน้าพอร์ต เมื่อเปิดโหมดสาธิตอยู่" })],
-    ["X-66", "ผลลัพธ์หลังติดตามในโหมดสาธิตต้องปฏิเสธการอ้างประสิทธิผล",
-      () => ({ ok: /ไม่ใช่ผลการศึกษา/.test(demoJs) && /simulated:\s*true/.test(demoJs)
-                && !/พิสูจน์แล้วว่า/.test(demoJs),
-               ev: "outcome() ติดธง simulated + ข้อความปฏิเสธ" })],
-    ["X-67", "โหมดสาธิตจำลองเฉพาะการตอบกลับของคน ไม่จำลองการตัดสินของระบบ",
-      () => ({ ok: /สิ่งที่จำลองคือ.{0,40}การตอบกลับของคน/.test(demoJs)
-                && /จำลองเฉพาะการตอบกลับของคน/.test(staff),
-               ev: "ประกาศไว้ทั้งในโมดูลและบนหน้าจอคอนโซล" })],
-  ];
-  for (const [id, name, fn] of demoChecks) {
-    const r = fn();
-    req(7, id, name, r.ok ? "PASS" : "MISSING", r.ev);
-    if (!r.ok) finding(id === "X-62" || id === "X-63" ? "HIGH" : "MEDIUM", id,
-      "โหมดสาธิตไม่ปลอดภัย/ไม่ตรงตามที่ประกาศ: " + name,
-      "ถ้าข้อมูลสาธิตหลุดเข้าฐานข้อมูลหรือรายงาน หรือถ้าผลถูกเขียนไว้ล่วงหน้า การสาธิตจะกลายเป็นการอ้างเกินจริง",
-      r.ev, "แก้ให้ตรงตามที่ประกาศไว้ในหัวไฟล์ cs-demo.js");
+  /* ---- X-61: ไม่มีเส้นทางข้อมูลจำลองหลงเหลืออยู่ ----
+     เดิมระบบมีโหมดสาธิตไว้ให้อัดวิดีโอนำเสนอได้ผลเหมือนกันทุกครั้ง
+     และมีกฎอีกเจ็ดข้อคอยกำกับว่ามันต้องไม่แตะฐานข้อมูลและต้องติดป้ายทุกหน้าจอ
+     ตอนนี้ถอดออกทั้งหมดตามที่เจ้าของระบบสั่ง เหตุผลที่กฎยังต้องอยู่คือ
+     โค้ดที่ถอดไม่หมดอันตรายกว่าโค้ดที่ยังอยู่ครบ — ตัวแปรค้างตัวเดียวที่ยัง
+     ป้อนข้อมูลปลอมเข้าหน้าจอ จะไม่มีป้ายกำกับคอยบอกผู้ชมอีกแล้ว
+     กฎนี้จึงตรวจย้อนว่าไม่เหลือร่องรอยในไฟล์ใดเลย */
+  {
+    const bad = [];
+    if (read("cs-demo.js")) bad.push("ยังมีไฟล์ cs-demo.js อยู่");
+    [["CareSignal-App.html", appAll],
+     ["CareSignal-Staff.html", staff],
+     ["CareSignal-Portfolio-Dashboard.html", read("CareSignal-Portfolio-Dashboard.html") || ""],
+     ["CareSignal-Vision.html", read("CareSignal-Vision.html") || ""],
+     ["sw.js", read("sw.js") || ""],
+     ["index.html", read("index.html") || ""]].forEach(([nm, t]) => {
+      if (/CSDemo|cs-demo\.js|demoV\(|demoCase\(|bindDemoPanel/.test(t))
+        bad.push(nm + " ยังอ้างถึงโหมดสาธิต");
+    });
+    req(7, "X-61", "ไม่มีโหมดสาธิตหรือเส้นทางข้อมูลจำลองหลงเหลือในระบบ",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ")
+                   : "ไม่พบไฟล์ ตัวแปร หรือการเรียกใช้โหมดสาธิตในแอปสมาชิก คอนโซล แดชบอร์ด และ service worker");
+    if (bad.length) finding("HIGH", "X-61", "ยังมีเส้นทางข้อมูลจำลองค้างอยู่",
+      "โหมดสาธิตถูกถอดออกพร้อมกับแถบกำกับที่เคยบอกผู้ชมว่านี่คือข้อมูลจำลอง ถ้ายังมีโค้ดที่ป้อนข้อมูลปลอมเข้าหน้าจอได้ ผู้ชมจะเข้าใจว่าเป็นข้อมูลจริง",
+      bad.join(" · "), "ลบส่วนที่เหลือให้หมด หรือถ้าจะเก็บโหมดสาธิตไว้ ต้องนำแถบกำกับกลับมาด้วย");
   }
 
   /* ---- เสถียรภาพเสียงและ OCR (แก้ด่วนตามรายงานผู้ใช้) ---- */
@@ -1745,9 +1724,9 @@ function layer7() {
 
     const st = read("CareSignal-Staff.html");
     if (!/function redeemV\(/.test(st)) bad.push("ไม่มีหน้ากรอกรหัสในคอนโซล");
-    if (!/if\(!mayConsole\(pr\.role\)\)\{[\s\S]{0,160}redeemV\(em\); return;/.test(st))
+    if (!/if\(!mayConsole\(pr\.role\)\)\{ redeemV\([\s\S]{0,40}\); return; \}/.test(st))
       bad.push("ทางล็อกอินไม่ได้พาบัญชีที่ยังไม่มีบทบาทไปหน้ากรอกรหัส");
-    if (!/redeemV\(u\.email\)/.test(st))
+    if (!/ST\.name=p\.display_name\|\|ST\.email; redeemV\(/.test(st))
       bad.push("ทางเปิดแอปซ้ำไม่ได้พาไปหน้ากรอกรหัส");
     if (!/CSBackend\.issueInvite\(/.test(st) || !/CSBackend\.revokeInvite\(/.test(st))
       bad.push("หน้าผู้ดูแลระบบออกหรือยกเลิกรหัสไม่ได้");
@@ -1763,6 +1742,89 @@ function layer7() {
     if (bad.length) finding("HIGH", "X-116", "ประตูเข้าคอนโซลไม่รัดกุม",
       "ถ้าบทบาทมาจากค่าที่ผู้เรียกส่งมา หรือรหัสถูกเก็บเป็นข้อความธรรมดา ผู้ไม่มีสิทธิ์จะเข้าถึงข้อมูลสุขภาพรายบุคคลของผู้สูงอายุได้",
       bad.join(" · "), "ให้บทบาทมาจากแถวของรหัสเสมอ เก็บเฉพาะแฮช และบังคับสิทธิ์ที่ฐานข้อมูล ไม่ใช่ที่หน้าจอ");
+  }
+
+  /* ---- X-117: ความลับเดียวที่ผู้ดูแลระบบควบคุม แล้วส่งต่อให้เจ้าของบัญชี ----
+     เจ้าหน้าที่ไม่มีอีเมลและไม่ได้ตั้งรหัสผ่านไว้ล่วงหน้า เข้าครั้งแรกด้วย
+     ชื่อผู้ใช้ + รหัสที่ผู้ดูแลระบบออกให้ แล้วต้องตั้งรหัสผ่านของตัวเองทันที
+     สองอย่างนี้ต้องอยู่ด้วยกันเสมอ ถ้าขาดข้อหลัง รหัสที่เดินผ่านมือคนอื่น
+     จะกลายเป็นรหัสผ่านถาวร และ audit log จะตอบไม่ได้ว่าใครเป็นคนลงมือจริง
+
+     ข้อที่มองข้ามง่ายที่สุดคือสิทธิ์ระดับคอลัมน์ RLS ตัดสินว่าแถวไหนแก้ได้
+     แต่ไม่ได้ตัดสินว่าคอลัมน์ไหน ถ้า authenticated ยังมี UPDATE ทั้งตาราง
+     ใครก็ปลดธง must_set_password หรือตั้ง role ของตัวเองได้ผ่าน API ตรง ๆ
+     โดยไม่ต้องแตะหน้าเว็บเลย */
+  {
+    const bad = [];
+    const st = read("CareSignal-Staff.html");
+    const be = read("cs-backend.js");
+    const sql = read("supabase/19_staff_login.sql") || "";
+    const fx = read("supabase/functions/staff-activate/index.ts") || "";
+    const priv = read("supabase/19_staff_login.sql") || "";
+    const tools = read("supabase/20_admin_data.sql") || "";
+
+    if (!/must_set_password/.test(sql)) bad.push("ไม่มีธงบังคับตั้งรหัสผ่านในฐานข้อมูล");
+    if (!/function setPwV\(\)/.test(st)) bad.push("ไม่มีหน้าตั้งรหัสผ่านครั้งแรก");
+    if (!/if\(pr\.must_set_password\)\{ setPwV\(\); return; \}/.test(st))
+      bad.push("ทางล็อกอินไม่ได้บังคับตั้งรหัสผ่าน");
+    if (!/p\.must_set_password\)\{[\s\S]{0,200}setPwV\(\);/.test(st))
+      bad.push("ทางเปิดแอปซ้ำไม่ได้บังคับตั้งรหัสผ่าน");
+    if (/LOGIN_CATS|pickedCat/.test(st))
+      bad.push("ยังให้ผู้ใช้เลือกหมวดบทบาทเอง ทั้งที่บทบาทมาจากรหัส");
+    if (!/function staffEmail\(id\)/.test(be) || !/staff\.caresignal\.local/.test(be))
+      bad.push("ไม่ได้ประกอบอีเมลภายในจากชื่อผู้ใช้");
+    if (/signUpStaff/.test(be)) bad.push("ยังมีเส้นทางสมัครบัญชีเจ้าหน้าที่เอง");
+    if (!/rpc\("admin_set_role"/.test(be) || /from\("profiles"\)\.update\(\{ role/.test(be))
+      bad.push("ยังเปลี่ยนบทบาทด้วย UPDATE ตรงจากเบราว์เซอร์");
+
+    /* Edge Function ต้องตรวจรหัสก่อนสร้างบัญชี ไม่ใช่สร้างก่อนแล้วค่อยตรวจ */
+    if (fx) {
+      const iCreate = fx.indexOf("createUser(");
+      if (iCreate < 0) bad.push("staff-activate ไม่ได้สร้างบัญชี");
+      else {
+        /* ด่านทั้งห้าต้องอยู่ครบและอยู่ก่อนการสร้างบัญชี ตรวจทีละด่าน
+           ไม่ใช่ดูแค่ว่ามี reject สักตัวโผล่มาก่อน ซึ่งด่านที่หายไปหนึ่งด่าน
+           ก็ยังผ่านได้ */
+        [["if (!inv) return await reject", "รหัสที่ไม่มีอยู่จริง"],
+         ["if (inv.username !== username) return await reject", "รหัสที่ไม่ตรงกับชื่อผู้ใช้"],
+         ["if (inv.revoked_at) return await reject", "รหัสที่ถูกยกเลิก"],
+         ["if (inv.used_at) return await reject", "รหัสที่ถูกใช้ไปแล้ว"],
+         ["if (new Date(inv.expires_at) < new Date()) return await reject", "รหัสที่หมดอายุ"]].forEach(([g, nm]) => {
+          const i = fx.indexOf(g);
+          if (i < 0 || i > iCreate) bad.push("staff-activate ไม่ได้กัน" + nm + "ก่อนสร้างบัญชี");
+        });
+      }
+      if (!/email_confirm: true/.test(fx)) bad.push("staff-activate ไม่ได้ยืนยันอีเมลภายในให้ทันที");
+      if (!/must_set_password: true/.test(fx)) bad.push("staff-activate ไม่ได้ติดธงบังคับตั้งรหัสผ่าน");
+      if (!/SUPABASE_SERVICE_ROLE_KEY/.test(fx)) bad.push("staff-activate ไม่ได้ใช้สิทธิ์ฝั่งเซิร์ฟเวอร์");
+    } else bad.push("ไม่มี Edge Function staff-activate");
+
+    /* สิทธิ์ระดับคอลัมน์ — คอลัมน์ที่ตัดสินสิทธิ์ต้องไม่อยู่ในรายการที่ให้แก้เอง */
+    const g = (priv.match(/grant update \(([\s\S]*?)\)\s*\n?\s*on public\.profiles/) || [])[1] || "";
+    if (!/revoke update on public\.profiles from authenticated/.test(priv))
+      bad.push("ไม่ได้ถอนสิทธิ์ UPDATE ทั้งตารางของ profiles");
+    ["role", "username", "must_set_password", "id", "pseudonym"].forEach((c) => {
+      if (new RegExp("(^|[\\s,])" + c + "([\\s,]|$)").test(g))
+        bad.push("ยังให้ผู้ใช้แก้คอลัมน์ " + c + " เองได้");
+    });
+    if (!/display_name/.test(g)) bad.push("ผู้ใช้แก้ชื่อที่แสดงของตัวเองไม่ได้");
+
+    /* เครื่องมือลบข้อมูล — บันทึกตรวจสอบต้องไม่อยู่ในรายการที่ลบได้ */
+    if (/delete from public\.audit_logs/.test(tools))
+      bad.push("มีคำสั่งลบบันทึกตรวจสอบ");
+    if (!/async function dataV\(\)/.test(st)) bad.push("ไม่มีหน้าจัดการข้อมูลของผู้ดูแลระบบ");
+    if (!/function askExact\(word,what\)/.test(st))
+      bad.push("ลบข้อมูลไม่ได้ให้พิมพ์คำยืนยัน");
+    if (!/เคยลงมือทำงานในระบบ ลบไม่ได้/.test(tools))
+      bad.push("ยอมให้ลบบัญชีที่มีประวัติการทำงาน");
+
+    req(7, "X-117", "เจ้าหน้าที่เข้าด้วยชื่อผู้ใช้+รหัสครั้งเดียว แล้วต้องตั้งรหัสผ่านของตัวเอง",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ")
+                   : "ตรวจรหัสก่อนสร้างบัญชี · บังคับตั้งรหัสผ่านทั้งทางล็อกอินและทางเปิดแอปซ้ำ · คอลัมน์ที่ตัดสินสิทธิ์แก้เองไม่ได้ · ลบบันทึกตรวจสอบไม่ได้");
+    if (bad.length) finding("HIGH", "X-117", "ประตูเข้าระบบหรือสิทธิ์ระดับคอลัมน์ไม่รัดกุม",
+      "ถ้ารหัสที่ผู้ดูแลระบบออกให้กลายเป็นรหัสผ่านถาวร หรือผู้ใช้แก้คอลัมน์ role ของตัวเองได้ผ่าน API ผู้ที่ไม่มีสิทธิ์จะเข้าถึงข้อมูลสุขภาพรายบุคคลได้",
+      bad.join(" · "), "บังคับตั้งรหัสผ่านครั้งแรกเสมอ และคืนสิทธิ์ UPDATE ให้เฉพาะคอลัมน์ที่เจ้าของโปรไฟล์ควรแก้เอง");
   }
 
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */

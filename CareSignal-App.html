@@ -381,7 +381,6 @@ body.camfs .hudtop{display:none}
 /* อยู่ในกรอบของหน้าเดียวหรือไม่ — ตั้งธงก่อนวาด เพื่อให้ CSS ย่อหัวทำงานตั้งแต่เฟรมแรก */
 try{if(window.self!==window.top)document.documentElement.setAttribute("data-embedded","1")}catch(e){document.documentElement.setAttribute("data-embedded","1")}
 </script>
-<script src="./cs-demo.js?v=2"></script>
 <script src="./cs-backend.js?v=4"></script>
 <script src="./cs-meds.js?v=4"></script>
 <script>
@@ -2677,7 +2676,7 @@ function render(arg){
     ["portal","carerAuth","famLink","famHome","famView","assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"home",ai:"home",family:"family"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={demo:demoV,assessHub:assessHubV,loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,radar:radarV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={assessHub:assessHubV,loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,radar:radarV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){
@@ -2685,7 +2684,6 @@ function loadingV(){
   V.innerHTML='<div class="boot">'+'<img src="./icon-512.png" alt="">'+'<div class="bt">Care<i>Signal</i></div>'+'<div class="bs">กำลังเปิดโปรแกรม…</div>'+'<div class="bar"><i></i></div>'+'</div>';
 }
 /* แถบกำกับโหมดสาธิต — ต้องเห็นทุกหน้าจอ แม้ผู้ชมเข้ามากลางคลิป */
-if(window.CSDemo&&CSDemo.on()){ CSDemo.restore(); document.addEventListener("DOMContentLoaded",CSDemo.banner); CSDemo.banner(); }
 
 /* ---------- ลงทะเบียน ---------- */
 function welcomeV(){
@@ -3490,46 +3488,6 @@ async function renderAccessReqs(host){
   });
 }
 
-/* ============================================================
-   โหมดสาธิต — หน้าเลือกสถานการณ์
-   ------------------------------------------------------------
-   โหลดข้อมูลจำลองเข้าหน่วยความจำ แล้วปล่อยให้เอนจินจริงคำนวณเอง
-   ไม่บันทึกลงฐานข้อมูล ไม่ส่งอะไรออกนอกเครื่อง
-   ============================================================ */
-function demoV(){
-  head("โหมดสาธิต","เลือกสถานการณ์ — ข้อมูลจำลองเพื่อการนำเสนอ ไม่ใช่ข้อมูลผู้ป่วยจริง","","home");
-  var S_=CSDemo.SCENARIOS;
-  V.innerHTML='<div class="anim">'+
-    '<div class="card" style="background:var(--surf2)"><h3>โหมดนี้ทำงานอย่างไร</h3>'+
-    '<p class="sub" style="margin:0 0 8px">ระบบโหลดข้อมูลจำลองเข้าหน้าจอ แล้ว<b>ให้เอนจินตัวเดียวกับระบบจริงคำนวณ</b> '+
-    'สิ่งที่จำลองคือการบันทึกและการตอบกลับของคน ไม่ใช่การตัดสินของระบบ</p>'+
-    '<p class="sub" style="margin:0"><b>ไม่บันทึกลงฐานข้อมูล</b> · ไม่เข้ารายงานของบริษัทประกัน · ปิดหน้าแล้วหายทันที</p></div>'+
-    Object.keys(S_).map(function(k){
-      var x=S_[k];
-      return '<button class="scen" data-scen="'+k+'" style="border-color:'+x.color+'">'+
-        '<b style="color:'+x.color+'">'+esc(x.label)+'</b>'+
-        '<span class="who">'+esc(x.member.name)+' · '+x.member.age+' ปี · '+esc(x.member.policy)+'</span>'+
-        '<span class="note">'+esc(x.note)+'</span></button>';
-    }).join("")+
-    '<button class="ghostb" id="dReset">ล้างข้อมูลสาธิตและเริ่มใหม่</button>'+
-    '<p class="small" style="margin-top:10px">ผลลัพธ์หลังติดตามในโหมดนี้เป็นตัวอย่างเพื่อแสดงว่าระบบติดตามผลได้ '+
-    '<b>ไม่ใช่ผลการศึกษา</b> และไม่ใช่หลักฐานว่าระบบลดการหกล้มได้</p></div>';
-
-  V.querySelectorAll("[data-scen]").forEach(function(b){b.addEventListener("click",function(){
-    var sc=CSDemo.load(b.dataset.scen);
-    /* ใส่ข้อมูลลงหน่วยความจำของแอป — ไม่เรียก saveAll() จึงไม่แตะฐานข้อมูล */
-    S.data.profile={name:sc.member.name,age:sc.member.age,sex:sc.member.sex,demo:true};
-    S.data.assessments=sc.assessments;
-    S.data.policy={plan:sc.member.policy,demo:true};
-    CSDemo.step("screen"); CSDemo.step("assess"); CSDemo.step("signal");
-    toast("โหลด "+sc.label+" แล้ว");
-    go("home");
-  })});
-  document.getElementById("dReset").addEventListener("click",function(){
-    CSDemo.reset(); S.data.assessments=[]; S.data.profile=null; toast("ล้างแล้ว"); demoV();
-  });
-}
-
 function homeV(){
   var p=S.data.profile;
   /* กันจอขาว: เข้าหน้านี้ได้โดยยังไม่มีโปรไฟล์ ถ้า session ค้างหรือกลับมาจากลิงก์เก่า */
@@ -3587,8 +3545,7 @@ function homeV(){
     '<button class="ghostb" data-go="ai" style="font-size:17px;min-height:56px">🔍 ระบบทำงานกับข้อมูลของฉันอย่างไร</button></div>';
   /* แถบเส้นทาง STEADI วางไว้ใต้ผลตรวจ เพื่อตอบว่า "ตรวจแล้วยังไงต่อ" */
   /* คำขอเปิดดูข้อมูลต้องขึ้นก่อนทุกอย่าง — มีเวลาตอบจำกัด */
-  var demoBar = (window.CSDemo&&CSDemo.on()) ? CSDemo.progressHTML() : "";
-  V.innerHTML='<div class="anim">'+demoBar+'<div id="areqHost"></div>'+hero+journeyHTML()+fontBarHTML()+mainBtn+warnPart+polPart+
+  V.innerHTML='<div class="anim">'+'<div id="areqHost"></div>'+hero+journeyHTML()+fontBarHTML()+mainBtn+warnPart+polPart+
   (A.length>1?'<button class="ghostb" data-go="history" style="font-size:17px;min-height:56px">📈 ดูกราฟแนวโน้มย้อนหลัง ('+A.length+' ครั้ง)</button>':'')+
   morePart+
   '</div>';
@@ -6768,11 +6725,6 @@ function aiV(){
   var log=(S.data.audit||[]).slice(-12).reverse();
   var c=S.data.consent;
   V.innerHTML='<div class="anim">'+
-  '<div class="card" style="background:var(--surf2)"><h3>โหมดสาธิต (สำหรับการนำเสนอ)</h3>'+
-  '<p class="sub" style="margin:0 0 10px">โหลดข้อมูลจำลองเพื่อสาธิตเส้นทางการดูแลทั้งเส้น — '+
-  'ไม่บันทึกลงฐานข้อมูล และไม่ปะปนกับข้อมูลจริงของท่าน</p>'+
-  '<button class="ghostb" data-go="demo" style="margin:0">'+
-    ((window.CSDemo&&CSDemo.on())?"เปิดหน้าเลือกสถานการณ์":"เปิดโหมดสาธิต")+'</button></div>'+
   '<div class="card"><h3>ใครขอเปิดดูข้อมูลของท่านบ้าง</h3>'+
   '<p class="sub">ผู้เชี่ยวชาญที่ได้รับส่งต่อต้องขออนุญาตท่านทุกครั้ง และสิทธิ์หมดอายุเองอัตโนมัติ — รายการนี้ตรวจย้อนได้เสมอ</p>'+
   '<div id="alogHost"><p class="small">กำลังโหลด…</p></div></div>'+
@@ -6910,8 +6862,6 @@ function meV(){
 document.addEventListener("click",function(e){
   var g=e.target.closest("[data-go]");
   if(!g) return;
-  /* หน้าโหมดสาธิตต้องเปิดโหมดก่อน มิฉะนั้นแถบกำกับจะไม่ขึ้นและผู้ชมอาจเข้าใจผิด */
-  if(g.dataset.go==="demo"&&window.CSDemo&&!CSDemo.on()){ CSDemo.set(true); CSDemo.banner(); }
   go(g.dataset.go);
 });
 (async function(){
