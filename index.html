@@ -115,6 +115,25 @@ h1 em{color:var(--gold);font-style:normal}
 .cta.g{background:transparent;color:#C7D6F5;border:1px solid rgba(255,255,255,.22);margin-left:8px;font-weight:600}
 .cta.g:hover{background:rgba(255,255,255,.08);color:#fff}
 .cta.p{position:relative}
+
+/* ---------- วงจรการทำงาน ---------- */
+.flow{background:#0B1C42;padding:52px 0 56px;border-top:1px solid rgba(255,255,255,.1)}
+.flow h2{margin:0 0 10px;font-size:clamp(21px,2.4vw,28px);letter-spacing:-.01em}
+.flow .fsub{margin:0 0 26px;font-size:15.5px;color:#B9C7E8;max-width:760px;line-height:1.75}
+.flowlist{list-style:none;margin:0;padding:0;display:grid;gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(215px,1fr));counter-reset:none}
+.flowlist li{position:relative;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);
+  border-radius:13px;padding:14px 15px 15px;border-left-width:4px}
+.flowlist li b{display:block;font-size:12px;color:#8FB8FF;margin-bottom:5px;letter-spacing:.05em}
+.flowlist li .t{display:block;font-size:15.5px;font-weight:600;line-height:1.4}
+.flowlist li .d{display:block;font-size:13px;color:#B9C7E8;margin-top:5px;line-height:1.6}
+/* สีขอบซ้ายบอกว่าใครถืองานในขั้นนั้น */
+.fl-m{border-left-color:#38BDF8}.fl-s{border-left-color:#8FB8FF}
+.fl-c{border-left-color:#FCD34D}.fl-e{border-left-color:#34D399}.fl-i{border-left-color:#F472B6}
+.fnote{margin:20px 0 0;font-size:13.5px;color:#B9C7E8}
+.fnote .k{display:inline-block;width:11px;height:11px;border-radius:3px;margin:0 3px 0 10px;vertical-align:-1px}
+.fnote .k.m{background:#38BDF8}.fnote .k.s{background:#8FB8FF}.fnote .k.c{background:#FCD34D}
+.fnote .k.e{background:#34D399}.fnote .k.i{background:#F472B6}
 .vows{display:flex;gap:26px;flex-wrap:wrap;margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.16)}
 .vows div b{display:block;font-size:14.5px}
 .vows div span{font-size:12px;color:#B9C7E8}
@@ -369,6 +388,15 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
       </aside>
     </div>
   </div>
+
+<section class="flow" id="flow">
+  <div class="wrap">
+    <h2>วงจรการทำงานตั้งแต่ประเมินจนถึงติดตามผล</h2>
+    <p class="fsub">ข้อมูลชุดเดียวเดินผ่านทุกคนที่เกี่ยวข้อง แต่ละคนเห็นเฉพาะส่วนที่จำเป็นต่อหน้าที่ตน · <b>คนเป็นผู้ตัดสินใจทุกจุด</b> ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น</p>
+    <ol class="flowlist"><li class="fl-m"><b>1</b><span class="t">ผู้เอาประกันประเมิน</span><span class="d">กล้อง เซ็นเซอร์ หรือเรดาร์ · 8 หัวข้อ</span></li><li class="fl-s"><b>2</b><span class="t">ระบบสร้างสัญญาณ</span><span class="d">4 ระดับ พร้อมเหตุผลรายข้อที่ตรวจสอบได้</span></li><li class="fl-c"><b>3</b><span class="t">เข้าคิว Care Manager</span><span class="d">จัดลำดับตามความเร่งด่วนและกำหนดเวลา</span></li><li class="fl-c"><b>4</b><span class="t">Care Manager ตรวจและตัดสิน</span><span class="d">คนเป็นผู้ตัดสินใจส่งต่อ ไม่ใช่ระบบ</span></li><li class="fl-e"><b>5</b><span class="t">ส่งต่อผู้เชี่ยวชาญ</span><span class="d">เภสัชกร · นักกายภาพ · พยาบาล · แพทย์</span></li><li class="fl-e"><b>6</b><span class="t">ผู้เชี่ยวชาญยืนยัน</span><span class="d">ยืนยัน ไม่ยืนยัน หรือขอข้อมูลเพิ่ม</span></li><li class="fl-i"><b>7</b><span class="t">บริษัทประกันอนุมัติสิทธิ์</span><span class="d">ใช้งบป้องกันก่อนเกิดเคลม</span></li><li class="fl-e"><b>8</b><span class="t">เข้าไปดูแลและบันทึกผล</span><span class="d">ผลกลับเข้าระบบเป็นข้อมูลชุดเดียวกัน</span></li><li class="fl-s"><b>9</b><span class="t">นัดติดตามซ้ำ</span><span class="d">ถี่ตามระดับ: 2 สัปดาห์ ถึง 6 เดือน</span></li></ol>
+    <p class="fnote">สีบอกว่าใครถืองานอยู่ในขั้นนั้น — <i class="k m"></i> ผู้เอาประกัน <i class="k s"></i> ระบบ <i class="k c"></i> Care Manager <i class="k e"></i> ผู้เชี่ยวชาญ <i class="k i"></i> บริษัทประกัน</p>
+  </div>
+</section>
 
   <section class="s">
     <div class="wrap">

@@ -258,6 +258,95 @@ td.num{font-family:var(--mono);white-space:nowrap}
   animation:bootslide 1.15s ease-in-out infinite}
 @keyframes bootslide{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
 @media(prefers-reduced-motion:reduce){.boot .bar i{animation:none;width:100%}}
+/* ============================================================
+   มุมมองวอร์ด — คอนโซลเต็มจอสำหรับจอใหญ่ที่เคาน์เตอร์พยาบาล
+   ------------------------------------------------------------
+   ต่างจากหน้าคิวเคสเดิมตรงที่หน้านั้นออกแบบให้เลื่อนอ่านทีละเคสบนมือถือ
+   ส่วนหน้านี้ออกแบบให้ "ยืนดูจากระยะสองเมตรแล้วรู้ทันทีว่าต้องไปที่ใครก่อน"
+   จึงใช้การ์ดกริดหนาแน่น แถบสีตามระดับ และแถบสถานะวงจรงานอยู่บนสุด
+
+   ทำไมต้องเต็มจอไม่ใช้กรอบ .phone เดิม: กรอบเดิมกว้างสุด 520px ซึ่งเหมาะกับ
+   การถือมือถือ แต่คอนโซลที่เคาน์เตอร์คือจอ 24-32 นิ้ว ถ้าใช้กรอบเดิมจะเหลือ
+   พื้นที่ว่างสองข้างมหาศาลและเห็นเคสได้ครั้งละไม่กี่ใบ
+   ============================================================ */
+.ward{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;
+  background:#0E1B3D;color:#EAF0FF;font-size:14px}
+.ward *{box-sizing:border-box}
+
+/* ---------- แถบบน ---------- */
+.wtop{display:flex;align-items:center;gap:0;background:#fff;color:#16233B;flex:none;
+  border-bottom:3px solid #12295F}
+.wtop .brand{display:flex;align-items:center;gap:9px;padding:10px 18px;border-right:1px solid #E3EAF6}
+.wtop .brand b{font-size:17px;letter-spacing:-.01em}
+.wtop .brand b i{color:#D97706;font-style:normal}
+.wtop .stat{display:flex;align-items:center;gap:7px;padding:10px 18px;border-right:1px solid #E3EAF6;
+  font-size:14.5px;white-space:nowrap}
+.wtop .stat u{text-decoration:none;font-weight:700;font-size:17px}
+.wtop .clock{margin-left:auto;text-align:right;padding:8px 16px;line-height:1.25}
+.wtop .clock .d{font-size:12.5px;color:#5B6B84}
+.wtop .clock .t{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.wtop .port{background:#12295F;color:#fff;padding:12px 26px;font-size:20px;font-weight:700;
+  border-radius:0 0 0 26px;white-space:nowrap}
+
+/* ---------- แถบวงจรงาน ---------- */
+.wflow{display:flex;gap:0;background:#0A1530;flex:none;overflow-x:auto}
+.wflow button{flex:1;min-width:132px;background:transparent;border:0;border-bottom:3px solid transparent;
+  color:#9FB2DA;font:inherit;padding:9px 10px;cursor:pointer;text-align:center;white-space:nowrap}
+.wflow button b{display:block;font-size:19px;line-height:1.1;color:#fff}
+.wflow button span{font-size:12px}
+.wflow button[aria-pressed="true"]{background:rgba(255,255,255,.07);border-bottom-color:#F5B301;color:#fff}
+.wflow button:disabled{opacity:.45;cursor:default}
+
+/* ---------- พื้นที่กลาง ---------- */
+.wbody{flex:1;display:grid;grid-template-columns:1fr 268px;gap:0;min-height:0}
+.wgrid{overflow:auto;padding:12px;display:grid;gap:10px;align-content:start;
+  grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.wempty{grid-column:1/-1;padding:40px;text-align:center;color:#9FB2DA}
+
+/* ---------- การ์ดเคส ---------- */
+.wcard{background:#fff;color:#16233B;border-radius:9px;overflow:hidden;text-align:left;
+  border:0;font:inherit;cursor:pointer;display:flex;flex-direction:column;
+  box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.wcard:hover{box-shadow:0 0 0 2px #F5B301,0 2px 8px rgba(0,0,0,.3)}
+.wcard .hd{display:flex;align-items:stretch;gap:0}
+.wcard .code{background:#12295F;color:#fff;padding:5px 9px;font-weight:700;font-size:13px;letter-spacing:.01em}
+.wcard .lv{flex:1;padding:5px 9px;font-size:12px;font-weight:700;color:#fff;text-align:right;white-space:nowrap}
+.wcard .bd{padding:8px 10px 9px}
+.wcard .nm{font-weight:700;font-size:15px;line-height:1.3}
+.wcard .sub{font-size:12px;color:#5B6B84;margin-top:1px}
+.wcard .act{font-size:12.5px;color:#16233B;margin-top:6px;font-weight:600}
+.wcard .due{font-size:12px;margin-top:3px}
+.wcard .ics{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.wcard .ics span{font-size:11px;background:#EEF3FB;color:#3A5480;border-radius:5px;padding:2px 6px}
+.wcard .ics span.on{background:#FEF3C7;color:#92400E}
+
+/* ---------- พาเนลขวา ---------- */
+.wside{background:#0A1530;border-left:1px solid rgba(255,255,255,.1);overflow:auto;padding:12px}
+.wside h4{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#8FA3CF}
+.wside .box{background:rgba(255,255,255,.06);border-radius:9px;padding:11px;margin-bottom:12px}
+.wsum{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.wsum div{background:rgba(255,255,255,.05);border-radius:7px;padding:8px 9px}
+.wsum b{display:block;font-size:21px;line-height:1.1}
+.wsum span{font-size:11.5px;color:#9FB2DA}
+.wnote{font-size:12.5px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);line-height:1.5}
+.wnote:last-child{border-bottom:0}
+.wnote b{display:block;font-size:12px;color:#F5B301}
+
+/* ---------- แถบล่าง ---------- */
+.wtabs{display:flex;gap:0;background:#D8DEE9;flex:none;padding:5px 8px;align-items:center}
+.wtabs button{background:#fff;border:1px solid #B9C4D6;color:#16233B;font:inherit;font-size:13.5px;
+  padding:7px 15px;margin-right:6px;border-radius:4px;cursor:pointer}
+.wtabs button[aria-pressed="true"]{background:#12295F;color:#fff;border-color:#12295F;font-weight:600}
+.wtabs .sp{margin-left:auto}
+.wtabs .exit{background:#12295F;color:#fff;border-color:#12295F}
+
+@media(max-width:900px){
+  .wbody{grid-template-columns:1fr}
+  .wside{display:none}
+  .wtop .port{font-size:15px;padding:10px 14px}
+  .wtop .stat{display:none}
+}
+
 </style>
 </head>
 <body>
@@ -547,6 +636,167 @@ async function queueV(){
   try{WL.rows=await CSBackend.cmWorklist()}catch(e){WL.rows=[]}
   renderQueue();
 }
+/* ============================================================
+   มุมมองวอร์ด — คอนโซลเต็มจอสำหรับจอใหญ่ที่เคาน์เตอร์
+   ------------------------------------------------------------
+   ใช้ข้อมูลชุดเดียวกับหน้าคิวเคส (CSBackend.cmWorklist) ไม่มีการคำนวณ
+   ระดับความเสี่ยงหรือลำดับใหม่ — เปลี่ยนแค่วิธีแสดงผล เพื่อไม่ให้เกิด
+   ความจริงสองชุดที่ขัดกันระหว่างสองหน้าจอ
+
+   แถบวงจรงานด้านบนสะท้อนขั้นตอนจริงของระบบ ไม่ใช่ภาพประกอบ
+   กดที่ขั้นไหนก็กรองเห็นเฉพาะเคสที่ค้างอยู่ขั้นนั้น
+   ============================================================ */
+var WARD={on:false,stage:"all",timer:null};
+
+function wardStageCounts(rows){
+  var c={all:rows.length};
+  STAGES.forEach(function(s){c[s.k]=0});
+  c.closed=0;
+  rows.forEach(function(r){var k=stageOf(r.status).k;c[k]=(c[k]||0)+1});
+  return c;
+}
+/* ชื่อระดับแบบสั้นสำหรับการ์ดในกริด — ชื่อเต็มยาวเกินจนตกบรรทัด
+   ทำให้การ์ดสูงไม่เท่ากันและอ่านเป็นตารางไม่ได้ ความหมายเต็มอยู่ในพาเนลขวา */
+var WARD_LV={urgent:"ด่วน",decline:"ทบทวน",watch:"เฝ้าดู",stable:"ตามรอบ"};
+function wardLevelColor(lv){
+  return {urgent:"#DC2626",decline:"#EA580C",watch:"#D97706",stable:"#059669"}[lv]||"#64748B";
+}
+function wardClock(){
+  var d=new Date();
+  var wd=["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"][d.getDay()];
+  var p=function(n){return (n<10?"0":"")+n};
+  return {d:"วัน"+wd+" "+d.getDate()+"/"+(d.getMonth()+1)+"/"+(d.getFullYear()+543),
+          t:p(d.getHours())+":"+p(d.getMinutes())};
+}
+
+function wardV(){
+  if(ST.role!=="care_manager"&&ST.role!=="admin"){
+    toast("มุมมองวอร์ดเปิดให้เฉพาะ Care Manager");return;
+  }
+  WARD.on=true;
+  var el=document.getElementById("wardRoot");
+  if(!el){el=document.createElement("div");el.id="wardRoot";document.body.appendChild(el)}
+  el.className="ward";
+  wardPaint();
+  /* นาฬิกาเดินจริง เพราะจอนี้ถูกเปิดค้างไว้ทั้งวัน คนดูใช้ดูเวลาจริง */
+  if(WARD.timer)clearInterval(WARD.timer);
+  WARD.timer=setInterval(function(){
+    var c=document.getElementById("wClock");
+    if(!c){clearInterval(WARD.timer);WARD.timer=null;return}
+    var k=wardClock(); c.innerHTML='<div class="d">'+esc(k.d)+'</div><div class="t">'+k.t+'</div>';
+  },10000);
+}
+function wardClose(){
+  WARD.on=false;
+  if(WARD.timer){clearInterval(WARD.timer);WARD.timer=null}
+  var el=document.getElementById("wardRoot");
+  if(el)el.remove();
+}
+
+function wardPaint(){
+  var el=document.getElementById("wardRoot"); if(!el)return;
+  var rows=(WL.rows||[]).slice();
+  var cnt=wardStageCounts(rows), k=wardClock();
+  var lv={urgent:0,decline:0,watch:0,stable:0};
+  rows.forEach(function(r){if(lv[r.level]!=null)lv[r.level]++});
+  var overdue=rows.filter(function(r){return r.overdue}).length;
+
+  var list=rows;
+  if(WARD.stage!=="all")list=rows.filter(function(r){return stageOf(r.status).k===WARD.stage});
+  list.sort(function(a,b){return a.priority-b.priority});
+
+  /* ---- แถบวงจรงาน: ขั้นตอนจริงของระบบ กดกรองได้ ---- */
+  var flow='<div class="wflow">'+
+    '<button data-st="all" aria-pressed="'+(WARD.stage==="all")+'"><b>'+cnt.all+'</b><span>ทั้งหมด</span></button>'+
+    STAGES.map(function(s){
+      return '<button data-st="'+s.k+'" aria-pressed="'+(WARD.stage===s.k)+'"'+
+        (cnt[s.k]?"":" disabled")+'><b>'+(cnt[s.k]||0)+'</b><span>'+s.ic+' '+esc(s.nm)+'</span></button>';
+    }).join("")+
+    '<button data-st="closed" aria-pressed="'+(WARD.stage==="closed")+'"'+(cnt.closed?"":" disabled")+
+      '><b>'+(cnt.closed||0)+'</b><span>✓ ปิดแล้ว</span></button>'+
+  '</div>';
+
+  /* ---- การ์ดเคส ---- */
+  var cards=list.map(function(c){
+    var sl=slaText(c), st=caseStep(c.status), p=PRIO[c.level]||PRIO.watch;
+    var ics=[];
+    if(c.ref_open>0)ics.push(['on','➡️ ส่งต่อ '+c.ref_open]);
+    if(c.med_review_open>0)ics.push(['on','💊 ทบทวนยา '+c.med_review_open]);
+    if(c.fu_due>0)ics.push(['on','🔁 ติดตาม '+c.fu_due]);
+    if(c.unreachable)ics.push(['on','📵 ติดต่อไม่ได้']);
+    if(!ics.length)ics.push(['','ไม่มีงานค้าง']);
+    return '<button class="wcard" data-open="'+esc(c.id)+'" data-uid="'+esc(c.user_id)+'">'+
+      '<div class="hd"><span class="code">'+esc(c.pseudonym||"—")+'</span>'+
+      '<span class="lv" style="background:'+wardLevelColor(c.level)+'">'+esc(WARD_LV[c.level]||p.nm)+'</span></div>'+
+      '<div class="bd">'+
+      '<div class="nm">'+esc(c.display_name||"—")+'</div>'+
+      '<div class="sub">'+(c.age?c.age+" ปี · ":"")+esc(st?st.nm:c.status)+'</div>'+
+      '<div class="act">'+esc(nextAction(c))+'</div>'+
+      '<div class="due" style="color:'+sl.cls+'">'+esc(sl.txt)+'</div>'+
+      '<div class="ics">'+ics.map(function(x){
+        return '<span class="'+x[0]+'">'+esc(x[1])+'</span>'}).join("")+'</div>'+
+      '</div></button>';
+  }).join("");
+
+  /* ---- พาเนลขวา ---- */
+  var notes=rows.filter(function(r){return r.overdue||r.level==="urgent"}).slice(0,8).map(function(r){
+    return '<div class="wnote"><b>'+esc(r.pseudonym||"—")+' · '+(PRIO[r.level]||PRIO.watch).nm+'</b>'+
+           esc(nextAction(r))+'</div>';
+  }).join("")||'<div class="wnote">ไม่มีเรื่องต้องแจ้ง</div>';
+
+  el.innerHTML=
+  '<div class="wtop">'+
+    '<div class="brand">'+'<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none;color:#12295F"><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round"/><rect x="19.5" y="33" width="7" height="11" rx="3.5" fill="currentColor" opacity=".55"/><rect x="28.5" y="26" width="7" height="18" rx="3.5" fill="currentColor" opacity=".78"/><rect x="37.5" y="18" width="7" height="26" rx="3.5" fill="#D97706"/></svg>'+'<b>Care<i>Signal</i></b></div>'+
+    '<div class="stat">เคสค้าง <u>'+cnt.all+'</u></div>'+
+    '<div class="stat">เกินกำหนด <u style="color:#DC2626">'+overdue+'</u></div>'+
+    '<div class="clock" id="wClock"><div class="d">'+esc(k.d)+'</div><div class="t">'+k.t+'</div></div>'+
+    '<div class="port">'+esc(ST.name||"พอร์ตของฉัน")+'</div>'+
+  '</div>'+
+  flow+
+  '<div class="wbody">'+
+    '<div class="wgrid">'+(cards||'<div class="wempty">ไม่มีเคสในขั้นตอนนี้</div>')+'</div>'+
+    '<aside class="wside">'+
+      '<h4>ภาพรวมพอร์ต</h4>'+
+      '<div class="box"><div class="wsum">'+
+        '<div><b style="color:#F87171">'+lv.urgent+'</b><span>ต้องทบทวนด่วน</span></div>'+
+        '<div><b style="color:#FB923C">'+lv.decline+'</b><span>ต้องทบทวน</span></div>'+
+        '<div><b style="color:#FBBF24">'+lv.watch+'</b><span>เฝ้าสังเกต</span></div>'+
+        '<div><b style="color:#34D399">'+lv.stable+'</b><span>ตามรอบ</span></div>'+
+      '</div></div>'+
+      '<h4>ต้องดูก่อน</h4><div class="box" style="padding:4px 11px">'+notes+'</div>'+
+      '<h4>ขอบเขตของหน้าจอนี้</h4>'+
+      '<div class="box" style="font-size:12px;color:#9FB2DA;line-height:1.6">'+
+      'ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น <b style="color:#EAF0FF">การตัดสินใจส่งต่อทุกครั้งเป็นของคุณ</b> '+
+      'ทุกการกระทำบันทึกชื่อผู้ทำใน audit log ที่ลบไม่ได้</div>'+
+    '</aside>'+
+  '</div>'+
+  '<div class="wtabs">'+
+    '<button data-tab="queue" aria-pressed="true">คิวเคส</button>'+
+    '<button data-tab="refer">ติดตามการส่งต่อ</button>'+
+    '<button data-tab="meds">ทบทวนยา</button>'+
+    '<button data-tab="port">พอร์ตความเสี่ยง</button>'+
+    '<button data-tab="reports">รายงาน</button>'+
+    '<button class="sp exit" id="wExit">ออกจากมุมมองวอร์ด</button>'+
+  '</div>';
+
+  /* ---- ผูกปุ่ม ---- */
+  el.querySelectorAll(".wflow button").forEach(function(b){
+    b.addEventListener("click",function(){WARD.stage=b.dataset.st;wardPaint()});
+  });
+  el.querySelectorAll(".wcard").forEach(function(b){
+    /* เปิดรายละเอียดเคสด้วยเส้นทางเดิม ไม่สร้างหน้ารายละเอียดซ้อนอีกชุด
+       เพื่อไม่ให้ตรรกะการเปิดเคสแตกเป็นสองทางที่ต้องดูแลคู่กัน */
+    b.addEventListener("click",function(){
+      wardClose(); caseDetailV(b.dataset.open,b.dataset.uid);
+    });
+  });
+  el.querySelectorAll(".wtabs button[data-tab]").forEach(function(b){
+    b.addEventListener("click",function(){wardClose();go(b.dataset.tab)});
+  });
+  var x=document.getElementById("wExit");
+  if(x)x.addEventListener("click",function(){wardClose();go("queue")});
+}
+
 function renderQueue(){
   var rows=WL.rows;
   var k={
@@ -562,7 +812,8 @@ function renderQueue(){
     return '<button class="kpi" data-f="'+id+'" aria-pressed="'+(WL.filter===id)+'">'+
       '<b style="color:'+(n?col:"var(--ink3)")+'">'+n+'</b><span>'+label+'</span></button>';
   };
-  var html='<div class="kpis">'+
+  var html='<button class="ok" id="toWard" style="width:100%;margin-bottom:10px">เปิดมุมมองวอร์ด — จอใหญ่ที่เคาน์เตอร์</button>'+
+  '<div class="kpis">'+
     tile("newRed",k.newRed,"เคสแดงใหม่","var(--c1)")+
     tile("dueToday",k.dueToday,"ต้องติดต่อวันนี้","var(--c2)")+
     tile("overdue",k.overdue,"เกินกำหนด","var(--c1)")+
@@ -631,6 +882,8 @@ function renderQueue(){
   V.querySelectorAll("[data-tab]").forEach(function(b){b.addEventListener("click",function(){
     WL.tab=b.dataset.tab; WL.filter="all"; renderQueue();
   })});
+  var tw=document.getElementById("toWard");
+  if(tw)tw.addEventListener("click",wardV);
   V.querySelectorAll("[data-open]").forEach(function(b){b.addEventListener("click",function(){
     caseDetailV(b.dataset.open,b.dataset.uid);
   })});
