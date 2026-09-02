@@ -1626,6 +1626,41 @@ function layer7() {
       bad.join(" · "), "คงตัววิเคราะห์ครบสี่ ที่มา src:radar และคำประกาศข้อจำกัดไว้เสมอ");
   }
 
+  /* ---- X-114: รายงานส่งต่อและการส่งออก HL7 FHIR ----
+     เติมช่องว่างสุดท้ายของโครง Assessment & Referral Record: รายงานสรุป
+     ที่ Care Manager และผู้เชี่ยวชาญอ่านต่อได้ทันที และการส่งออกตามมาตรฐาน
+     แลกเปลี่ยนข้อมูลสุขภาพสากล กฎนี้บังคับความซื่อสัตย์สามข้อ
+       1. รหัสมาตรฐานใส่เฉพาะที่มีจริง — TUG ใช้ LOINC 89423-8 ได้
+          แต่ลุกนั่ง 5 ครั้งไม่มีรหัส LOINC ที่ยืนยันได้ ห้ามแต่งรหัสใส่
+       2. รายงานต้องปิดท้ายว่าเป็นผลคัดกรอง ไม่ใช่การวินิจฉัย
+       3. รายงานใช้รหัสผู้เอาประกัน ไม่ฝังชื่อจริง */
+  {
+    const bad = APP_PAIR.filter(([f, t]) => {
+      if (!/function\s+csReferralText\s*\(/.test(t) || !/function\s+csFHIRBundle\s*\(/.test(t)) return true;
+      if (!t.includes('code:"89423-8"')) return true;
+      /* ในฟังก์ชัน FHIR ต้องมีรหัส LOINC แค่ตัวเดียว (ของ TUG) — เกินหนึ่ง
+         แปลว่ามีคนแต่งรหัสเพิ่มโดยไม่ผ่านการยืนยันว่ามีจริง */
+      const fb = t.indexOf("function csFHIRBundle(");
+      const fe = t.indexOf("function ", fb + 30);
+      const body = t.slice(fb, fe > 0 ? fe : undefined);
+      if ((body.match(/http:\/\/loinc\.org/g) || []).length !== 1) return true;
+      if (!t.includes("ไม่ใช่การวินิจฉัยโรค และต้องผ่านการทบทวนโดยผู้เชี่ยวชาญ")) return true;
+      if (!body.includes("Screening result only")) return true;
+      /* รายงานอ้างรหัส ไม่อ้างชื่อ — ต้องเห็นการใช้ uid และต้องไม่เห็น p.name */
+      const rb = t.indexOf("function csReferralText(");
+      const rbody = t.slice(rb, t.indexOf("function csFHIRBundle("));
+      if (!rbody.includes("p.uid") || rbody.includes("p.name")) return true;
+      return false;
+    }).map(([f]) => f);
+    req(7, "X-114", "รายงานส่งต่อ + FHIR ใช้รหัสจริง ประกาศเป็นการคัดกรอง ไม่ฝังชื่อ",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? ("ขาดหรือผิดใน " + bad.join(" · "))
+                   : "LOINC เฉพาะ TUG (89423-8) · ปิดท้ายว่าคัดกรอง · รายงานใช้รหัสผู้เอาประกัน");
+    if (bad.length) finding("HIGH", "X-114", "รายงานส่งต่อหรือ FHIR ไม่ซื่อสัตย์กับมาตรฐาน",
+      "รหัสที่แต่งเองในข้อมูลสุขภาพจะถูกระบบปลายทางตีความผิด และรายงานที่ไม่ประกาศขอบเขตจะถูกใช้แทนการวินิจฉัย",
+      bad.join(" · "), "ใช้รหัสที่ยืนยันได้เท่านั้น และคงคำประกาศขอบเขตไว้เสมอ");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

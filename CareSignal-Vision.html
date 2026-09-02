@@ -2560,6 +2560,141 @@ function rdFinish(){
     '<p class="sub" style="margin:8px 0 0">'+esc(why)+'</p>';
 }
 
+/* ============================================================
+   รายงานส่งต่อแบบมีโครงสร้าง + ส่งออก HL7 FHIR R4
+   ------------------------------------------------------------
+   สองชิ้นนี้คือช่องว่างจริงที่เหลือจากโครง CareSignal Assessment &
+   Referral Record (WHO ICOPE + CDC STEADI + NICE) — ส่วนอื่นของโครงนั้น
+   ระบบมีอยู่แล้ว: ล้มละเอียด 5 ข้อ · STEADI 3 คำถาม · อารมณ์/การนอน ·
+   ADL · ความปลอดภัยในบ้าน · ยา+คิวเภสัชกร · เครื่องยนต์สองชั้นพร้อม
+   เหตุผล · การส่งต่อ · การยืนยันโดยผู้เชี่ยวชาญก่อนแจ้งครอบครัว
+
+   หลักที่ยึด
+     * เป็นฟังก์ชันบริสุทธิ์ รับข้อมูลเข้าคืนข้อความ/อ็อบเจกต์ ทดสอบได้เต็ม
+     * รหัสมาตรฐานใส่เฉพาะที่มีจริง — TUG มี LOINC 89423-8 จริง
+       ส่วนลุกนั่ง 5 ครั้งไม่มีรหัส LOINC ที่ยืนยันได้ จึงใส่เป็นข้อความ
+       การแต่งรหัสปลอมใส่ข้อมูลสุขภาพคือความผิดที่เลวร้ายกว่าการไม่มีรหัส
+     * รายงานทุกฉบับปิดท้ายด้วยข้อจำกัด: เป็นผลคัดกรอง ไม่ใช่การวินิจฉัย
+   ============================================================ */
+
+/* ---------- รายงานสรุปสัญญาณเพื่อการส่งต่อ ----------
+   โครงเดียวกับ Risk Signal Summary ของ CDC STEADI ที่ Care Manager และ
+   ผู้เชี่ยวชาญอ่านต่อได้ทันที ทุกบรรทัดมาจากกฎที่ตรวจสอบได้ ไม่มีการแต่งเพิ่ม */
+function csReferralText(rec,profile,base,traj,signals,destNm){
+  var L=[], p=profile||{};
+  var tierNm={0:"เขียว — ความเสี่ยงต่ำ",1:"เหลือง — ควรติดตาม",2:"ส้ม — ควรทบทวน",3:"แดง — ควรทบทวนเร่งด่วน"};
+  L.push("CareSignal — รายงานสรุปสัญญาณเพื่อการส่งต่อ");
+  L.push("วันที่ประเมิน: "+(rec.at||"—"));
+  L.push("ผู้เอาประกัน: รหัส "+(p.uid||"—")+" · อายุ "+(p.age!=null?p.age:"—")+" ปี · เพศ"+(p.sex==="f"?"หญิง":"ชาย"));
+  L.push("");
+  L.push("ระดับสัญญาณ: "+(tierNm[rec.tier]||("ระดับ "+rec.tier))+" (คะแนน "+rec.score+"/"+rec.max+")");
+  L.push("");
+  L.push("ผลการวัด");
+  if(rec.ftsst!=null)
+    L.push("• ลุกนั่ง 5 ครั้ง: "+rec.ftsst.toFixed(1)+" วินาที"+
+           (rec.method==="camera-pose"?" (วัดด้วยกล้อง)":(rec.method==="radar"?" (วัดด้วยเรดาร์)":" (จับเวลาเอง)")));
+  else L.push("• ลุกนั่ง 5 ครั้ง: ข้ามการทดสอบ");
+  if(rec.tug!=null)L.push("• ลุกเดิน 3 เมตร (TUG): "+rec.tug.toFixed(1)+" วินาที (เกณฑ์ 12 วินาที)");
+  if(rec.gaps&&rec.gaps.length)L.push("• เวลาลุกแต่ละครั้ง: "+rec.gaps.join(" · ")+" วิ");
+  if(rec.parts)L.push("• คะแนนรายด้าน — ลุกนั่ง "+rec.parts.ftsst+"/4 · ทรงตัว "+rec.parts.balance+
+                      "/2 · ประวัติล้ม "+rec.parts.falls+"/1 · ยา "+rec.parts.meds+"/1 · กิจวัตร "+rec.parts.adl+"/1");
+  L.push("• การยืนยันตัวตนระหว่างทดสอบ: "+(rec.verified?"ผ่าน":"ไม่ได้ยืนยัน"));
+  L.push("");
+  L.push("ปัจจัยที่ตรวจพบ (จากกฎที่ตรวจสอบได้)");
+  var any=false;
+  (base&&base.reds||[]).forEach(function(x){L.push("• ["+x.id+"] "+x.text);any=true});
+  (base&&base.yellows||[]).forEach(function(x){L.push("• ["+x.id+"] "+x.text);any=true});
+  (traj&&traj.flags||[]).forEach(function(x){L.push("• ["+x.id+"] "+x.text);any=true});
+  if(!any)L.push("• ไม่พบปัจจัยเสี่ยงจากกฎชุดปัจจุบัน");
+  if(signals&&signals.length){
+    L.push("");
+    L.push("คำแนะนำการทบทวน");
+    var seen={};
+    signals.forEach(function(s){
+      var who=(destNm&&destNm[s.dest])||s.dest||"ทีมดูแล";
+      if(seen[who])return; seen[who]=1;
+      L.push("• "+who+": "+(s.text||s.type||""));
+    });
+  }
+  L.push("");
+  L.push("ข้อจำกัด: รายงานนี้เป็นผลคัดกรองจากข้อมูลที่ผู้ใช้และระบบบันทึก");
+  L.push("ไม่ใช่การวินิจฉัยโรค และต้องผ่านการทบทวนโดยผู้เชี่ยวชาญก่อนดำเนินการ");
+  return L.join(String.fromCharCode(10));
+}
+
+/* ---------- ส่งออก HL7 FHIR R4 Bundle ----------
+   โครงตามมาตรฐานแลกเปลี่ยนข้อมูลสุขภาพสากล ให้โรงพยาบาลหรือบริษัทประกัน
+   รับไปต่อได้โดยไม่ต้องเขียนตัวแปลงเฉพาะกิจ
+     Patient        ข้อมูลพื้นฐานผู้รับการประเมิน
+     Observation    ค่าที่วัดได้ทีละรายการ (TUG ใช้ LOINC 89423-8 ของจริง)
+     RiskAssessment ระดับสัญญาณพร้อมเหตุผลรายข้อ */
+function csFHIRBundle(rec,profile,base,traj){
+  var p=profile||{}, uid=p.uid||"unknown";
+  var when=rec.at?(rec.at.length>10?rec.at:rec.at+"T00:00:00+07:00"):undefined;
+  var subject={reference:"Patient/"+uid};
+  var entries=[];
+
+  entries.push({resource:{
+    resourceType:"Patient", id:String(uid),
+    gender:p.sex==="f"?"female":(p.sex==="m"?"male":"unknown"),
+    /* ปีเกิดเก็บเป็น พ.ศ. — FHIR ใช้ ค.ศ. และยอมรับความละเอียดระดับปี */
+    birthDate:p.birthYear?String(p.birthYear-543):undefined
+  }});
+
+  if(rec.tug!=null)entries.push({resource:{
+    resourceType:"Observation", status:"final",
+    code:{coding:[{system:"http://loinc.org",code:"89423-8",
+      display:"Time elapsed to rise from chair walk 3 meters turn around and sit down"}],
+      text:"ลุกเดิน 3 เมตร (Timed Up and Go)"},
+    subject:subject, effectiveDateTime:when,
+    valueQuantity:{value:rec.tug,unit:"s",system:"http://unitsofmeasure.org",code:"s"},
+    method:{text:rec.method==="camera-pose"?"camera pose estimation":"manual timing"}
+  }});
+
+  if(rec.ftsst!=null)entries.push({resource:{
+    resourceType:"Observation", status:"final",
+    /* ลุกนั่ง 5 ครั้งยังไม่มีรหัส LOINC ที่ยืนยันได้ จึงใส่เป็นข้อความล้วน
+       จงใจไม่แต่งรหัสขึ้นเอง — รหัสปลอมในข้อมูลสุขภาพอันตรายกว่าไม่มีรหัส */
+    code:{text:"Five times sit-to-stand time (ลุกนั่ง 5 ครั้ง)"},
+    subject:subject, effectiveDateTime:when,
+    valueQuantity:{value:rec.ftsst,unit:"s",system:"http://unitsofmeasure.org",code:"s"},
+    method:{text:rec.method==="camera-pose"?"camera pose estimation":
+                 (rec.method==="radar"?"mmWave radar":"manual timing")}
+  }});
+
+  if(rec.parts)entries.push({resource:{
+    resourceType:"Observation", status:"final",
+    code:{text:"CareSignal domain scores (คะแนนรายด้าน)"},
+    subject:subject, effectiveDateTime:when,
+    component:[
+      {code:{text:"sit-to-stand"},valueInteger:rec.parts.ftsst},
+      {code:{text:"balance"},valueInteger:rec.parts.balance},
+      {code:{text:"falls history"},valueInteger:rec.parts.falls},
+      {code:{text:"medications"},valueInteger:rec.parts.meds},
+      {code:{text:"ADL"},valueInteger:rec.parts.adl},
+      {code:{text:"identity verified"},valueBoolean:!!rec.verified}
+    ]
+  }});
+
+  var tierNm={0:"low",1:"moderate",2:"high",3:"very-high"};
+  var notes=[];
+  (base&&base.reds||[]).forEach(function(x){notes.push({text:"["+x.id+"] "+x.text})});
+  (base&&base.yellows||[]).forEach(function(x){notes.push({text:"["+x.id+"] "+x.text})});
+  (traj&&traj.flags||[]).forEach(function(x){notes.push({text:"["+x.id+"] "+x.text})});
+  entries.push({resource:{
+    resourceType:"RiskAssessment", status:"final",
+    subject:subject, occurrenceDateTime:when,
+    prediction:[{outcome:{text:"fall and dependency risk (ความเสี่ยงหกล้มและภาวะพึ่งพิง)"},
+                 qualitativeRisk:{text:tierNm[rec.tier]||String(rec.tier)}}],
+    note:notes,
+    /* ประกาศตัวตนของเครื่องมือ: คัดกรอง ไม่ใช่วินิจฉัย */
+    mitigation:"Screening result only. Requires professional review before any action."
+  }});
+
+  return {resourceType:"Bundle", type:"collection",
+          timestamp:when, entry:entries};
+}
+
 function vcStart(handler){
   VC.handler=handler;
   if(!VC.supported)return false;
