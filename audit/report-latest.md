@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-09-03 04:10 |
+| วันที่ตรวจ | 2026-09-03 04:58 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 164 |
+| PASS | 165 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -35,9 +35,9 @@
 |---|---|---|---|
 | F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:201 · CareSignal-Vision.html:174 · cs-backend.js:222 |
 | F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:2366 · CareSignal-Vision.html:525 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:4333 · CareSignal-Vision.html:4939 · CareSignal-App.html:4631 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:4342 · CareSignal-Vision.html:4939 · CareSignal-App.html:4640 |
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:2342 · CareSignal-Vision.html:501 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4889 · CareSignal-Vision.html:4813 · CareSignal-App.html:3425 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4898 · CareSignal-Vision.html:4813 · CareSignal-App.html:3425 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:2635 · CareSignal-Vision.html:777 · CareSignal-App.html:2430 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:664 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
@@ -229,6 +229,7 @@
 | X-116 | บทบาทเจ้าหน้าที่มาจากรหัสที่ผู้ดูแลระบบออก และเก็บเป็นแฮชเท่านั้น | PASS | ออกรหัสได้เฉพาะผู้ดูแลระบบ · เก็บเป็นแฮช · บทบาทมาจากแถวของรหัส · บัญชีที่ยังไม่แลกรหัสถูกพาไปหน้ากรอกรหัส |
 | X-117 | เจ้าหน้าที่เข้าด้วยชื่อผู้ใช้+รหัสครั้งเดียว แล้วต้องตั้งรหัสผ่านของตัวเอง | PASS | ตรวจรหัสก่อนสร้างบัญชี · บังคับตั้งรหัสผ่านทั้งทางล็อกอินและทางเปิดแอปซ้ำ · คอลัมน์ที่ตัดสินสิทธิ์แก้เองไม่ได้ · ลบบันทึกตรวจสอบไม่ได้ |
 | X-118 | โหมดป้ายเป็นตัวเสริมที่ถอยกลับไปใช้กล้องได้ และสอบเทียบขนาดที่พิมพ์ได้ | PASS | ไม่มีป้ายก็ทำงานเหมือนเดิม · สัญญาณสองแหล่งอยู่บนสเกลเดียวกันจึงสลับกลางคันได้ · สอบเทียบขนาดที่พิมพ์ด้วยไม้บรรทัดบนแผ่นเดียวกัน · ประกาศขีดจำกัดและยั |
+| X-119 | แผ่นป้ายที่พิมพ์วาดจากพจนานุกรมเดียวกับตัวอ่าน และครบทุกตำแหน่งที่โปรแกรมใช้ | PASS | แผ่น PDF และแผ่นในแอปวาดจาก CSAruco.DICT ตัวเดียวกัน · ชื่อและการใช้งานมาจากที่เดียว · ครบห้าตำแหน่ง · มีไม้บรรทัดสอบเทียบเครื่องพิมพ์ |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

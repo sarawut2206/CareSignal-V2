@@ -3688,6 +3688,9 @@ async function renderAccessReqs(host){
    ให้ตอนพิมพ์ ซึ่งตรงกว่าการเดาจากความละเอียดหน้าจอ
    ============================================================ */
 var SHEET_MM = 90;      /* ขนาดที่ออกแบบไว้ ก่อนหักความคลาดของเครื่องพิมพ์ */
+/* ป้ายที่มีบนแผ่น — ต้องตรงกับ tools/make-marker-pdf.mjs
+   ห้าตำแหน่งนี้คือทั้งหมดที่การทดสอบในโปรแกรมใช้จริง ไม่มีป้ายที่พิมพ์แล้วไม่ได้ใช้ */
+var MK_SHEET_IDS = [0, 1, 2, 3, 4];
 
 function markGridHTML(id, mm){
   if(!window.CSAruco) return "";
@@ -3719,7 +3722,11 @@ function markersV(){
   '<div class="card"><h3>ขั้นที่ 1 — พิมพ์</h3>'+
   '<p class="sub">พิมพ์ลงกระดาษ A4 ธรรมดา <b>ตั้งค่าขนาดเป็น 100%</b> '+
   'อย่าเลือก "พอดีหน้ากระดาษ" เพราะจะย่อขนาดโดยไม่บอก</p>'+
-  '<button class="cta" id="mkPrint">พิมพ์แผ่นป้าย</button></div>'+
+  '<button class="cta" id="mkPrint">พิมพ์แผ่นป้ายจากแอป</button>'+
+  '<a class="ghostb" href="./CareSignal-markers.pdf" download style="display:block;text-align:center;'+
+  'text-decoration:none;line-height:1.4">ดาวน์โหลดไฟล์ PDF (4 หน้า พร้อมวิธีใช้)</a>'+
+  '<p class="small" style="margin-top:8px">ไฟล์ PDF มีหน้าวิธีใช้ ไม้บรรทัดสอบเทียบ '+
+  'และฐานพับสำหรับป้ายที่ต้องตั้งพื้น · พิมพ์จากคอมพิวเตอร์จะได้ขนาดตรงกว่าพิมพ์จากมือถือ</p></div>'+
 
   '<div class="card"><h3>ขั้นที่ 2 — วัดไม้บรรทัดบนแผ่นที่พิมพ์</h3>'+
   '<p class="sub">บนแผ่นมีเส้นยาว 100 มิลลิเมตร วัดด้วยไม้บรรทัดจริงแล้วกรอกค่าที่วัดได้ '+
@@ -3752,14 +3759,16 @@ function markersV(){
     '<h1>CareSignal — ป้ายติดตามการเคลื่อนไหว</h1>'+
     '<p>พิมพ์ที่ขนาด 100% · ตัดตามกรอบ · ให้แผ่นแบนเรียบเสมอ</p>'+
     '<div class="mkruler"><span></span><b>ยาว 100 มิลลิเมตร — วัดเส้นนี้แล้วกรอกกลับเข้าแอป</b></div>'+
-    '<div class="mkrow">'+
-      '<div class="mkone">'+markGridHTML(0,SHEET_MM)+'<b>หน้าอก</b><i>ติดกลางอก</i></div>'+
-      '<div class="mkone">'+markGridHTML(1,SHEET_MM)+'<b>เอว</b><i>ติดหน้าท้องระดับสะดือ</i></div>'+
-    '</div>'+
-    '<div class="mkrow">'+
-      '<div class="mkone">'+markGridHTML(2,SHEET_MM)+'<b>แผ่นรองพื้น</b><i>วางที่จุดยืน</i></div>'+
-      '<div class="mkone">'+markGridHTML(3,SHEET_MM)+'<b>จุดกลับตัว</b><i>วางที่ระยะ 3 เมตร</i></div>'+
-    '</div>'+
+    /* ชื่อและการใช้งานของแต่ละป้ายมาจาก cs-aruco.js ที่เดียว
+       แผ่นในแอปกับแผ่น PDF จึงบอกเรื่องเดียวกันเสมอ ไม่ต้องไล่แก้สองที่ */
+    MK_SHEET_IDS.map(function(id,i){
+      var role=CSAruco.ROLE[id];
+      return (i%2===0?'<div class="mkrow">':'')+
+        '<div class="mkone">'+markGridHTML(id,SHEET_MM)+
+        '<b>'+esc(CSAruco.ROLE_NM[role]||role)+'</b>'+
+        '<i>'+esc((CSAruco.ROLE_USE[role]||[])[0]||'')+'</i></div>'+
+        (i%2===1||i===MK_SHEET_IDS.length-1?'</div>':'');
+    }).join("")+
     '<p class="mkfoot">ป้ายทุกใบต้องมีขอบขาวรอบตัว ห้ามตัดชิดขอบดำ '+
     'เพราะขอบดำที่ไปติดกับสีเข้มรอบข้างจะทำให้กล้องอ่านไม่ออก</p>'+
   '</div>'+

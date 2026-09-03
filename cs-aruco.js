@@ -100,9 +100,18 @@
   })();
 
   /* บทบาทของแต่ละรหัส — ผูกไว้ที่นี่ที่เดียว ทั้งฝั่งพิมพ์และฝั่งอ่านใช้ร่วมกัน */
-  var ROLE = { 0: "chest", 1: "waist", 2: "floor", 3: "turn" };
-  var ROLE_NM = { chest: "สายคาดหน้าอก", waist: "สายคาดเอว",
-                  floor: "แผ่นรองพื้น", turn: "จุดกลับตัว" };
+  var ROLE = { 0: "chest", 1: "waist", 2: "floor", 3: "turn", 4: "chair" };
+  var ROLE_NM = { chest: "ป้ายหน้าอก", waist: "ป้ายเอว", floor: "ป้ายจุดยืน",
+                  turn: "ป้ายจุดกลับตัว 3 เมตร", chair: "ป้ายจุดเก้าอี้" };
+  /* ตำแหน่งไหนใช้กับการทดสอบใด — ผูกไว้ที่เดียว ทั้งแผ่นพิมพ์และหน้าจอใช้ร่วมกัน
+     ป้ายที่ไม่มีการทดสอบใดใช้ ไม่ควรมีอยู่ เพราะเพิ่มภาระผู้ใช้โดยไม่ได้อะไร */
+  var ROLE_USE = {
+    chest: ["ทรงตัว 4 ท่า — วัดการโคลงและการเอียงของลำตัว", "ลุกนั่ง 5 ครั้ง", "ลุกเดิน 3 เมตร"],
+    waist: ["ลุกนั่ง 5 ครั้ง — จับจังหวะขึ้นลง", "ลุกเดิน 3 เมตร"],
+    floor: ["ทรงตัว 4 ท่า — จุดยืนและตำแหน่งเท้า"],
+    turn:  ["ลุกเดิน 3 เมตร — ยืนยันว่าเดินถึงจุดกลับตัวจริง"],
+    chair: ["ลุกเดิน 3 เมตร — จุดเริ่มและจุดจบ", "ลุกนั่ง 5 ครั้ง — ตำแหน่งเก้าอี้"]
+  };
 
   /* ============================================================
      วาดป้ายลงบนแคนวาส สำหรับพิมพ์
@@ -675,7 +684,7 @@
   }
 
   root.CSAruco = {
-    GRID: GRID, CELLS: CELLS, DICT: DICT, ROLE: ROLE, ROLE_NM: ROLE_NM,
+    GRID: GRID, CELLS: CELLS, DICT: DICT, ROLE: ROLE, ROLE_NM: ROLE_NM, ROLE_USE: ROLE_USE,
     MIN_DIST: MIN_DIST, MIN_SIDE_PX: MIN_SIDE_PX, GOOD_SIDE_PX: GOOD_SIDE_PX,
     bitsOf: bitsOf, wordOf: wordOf, rotations: rotations, hamming: hamming,
     Tracker: Tracker, render: render, totalSize: totalSize, QUIET: QUIET, grayscale: grayscale, threshold: threshold, detect: detect,
