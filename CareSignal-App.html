@@ -359,6 +359,39 @@ body.camfs .hudtop{display:none}
   animation:bootslide 1.15s ease-in-out infinite}
 @keyframes bootslide{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
 @media(prefers-reduced-motion:reduce){.boot .bar i{animation:none;width:100%}}
+
+/* ---------- แผ่นป้าย ArUco สำหรับพิมพ์ ----------
+   ใช้หน่วยมิลลิเมตรทั้งหมด ไม่ใช้พิกเซล เพราะเบราว์เซอร์แปลงหน่วยจริง
+   ให้ตอนพิมพ์ ทำให้ขนาดที่ออกมาตรงกับที่ออกแบบ ตราบใดที่ผู้ใช้ตั้งค่า
+   การพิมพ์ไว้ที่ 100% · ถ้าเครื่องพิมพ์ย่อเอง ไม้บรรทัดบนแผ่นจะฟ้อง */
+.mkgrid{display:grid;gap:0;margin:0 auto;background:#fff;
+  border:0.2mm solid #E3E8F0;box-sizing:content-box}
+.mkgrid i{display:block;width:100%;height:100%}
+.mksheet{display:none}
+.mksheet h1{font-size:5mm;margin:0 0 1mm;color:#0B2A5B}
+.mksheet p{font-size:3.4mm;margin:0 0 4mm;color:#334}
+.mkruler{margin:0 0 6mm}
+.mkruler span{display:block;width:100mm;height:2.5mm;border:0.4mm solid #000;
+  border-top:0;box-sizing:border-box}
+.mkruler b{display:block;font-size:3.2mm;margin-top:1mm;font-weight:600}
+.mkrow{display:flex;gap:10mm;margin-bottom:8mm}
+.mkone{text-align:center}
+.mkone b{display:block;font-size:4mm;margin-top:2mm}
+.mkone i{display:block;font-size:3.2mm;font-style:normal;color:#445}
+.mkfoot{font-size:3.2mm;color:#445;margin-top:4mm}
+
+/* ตอนสั่งพิมพ์ ซ่อนหน้าจอแอปทั้งก้อน แล้วยกแผ่นป้ายออกมาไว้ใต้ body โดยตรง
+   เหตุผลที่ต้องย้ายออกมา ไม่ใช่แค่ซ่อนพี่น้อง: แผ่นป้ายอยู่ในกล่องที่มี
+   ความสูงจำกัดและเลื่อนได้ ถ้าพิมพ์ทั้งอย่างนั้น ป้ายจะถูกตัดหรือถูกย่อ
+   ให้พอดีกล่อง ซึ่งทำลายเรื่องขนาดจริงที่เป็นหัวใจของทั้งแผ่น */
+body.printing .phone{display:none !important}
+.mkprintroot{background:#fff;padding:0;color:#111}
+.mkprintroot .mksheet{display:block}
+@media print{
+  body{background:#fff}
+  .phone{display:none !important}
+  @page{size:A4;margin:10mm}
+}
 </style>
 </head>
 <body>
@@ -383,6 +416,7 @@ try{if(window.self!==window.top)document.documentElement.setAttribute("data-embe
 </script>
 <script src="./cs-backend.js?v=4"></script>
 <script src="./cs-meds.js?v=4"></script>
+<script src="./cs-aruco.js?v=1"></script>
 <script>
 var LOGO='<svg width="30" height="30" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none;color:#fff"><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round"/><rect x="19.5" y="33" width="7" height="11" rx="3.5" fill="currentColor" opacity=".75"/><rect x="28.5" y="26" width="7" height="18" rx="3.5" fill="currentColor" opacity=".88"/><rect x="37.5" y="18" width="7" height="26" rx="3.5" fill="#FCD34D"/></svg>';
 
@@ -2093,6 +2127,154 @@ function visOK(lm){
   for(var i=0;i<need.length;i++){var v=lm[need[i]];if(v&&(v.visibility===undefined||v.visibility>0.5))seen++}
   return seen/need.length;
 }
+/* ============================================================
+   โหมดป้ายสัญลักษณ์ (Marker-assisted tracking)
+   ------------------------------------------------------------
+   ปัญหาที่มาแก้
+     กล้องมือถือตัวเดียวประมาณจุดข้อต่อจากภาพ ซึ่งสั่นระดับหลายพิกเซล
+     ต่อเฟรม · การนับลุกนั่งทนต่อความสั่นนั้นได้เพราะสัญญาณใหญ่
+     แต่การวัด "การโคลงของลำตัว" ในท่าทรงตัว สัญญาณเล็กระดับเซนติเมตร
+     จนกลบด้วยความสั่นของตัวประมาณเอง ระบบจึงเก็บค่าโคลงไว้เป็น
+     ข้อสังเกตเชิงสำรวจเท่านั้น ไม่กล้าเอาไปใช้ตัดสิน
+
+     ป้าย ArUco ให้จุดอ้างอิงที่หามุมได้ละเอียดกว่าพิกเซล วัดแล้วสั่นเอง
+     เพียง 0.03 พิกเซล เทียบกับจุดข้อต่อที่สั่นหลายพิกเซล และเพราะรู้
+     ขนาดจริงที่พิมพ์ จึงแปลงพิกเซลเป็นมิลลิเมตรบนตัวผู้ใช้ได้จริง
+
+   ขอบเขตที่ตั้งใจให้แคบ
+     ป้ายเป็น "ตัวเสริม" ไม่ใช่เงื่อนไข · ไม่มีป้ายทุกอย่างยังทำงานเหมือนเดิม
+     ทุกจุดที่ใช้ป้ายมีทางถอยกลับไปใช้ MediaPipe เสมอ
+     และไม่มีการอ้างว่าแม่นเท่าห้องปฏิบัติการ เพราะยังไม่ได้ทดสอบภาคสนาม
+   ============================================================ */
+var MARK = {
+  on: false,                 /* ผู้ใช้เปิดโหมดนี้ไว้หรือไม่ */
+  mm: 90,                    /* ความกว้างของส่วนรหัสที่พิมพ์จริง หน่วยมิลลิเมตร */
+  want: [0, 1],              /* หน้าอก + เอว */
+  tracker: null, cvs: null, cctx: null,
+  seen: {}, at: 0, W: 0, H: 0,
+  lostSince: 0, everSeen: false
+};
+var MARK_LS = "cs-mark";
+
+function markLoad() {
+  try {
+    var j = JSON.parse(localStorage.getItem(MARK_LS) || "{}");
+    if (j.on) MARK.on = true;
+    if (j.mm > 20 && j.mm < 400) MARK.mm = j.mm;
+  } catch (e) {}
+}
+function markSave() {
+  try { localStorage.setItem(MARK_LS, JSON.stringify({ on: MARK.on, mm: MARK.mm })) } catch (e) {}
+}
+function markReady() { return !!(window.CSAruco && MARK.on) }
+
+/* เริ่มติดตาม — เรียกตอนเปิดกล้องของหน้าที่ใช้ป้าย */
+function markStart(want) {
+  if (!markReady()) return false;
+  MARK.want = want || [0, 1];
+  MARK.tracker = new CSAruco.Tracker({ want: MARK.want });
+  MARK.seen = {}; MARK.at = 0; MARK.lostSince = 0; MARK.everSeen = false;
+  if (!MARK.cvs) {
+    MARK.cvs = document.createElement("canvas");
+    MARK.cctx = MARK.cvs.getContext("2d", { willReadFrequently: true });
+  }
+  return true;
+}
+function markStop() { MARK.tracker = null; MARK.seen = {}; }
+
+/* เดินหนึ่งเฟรม — เรียกจากลูปวาดภาพของแต่ละหน้า
+   ราคาราวหนึ่งถึงสองมิลลิวินาทีเมื่อจับป้ายได้แล้ว เพราะดูเฉพาะกรอบรอบป้าย
+   ส่วนการสแกนเต็มเฟรมเกิดเฉพาะตอนยังหาไม่เจอ ซึ่งคือช่วงผู้ใช้กำลังจัดท่า */
+function markTick(video) {
+  if (!MARK.tracker || !video || !video.videoWidth) return null;
+  var W = video.videoWidth, H = video.videoHeight;
+  if (MARK.cvs.width !== W) { MARK.cvs.width = W; MARK.cvs.height = H; }
+  MARK.W = W; MARK.H = H;
+  try { MARK.cctx.drawImage(video, 0, 0, W, H) } catch (e) { return null }
+  var ctx = MARK.cctx;
+  var r = MARK.tracker.update(function (x, y, w, h) { return ctx.getImageData(x, y, w, h) }, W, H);
+  MARK.seen = r.marks; MARK.at = performance.now();
+  var n = 0, k;
+  for (k in r.marks) if (Object.prototype.hasOwnProperty.call(r.marks, k)) n++;
+  if (n) { MARK.everSeen = true; MARK.lostSince = 0 } else if (MARK.everSeen) MARK.lostSince++;
+  return r.marks;
+}
+function markOf(role) {
+  var k;
+  for (k in MARK.seen) if (Object.prototype.hasOwnProperty.call(MARK.seen, k)) {
+    if (MARK.seen[k].role === role) return MARK.seen[k];
+  }
+  return null;
+}
+/* มิลลิเมตรจริงต่อหนึ่งพิกเซล ณ ระยะของป้ายนั้น
+   ได้มาเพราะรู้ขนาดที่พิมพ์ จึงไม่ต้องสอบเทียบกล้องเลย */
+function markMmPerPx(m) {
+  if (!m || !m.side) return null;
+  return MARK.mm / m.side;
+}
+
+/* ============================================================
+   สัญญาณท่าทาง 0 = นั่ง, 1 = ยืน
+   ------------------------------------------------------------
+   ทำไมต้องแปลงเป็นสเกล 0-1 ก่อน แทนที่จะส่งค่าดิบเข้าไปตรง ๆ
+     ค่าจากกล้องกับค่าจากป้ายอยู่คนละหน่วยและคนละช่วงโดยสิ้นเชิง
+     ถ้าสลับแหล่งกลางการทดสอบโดยส่งค่าดิบ เกณฑ์ที่ตั้งไว้จะผิดทันที
+     การแปลงทั้งสองแหล่งเข้าสเกลเดียวกันด้วยค่าอ้างอิงของตัวเอง
+     ทำให้สลับแหล่งกลางคันได้โดยเกณฑ์ยังถูกต้อง — สำคัญมากเพราะป้าย
+     ถูกบังชั่วครู่ได้ตลอดเวลา เช่น มือปัดผ่าน หรือก้มจนป้ายพับ
+
+     เมื่อไม่ได้เปิดโหมดป้าย ผลลัพธ์คือการปรับสเกลเชิงเส้นของค่าเดิม
+     ซึ่งให้ผลเท่าเดิมทุกประการ เพราะเกณฑ์เป็นสัดส่วนของช่วง
+   ============================================================ */
+function poseRise(lm) { return hipRatio(lm) }
+/* ป้ายเอวสูงต่ำตามการลุกนั่ง · แกน y ในภาพชี้ลง จึงกลับเครื่องหมาย
+   หารด้วยขนาดป้ายเพื่อให้ค่าไม่เปลี่ยนตามระยะห่างจากกล้อง */
+function markRise() {
+  var m = markOf("waist") || markOf("chest");
+  if (!m || !m.side) return null;
+  return -m.cy / m.side;
+}
+function normRise(v, sit, stand) {
+  if (v == null || sit == null || stand == null) return null;
+  var r = stand - sit;
+  if (!isFinite(r) || Math.abs(r) < 1e-6) return null;
+  return (v - sit) / r;
+}
+/** ค่าท่าทาง 0-1 จากแหล่งที่ดีที่สุดที่มีในเฟรมนี้ พร้อมบอกว่ามาจากแหล่งใด */
+function riseNow(lm) {
+  var mv = markRise();
+  if (mv != null && S.draft.mSitRef != null && S.draft.mStandRef != null) {
+    var n = normRise(mv, S.draft.mSitRef, S.draft.mStandRef);
+    if (n != null) return { v: n, src: "mark" };
+  }
+  var pv = poseRise(lm);
+  var p = normRise(pv, S.draft.sitRef, S.draft.standRef);
+  if (p != null) return { v: p, src: "pose" };
+  return { v: null, src: null };
+}
+/* ขนาดอ้างอิงในภาพ ใช้เป็นมาตรวัดระยะของ TUG
+   ป้ายดีกว่าความกว้างไหล่เพราะขนาดจริงคงที่และรู้ค่า ส่วนไหล่เปลี่ยนตามการหันตัว */
+function scaleNow(lm) {
+  var m = markOf("chest") || markOf("waist");
+  if (m && m.side) return { v: m.side / (MARK.W || 1), src: "mark" };
+  if (!lm) return { v: null, src: null };
+  return { v: shoulderWidth(lm), src: "pose" };
+}
+
+/* ============================================================
+   ค่ากล้อง
+   ------------------------------------------------------------
+   ปกติขอ 720x1280 ซึ่งพอสำหรับ MediaPipe และเบาสำหรับเครื่องระดับกลาง
+   แต่โหมดป้ายต้องการมากกว่านั้น เพราะขนาดป้ายในภาพแปรตามความละเอียดตรง ๆ
+   ที่ 720 พิกเซล ป้าย 9 เซนติเมตรที่ระยะ 2.5 เมตรกว้างเพียงราว 19 พิกเซล
+   ซึ่งต่ำกว่าขีดที่อ่านรหัสได้ · ที่ 1080 พิกเซลได้ราว 29 พิกเซล จึงพอ
+   เปิดความละเอียดสูงเฉพาะตอนใช้ป้าย ไม่ไปหน่วงเครื่องของคนที่ไม่ได้ใช้
+   ============================================================ */
+function camConstraints(){
+  var w = markReady() ? 1080 : 720, h = markReady() ? 1920 : 1280;
+  return { facingMode:"user", width:{ideal:w}, height:{ideal:h} };
+}
+
 function hipRatio(lm){
   var sh=midY(lm,LM.LSH,LM.RSH), hip=midY(lm,LM.LHIP,LM.RHIP), ank=midY(lm,LM.LANK,LM.RANK);
   var span=ank-sh;
@@ -2676,7 +2858,7 @@ function render(arg){
     ["portal","carerAuth","famLink","famHome","famView","assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"home",ai:"home",family:"family"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={assessHub:assessHubV,loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,radar:radarV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={markers:markersV,assessHub:assessHubV,loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,radar:radarV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){
@@ -3485,6 +3667,135 @@ async function renderAccessReqs(host){
     }
     box.querySelector("[data-allow]").addEventListener("click",decide(true));
     box.querySelector("[data-deny]").addEventListener("click",decide(false));
+  });
+}
+
+/* ============================================================
+   หน้าพิมพ์ป้าย
+   ------------------------------------------------------------
+   ปัญหาที่ต้องแก้ให้ได้ ไม่งั้นทั้งโมดูลไร้ความหมาย
+     เครื่องพิมพ์ย่อขนาดเองโดยไม่บอก โดยเฉพาะเมื่อเลือก "พอดีหน้ากระดาษ"
+     ป้ายที่ควรกว้าง 90 มิลลิเมตรอาจออกมา 86 หรือ 78 · ระบบจะยังอ่านรหัสได้
+     แต่จะคำนวณระยะและมิลลิเมตรผิดทั้งหมด โดยไม่มีอะไรฟ้องเลยสักอย่าง
+     ซึ่งอันตรายกว่าอ่านไม่ออก เพราะอ่านไม่ออกอย่างน้อยผู้ใช้ก็รู้ว่ามีปัญหา
+
+   วิธีแก้: พิมพ์ไม้บรรทัดยาว 100 มิลลิเมตรลงไปบนแผ่นเดียวกัน
+   ให้ผู้ใช้วัดด้วยไม้บรรทัดจริงแล้วบอกระบบว่าได้กี่มิลลิเมตร
+   ระบบคำนวณขนาดป้ายจริงจากอัตราส่วนนั้น · เท่ากับสอบเทียบเครื่องพิมพ์
+   โดยไม่ต้องรู้ว่าเครื่องพิมพ์ทำอะไรไป
+
+   หน่วยเป็นมิลลิเมตรใน CSS ไม่ใช่พิกเซล เพราะเบราว์เซอร์แปลงหน่วยจริง
+   ให้ตอนพิมพ์ ซึ่งตรงกว่าการเดาจากความละเอียดหน้าจอ
+   ============================================================ */
+var SHEET_MM = 90;      /* ขนาดที่ออกแบบไว้ ก่อนหักความคลาดของเครื่องพิมพ์ */
+
+function markGridHTML(id, mm){
+  if(!window.CSAruco) return "";
+  var g=CSAruco.bitsOf(CSAruco.DICT[id]), C=CSAruco.CELLS, T=C+2, cells=[], r, c;
+  for(r=0;r<T;r++)for(c=0;c<T;c++){
+    var rr=r-1, cc=c-1, on;
+    if(rr<0||cc<0||rr>=C||cc>=C) on=1;                       /* ขอบขาว */
+    else if(rr<1||cc<1||rr>C-2||cc>C-2) on=0;                /* ขอบดำ */
+    else on=g[rr-1][cc-1];
+    cells.push('<i style="background:'+(on?"#fff":"#000")+'"></i>');
+  }
+  var total=mm*T/C;
+  return '<div class="mkgrid" style="width:'+total.toFixed(2)+'mm;height:'+total.toFixed(2)+'mm;'+
+         'grid-template-columns:repeat('+T+',1fr)">'+cells.join("")+'</div>';
+}
+
+function markersV(){
+  head("ป้ายสำหรับติดตามการเคลื่อนไหว","พิมพ์ · วัด · ยืนยันขนาด","","me");
+  var mm=MARK.mm;
+  V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--surf2)"><h3>ป้ายช่วยให้กล้องแม่นขึ้นตรงไหน</h3>'+
+  '<p class="sub" style="margin:0 0 8px">กล้องประมาณตำแหน่งข้อต่อจากภาพ ซึ่งสั่นระดับหลายพิกเซลต่อเฟรม '+
+  'พอเป็นการวัดการโคลงของลำตัวที่สัญญาณเล็กระดับเซนติเมตร ความสั่นนั้นกลบสัญญาณจริง '+
+  'ป้ายให้จุดอ้างอิงที่หามุมได้ละเอียดกว่าพิกเซล และเพราะรู้ขนาดที่พิมพ์ '+
+  'ระบบจึงบอกเป็น<b>มิลลิเมตรจริง</b>ได้ ไม่ใช่ตัวเลขไร้หน่วย</p>'+
+  '<p class="sub" style="margin:0"><b>ไม่บังคับใช้</b> — ไม่มีป้ายทุกอย่างยังทำงานเหมือนเดิม '+
+  'ป้ายเป็นตัวเสริม ไม่ใช่เงื่อนไข</p></div>'+
+
+  '<div class="card"><h3>ขั้นที่ 1 — พิมพ์</h3>'+
+  '<p class="sub">พิมพ์ลงกระดาษ A4 ธรรมดา <b>ตั้งค่าขนาดเป็น 100%</b> '+
+  'อย่าเลือก "พอดีหน้ากระดาษ" เพราะจะย่อขนาดโดยไม่บอก</p>'+
+  '<button class="cta" id="mkPrint">พิมพ์แผ่นป้าย</button></div>'+
+
+  '<div class="card"><h3>ขั้นที่ 2 — วัดไม้บรรทัดบนแผ่นที่พิมพ์</h3>'+
+  '<p class="sub">บนแผ่นมีเส้นยาว 100 มิลลิเมตร วัดด้วยไม้บรรทัดจริงแล้วกรอกค่าที่วัดได้ '+
+  'ถ้าเครื่องพิมพ์ย่อขนาด ระบบจะปรับให้เอง</p>'+
+  '<div class="field"><label>วัดเส้นได้กี่มิลลิเมตร</label>'+
+  '<input id="mkRuler" inputmode="decimal" placeholder="100"></div>'+
+  '<button class="ghostb" id="mkSave">บันทึกขนาดที่วัดได้</button>'+
+  '<p class="small" style="margin-top:8px">ขนาดป้ายที่ระบบใช้อยู่ตอนนี้: <b id="mkNow">'+
+  mm.toFixed(1)+' มม.</b></p></div>'+
+
+  '<div class="card"><h3>ขั้นที่ 3 — ติดและเปิดใช้งาน</h3>'+
+  '<p class="sub">ติดป้าย<b>หน้าอก</b>ไว้กลางอก และป้าย<b>เอว</b>ไว้หน้าท้องระดับสะดือ '+
+  'ติดบนเสื้อหรือสายคาด <b>ไม่ติดบนผิวหนังโดยตรง</b> · ให้แผ่นแบนเรียบ ไม่ยับ ไม่พับ</p>'+
+  '<label class="chk" style="font-size:16px"><input type="checkbox" id="mkOn"'+(MARK.on?" checked":"")+'>'+
+  '<span>เปิดใช้โหมดป้าย</span></label>'+
+  '<p class="small" style="margin-top:10px">เปิดโหมดนี้แล้วกล้องจะขอความละเอียดสูงขึ้น '+
+  'เครื่องรุ่นเก่าอาจทำงานช้าลง ถ้ารู้สึกหน่วงให้ปิดโหมดนี้</p></div>'+
+
+  '<div class="card"><h3>ข้อจำกัดที่ต้องรู้</h3>'+
+  '<ul style="margin:0 0 0 18px;padding:0;font-size:14.5px;color:var(--ink2);line-height:1.75">'+
+  '<li>ป้ายต้องกว้างอย่างน้อยราว <b>9 เซนติเมตร</b> จึงจะอ่านได้ที่ระยะ 2.5-3 เมตร '+
+  'เล็กกว่านั้นไม่ใช่แม่นน้อยลง แต่คือกล้องไม่เห็นเลย</li>'+
+  '<li>เวลาหันหลังให้กล้อง ป้ายหน้าอกจะหายไป ระบบจะถอยไปใช้กล้องตามปกติในช่วงนั้น</li>'+
+  '<li>ระบบ<b>ยังไม่ได้ทดสอบภาคสนาม</b> ค่ามิลลิเมตรที่รายงานเป็นข้อสังเกต '+
+  'ไม่ได้นำไปตัดสินผ่านหรือไม่ผ่าน และไม่ได้อ้างว่าเทียบเท่าห้องปฏิบัติการ</li>'+
+  '</ul></div>'+
+
+  /* แผ่นสำหรับพิมพ์ — ซ่อนบนจอ แสดงเฉพาะตอนสั่งพิมพ์ */
+  '<div id="mkSheet" class="mksheet">'+
+    '<h1>CareSignal — ป้ายติดตามการเคลื่อนไหว</h1>'+
+    '<p>พิมพ์ที่ขนาด 100% · ตัดตามกรอบ · ให้แผ่นแบนเรียบเสมอ</p>'+
+    '<div class="mkruler"><span></span><b>ยาว 100 มิลลิเมตร — วัดเส้นนี้แล้วกรอกกลับเข้าแอป</b></div>'+
+    '<div class="mkrow">'+
+      '<div class="mkone">'+markGridHTML(0,SHEET_MM)+'<b>หน้าอก</b><i>ติดกลางอก</i></div>'+
+      '<div class="mkone">'+markGridHTML(1,SHEET_MM)+'<b>เอว</b><i>ติดหน้าท้องระดับสะดือ</i></div>'+
+    '</div>'+
+    '<div class="mkrow">'+
+      '<div class="mkone">'+markGridHTML(2,SHEET_MM)+'<b>แผ่นรองพื้น</b><i>วางที่จุดยืน</i></div>'+
+      '<div class="mkone">'+markGridHTML(3,SHEET_MM)+'<b>จุดกลับตัว</b><i>วางที่ระยะ 3 เมตร</i></div>'+
+    '</div>'+
+    '<p class="mkfoot">ป้ายทุกใบต้องมีขอบขาวรอบตัว ห้ามตัดชิดขอบดำ '+
+    'เพราะขอบดำที่ไปติดกับสีเข้มรอบข้างจะทำให้กล้องอ่านไม่ออก</p>'+
+  '</div>'+
+  '</div>';
+
+  document.getElementById("mkPrint").addEventListener("click",function(){
+    var src=document.getElementById("mkSheet");
+    if(!src){toast("ยังสร้างแผ่นป้ายไม่ได้");return}
+    var root=document.createElement("div");
+    root.className="mkprintroot";
+    root.appendChild(src.cloneNode(true));
+    document.body.appendChild(root);
+    document.body.classList.add("printing");
+    var clean=function(){
+      document.body.classList.remove("printing");
+      if(root.parentNode)root.parentNode.removeChild(root);
+    };
+    /* บางเบราว์เซอร์คืนค่าจาก print() ทันทีโดยยังไม่ปิดกล่องพิมพ์
+       จึงเก็บกวาดทั้งจากเหตุการณ์ afterprint และจากตัวจับเวลาสำรอง */
+    window.addEventListener("afterprint",clean,{once:true});
+    setTimeout(function(){ try{window.print()}catch(e){} setTimeout(clean,2000) },80);
+  });
+  document.getElementById("mkSave").addEventListener("click",function(){
+    var v=parseFloat(document.getElementById("mkRuler").value);
+    if(!isFinite(v)||v<60||v>140){toast("กรอกค่าที่วัดได้ระหว่าง 60 ถึง 140 มิลลิเมตร");return}
+    /* ป้ายหดหรือขยายตามอัตราส่วนเดียวกับไม้บรรทัด เพราะพิมพ์มาจากแผ่นเดียวกัน */
+    MARK.mm=SHEET_MM*(v/100);
+    markSave();
+    document.getElementById("mkNow").textContent=MARK.mm.toFixed(1)+" มม.";
+    audit("ยืนยันขนาดป้ายที่พิมพ์","วัดไม้บรรทัดได้ "+v+" มม. → ขนาดป้ายจริง "+MARK.mm.toFixed(1)+" มม.");
+    toast("บันทึกขนาดป้ายแล้ว");
+    if(MARK.mm<80)toast("ป้ายเล็กกว่า 8 ซม. อาจอ่านไม่ได้ที่ระยะ 3 เมตร");
+  });
+  document.getElementById("mkOn").addEventListener("change",function(){
+    MARK.on=this.checked; markSave();
+    toast(MARK.on?"เปิดโหมดป้ายแล้ว":"ปิดโหมดป้ายแล้ว");
   });
 }
 
@@ -4816,6 +5127,7 @@ function showFallback(reason){
   });
 }
 function stopCam(){
+  markStop();
   vcStop();                     /* ปิดไมค์ทุกครั้งที่ปิดกล้อง */
   if(RAF)cancelAnimationFrame(RAF);RAF=null;
   if(S.cam){S.cam.getTracks().forEach(function(t){t.stop()});S.cam=null}
@@ -4863,6 +5175,7 @@ async function startFacePipeline(){
   S.cam=stream; video.srcObject=stream; /* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
      ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
   await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
+  markStart([0,1]);
   try{ tag.textContent="กำลังโหลดตัวตรวจใบหน้า…"; await loadFaceModel(); }
   catch(e){ tag.textContent="โหลดไม่สำเร็จ"; coach.textContent="ข้ามขั้นนี้ได้ ผลจะไม่นับเป็นสิทธิประโยชน์"; return; }
   tag.textContent="พบใบหน้าแล้ว";
@@ -4958,7 +5271,7 @@ async function startPipeline(mode){
   var stream;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:720},height:{ideal:1280}},audio:false});
+    stream=await navigator.mediaDevices.getUserMedia({video:camConstraints(),audio:false});
   }catch(e){
     tag.textContent="เปิดกล้องไม่ได้";
     coach.innerHTML="เบราว์เซอร์ปฏิเสธการเข้าถึงกล้อง ให้อนุญาตในการตั้งค่าแล้วลองใหม่";
@@ -4970,6 +5283,7 @@ async function startPipeline(mode){
   /* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
      ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
   await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
+  markStart([0,1]);
   setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง รอสักครู่",false);
   try{ await loadModel(tag); }
   catch(e){
@@ -5013,6 +5327,10 @@ function drawPose(ctx,canvas,video,lm){
    ============================================================ */
 function setupCalib(video,canvas,ctx){
   var sitVal=null, standVal=null, cur=null;
+  /* ค่าอ้างอิงของป้าย เก็บคู่ขนานไปกับค่าจากกล้อง
+     เก็บทั้งสองแหล่งตั้งแต่ตอนสอบเทียบ เพราะถ้าเก็บแหล่งเดียวแล้ววันไหน
+     แหล่งนั้นใช้ไม่ได้ ต้องกลับมาสอบเทียบใหม่ทั้งหมด ซึ่งผู้สูงอายุจะเลิกทำ */
+  var mSit=null, mStand=null;
   var CALH=[], CALKIND=null;
   /* นิ่ง = ค่าล่าสุด 14 เฟรมแกว่งน้อยกว่า 0.012 ราวครึ่งวินาทีที่ไม่ขยับ */
   function calSteady(){
@@ -5038,6 +5356,7 @@ function setupCalib(video,canvas,ctx){
   }
   function loop(){
     if(S.screen!=="calib"){return}
+    markTick(video);
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
     gestureTick(lm);
@@ -5080,8 +5399,9 @@ function setupCalib(video,canvas,ctx){
     if(cur==null){speak("ยังมองไม่เห็นตัวชัดพอ กรุณาขยับให้เห็นทั้งตัวก่อน");
       setStatus("yellow","ยังมองไม่เห็นตัวชัดพอ — ยังบันทึกไม่ได้",false);return}
     /* บันทึกแล้วเดินไปขั้นถัดไปเอง ผู้ใช้ไม่ต้องจำว่าเหลืออะไร */
-    if(kind==="sit"){sitVal=cur;toast("บันทึกท่านั่งแล้ว")}
-    else{standVal=cur;toast("บันทึกท่ายืนแล้ว")}
+    var mv=markRise();
+    if(kind==="sit"){sitVal=cur;mSit=mv;toast("บันทึกท่านั่งแล้ว")}
+    else{standVal=cur;mStand=mv;toast("บันทึกท่ายืนแล้ว")}
     cstep.textContent=fmtState();
     setStatus("green",(kind==="sit"?"บันทึกท่านั่งเรียบร้อย":"บันทึกท่ายืนเรียบร้อย")+" · "+fmtState(),false);
     if(sitVal!=null&&standVal!=null){stepStop();finish();return}
@@ -5099,6 +5419,11 @@ function setupCalib(video,canvas,ctx){
       return;
     }
     S.draft.sitRef=sitVal;S.draft.standRef=standVal;
+    /* รับค่าอ้างอิงของป้ายเฉพาะเมื่อเห็นป้ายครบทั้งสองท่า และค่าต่างกันพอ
+       ถ้าเห็นแค่ท่าเดียว การเทียบจะผิดทั้งการทดสอบ จึงยอมทิ้งไปเลยดีกว่า */
+    if(mSit!=null&&mStand!=null&&Math.abs(mStand-mSit)>0.15){
+      S.draft.mSitRef=mSit; S.draft.mStandRef=mStand;
+    }else{ S.draft.mSitRef=null; S.draft.mStandRef=null; }
     audit("สอบเทียบกล้อง (ผู้ใช้เป็นผู้สั่งบันทึกทีละท่า)",
       "ค่าท่านั่ง "+sitVal.toFixed(3)+" ค่าท่ายืน "+standVal.toFixed(3)+" ช่วงห่าง "+(standVal-sitVal).toFixed(3));
     toast("สอบเทียบเรียบร้อย");
@@ -5151,13 +5476,16 @@ function setupTest(video,canvas,ctx){
   var faceRef=faceEnabled()?loadFaceSig():null;
   var frameN=0, faceChecks=0, faceFails=0;
   S.draft.identityChecks=0; S.draft.identityFails=0;
-  DET.setRefs(S.draft.sitRef,S.draft.standRef);
+  /* เกณฑ์ทำงานบนสเกล 0 ถึง 1 เสมอ การแปลงเกิดที่ riseNow()
+     ทำให้สลับแหล่งกลางการทดสอบได้โดยเกณฑ์ไม่เพี้ยน */
+  DET.setRefs(0,1);
   var repEl=document.getElementById("rep"),clk=document.getElementById("clk"),trk=document.getElementById("trk"),
       st=document.getElementById("st"),coach=document.getElementById("coach"),qual=document.getElementById("qual"),
       startBtn=document.getElementById("startBtn"),stopBtn=document.getElementById("stopBtn");
   var running=false, t0=0, lastEvt=0, AUTOSTART=null;
   function loop(){
     if(S.screen!=="camtest")return;
+    markTick(video);
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
     gestureTick(lm);
@@ -5175,7 +5503,7 @@ function setupTest(video,canvas,ctx){
       }catch(e){}
     }
     if(lm){
-      var q=visOK(lm),m=hipRatio(lm),ka=kneeAngle(lm);
+      var q=visOK(lm),rn=riseNow(lm),m=rn.v,ka=kneeAngle(lm);
       qual.innerHTML="คุณภาพภาพ <b>"+Math.round(q*100)+"%</b>"+(ka!=null?" · เข่า "+Math.round(ka)+"°":"")+(faceRef?(faceFails>0?" · <b style='color:#FCA5A5'>ตรวจใบหน้าไม่ตรง</b>":" · <b>ยืนยันตัวตนแล้ว</b>"):"");
       if(m!=null&&running){
         var ev=DET.push(m,performance.now());
@@ -5443,7 +5771,40 @@ function BalanceEngine(stage){
      ไม่ได้เอาไปตัดสินผ่าน/ไม่ผ่านเอง */
   this.hn=0; this.hFeet=0; this.dropN=0; this.dropped=false;
   this.stepAt=null; this.lostFrames=0;
+  /* ตัวอย่างจากป้าย เก็บแยกจากตัวอย่างจากกล้อง เพราะหน่วยคนละอย่าง
+     ของกล้องเป็นสัดส่วนของภาพ ของป้ายแปลงเป็นมิลลิเมตรจริงได้ */
+  this.mk=[]; this.mkAng=[];
 }
+/* ป้อนป้ายหนึ่งเฟรม — เก็บทั้งตำแหน่งเป็นมิลลิเมตรและมุมเอียงเป็นองศา
+   เหตุผลที่แปลงเป็นมิลลิเมตรตั้งแต่ตอนเก็บ ไม่ใช่ตอนสรุป
+   เพราะระยะห่างจากกล้องเปลี่ยนได้ระหว่างทดสอบ ถ้าเก็บเป็นพิกเซลไว้ก่อน
+   แล้วค่อยคูณด้วยอัตราส่วนตอนท้าย จะใช้อัตราส่วนของเฟรมสุดท้ายกับทุกเฟรม */
+BalanceEngine.prototype.feedMark=function(m){
+  if(!m||!m.side)return;
+  var mmPerPx=markMmPerPx(m);
+  if(mmPerPx==null)return;
+  this.mk.push({x:m.cx*mmPerPx, y:m.cy*mmPerPx});
+  this.mkAng.push(m.angle);
+};
+/* การโคลง หน่วยมิลลิเมตร — ส่วนเบี่ยงเบนมาตรฐานของตำแหน่งลำตัว */
+BalanceEngine.prototype.markSway=function(){
+  if(this.mk.length<20)return null;
+  var mx=0,my=0,i;
+  for(i=0;i<this.mk.length;i++){mx+=this.mk[i].x;my+=this.mk[i].y}
+  mx/=this.mk.length; my/=this.mk.length;
+  var v=0;
+  for(i=0;i<this.mk.length;i++)
+    v+=(this.mk[i].x-mx)*(this.mk[i].x-mx)+(this.mk[i].y-my)*(this.mk[i].y-my);
+  return Math.sqrt(v/this.mk.length);
+};
+/* ช่วงการเอียงของลำตัว หน่วยองศา — เอาช่วงกว้างสุดหักค่าปลายสุดทิ้ง
+   กันเฟรมเดียวที่อ่านมุมพลาดไปดึงค่าให้ดูแย่กว่าความจริง */
+BalanceEngine.prototype.markTilt=function(){
+  if(this.mkAng.length<20)return null;
+  var a=this.mkAng.slice().sort(function(p,q){return p-q});
+  var lo=a[Math.floor(a.length*0.05)], hi=a[Math.floor(a.length*0.95)];
+  return hi-lo;
+};
 BalanceEngine.prototype._read=function(lm){
   if(!lm)return null;
   function vis(i){var p=lm[i];return p&&(p.visibility===undefined||p.visibility>0.4)}
@@ -5792,11 +6153,12 @@ async function startTugPipeline(){
       startBtn=document.getElementById("tugStart");
   var stream;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:720},height:{ideal:1280}},audio:false})}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:camConstraints(),audio:false})}
   catch(e){tag.textContent="เปิดกล้องไม่ได้";setStatus("red","เปิดกล้องไม่ได้ — ข้ามขั้นนี้ได้");return}
   S.cam=stream;video.srcObject=stream;/* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
      ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
   await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
+  markStart([0,1]);
   try{await loadModel(tag)}catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ข้ามขั้นนี้ได้");return}
   tag.textContent="พร้อมแล้ว";
 
@@ -5827,7 +6189,9 @@ async function startTugPipeline(){
   }
   function begin(){
     phase="active";
-    TUG=new TugTracker({sitRef:sitRef,standRef:standRef});
+    /* สัญญาณท่าทางถูกแปลงเป็นสเกล 0 ถึง 1 ที่ riseNow() แล้ว
+       ค่าอ้างอิงที่ส่งเข้าตัวจับจึงเป็น 0 กับ 1 ไม่ใช่ค่าดิบของกล้อง */
+    TUG=new TugTracker({sitRef:0,standRef:1});
     /* CDC ให้เริ่มจับเวลาที่สัญญาณ "เริ่ม" ไม่ใช่ตอนผู้รับการประเมินขยับ */
     TUG.goAt=performance.now();
     setStatus("green","เริ่ม — ลุกขึ้นแล้วเดินไปที่ป้าย",false);
@@ -5837,10 +6201,11 @@ async function startTugPipeline(){
 
   function loop(){
     if(S.screen!=="tug")return;
+    markTick(video);
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
     gestureTick(lm);
-    var m=lm?hipRatio(lm):null;
+    var m=riseNow(lm).v;
 
     if(phase==="waitSit"){
       /* รอให้กลับมานั่งเก้าอี้จริง ๆ ก่อน จึงจะประกาศพร้อมทดสอบ */
@@ -5865,7 +6230,9 @@ async function startTugPipeline(){
       }
     }
     else if(phase==="active"&&lm&&m!=null){
-      var sw=shoulderWidth(lm), cx=(lm[LM.LSH].x+lm[LM.RSH].x)/2;
+      /* มาตรวัดระยะ: ป้ายดีกว่าความกว้างไหล่เพราะขนาดจริงคงที่และรู้ค่า
+         ส่วนไหล่แคบลงเองเมื่อผู้ใช้หันตัว ทำให้ระบบเข้าใจผิดว่าเดินออกห่าง */
+      var sc=scaleNow(lm), sw=sc.v, cx=(lm[LM.LSH].x+lm[LM.RSH].x)/2;
       var ev=TUG.pushFrame(m,sw,cx,performance.now());
       phaseEl.textContent=PH[TUG.state]||"—";
       if(ev&&ev.event==="walk"){coach.textContent="เดินไปให้ถึงป้ายจุดกลับ 3 เมตร";speak("เดินไปที่ป้ายได้เลย")}
@@ -5977,11 +6344,12 @@ async function startBalancePipeline(){
       bcQ=document.getElementById("bcQ");
   var stream;
   setStatus("yellow","กำลังเปิดกล้อง กรุณารอสักครู่");
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:720},height:{ideal:1280}},audio:false})}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:camConstraints(),audio:false})}
   catch(e){setStatus("red","เปิดกล้องไม่ได้ — กดปุ่มหยุดเพื่อตอบด้วยตนเอง");
     coach.textContent="เปิดกล้องไม่ได้ — กดปุ่มหยุดด้านล่างเพื่อตอบเอง";return}
   S.cam=stream;video.srcObject=stream;
   await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
+  markStart([0,1]);
   setStatus("yellow","กำลังโหลดระบบตรวจจับท่าทาง",false);
   try{await loadModel(tag)}
   catch(e){setStatus("red","โหลดระบบไม่สำเร็จ — กดปุ่มหยุดเพื่อตอบด้วยตนเอง");return}
@@ -6055,6 +6423,15 @@ async function startBalancePipeline(){
     var imuV=IMU.ok?imuSway():null, imuSpikes=IMU.spikes;
     imuStop();
     var o=ENG.observe();
+    /* ค่าจากป้ายมีหน่วยจริง จึงบอกผู้ใช้ได้ตรง ๆ ว่าลำตัวโคลงกี่มิลลิเมตร
+       ยังไม่นำไปตัดสินผ่าน/ไม่ผ่าน เพราะยังไม่มีเกณฑ์ที่ผ่านการทดสอบภาคสนาม
+       สิ่งที่ทำได้ตอนนี้คือรายงานให้คนอ่าน ซึ่งตรงกับหลักของทั้งระบบอยู่แล้ว */
+    var mkSway=ENG.markSway(), mkTilt=ENG.markTilt();
+    if(mkSway!=null){
+      o.obs.push("ป้ายบนลำตัววัดการโคลงได้ "+mkSway.toFixed(0)+" มิลลิเมตร"+
+                 (mkTilt!=null?" · เอียงในช่วง "+mkTilt.toFixed(0)+" องศา":""));
+      o.markSway=mkSway; o.markTilt=mkTilt;
+    }
     if(imuV!=null){
       o.obs.push("เซ็นเซอร์ในมือถือวัดการแกว่งได้ "+imuV.toFixed(2)+" — "+imuLabel(imuV).nm);
       if(imuSpikes>0)o.obs.push("เซ็นเซอร์จับจังหวะเสียหลักได้ "+imuSpikes+" ครั้ง");
@@ -6106,7 +6483,9 @@ async function startBalancePipeline(){
                     footOk:ENG.startStance===stage,
                     aiObs:o.obs, aiSuggest:o.suggest, aiConfidence:o.confidence,
                     feetSeenPct:o.feetSeen, decidedBy:"human",
-                    sway:o.sway};                      /* เก็บไว้เชิงสำรวจเท่านั้น */
+                    sway:o.sway,                       /* เก็บไว้เชิงสำรวจเท่านั้น */
+                    markSway:o.markSway!=null?Math.round(o.markSway):null,
+                    markTilt:o.markTilt!=null?Math.round(o.markTilt):null};
     chip(stage, pass?"ok":"bad");
     pending=null;
 
@@ -6192,6 +6571,7 @@ async function startBalancePipeline(){
 
   function loop(){
     if(S.screen!=="balance")return;
+    markTick(video);
     var lm=detectPose(video);
     drawPose(ctx,canvas,video,lm);
     gestureTick(lm);
@@ -6218,6 +6598,9 @@ async function startBalancePipeline(){
       }
     }
     else if(phase==="holding"&&ENG){
+      /* ป้ายหน้าอกบอกการโคลงของลำตัวได้ตรงกว่าจุดไหล่ที่ประมาณจากภาพ
+         และเพราะรู้ขนาดที่พิมพ์ จึงรายงานเป็นมิลลิเมตรจริงได้ ไม่ใช่ตัวเลขไร้หน่วย */
+      ENG.feedMark(markOf("chest")||markOf("waist"));
       var h=ENG.frame(lm);
       var el=(performance.now()-t0)/1000;
       secEl.textContent=Math.max(0,BAL_SECONDS-el).toFixed(0);
@@ -6725,6 +7108,11 @@ function aiV(){
   var log=(S.data.audit||[]).slice(-12).reverse();
   var c=S.data.consent;
   V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--surf2)"><h3>ป้ายช่วยติดตามการเคลื่อนไหว</h3>'+
+  '<p class="sub" style="margin:0 0 10px">พิมพ์ป้ายติดหน้าอกและเอว เพื่อให้กล้องวัดการโคลงของลำตัว'+
+  'เป็นมิลลิเมตรจริง — ไม่บังคับใช้ ไม่มีป้ายทุกอย่างยังทำงานเหมือนเดิม</p>'+
+  '<button class="ghostb" data-go="markers" style="margin:0">'+
+    (MARK.on?"เปิดใช้อยู่ · ดูหน้าป้าย":"ตั้งค่าโหมดป้าย")+'</button></div>'+
   '<div class="card"><h3>ใครขอเปิดดูข้อมูลของท่านบ้าง</h3>'+
   '<p class="sub">ผู้เชี่ยวชาญที่ได้รับส่งต่อต้องขออนุญาตท่านทุกครั้ง และสิทธิ์หมดอายุเองอัตโนมัติ — รายการนี้ตรวจย้อนได้เสมอ</p>'+
   '<div id="alogHost"><p class="small">กำลังโหลด…</p></div></div>'+
@@ -6865,6 +7253,7 @@ document.addEventListener("click",function(e){
   go(g.dataset.go);
 });
 (async function(){
+  markLoad();
   applyFontScale();
   await loadAll();
   /* จำบทบาทที่เลือกไว้ เปิดแอปครั้งถัดไปเข้าแดชบอร์ดของบทบาทนั้นทันที */
