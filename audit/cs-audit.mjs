@@ -2235,6 +2235,41 @@ function layer7() {
       bad.join(" · "), "ให้คำตอบเรื่องผู้ดูแลมีที่เดียว ตัดท่ายืนขาเดียวเมื่อคนเดียว บอกก่อนเริ่ม และบันทึกว่าไม่ได้ทดสอบ ไม่ใช่ไม่ผ่าน");
   }
 
+  /* ---- X-123: กฎที่จุดได้ทุกข้อต้องถูกประกาศ ----
+     หน้าผู้เชี่ยวชาญแสดงหลักฐานด้วย ENGINE.rules[id].nm ของทุกกฎที่ติด
+     กฎที่จุดได้แต่ไม่มีในตาราง จึงไม่ใช่แค่ "ไม่มีชื่อ" แต่ทำให้ทั้งการ์ดล้ม
+     และมันเกิดกับผู้ใช้ที่ติดกฎน้อยที่สุด คือคนที่มาครั้งแรกและมีกฎนั้นข้อเดียว
+     เคยเกิดจริงกับ B15: แก้ให้จุดได้แล้วลืมประกาศ */
+  {
+    const bad = [];
+    const files = { "CareSignal-App.html": appAll, "CareSignal-Vision.html": read("CareSignal-Vision.html") || "" };
+    const declaredBy = {};
+    Object.keys(files).forEach((f) => {
+      const t = files[f];
+      const blk = (t.match(/rules:\{([\s\S]*?)\},\s*cadence:/) || [])[1] || "";
+      const declared = new Set([...blk.matchAll(/\b([RB]\d+):\{nm:/g)].map((m) => m[1]));
+      const fired = new Set([...t.matchAll(/id:"([RB]\d+)"/g)].map((m) => m[1]));
+      declaredBy[f] = declared;
+      if (!declared.size) { bad.push(f + ": ไม่พบตารางกฎ"); return; }
+      const missing = [...fired].filter((id) => !declared.has(id)).sort();
+      if (missing.length) bad.push(f + ": จุดได้แต่ไม่ประกาศ " + missing.join(" "));
+      const dead = [...declared].filter((id) => !fired.has(id)).sort();
+      if (dead.length) bad.push(f + ": ประกาศแต่ไม่มีที่ไหนจุด " + dead.join(" "));
+    });
+    /* สองไฟล์ต้องมีชุดกฎเดียวกัน ไม่งั้นผลจากแอปจะอ่านไม่ออกในหน้าผู้เชี่ยวชาญ */
+    const a = declaredBy["CareSignal-App.html"], v = declaredBy["CareSignal-Vision.html"];
+    if (a && v && (a.size !== v.size || [...a].some((k) => !v.has(k))))
+      bad.push("ชุดกฎของแอปกับหน้าผู้เชี่ยวชาญไม่ตรงกัน");
+
+    req(7, "X-123", "กฎที่จุดได้ทุกข้อต้องถูกประกาศ และสองไฟล์ต้องมีชุดกฎเดียวกัน",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ")
+                   : "กฎที่จุดได้ " + (a ? a.size : 0) + " ข้อ ประกาศครบ ไม่มีกฎตาย และตรงกันทั้งสองไฟล์");
+    if (bad.length) finding("HIGH", "X-123", "หน้าผู้เชี่ยวชาญล้มเมื่อเจอกฎที่ไม่ได้ประกาศ",
+      "การ์ดหลักฐานเปิดชื่อกฎจากตารางกลาง กฎที่จุดได้แต่ไม่อยู่ในตารางทำให้การ์ดทั้งใบไม่แสดง ผู้เชี่ยวชาญจะไม่เห็นหลักฐานใด ๆ ของผู้ใช้คนนั้นเลย",
+      bad.join(" · "), "ประกาศทุกกฎที่จุดได้ในตาราง ENGINE.rules ของทุกไฟล์ที่มีเอนจิน");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],
