@@ -2315,6 +2315,23 @@ function carerSave() {
 }
 /* จุดเดียวที่ตัดสินว่าจะเปิดหูฟังคำสั่งหรือไม่ — ประตูเดียวจึงไม่มีทางลืมปิดที่ใดที่หนึ่ง */
 function voiceOK() { return !CARER.on }
+/* ทำคนเดียวหรือไม่ — แหล่งเดียวคือโหมดผู้ดูแล
+   เดิมมีสองที่ถามเรื่องเดียวกันแต่ไม่คุยกัน: ด่านความปลอดภัยถามว่ามีผู้ดูแลไหม
+   แล้วบันทึกไว้เฉย ๆ ส่วนสวิตช์โหมดผู้ดูแลอยู่ในหน้าตั้งค่า ตอบ "มี" แล้วไม่เปิด
+   สวิตช์ก็ได้ ผลที่บันทึกจึงขัดกันเองได้ ตอนนี้คำตอบในด่านความปลอดภัยเป็นผู้ตั้ง
+   โหมดผู้ดูแล และสวิตช์ในหน้าตั้งค่าก็เขียนกลับไปที่คำตอบเดียวกัน */
+function testAlone() { return !CARER.on }
+/* ตั้งโหมดผู้ดูแลจากที่ใดก็ตาม ให้ทุกที่ที่เก็บคำตอบนี้ตรงกันเสมอ */
+function setCarer(on, why) {
+  var was = CARER.on;
+  CARER.on = !!on; carerSave();
+  if (S.draft && S.draft.safety) S.draft.safety.helper = CARER.on ? 0 : 1;
+  if (S.draft && S.draft.safetyVerdict) S.draft.safetyVerdict.alone = !CARER.on;
+  /* ปิดหูฟังทันที ไม่รอหน้าจอถัดไป ไม่งั้นคำสั่งเสียงยังทำงานอยู่ทั้งที่ปิดไปแล้ว */
+  if (!was && CARER.on && typeof stepStop === "function") stepStop();
+  if (was !== CARER.on && why) audit("เปลี่ยนโหมดผู้ดูแล", (CARER.on ? "เปิด" : "ปิด") + " — " + why);
+  return was !== CARER.on;
+}
 
 /* ============================================================
    เหตุผลที่หยุดกลางคัน
@@ -2453,8 +2470,8 @@ var SAFETY_Q=[
    o:[["ไม่มี",0],["มี",2]], red:2},
   {k:"injury", q:"เพิ่งหกล้ม บาดเจ็บ ผ่าตัด หรือแพทย์ห้ามเดิน/ลงน้ำหนักหรือไม่",
    o:[["ไม่มี",0],["มี",2]], red:2},
-  {k:"helper", q:"ขณะทำการทดสอบ มีผู้ดูแลอยู่ใกล้ ๆ หรือไม่",
-   o:[["มี",0],["ไม่มี",1]], red:9}   /* ไม่ใช่ red flag แต่บันทึกไว้ */
+  {k:"helper", q:"ขณะทำการทดสอบ มีผู้ดูแลยืนอยู่ข้าง ๆ หรือไม่ — ถ้ามี ผู้ดูแลจะเป็นคนกดเริ่มและกดหยุด ถ้าไม่มี ระบบจะข้ามท่ายืนขาเดียว",
+   o:[["มี",0],["ไม่มี",1]], red:9}   /* ไม่ใช่ red flag แต่เป็นผู้ตั้งโหมดผู้ดูแล และตัดท่ายืนขาเดียว */
 ];
 function safetyVerdict(ans){
   var reds=[];
@@ -3909,9 +3926,7 @@ function markersV(){
   });
   var cOn=document.getElementById("carerOn");
   if(cOn)cOn.addEventListener("change",function(){
-    CARER.on=this.checked; carerSave();
-    /* ปิดหูฟังทันที ไม่รอหน้าจอถัดไป ไม่งั้นคำสั่งเสียงยังทำงานอยู่ทั้งที่ปิดไปแล้ว */
-    if(CARER.on&&typeof stepStop==="function")stepStop();
+    setCarer(this.checked,"สวิตช์ในหน้าตั้งค่า");
     toast(CARER.on?"เปิดโหมดผู้ดูแลแล้ว — ปิดคำสั่งเสียง":"ปิดโหมดผู้ดูแลแล้ว — เปิดคำสั่งเสียง");
   });
   document.getElementById("mkOn").addEventListener("change",function(){
@@ -4045,6 +4060,9 @@ function safetyV(){
   head("ก่อนเริ่มทดสอบ","ตรวจความปลอดภัยก่อน","ตอบตามความจริง เพื่อไม่ให้เกิดอันตรายระหว่างทดสอบ","assessIntro");
   if(!S.draft.safety)S.draft.safety={};
   var a=S.draft.safety;
+  /* ถ้าเปิดโหมดผู้ดูแลไว้แล้วในหน้าตั้งค่า ให้คำตอบเริ่มที่ "มี" เพราะเป็นสิ่งที่
+     ผู้ใช้ตั้งใจตั้งไว้เอง แต่ถ้าไม่ได้เปิด ไม่เติมคำตอบให้ ต้องตอบเองว่าคนเดียวหรือไม่ */
+  if(a.helper==null&&CARER.on)a.helper=0;
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ทำไมต้องถามก่อน</h3>'+
   '<p class="sub" style="margin:0">การทดสอบมีการลุกยืนและยืนขาเดียว หากวันนี้มีอาการบางอย่าง การทดสอบอาจเป็นอันตราย ระบบจะหยุดให้เองและแนะนำสิ่งที่ควรทำแทน</p></div>'+
@@ -4069,6 +4087,8 @@ function safetyV(){
   document.getElementById("sgGo").addEventListener("click",function(){
     var vd=safetyVerdict(a);
     S.draft.safetyVerdict=vd;
+    /* คำตอบข้อนี้คือสวิตช์โหมดผู้ดูแล ไม่ใช่แค่บันทึก */
+    setCarer(a.helper===0,"คำตอบในด่านความปลอดภัย");
     audit("คัดกรองความปลอดภัยก่อนทดสอบ",
       vd.safe?("ผ่าน — ไม่พบอาการที่ต้องหยุด"+(vd.alone?" (ทำคนเดียว)":"")):
               ("พบสัญญาณอันตราย: "+vd.reds.join(", ")+" — หยุดการทดสอบกายภาพ"));
@@ -5068,6 +5088,7 @@ async function finishAssess(){
     tugDrift:S.draft.tugDrift!=null?S.draft.tugDrift:null,
     balPassed:S.draft.balPassed!=null?S.draft.balPassed:null,
     balStages:S.draft.balStages||null,
+    balAlone:!!S.draft.balAlone, balAloneSkip:!!S.draft.balAloneSkip,
     balLabel:S.draft.balLabel||null,
     barthelTotal:S.draft.barthelTotal!=null?S.draft.barthelTotal:null,
     barthelSF:S.draft.barthelSF!=null?S.draft.barthelSF:null,
@@ -6303,6 +6324,14 @@ var BAL_STAGES=[
   {nm:"ยืนขาเดียว",   how:"ยืนหันข้างให้กล้อง ยกเท้าข้างหนึ่งขึ้นจากพื้น ยืนด้วยขาเดียว"}
 ];
 /* คะแนนทรงตัว 0-3 ตามท่าสูงสุดที่ยืนครบ 10 วินาที */
+/* ท่าที่ทำได้เมื่ออยู่คนเดียว
+   STEADI ให้ผู้ประเมินยืนข้าง จับแขน แล้วปล่อยเมื่อนิ่ง ในทุกท่า แต่การทดสอบนี้
+   ทำที่บ้าน จึงต้องเลือกว่าจะตัดท่าไหนเมื่อไม่มีใครอยู่ ท่าต่อเท้า (ท่าที่ 3) คือ
+   เกณฑ์คัดกรองหลักของ STEADI ตัดแล้วการทดสอบไม่เหลือค่า ส่วนท่ายืนขาเดียว
+   คือท่าที่ล้มบ่อยที่สุดและไม่ใช่เกณฑ์คัดกรอง จึงเป็นท่าเดียวที่ต้องมีคนอยู่ข้าง ๆ
+   คะแนนสูงสุดเมื่อทำคนเดียวจึงเป็น 2 ไม่ใช่ 3 และบันทึกไว้ว่าเพราะอะไร */
+var BAL_ALONE_MAX=3;   /* จำนวนท่าที่ทำได้เมื่ออยู่คนเดียว */
+function balStagesAllowed(){ return testAlone()?BAL_ALONE_MAX:BAL_STAGES.length }
 function balanceScore(passed){
   if(passed>=4)return {score:3, nm:"ทรงตัวดีมาก — ยืนขาเดียวได้ครบ"};
   if(passed>=3)return {score:2, nm:"ทรงตัวดี — ยืนต่อเท้าได้ครบ"};
@@ -6747,9 +6776,10 @@ async function startBalancePipeline(){
                                  :("เริ่มท่าที่ "+(stage+1)+" (แทนคำสั่งเสียงได้)");
     retryBtn.hidden=true;
     chip(stage,"on");
+    var nAll=balStagesAllowed();
     coach.innerHTML='<b>ท่าที่ '+(stage+1)+' · '+esc(st.nm)+'</b><br>'+esc(st.how);
-    setStatus("yellow","ท่าที่ "+(stage+1)+" จาก 4 — "+st.nm,false);
-    speak((retry?"ลองท่านี้ใหม่อีกครั้ง ":"ต่อไป ")+"ท่าที่ "+(stage+1)+" จาก 4 ท่า "+st.nm+" "+st.how+
+    setStatus("yellow","ท่าที่ "+(stage+1)+" จาก "+nAll+" — "+st.nm,false);
+    speak((retry?"ลองท่านี้ใหม่อีกครั้ง ":"ต่อไป ")+"ท่าที่ "+(stage+1)+" จาก "+nAll+" ท่า "+st.nm+" "+st.how+
           " เมื่อพร้อม กรุณาพูดว่า เริ่ม");
     if(BAL_ASK)BAL_ASK("setup");
   }
@@ -6876,6 +6906,16 @@ async function startBalancePipeline(){
       speak("บันทึกว่าผ่านแล้ว");
       stage++;
       if(stage>=BAL_STAGES.length){setTimeout(function(){finishAll("ทำครบทุกท่า")},2200);return}
+      /* ถึงท่าที่ต้องมีคนอยู่ข้าง ๆ แต่ทำคนเดียว — จบตรงนี้ บันทึกว่าทำไม ไม่ใช่แค่จดว่าคนเดียว */
+      if(stage>=balStagesAllowed()){
+        results[stage]={held:0, pass:false, stage:BAL_STAGES[stage].nm, attempts:0,
+          skipped:"alone", reason:"ไม่ได้ทำ — ทำคนเดียว ท่ายืนขาเดียวต้องมีผู้ดูแลอยู่ข้าง ๆ ตาม STEADI",
+          decidedBy:"system-safety"};
+        chip(stage,"",""+(stage+1)+" ต้องมีผู้ดูแล");
+        speak("ท่ายืนขาเดียวต้องมีผู้ดูแลอยู่ข้าง ๆ วันนี้ทำคนเดียว จึงไม่ทำท่านี้");
+        setTimeout(function(){finishAll("ข้ามท่ายืนขาเดียวเพราะทำคนเดียว")},2200);
+        return;
+      }
       setTimeout(function(){ if(S.screen==="balance")announce(false) },2200);
       return;
     }
@@ -6927,6 +6967,8 @@ async function startBalancePipeline(){
     var sc=balanceScore(passed);
     S.draft.balStages=results;
     S.draft.balPassed=passed;
+    S.draft.balAloneSkip=results.some(function(r){return r&&r.skipped==="alone"});
+    S.draft.balAlone=testAlone();
     S.draft.balScoreHint=sc.score;
     S.draft.balLabel=sc.nm;
     /* ค่าความโคลงเก็บไว้เชิงสำรวจเท่านั้น ไม่มีผลต่อคะแนนหรือระดับความเสี่ยง */
@@ -6939,16 +6981,17 @@ async function startBalancePipeline(){
       return r&&r.aiSuggest&&((r.aiSuggest==="pass")===!!r.pass)}).length;
     stopCam();
     audit("ทดสอบการทรงตัว 4 ท่า (CDC 4-Stage Balance Test)",
-      results.map(function(r,i){return r?((i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ "+(r.pass?"ผ่าน":"ไม่ผ่าน")+
+      results.map(function(r,i){return r?(r.skipped?((i+1)+"."+BAL_STAGES[i].nm+" ไม่ได้ทำ (ต้องมีผู้ดูแล)"):((i+1)+"."+BAL_STAGES[i].nm+" "+r.held.toFixed(1)+" วิ "+(r.pass?"ผ่าน":"ไม่ผ่าน"))+
         (r.aiSuggest&&(r.aiSuggest==="pass")!==!!r.pass?" (กล้องเห็นต่าง: "+r.aiSuggest+")":"")+
         (r.attempts>1?" ลอง "+r.attempts+" ครั้ง":"")):null})
              .filter(Boolean).join(" · ")+
-      " · ผ่าน "+passed+"/4 ท่า · "+sc.nm+" · ผลยืนยันโดยผู้ทดสอบ/ผู้ดูแล กล้องทำหน้าที่ช่วยจัดท่าและเฝ้าระวังเท่านั้น"+
+      " · ผ่าน "+passed+"/"+balStagesAllowed()+" ท่า"+(S.draft.balAloneSkip?" (ทำคนเดียว ไม่ทำท่ายืนขาเดียว)":"")+" · "+sc.nm+" · ผลยืนยันโดยผู้ทดสอบ/ผู้ดูแล กล้องทำหน้าที่ช่วยจัดท่าและเฝ้าระวังเท่านั้น"+
       (reason?" · "+reason:""));
+    var nDone=balStagesAllowed();
     setStatus(passed>=3?"green":(passed>=2?"yellow":"red"),
-      "ทดสอบเสร็จสมบูรณ์ — ยืนผ่าน "+passed+" จาก 4 ท่า · "+sc.nm,false);
-    coach.innerHTML='<b>ทดสอบเสร็จสมบูรณ์</b> — ยืนผ่าน '+passed+' จาก 4 ท่า';
-    speak("การทดสอบการทรงตัวเสร็จสมบูรณ์ ยืนผ่าน "+passed+" จาก 4 ท่า บันทึกเรียบร้อยแล้ว ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
+      "ทดสอบเสร็จสมบูรณ์ — ยืนผ่าน "+passed+" จาก "+nDone+" ท่า · "+sc.nm,false);
+    coach.innerHTML='<b>ทดสอบเสร็จสมบูรณ์</b> — ยืนผ่าน '+passed+' จาก '+nDone+' ท่า';
+    speak("การทดสอบการทรงตัวเสร็จสมบูรณ์ ยืนผ่าน "+passed+" จาก "+nDone+" ท่า บันทึกเรียบร้อยแล้ว ขั้นตอนต่อไป กรุณายืนยันความรู้สึกของท่านเอง");
     setTimeout(function(){ if(S.screen==="balance")go("assessQ",0) },3400);
   }
 
@@ -7076,10 +7119,16 @@ async function startBalancePipeline(){
   phase="intro";
   setStatus("yellow","ยืนห่างกล้อง 2–3 เมตร ให้เห็นทั้งตัว",false);
   coach.textContent="ยืนห่างกล้อง 2–3 เมตร หันข้างให้กล้อง ให้เห็นตั้งแต่ศีรษะถึงเท้า";
-  speak("การทดสอบการทรงตัวมีสี่ท่า ท่าละสิบวินาที ลืมตาตลอด ไม่ต้องจับสิ่งใด "+
-        "ควรมีผู้ดูแลยืนอยู่ข้าง ๆ เพื่อความปลอดภัย "+
+  /* บอกตั้งแต่ก่อนเริ่มว่าวันนี้จะทำกี่ท่า ไม่ปล่อยให้ไปเจอตอนถึงท่าที่ 4 */
+  var aloneNow=testAlone();
+  if(aloneNow)chip(BAL_ALONE_MAX,"",""+(BAL_ALONE_MAX+1)+" ต้องมีผู้ดูแล");
+  speak((aloneNow
+      ? "การทดสอบการทรงตัว วันนี้ทำคนเดียว จึงทำสามท่า ท่าละสิบวินาที ลืมตาตลอด ไม่ต้องจับสิ่งใด "+
+        "ท่ายืนขาเดียวต้องมีผู้ดูแลอยู่ข้าง ๆ จึงไม่ทำในวันนี้ "
+      : "การทดสอบการทรงตัวมีสี่ท่า ท่าละสิบวินาที ลืมตาตลอด ไม่ต้องจับสิ่งใด "+
+        "ผู้ดูแลยืนอยู่ข้าง ๆ พร้อมช่วยตลอดเวลา ")+
         "ยืนห่างจากกล้องประมาณสองถึงสามเมตร ให้เห็นทั้งตัว และยืนหันข้างให้กล้อง "+
-        "ระบบจะบอกท่าที่ต้องทำ แล้วรอให้ท่านพูดว่า เริ่ม จากนั้นจับเวลาให้ "+
+        "ระบบจะบอกท่าที่ต้องทำ แล้วรอคำสั่งเริ่ม จากนั้นจับเวลาให้ "+
         "เมื่อครบสิบวินาที ท่านหรือผู้ดูแลเป็นผู้ยืนยันว่าผ่านหรือไม่ผ่าน "+
         "พูดว่า ช่วยเหลือ เมื่อใดก็ได้ เพื่อฟังคำสั่งทั้งหมด");
   setTimeout(function(){ if(S.screen==="balance")announce(false) },6000);
