@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-09-03 09:05 |
+| วันที่ตรวจ | 2026-09-03 15:15 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -39,7 +39,7 @@
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:2329 · CareSignal-Vision.html:501 · supabase/01_schema.sql:79 |
 | F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:5030 · CareSignal-Vision.html:4813 · CareSignal-App.html:3547 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:2757 · CareSignal-Vision.html:777 · CareSignal-App.html:2552 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:664 · supabase/09_insurtech.sql:20 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:643 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |

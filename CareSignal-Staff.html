@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://esm.sh https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="CareSignal Staff — แอปเจ้าหน้าที่: คิวเคสของ Care Manager และพอร์ตความเสี่ยงของบริษัทประกัน เข้าได้เฉพาะบัญชีเจ้าหน้าที่ที่ได้รับสิทธิ์">
-<meta name="theme-color" content="#16337A">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="manifest" href="./manifest-staff.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon-64.png">
@@ -15,333 +15,313 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   ธีมเจ้าหน้าที่ — น้ำเงินเข้มทั้งแอป (ตามที่ผู้ใช้กำหนดสี)
-   เหตุผล: ให้เจ้าหน้าที่รู้ทันทีว่ากำลังถืออยู่ "แอปงาน" ไม่ใช่
-   แอปสมาชิกซึ่งพื้นสว่าง — ลดโอกาสสาธิตผิดแอปต่อหน้าลูกค้า
+   ธีมเจ้าหน้าที่ — พื้นขาว ตัดด้วยสีตามสถานะ แบบระบบงานคลินิก
+   ------------------------------------------------------------
+   หลักสามข้อที่ทุกกฎในไฟล์นี้ยึด
+     1. พื้นขาวหรือเทาอ่อนเสมอ ตัวหนังสือเข้ม — อ่านได้ทั้งบนจอเคาน์เตอร์ 32 นิ้ว
+        และบนมือถือกลางแดด ไม่พึ่งความสว่างของจอ
+     2. สีมีความหมายเดียว: แดง ส้ม เหลือง เขียว = ระดับความเสี่ยง · น้ำเงิน = สิ่งที่
+        กดได้หรือกำลังเลือกอยู่ · นอกจากนี้ไม่มีสี จึงไม่มีอะไรแย่งสายตาจากสถานะเคส
+     3. รูปทรงเรียบ ขอบเหลี่ยมมนน้อย เงาแทบไม่มี — ให้เหมือนระบบงานที่โรงพยาบาลใช้อยู่แล้ว
+        เจ้าหน้าที่ไม่ต้องเรียนรู้ภาษาภาพใหม่
    ============================================================ */
 :root{
-  --blue1:#24509F; --blue2:#1A3A85; --blue3:#12295F;
-  --surf:rgba(255,255,255,.07); --surf2:rgba(255,255,255,.11);
-  --ink:#F2F6FF; --ink2:#B9C7E8; --ink3:#8FA3CF;
-  --line:rgba(255,255,255,.17); --line2:rgba(255,255,255,.10);
-  --gold:#F5B93E; --goldink:#231a02;
-  --c4:#22B57F; --c3:#E3B341; --c2:#F08A3C; --c1:#F0524C;
+  --bg:#F4F6FA; --surf:#FFFFFF; --surf2:#F7F9FC;
+  --line:#D9E1EC; --line2:#EAEFF5;
+  --ink:#16233B; --ink2:#4F5F78; --ink3:#7B8AA1;
+  --brand:#1D4E9A; --brand2:#143A74; --brandt:#E8F0FB;
+  /* ชื่อเดิมคงไว้ให้โค้ดที่อ้างถึงยังทำงาน แต่ชี้ไปที่สีหลักแทนสีทอง */
+  --gold:var(--brand); --goldink:#FFFFFF;
+  --blue1:var(--brand); --blue2:var(--brand2); --blue3:var(--brand2);
+  --c1:#DC2626; --c2:#EA580C; --c3:#D97706; --c4:#16A34A;
+  --c1t:#FEE2E2; --c2t:#FFEDD5; --c3t:#FEF3C7; --c4t:#DCFCE7;
   --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,monospace;
-  --sh:0 2px 6px rgba(0,10,40,.25),0 12px 30px rgba(0,10,40,.28);
+  --sh:0 1px 2px rgba(22,35,59,.06),0 1px 0 rgba(22,35,59,.03);
+  --r:10px;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;font-family:var(--sans);color:var(--ink);font-size:15.5px;line-height:1.6;-webkit-font-smoothing:antialiased;
-  background:#16337A;
-  background:radial-gradient(130% 90% at 50% 28%, var(--blue1) 0%, var(--blue2) 55%, var(--blue3) 100%) fixed}
-.phone{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
-.bar{background:rgba(0,12,45,.35);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 18px 12px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px)}
-.bar b{font-size:16px;letter-spacing:-.01em}
-.bar b i{color:var(--gold);font-style:normal}
-.chip{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:rgba(255,255,255,.16);padding:4px 10px;border-radius:99px;letter-spacing:.06em}
-.view{flex:1;padding:18px 16px calc(86px + env(safe-area-inset-bottom))}
-.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh);margin-bottom:14px;backdrop-filter:blur(6px)}
-h1{font-size:21px;letter-spacing:-.02em;margin:2px 0 4px;color:#fff}
-h3{font-size:15.5px;margin:0 0 10px;color:#fff}
-.sub{font-size:13.5px;color:var(--ink2);margin:0 0 4px}
-.kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600}
-.hd{padding:6px 18px 18px}
+body{margin:0;font-family:var(--sans);color:var(--ink);font-size:14.5px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;background:var(--bg)}
+.phone{max-width:560px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+
+/* ---------- แถบบน: ขาว มีเส้นน้ำเงินคั่นด้านล่างเหมือนสถานีพยาบาล ---------- */
+.bar{background:var(--surf);color:var(--ink);padding:calc(10px + env(safe-area-inset-top)) 18px 10px;
+  display:flex;align-items:center;gap:10px;border-bottom:3px solid var(--brand)}
+.bar b{font-size:16px;letter-spacing:-.01em;color:var(--brand2)}
+.bar b i{color:var(--brand);font-style:normal}
+.chip{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:var(--surf2);
+  border:1px solid var(--line);color:var(--ink2);padding:3px 10px;border-radius:99px;letter-spacing:.04em}
+
+.view{flex:1;padding:16px 16px calc(86px + env(safe-area-inset-bottom))}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;
+  box-shadow:var(--sh);margin-bottom:12px}
+h1{font-size:21px;letter-spacing:-.02em;margin:2px 0 4px;color:var(--ink)}
+h3{font-size:14.5px;margin:0 0 10px;color:var(--ink);font-weight:700}
+.sub{font-size:13px;color:var(--ink2);margin:0 0 4px}
+.kick{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);font-weight:700}
+.hd{padding:6px 18px 14px}
 .hd p{color:var(--ink2);font-size:13px;margin:4px 0 0}
+
+/* ---------- ฟอร์ม ---------- */
 .field{margin-bottom:12px}
-.field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
-.field input{width:100%;font-family:inherit;font-size:16px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:rgba(0,14,50,.35);color:#fff}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+.field input,.field select,.field textarea,input.f,select.f,textarea.f{
+  width:100%;font-family:inherit;font-size:15px;padding:11px 12px;border:1px solid var(--line);
+  border-radius:8px;background:var(--surf);color:var(--ink)}
 .field input::placeholder{color:var(--ink3)}
-.cta{display:block;width:100%;border:0;border-radius:15px;background:var(--gold);color:var(--goldink);font-family:inherit;font-size:16.5px;font-weight:700;padding:15px;cursor:pointer;margin:6px 0;box-shadow:0 6px 18px rgba(0,10,40,.35)}
-.cta:disabled{opacity:.6}
-.ghostb{display:block;width:100%;border:1.5px solid var(--line);border-radius:15px;background:rgba(255,255,255,.06);color:var(--ink);font-family:inherit;font-size:14.5px;padding:12px;cursor:pointer;margin:8px 0}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--brand);outline-offset:0;border-color:var(--brand)}
+
+/* ---------- ปุ่ม: น้ำเงินคือกดได้ ไม่มีสีอื่นบนปุ่มหลัก ---------- */
+.cta{display:block;width:100%;border:0;border-radius:8px;background:var(--brand);color:#fff;
+  font-family:inherit;font-size:15.5px;font-weight:700;padding:13px;cursor:pointer;margin:6px 0}
+.cta:hover{background:var(--brand2)}
+.cta:disabled{opacity:.55;cursor:default}
+.ghostb{display:block;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surf);
+  color:var(--ink);font-family:inherit;font-size:14px;padding:11px;cursor:pointer;margin:8px 0}
+.ghostb:hover{background:var(--surf2)}
+
+/* ---------- แท็บล่าง (มือถือ) ---------- */
 .tabs[hidden]{display:none}
-.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(9,25,66,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line2);display:flex;max-width:520px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
-.tabs button{flex:1;border:0;background:none;font-family:inherit;font-size:11.5px;color:var(--ink3);padding:9px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
-.tabs button[aria-selected="true"]{color:var(--gold);font-weight:600}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surf);border-top:1px solid var(--line);
+  display:flex;max-width:560px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;border:0;background:none;font-family:inherit;font-size:11.5px;color:var(--ink3);
+  padding:9px 4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button[aria-selected="true"]{color:var(--brand);font-weight:700}
 .tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:600;color:#fff}
-.rowline{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line2);font-size:13.5px}
+
+/* ---------- ป้ายและแถว ---------- */
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;color:#fff}
+.rowline{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line2);font-size:13.5px}
 .rowline:last-child{border-bottom:0}
 .rowline .k{color:var(--ink2)}
-.rowline .v{font-family:var(--mono);font-weight:600;text-align:right;color:#fff}
-.case{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--surf2)}
+.rowline .v{font-family:var(--mono);font-weight:600;text-align:right;color:var(--ink)}
+.case{border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px;background:var(--surf)}
 .case .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .case .who{font-family:var(--mono);font-size:12.5px;color:var(--ink2)}
 .flag{font-size:12.5px;color:var(--ink2);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:6px 0}
 .btnrow{display:flex;gap:8px;margin-top:10px}
-.btnrow button{flex:1;border-radius:11px;font-family:inherit;font-size:13.5px;font-weight:600;padding:10px;cursor:pointer}
-.ok{border:0;background:var(--c4);color:#fff}
-.no{border:1.5px solid var(--line);background:transparent;color:var(--ink2)}
+.btnrow button{flex:1;border-radius:8px;font-family:inherit;font-size:13.5px;font-weight:600;padding:10px;cursor:pointer}
+.ok{border:0;background:var(--brand);color:#fff}
+.no{border:1px solid var(--line);background:var(--surf);color:var(--ink2)}
 .empty{text-align:center;color:var(--ink3);font-size:14px;padding:28px 10px}
-.notice{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:13px;padding:13px 15px;font-size:13px;color:var(--ink2);margin-bottom:14px}
-.notice b{color:#fff}
-.tiny{font-size:11.5px;color:var(--ink2);line-height:1.65;margin:10px 0 0}
-/* ---------- แถบขั้นตอนตาม STEADI ----------
-   บอกว่าเคสอยู่ช่วงไหนของวงจร ทบทวน → ติดต่อ/วางแผน → ส่งต่อ → ติดตาม
-   เจ้าหน้าที่จะได้รู้ทันทีว่า "งานถัดไปเป็นงานประเภทไหน" ไม่ต้องอ่านสถานะดิบ */
+.notice{background:var(--brandt);border:1px solid #C9DAF3;border-radius:var(--r);padding:12px 15px;font-size:13px;color:var(--ink2);margin-bottom:12px}
+.notice b{color:var(--ink)}
+.tiny{font-size:11.5px;color:var(--ink2);line-height:1.6;margin:10px 0 0}
+
+/* ---------- แถบขั้นตอนตาม STEADI ---------- */
 .stagebar{display:flex;gap:4px;margin:8px 0 10px}
-.stg{flex:1;text-align:center;font-size:11px;padding:6px 3px;border-radius:9px;
-  background:rgba(255,255,255,.06);color:var(--ink3);border:1px solid var(--line2);line-height:1.3}
-.stg[data-on="1"]{background:var(--gold);color:var(--goldink);font-weight:700;border-color:var(--gold)}
-.stg[data-on="done"]{background:rgba(34,181,127,.18);color:var(--c4);border-color:rgba(34,181,127,.4)}
-/* ป้ายความสำคัญ: ต้องมีไอคอน + ข้อความ + การกระทำเสมอ ไม่ใช้สีลำพัง
-   เพราะผู้ใช้ที่แยกสีได้ยากจะอ่านไม่ออกว่าเคสไหนด่วน */
-.prio{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;
-  font-size:11.5px;font-weight:700;color:#fff}
+.stg{flex:1;text-align:center;font-size:11px;padding:6px 3px;border-radius:6px;
+  background:var(--surf2);color:var(--ink3);border:1px solid var(--line2);line-height:1.3}
+.stg[data-on="1"]{background:var(--brand);color:#fff;font-weight:700;border-color:var(--brand)}
+.stg[data-on="done"]{background:var(--c4t);color:#15803D;border-color:#BBF7D0}
+
+/* ป้ายความสำคัญ: ไอคอน + ข้อความ + การกระทำเสมอ ไม่ใช้สีลำพัง */
+.prio{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:11.5px;font-weight:700;color:#fff}
 .prioact{font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.5}
-.grp{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.05em;margin:16px 0 6px}
-/* ---------- การ์ดงานหนึ่งชิ้น ----------
-   แถวหนึ่ง = งานหนึ่งชิ้นที่ต้องลงมือทำ ไม่ใช่รายชื่อคน
-   เจ้าหน้าที่เปิดหน้าเดียวแล้วรู้ว่าวันนี้ต้องทำอะไรบ้าง */
-.work{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);
-  border-radius:13px;padding:13px 15px;margin-bottom:10px;background:var(--surf2)}
+.grp{font-size:12px;font-weight:700;color:var(--brand);letter-spacing:.05em;margin:16px 0 6px}
+
+/* ---------- การ์ดงานหนึ่งชิ้น ---------- */
+.work{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:8px;background:var(--surf)}
 .work .wm{flex:1;min-width:0}
-.work .wt{font-weight:600;font-size:14.5px;color:#fff;margin-bottom:3px}
+.work .wt{font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:3px}
 .work .ww{font-size:12.5px;color:var(--ink2)}
-.work .wd{text-align:right;white-space:nowrap;font-size:12px}
-.work .wd b{display:block;font-family:var(--mono);font-size:13px}
-.work[data-late="1"]{border-color:rgba(240,82,76,.55);background:rgba(240,82,76,.10)}
-.work .claim{border:0;border-radius:10px;background:var(--gold);color:var(--goldink);
-  font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;margin-top:7px}
+.work .wd{text-align:right;white-space:nowrap;font-size:12px;color:var(--ink2)}
+.work .wd b{display:block;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.work[data-late="1"]{border-color:#FCA5A5;background:var(--c1t)}
+.work .claim{border:0;border-radius:6px;background:var(--brand);color:#fff;font-family:inherit;
+  font-size:12.5px;font-weight:700;padding:7px 13px;cursor:pointer;margin-top:7px}
 .demoprog{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 12px}
-.demoprog .dp{font-size:11px;padding:4px 9px;border-radius:99px;border:1px solid var(--line2);
-  background:rgba(255,255,255,.05);color:var(--ink3);white-space:nowrap}
-.demoprog .dp[data-st="done"]{background:rgba(34,181,127,.18);border-color:rgba(34,181,127,.45);color:var(--c4)}
-.demoprog .dp[data-st="now"]{background:var(--gold);border-color:var(--gold);color:var(--goldink);font-weight:700}
-.demopanel{border:1.5px dashed var(--gold);background:rgba(245,185,62,.08);border-radius:14px;
-  padding:14px 16px;margin-bottom:14px}
-.demopanel h3{color:var(--gold);margin:0 0 4px;font-size:15px}
+.demoprog .dp{font-size:11px;padding:4px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surf);color:var(--ink3);white-space:nowrap}
+.demoprog .dp[data-st="done"]{background:var(--c4t);border-color:#BBF7D0;color:#15803D}
+.demoprog .dp[data-st="now"]{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.demopanel{border:1px dashed var(--brand);background:var(--brandt);border-radius:var(--r);padding:13px 16px;margin-bottom:12px}
+.demopanel h3{color:var(--brand);margin:0 0 4px;font-size:14.5px}
 .demopanel .btnrow{margin-top:10px}
-.sheet{position:fixed;inset:0;background:rgba(4,12,36,.72);backdrop-filter:blur(4px);z-index:200;
-  display:grid;place-items:start center;padding:20px;overflow:auto}
+.sheet{position:fixed;inset:0;background:rgba(22,35,59,.45);z-index:200;display:grid;place-items:start center;padding:20px;overflow:auto}
 .sheet .card{max-width:640px;width:100%;margin:0 0 40px}
 .sheet h3{margin:0 0 4px}
 .pkg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
-.pkg .pk{background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:11px;padding:10px 12px}
+.pkg .pk{background:var(--surf2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px}
 .pkg .pk .l{font-size:11px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
-.pkg .pk .v{font-family:var(--mono);font-size:15px;font-weight:700;color:#fff;margin-top:2px}
+.pkg .pk .v{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink);margin-top:2px}
 .pkg .pk .v.w{color:var(--c2)}
 .pkg .pk .t{font-size:11.5px;color:var(--ink2)}
 .qs{margin:8px 0}
-.qs label{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;padding:7px 0;border-bottom:1px dashed var(--line2);cursor:pointer}
+.qs label{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;padding:7px 0;border-bottom:1px solid var(--line2);cursor:pointer}
 .qs input[type=checkbox]{margin-top:4px;flex:none}
 .tl{position:relative;padding-left:22px;margin:6px 0}
 .tl::before{content:"";position:absolute;left:7px;top:4px;bottom:4px;width:2px;background:var(--line)}
 .tl .ev{position:relative;padding:6px 0 10px;font-size:13px}
-.tl .ev::before{content:"";position:absolute;left:-19px;top:10px;width:10px;height:10px;border-radius:99px;
-  background:var(--ink3);border:2px solid var(--blue2)}
+.tl .ev::before{content:"";position:absolute;left:-19px;top:10px;width:10px;height:10px;border-radius:99px;background:var(--ink3);border:2px solid var(--surf)}
 .tl .ev[data-k="signal"]::before{background:var(--c1)}
-.tl .ev[data-k="refer"]::before{background:var(--gold)}
+.tl .ev[data-k="refer"]::before{background:var(--brand)}
 .tl .ev[data-k="review"]::before{background:var(--c4)}
-.tl .ev[data-k="consent"]::before{background:#8B5CF6}
+.tl .ev[data-k="consent"]::before{background:#7C3AED}
 .tl .ev[data-k="followup"]::before{background:var(--c3)}
 .tl .ev .at{font-family:var(--mono);font-size:11px;color:var(--ink3)}
-.tl .ev b{display:block;color:#fff;font-size:13.5px}
+.tl .ev b{display:block;color:var(--ink);font-size:13.5px}
 .tl .ev span{color:var(--ink2)}
-.rv{border:1.5px solid var(--c4);background:rgba(34,181,127,.10);border-radius:13px;padding:13px 15px;margin:10px 0;font-size:13.5px}
-.rv b{color:var(--c4);display:block;margin-bottom:4px}
+.rv{border:1px solid #BBF7D0;background:var(--c4t);border-radius:var(--r);padding:12px 15px;margin:10px 0;font-size:13.5px}
+.rv b{color:#15803D;display:block;margin-bottom:4px}
 .rv .row{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px}
 .rv .row span:nth-child(odd){color:var(--ink3)}
-.orgbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;
-  background:rgba(255,255,255,.07);border:1px solid var(--line2);border-radius:11px;
-  padding:8px 12px;margin-bottom:12px;color:var(--ink2)}
-.orgbar b{color:#fff}
-.orgbar button{margin-left:auto;border:1px solid var(--line);background:none;color:var(--gold);
-  font-family:inherit;font-size:12px;padding:4px 10px;border-radius:9px;cursor:pointer}
+.orgbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;background:var(--surf);
+  border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:12px;color:var(--ink2)}
+.orgbar b{color:var(--ink)}
+.orgbar button{margin-left:auto;border:1px solid var(--line);background:var(--surf);color:var(--brand);
+  font-family:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer}
 .mstat{font-size:12.5px;color:var(--ink2);margin-top:8px;line-height:1.6}
-.mstat b{color:#fff}
+.mstat b{color:var(--ink)}
 .mstat .bad{color:var(--c2)}
-.consent{border:1.5px solid var(--gold);background:rgba(245,185,62,.10);border-radius:13px;
-  padding:13px 15px;margin:10px 0;font-size:13.5px}
-.consent b{color:var(--gold);display:block;margin-bottom:4px}
+.consent{border:1px solid #C9DAF3;background:var(--brandt);border-radius:var(--r);padding:12px 15px;margin:10px 0;font-size:13.5px}
+.consent b{color:var(--brand);display:block;margin-bottom:4px}
 .consent .btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.consent button{border:0;border-radius:10px;padding:8px 14px;font-family:inherit;font-size:13px;
-  font-weight:700;cursor:pointer;background:var(--gold);color:var(--goldink)}
-.consent button.wait{background:rgba(255,255,255,.14);color:var(--ink)}
+.consent button{border:0;border-radius:6px;padding:8px 14px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+.consent button.wait{background:var(--surf);color:var(--ink);border:1px solid var(--line)}
 .consent .cd{font-family:var(--mono);font-size:12.5px;color:var(--ink2);margin-top:6px}
 .locked{filter:blur(4px);pointer-events:none;user-select:none}
-.newtag{display:inline-block;font-size:10.5px;font-weight:700;background:var(--gold);
-  color:var(--goldink);padding:1px 7px;border-radius:99px;margin-left:6px}
-.warnbox{background:rgba(240,82,76,.16);border:1px solid rgba(240,82,76,.5);border-radius:13px;padding:13px 15px;font-size:13.5px;color:#FFD9D7;margin-bottom:14px}
-.warnbox b{color:#fff}
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));background:#fff;color:#12295F;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;max-width:88vw;text-align:center;box-shadow:0 10px 30px rgba(0,10,40,.4)}
+.newtag{display:inline-block;font-size:10.5px;font-weight:700;background:var(--brand);color:#fff;padding:1px 7px;border-radius:99px;margin-left:6px}
+.warnbox{background:var(--c1t);border:1px solid #FCA5A5;border-radius:var(--r);padding:12px 15px;font-size:13.5px;color:#991B1B;margin-bottom:12px}
+.warnbox b{color:#7F1D1D}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(86px + env(safe-area-inset-bottom));
+  background:var(--ink);color:#fff;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;z-index:300;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(22,35,59,.25)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-.mixbar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:8px 0 4px;background:rgba(255,255,255,.1)}
+.mixbar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin:8px 0 4px;background:var(--line2)}
 .mixbar i{display:block;height:100%}
+
+/* ---------- ตาราง: หัวเทาอ่อน เส้นบางสม่ำเสมอ ---------- */
 table{width:100%;border-collapse:collapse;font-size:12.5px;color:var(--ink)}
-th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line2)}
-th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line2)}
+th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);background:var(--surf2);font-weight:700}
 td.num{font-family:var(--mono);white-space:nowrap}
 .tblwrap{overflow-x:auto}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.kpi{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:center;cursor:pointer}
-.kpi[aria-pressed="true"]{border-color:var(--gold);background:rgba(245,185,62,.14)}
-.kpi b{display:block;font-size:22px;font-family:var(--mono);color:#fff;line-height:1.2}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:12px 10px;text-align:center;cursor:pointer}
+.kpi[aria-pressed="true"]{border-color:var(--brand);background:var(--brandt)}
+.kpi b{display:block;font-size:24px;font-family:var(--mono);color:var(--ink);line-height:1.2}
 .kpi span{font-size:11px;color:var(--ink2);line-height:1.3;display:block;margin-top:2px}
 .seg{display:flex;gap:6px;margin-bottom:12px}
-.seg button{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink2);
-  font-family:inherit;font-size:13px;padding:9px;border-radius:11px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--gold);color:var(--goldink);border-color:var(--gold);font-weight:600}
+.seg button{flex:1;border:1px solid var(--line);background:var(--surf);color:var(--ink2);font-family:inherit;font-size:13px;padding:8px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600}
 .spark{display:block;width:100%;height:44px;margin:2px 0 6px}
+
 /* ============================================================
-   โครงจอกว้าง — เจ้าหน้าที่ทำงานบนคอมพิวเตอร์เป็นหลัก
-   ------------------------------------------------------------
-   เดิมคอนโซลถูกบีบไว้ที่ 520px เหมือนแอปมือถือ พอเปิดบนจอคอม
-   จะเหลือแถบแคบกลางจอ ดูไม่เป็นระบบงานจริง
-   ตั้งแต่ 1040px ขึ้นไปจึงเปลี่ยนเป็นแถบเมนูข้าง + พื้นที่ทำงานกว้าง
-   แบบโปรแกรมบริหารคลินิก ส่วนบนมือถือยังเป็นแท็บล่างเหมือนเดิม
+   โครงจอกว้าง — เมนูข้างสีขาว พื้นที่ทำงานสีเทาอ่อน
    ============================================================ */
 .side{display:none}
 @media(min-width:1040px){
-  .phone{max-width:1400px;display:grid;
-    grid-template-columns:236px minmax(0,1fr);
+  .phone{max-width:1440px;display:grid;
+    grid-template-columns:232px minmax(0,1fr);
     grid-template-areas:"bar bar" "side hd" "side view";
     grid-template-rows:auto auto 1fr;align-items:start}
-  .bar{grid-area:bar;padding:12px 24px}
+  .bar{grid-area:bar;padding:11px 24px}
   .hd{grid-area:hd;padding:20px 28px 10px}
   .view{grid-area:view;padding:6px 28px 40px}
   .tabs{display:none}
   .side{grid-area:side;display:block;position:sticky;top:0;align-self:stretch;
-    background:rgba(0,12,45,.30);border-right:1px solid var(--line2);
-    padding:20px 12px;min-height:calc(100dvh - 52px)}
+    background:var(--surf);border-right:1px solid var(--line);padding:16px 10px;min-height:calc(100dvh - 52px)}
   .side[hidden]{display:none}
-  .side .sgrp{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
-    color:var(--ink3);font-weight:600;margin:16px 10px 6px}
+  .side .sgrp{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:700;margin:16px 12px 6px}
   .side .sgrp:first-child{margin-top:0}
   .side button{display:flex;align-items:center;gap:10px;width:100%;border:0;cursor:pointer;
-    background:none;font-family:inherit;font-size:14px;color:var(--ink2);
-    padding:10px 12px;border-radius:11px;text-align:left;margin-bottom:2px}
-  .side button:hover{background:rgba(255,255,255,.07);color:#fff}
-  .side button[aria-selected="true"]{background:var(--gold);color:var(--goldink);font-weight:700}
-  .side button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;
-    stroke-linecap:round;stroke-linejoin:round;flex:none}
-  .side .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;
-    background:rgba(255,255,255,.14);padding:1px 7px;border-radius:99px}
-  .side button[aria-selected="true"] .cnt{background:rgba(0,0,0,.2)}
-  /* การ์ดเรียงหลายคอลัมน์บนจอกว้าง ไม่ยืดเป็นแถบยาวอ่านยาก */
+    background:none;font-family:inherit;font-size:14px;color:var(--ink2);padding:9px 12px;
+    border-radius:6px;text-align:left;margin-bottom:2px;border-left:3px solid transparent}
+  .side button:hover{background:var(--surf2);color:var(--ink)}
+  .side button[aria-selected="true"]{background:var(--brandt);color:var(--brand);font-weight:700;border-left-color:var(--brand)}
+  .side button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .side .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--c1);color:#fff;padding:1px 7px;border-radius:99px}
   .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:0 16px;align-items:start}
   .wide{grid-column:1/-1}
 }
 /* ---------- ตารางแบบระบบงาน ---------- */
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{text-align:left;font-weight:600;color:var(--ink3);font-size:10.5px;
-  letter-spacing:.05em;text-transform:uppercase;padding:8px 7px;border-bottom:1px solid var(--line)}
-.tbl td{padding:9px 7px;border-bottom:1px solid var(--line2);vertical-align:top}
-.tbl th:first-child,.tbl td:first-child{padding-left:0}
-.tbl th:last-child,.tbl td:last-child{padding-right:0}
+.tbl th{text-align:left;font-weight:700;color:var(--ink2);font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+  padding:8px 8px;border-bottom:1px solid var(--line);background:var(--surf2)}
+.tbl td{padding:9px 8px;border-bottom:1px solid var(--line2);vertical-align:top}
 .tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover td{background:var(--surf2)}
 .tbl .num{font-family:var(--mono);text-align:right;white-space:nowrap}
 .tblwrap{overflow-x:auto;margin:0 -4px}
 /* ---------- ท่อสถานะการส่งต่อ ---------- */
-.pipe{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
-.pipe .pn{flex:1 0 118px;background:var(--surf2);border:1px solid var(--line);
-  border-radius:12px;padding:11px 12px;text-align:left}
+.pipe{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px}
+.pipe .pn{flex:1 0 118px;background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:10px 12px;text-align:left}
 .pipe .pn .pl{font-size:11.5px;color:var(--ink2);line-height:1.35;min-height:31px}
-.pipe .pn .pv{font-family:var(--mono);font-size:21px;font-weight:700;color:#fff;margin-top:4px}
+.pipe .pn .pv{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--ink);margin-top:4px}
 .pipe .pn .pt{font-size:10.5px;color:var(--ink3);margin-top:2px}
-.pipe .pn[data-alert="1"]{border-color:rgba(240,82,76,.6);background:rgba(240,82,76,.12)}
-.chip2{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.12);color:var(--ink2);margin:0 4px 4px 0}
-.linkbtn{border:0;background:none;color:var(--gold);font-family:inherit;font-size:12.5px;cursor:pointer;padding:0}
-/* ---------- หน้าเปิดแอป ----------
-   ใช้สีเดียวกับ background_color ใน manifest เพื่อให้ต่อจาก splash ของระบบ
-   ได้เนียน ไม่กะพริบขาว-น้ำเงิน และบอกสถานะว่ากำลังทำอะไรอยู่ */
-.boot{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:18px;background:#16337A;color:#fff;
-  padding:24px;text-align:center}
-.boot img{width:92px;height:92px;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
-.boot .bt{font-size:21px;font-weight:700;letter-spacing:-.01em}
-.boot .bt i{color:#F5B93E;font-style:normal}
-.boot .bs{font-size:14px;color:#B9C7E8;line-height:1.6;max-width:280px}
-.boot .bar{width:132px;height:5px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
-.boot .bar i{display:block;width:40%;height:100%;border-radius:99px;background:#F5B93E;
-  animation:bootslide 1.15s ease-in-out infinite}
+.pipe .pn[data-alert="1"]{border-color:#FCA5A5;background:var(--c1t)}
+.chip2{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--surf2);border:1px solid var(--line2);color:var(--ink2);margin:0 4px 4px 0}
+.linkbtn{border:0;background:none;color:var(--brand);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
+/* ---------- หน้าเปิดแอป: สีเดียวกับ manifest ---------- */
+.boot{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:#FFFFFF;color:var(--ink);padding:24px;text-align:center}
+.boot img{width:92px;height:92px}
+.boot .bt{font-size:21px;font-weight:700;letter-spacing:-.01em;color:var(--brand2)}
+.boot .bt i{color:var(--brand);font-style:normal}
+.boot .bs{font-size:14px;color:var(--ink2);line-height:1.6;max-width:280px}
+.boot .bar{width:132px;height:5px;border-radius:99px;background:var(--line2);overflow:hidden;border:0;padding:0}
+.boot .bar i{display:block;width:40%;height:100%;border-radius:99px;background:var(--brand);animation:bootslide 1.15s ease-in-out infinite}
 @keyframes bootslide{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
 @media(prefers-reduced-motion:reduce){.boot .bar i{animation:none;width:100%}}
+
 /* ============================================================
-   มุมมองวอร์ด — คอนโซลเต็มจอสำหรับจอใหญ่ที่เคาน์เตอร์พยาบาล
-   ------------------------------------------------------------
-   ต่างจากหน้าคิวเคสเดิมตรงที่หน้านั้นออกแบบให้เลื่อนอ่านทีละเคสบนมือถือ
-   ส่วนหน้านี้ออกแบบให้ "ยืนดูจากระยะสองเมตรแล้วรู้ทันทีว่าต้องไปที่ใครก่อน"
-   จึงใช้การ์ดกริดหนาแน่น แถบสีตามระดับ และแถบสถานะวงจรงานอยู่บนสุด
-
-   ทำไมต้องเต็มจอไม่ใช้กรอบ .phone เดิม: กรอบเดิมกว้างสุด 520px ซึ่งเหมาะกับ
-   การถือมือถือ แต่คอนโซลที่เคาน์เตอร์คือจอ 24-32 นิ้ว ถ้าใช้กรอบเดิมจะเหลือ
-   พื้นที่ว่างสองข้างมหาศาลและเห็นเคสได้ครั้งละไม่กี่ใบ
+   มุมมองวอร์ด — จอเคาน์เตอร์: พื้นเทาอ่อน การ์ดขาว หัวการ์ดเป็นสีระดับ
    ============================================================ */
-.ward{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;
-  background:#0E1B3D;color:#EAF0FF;font-size:14px}
+.ward{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#EEF2F7;color:var(--ink);font-size:14px}
 .ward *{box-sizing:border-box}
-
-/* ---------- แถบบน ---------- */
-.wtop{display:flex;align-items:center;gap:0;background:#fff;color:#16233B;flex:none;
-  border-bottom:3px solid #12295F}
-.wtop .brand{display:flex;align-items:center;gap:9px;padding:10px 18px;border-right:1px solid #E3EAF6}
-.wtop .brand b{font-size:17px;letter-spacing:-.01em}
-.wtop .brand b i{color:#D97706;font-style:normal}
-.wtop .stat{display:flex;align-items:center;gap:7px;padding:10px 18px;border-right:1px solid #E3EAF6;
-  font-size:14.5px;white-space:nowrap}
-.wtop .stat u{text-decoration:none;font-weight:700;font-size:17px}
+.wtop{display:flex;align-items:center;gap:0;background:var(--surf);color:var(--ink);flex:none;border-bottom:3px solid var(--brand)}
+.wtop .brand{display:flex;align-items:center;gap:9px;padding:10px 18px;border-right:1px solid var(--line)}
+.wtop .brand b{font-size:17px;letter-spacing:-.01em;color:var(--brand2)}
+.wtop .brand b i{color:var(--brand);font-style:normal}
+.wtop .stat{display:flex;align-items:center;gap:7px;padding:10px 18px;border-right:1px solid var(--line);font-size:14.5px;white-space:nowrap;color:var(--ink2)}
+.wtop .stat u{text-decoration:none;font-weight:700;font-size:17px;color:var(--ink)}
 .wtop .clock{margin-left:auto;text-align:right;padding:8px 16px;line-height:1.25}
-.wtop .clock .d{font-size:12.5px;color:#5B6B84}
+.wtop .clock .d{font-size:12.5px;color:var(--ink2)}
 .wtop .clock .t{font-size:24px;font-weight:700;letter-spacing:-.02em}
-.wtop .port{background:#12295F;color:#fff;padding:12px 26px;font-size:20px;font-weight:700;
-  border-radius:0 0 0 26px;white-space:nowrap}
-
-/* ---------- แถบวงจรงาน ---------- */
-.wflow{display:flex;gap:0;background:#0A1530;flex:none;overflow-x:auto}
-.wflow button{flex:1;min-width:132px;background:transparent;border:0;border-bottom:3px solid transparent;
-  color:#9FB2DA;font:inherit;padding:9px 10px;cursor:pointer;text-align:center;white-space:nowrap}
-.wflow button b{display:block;font-size:19px;line-height:1.1;color:#fff}
+.wtop .port{background:var(--brand2);color:#fff;padding:12px 26px;font-size:20px;font-weight:700;border-radius:0 0 0 22px;white-space:nowrap}
+.wflow{display:flex;gap:0;background:var(--surf);flex:none;overflow-x:auto;border-bottom:1px solid var(--line)}
+.wflow button{flex:1;min-width:132px;background:transparent;border:0;border-bottom:3px solid transparent;color:var(--ink2);
+  font:inherit;padding:9px 10px;cursor:pointer;text-align:center;white-space:nowrap}
+.wflow button b{display:block;font-size:19px;line-height:1.1;color:var(--ink)}
 .wflow button span{font-size:12px}
-.wflow button[aria-pressed="true"]{background:rgba(255,255,255,.07);border-bottom-color:#F5B301;color:#fff}
+.wflow button[aria-pressed="true"]{background:var(--brandt);border-bottom-color:var(--brand);color:var(--brand)}
+.wflow button[aria-pressed="true"] b{color:var(--brand)}
 .wflow button:disabled{opacity:.45;cursor:default}
-
-/* ---------- พื้นที่กลาง ---------- */
 .wbody{flex:1;display:grid;grid-template-columns:1fr 268px;gap:0;min-height:0}
-.wgrid{overflow:auto;padding:12px;display:grid;gap:10px;align-content:start;
-  grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
-.wempty{grid-column:1/-1;padding:40px;text-align:center;color:#9FB2DA}
-
-/* ---------- การ์ดเคส ---------- */
-.wcard{background:#fff;color:#16233B;border-radius:9px;overflow:hidden;text-align:left;
-  border:0;font:inherit;cursor:pointer;display:flex;flex-direction:column;
-  box-shadow:0 1px 3px rgba(0,0,0,.25)}
-.wcard:hover{box-shadow:0 0 0 2px #F5B301,0 2px 8px rgba(0,0,0,.3)}
-.wcard .hd{display:flex;align-items:stretch;gap:0}
-.wcard .code{background:#12295F;color:#fff;padding:5px 9px;font-weight:700;font-size:13px;letter-spacing:.01em}
+.wgrid{overflow:auto;padding:12px;display:grid;gap:10px;align-content:start;grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.wempty{grid-column:1/-1;padding:40px;text-align:center;color:var(--ink3)}
+.wcard{background:var(--surf);color:var(--ink);border-radius:8px;overflow:hidden;text-align:left;border:1px solid var(--line);
+  font:inherit;cursor:pointer;display:flex;flex-direction:column;box-shadow:var(--sh)}
+.wcard:hover{box-shadow:0 0 0 2px var(--brand)}
+.wcard .hd{display:flex;align-items:stretch;gap:0;padding:0}
+.wcard .code{background:var(--brand2);color:#fff;padding:5px 9px;font-weight:700;font-size:13px;letter-spacing:.01em}
 .wcard .lv{flex:1;padding:5px 9px;font-size:12px;font-weight:700;color:#fff;text-align:right;white-space:nowrap}
 .wcard .bd{padding:8px 10px 9px}
 .wcard .nm{font-weight:700;font-size:15px;line-height:1.3}
-.wcard .sub{font-size:12px;color:#5B6B84;margin-top:1px}
-.wcard .act{font-size:12.5px;color:#16233B;margin-top:6px;font-weight:600}
+.wcard .sub{font-size:12px;color:var(--ink2);margin-top:1px}
+.wcard .act{font-size:12.5px;color:var(--ink);margin-top:6px;font-weight:600}
 .wcard .due{font-size:12px;margin-top:3px}
 .wcard .ics{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
-.wcard .ics span{font-size:11px;background:#EEF3FB;color:#3A5480;border-radius:5px;padding:2px 6px}
-.wcard .ics span.on{background:#FEF3C7;color:#92400E}
-
-/* ---------- พาเนลขวา ---------- */
-.wside{background:#0A1530;border-left:1px solid rgba(255,255,255,.1);overflow:auto;padding:12px}
-.wside h4{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#8FA3CF}
-.wside .box{background:rgba(255,255,255,.06);border-radius:9px;padding:11px;margin-bottom:12px}
+.wcard .ics span{font-size:11px;background:var(--surf2);color:var(--ink2);border:1px solid var(--line2);border-radius:5px;padding:2px 6px}
+.wcard .ics span.on{background:var(--c3t);color:#92400E;border-color:#FDE68A}
+.wside{background:var(--surf);border-left:1px solid var(--line);overflow:auto;padding:12px}
+.wside h4{margin:0 0 8px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.wside .box{background:var(--surf2);border:1px solid var(--line2);border-radius:8px;padding:11px;margin-bottom:12px}
 .wsum{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.wsum div{background:rgba(255,255,255,.05);border-radius:7px;padding:8px 9px}
+.wsum div{background:var(--surf);border:1px solid var(--line2);border-radius:6px;padding:8px 9px}
 .wsum b{display:block;font-size:21px;line-height:1.1}
-.wsum span{font-size:11.5px;color:#9FB2DA}
-.wnote{font-size:12.5px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);line-height:1.5}
+.wsum span{font-size:11.5px;color:var(--ink2)}
+.wnote{font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--line2);line-height:1.5}
 .wnote:last-child{border-bottom:0}
-.wnote b{display:block;font-size:12px;color:#F5B301}
-
-/* ---------- แถบล่าง ---------- */
-.wtabs{display:flex;gap:0;background:#D8DEE9;flex:none;padding:5px 8px;align-items:center}
-.wtabs button{background:#fff;border:1px solid #B9C4D6;color:#16233B;font:inherit;font-size:13.5px;
-  padding:7px 15px;margin-right:6px;border-radius:4px;cursor:pointer}
-.wtabs button[aria-pressed="true"]{background:#12295F;color:#fff;border-color:#12295F;font-weight:600}
+.wnote b{display:block;font-size:12px;color:var(--c1)}
+.wtabs{display:flex;gap:0;background:#DDE3EC;flex:none;padding:5px 8px;align-items:center;border-top:1px solid var(--line)}
+.wtabs button{background:var(--surf);border:1px solid #B9C4D6;color:var(--ink);font:inherit;font-size:13.5px;padding:7px 15px;margin-right:6px;border-radius:4px;cursor:pointer}
+.wtabs button[aria-pressed="true"]{background:var(--brand2);color:#fff;border-color:var(--brand2);font-weight:600}
 .wtabs .sp{margin-left:auto}
-.wtabs .exit{background:#12295F;color:#fff;border-color:#12295F}
-
-/* แถบสรุประดับความเสี่ยงสำหรับจอแคบ — พาเนลขวาถูกซ่อนบนมือถือ
-   ตัวเลขสี่ตัวนี้จึงต้องมีที่อยู่ใหม่ ไม่ใช่หายไปเฉย ๆ */
+.wtabs .exit{background:var(--brand2);color:#fff;border-color:var(--brand2)}
 .wstrip{display:none}
 @media(max-width:900px){
   .wbody{grid-template-columns:1fr}
@@ -358,13 +338,12 @@ td.num{font-family:var(--mono);white-space:nowrap}
   .wgrid{grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px;padding:9px}
   .wcard .nm{font-size:14px}
   .wstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:9px 9px 0;flex:none}
-  .wstrip div{background:rgba(255,255,255,.07);border-radius:8px;padding:7px 6px;text-align:center}
+  .wstrip div{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:7px 6px;text-align:center}
   .wstrip b{display:block;font-size:18px;line-height:1.15}
-  .wstrip span{font-size:10.5px;color:#9FB2DA}
+  .wstrip span{font-size:10.5px;color:var(--ink2)}
   .wtabs{overflow-x:auto}
   .wtabs button{white-space:nowrap;font-size:12.5px;padding:7px 11px}
 }
-
 </style>
 </head>
 <body>
@@ -881,7 +860,7 @@ function wardPaint(){
 
   el.innerHTML=
   '<div class="wtop">'+
-    '<div class="brand">'+'<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none;color:#12295F"><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round"/><rect x="19.5" y="33" width="7" height="11" rx="3.5" fill="currentColor" opacity=".55"/><rect x="28.5" y="26" width="7" height="18" rx="3.5" fill="currentColor" opacity=".78"/><rect x="37.5" y="18" width="7" height="26" rx="3.5" fill="#D97706"/></svg>'+'<b>Care<i>Signal</i></b></div>'+
+    '<div class="brand">'+'<svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="flex:none;color:var(--brand2)"><path d="M32 5C24.5 10 16.5 12.4 10 12.6V33c0 14 10 22.6 22 27 12-4.4 22-13 22-27V12.6C47.5 12.4 39.5 10 32 5Z" stroke="currentColor" stroke-width="4.2" stroke-linejoin="round"/><rect x="19.5" y="33" width="7" height="11" rx="3.5" fill="currentColor" opacity=".55"/><rect x="28.5" y="26" width="7" height="18" rx="3.5" fill="currentColor" opacity=".78"/><rect x="37.5" y="18" width="7" height="26" rx="3.5" fill="#D97706"/></svg>'+'<b>Care<i>Signal</i></b></div>'+
     '<div class="stat">เคสค้าง <u>'+cnt.all+'</u></div>'+
     '<div class="stat">เกินกำหนด <u style="color:#DC2626">'+overdue+'</u></div>'+
     '<div class="clock" id="wClock"><div class="d">'+esc(k.d)+'</div><div class="t">'+k.t+'</div></div>'+
@@ -889,25 +868,25 @@ function wardPaint(){
   '</div>'+
   flow+
   '<div class="wstrip">'+
-    '<div><b style="color:#F87171">'+lv.urgent+'</b><span>ด่วน</span></div>'+
-    '<div><b style="color:#FB923C">'+lv.decline+'</b><span>ทบทวน</span></div>'+
-    '<div><b style="color:#FBBF24">'+lv.watch+'</b><span>เฝ้าดู</span></div>'+
-    '<div><b style="color:#34D399">'+lv.stable+'</b><span>ตามรอบ</span></div>'+
+    '<div><b style="color:#DC2626">'+lv.urgent+'</b><span>ด่วน</span></div>'+
+    '<div><b style="color:#EA580C">'+lv.decline+'</b><span>ทบทวน</span></div>'+
+    '<div><b style="color:#D97706">'+lv.watch+'</b><span>เฝ้าดู</span></div>'+
+    '<div><b style="color:#059669">'+lv.stable+'</b><span>ตามรอบ</span></div>'+
   '</div>'+
   '<div class="wbody">'+
     '<div class="wgrid">'+(cards||'<div class="wempty">ไม่มีเคสในขั้นตอนนี้</div>')+'</div>'+
     '<aside class="wside">'+
       '<h4>ภาพรวมพอร์ต</h4>'+
       '<div class="box"><div class="wsum">'+
-        '<div><b style="color:#F87171">'+lv.urgent+'</b><span>ต้องทบทวนด่วน</span></div>'+
-        '<div><b style="color:#FB923C">'+lv.decline+'</b><span>ต้องทบทวน</span></div>'+
-        '<div><b style="color:#FBBF24">'+lv.watch+'</b><span>เฝ้าสังเกต</span></div>'+
-        '<div><b style="color:#34D399">'+lv.stable+'</b><span>ตามรอบ</span></div>'+
+        '<div><b style="color:#DC2626">'+lv.urgent+'</b><span>ต้องทบทวนด่วน</span></div>'+
+        '<div><b style="color:#EA580C">'+lv.decline+'</b><span>ต้องทบทวน</span></div>'+
+        '<div><b style="color:#D97706">'+lv.watch+'</b><span>เฝ้าสังเกต</span></div>'+
+        '<div><b style="color:#059669">'+lv.stable+'</b><span>ตามรอบ</span></div>'+
       '</div></div>'+
       '<h4>ต้องดูก่อน</h4><div class="box" style="padding:4px 11px">'+notes+'</div>'+
       '<h4>ขอบเขตของหน้าจอนี้</h4>'+
-      '<div class="box" style="font-size:12px;color:#9FB2DA;line-height:1.6">'+
-      'ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น <b style="color:#EAF0FF">การตัดสินใจส่งต่อทุกครั้งเป็นของคุณ</b> '+
+      '<div class="box" style="font-size:12px;color:var(--ink2);line-height:1.6">'+
+      'ระบบจัดลำดับและอธิบายเหตุผลเท่านั้น <b>การตัดสินใจส่งต่อทุกครั้งเป็นของคุณ</b> '+
       'ทุกการกระทำบันทึกชื่อผู้ทำใน audit log ที่ลบไม่ได้</div>'+
     '</aside>'+
   '</div>'+
@@ -1252,7 +1231,7 @@ async function portV(){
   var n=rows.length;
   function seg(k,c){var w=(mix[k]||0)/n*100;return w?'<i style="width:'+w+'%;background:'+c+'"></i>':''}
   var html='<div class="card"><h3>ภาพรวม '+n+' ราย</h3>'+
-    '<div class="mixbar">'+seg("urgent","var(--c1)")+seg("decline","var(--c2)")+seg("watch","var(--c3)")+seg("stable","var(--c4)")+seg("none","rgba(255,255,255,.28)")+'</div>'+
+    '<div class="mixbar">'+seg("urgent","var(--c1)")+seg("decline","var(--c2)")+seg("watch","var(--c3)")+seg("stable","var(--c4)")+seg("none","#D9E1EC")+'</div>'+
     '<div class="rowline"><span class="k">🔴 เร่งด่วน</span><span class="v">'+(mix.urgent||0)+'</span></div>'+
     '<div class="rowline"><span class="k">🟠 ถดถอย</span><span class="v">'+(mix.decline||0)+'</span></div>'+
     '<div class="rowline"><span class="k">🟡 เฝ้าสังเกต</span><span class="v">'+(mix.watch||0)+'</span></div>'+
@@ -1307,7 +1286,7 @@ function meV(){
     adminTools+
     '<div class="card"><h3>เครื่องมือเพิ่มเติม (บนเว็บ)</h3>'+
     '<p class="sub">เปิดคอนโซลนี้บนคอมพิวเตอร์เพื่อใช้แถบเมนูข้างและตารางเต็มจอ — ไม่ต้องไปหน้าอื่น</p></div>'+
-    '<button class="cta" id="out" style="background:rgba(240,82,76,.9);color:#fff">ออกจากระบบ</button>'+
+    '<button class="cta" id="out" style="background:var(--c1);color:#fff">ออกจากระบบ</button>'+
     '<p class="sub" style="text-align:center">CareSignal Staff · เอนจิน 1.4.1 · ต้นแบบเพื่อการประกวด OIC InsurTech Award 2026</p>';
   document.getElementById("out").addEventListener("click",async function(){
     try{await CSBackend.signOut()}catch(e){}
@@ -1349,8 +1328,8 @@ function unknownQueueHtml(list){
       (r.photo_path?'<div data-dqimg="'+r.id+'" class="tiny" style="margin-top:6px">กำลังเปิดรูปฉลาก…</div>':'<div class="tiny" style="margin-top:6px;color:var(--ink3)">ไม่มีรูปฉลาก — ผู้เอาประกันไม่ได้ยินยอมให้เก็บรูป</div>')+
       (r.label_text?'<details style="margin-top:6px"><summary class="tiny">ข้อความที่กล้องอ่านได้</summary><pre class="tiny" style="white-space:pre-wrap">'+esc(String(r.label_text).slice(0,400))+'</pre></details>':'')+
       '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'+
-        '<input data-dqinn="'+r.id+'" placeholder="ตัวยาสำคัญ เช่น diazepam" style="flex:1;min-width:130px;font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+
-        '<select data-dqgrp="'+r.id+'" style="flex:1;min-width:150px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+opts+'</select>'+
+        '<input data-dqinn="'+r.id+'" placeholder="ตัวยาสำคัญ เช่น diazepam" style="flex:1;min-width:130px;font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)">'+
+        '<select data-dqgrp="'+r.id+'" style="flex:1;min-width:150px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)">'+opts+'</select>'+
         '<button class="ok" data-dqok="'+r.id+'" style="flex:0 0 auto;padding:6px 12px;font-size:12.5px;border-radius:8px">บันทึกการจัดกลุ่ม</button>'+
         '<button class="no" data-dqno="'+r.id+'" style="flex:0 0 auto;padding:6px 10px;font-size:12.5px;border-radius:8px">ไม่ใช่ยา</button>'+
       '</div></div>';
@@ -1421,7 +1400,7 @@ async function medsV(){
       '<div class="rowline"><span class="k">เหตุผล</span><span class="v" style="font-family:inherit;font-weight:500;text-align:right">'+esc(r.reason||"—")+'</span></div>'+
       '<div class="cbox" data-uid="'+r.user_id+'"></div>'+
       '<div class="medlist" data-uid="'+r.user_id+'" data-rv="'+r.id+'"><div class="empty" style="padding:10px">กำลังโหลดรายการยา…</div></div>'+
-      '<div class="field" style="margin-top:8px"><label>ข้อสรุปของเภสัชกร</label><textarea data-out="'+r.id+'" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:rgba(0,14,50,.35);color:#fff" placeholder="เช่น พบ diazepam ร่วมกับ amitriptyline — แนะนำให้แพทย์พิจารณาทบทวน"></textarea></div>'+
+      '<div class="field" style="margin-top:8px"><label>ข้อสรุปของเภสัชกร</label><textarea data-out="'+r.id+'" rows="2" style="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)" placeholder="เช่น พบ diazepam ร่วมกับ amitriptyline — แนะนำให้แพทย์พิจารณาทบทวน"></textarea></div>'+
       '<div class="btnrow" style="flex-wrap:wrap">'+Object.keys(REC_NM).map(function(k){
         return '<button class="'+(k==="no_action"?"no":"ok")+'" data-close="'+r.id+'" data-rec="'+k+'" style="flex:1 1 45%">'+esc(REC_NM[k])+'</button>'}).join("")+'</div></div>';
   });
@@ -1456,8 +1435,8 @@ async function medsV(){
         (x.confirmed_by==="pharmacist"?" · <b style='color:var(--c4)'>เภสัชกรยืนยันแล้ว</b>":"")+'</span>'+
         (url?'<br><a href="'+url+'" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">เปิดดูรูปซองยา</a>':'')+
         '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'+
-          '<input data-inn="'+x.id+'" value="'+esc(x.inn||"")+'" placeholder="ตัวยาสำคัญ" style="flex:1;min-width:120px;font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+
-          '<select data-grp="'+x.id+'" style="flex:1;min-width:140px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;background:rgba(0,14,50,.35);color:#fff">'+opts+'</select>'+
+          '<input data-inn="'+x.id+'" value="'+esc(x.inn||"")+'" placeholder="ตัวยาสำคัญ" style="flex:1;min-width:120px;font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)">'+
+          '<select data-grp="'+x.id+'" style="flex:1;min-width:140px;font-family:inherit;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)">'+opts+'</select>'+
           '<button class="ok" data-fix="'+x.id+'" style="flex:0 0 auto;padding:6px 12px;font-size:12.5px;border-radius:8px">ยืนยัน/แก้</button>'+
           '<button class="no" data-stop="'+x.id+'" style="flex:0 0 auto;padding:6px 10px;font-size:12.5px;border-radius:8px">เลิกใช้แล้ว</button></div></div>';
     }));
@@ -1636,7 +1615,7 @@ async function consentBox(host, memberId, referralId, onGranted){
 function orgPrompt(){
   return new Promise(function(resolve){
     var w=document.createElement("div");
-    w.style.cssText="position:fixed;inset:0;background:rgba(4,12,36,.72);backdrop-filter:blur(4px);"+
+    w.style.cssText="position:fixed;inset:0;background:rgba(22,35,59,.45);"+
       "display:grid;place-items:center;z-index:200;padding:20px";
     w.innerHTML='<div class="card" style="max-width:440px;width:100%;margin:0">'+
       '<div class="kick">ขั้นตอนสุดท้ายก่อนเริ่มงาน</div>'+
@@ -1743,9 +1722,9 @@ async function referSheet(c, userId, caseId, dest){
     '<h4 style="margin:12px 0 4px;font-size:14px">ข้อมูลประกอบ ณ เวลาส่ง</h4><div id="pkgHost"><div class="empty" style="padding:8px">กำลังรวบรวม…</div></div>'+
     '<h4 style="margin:12px 0 4px;font-size:14px">คำถามที่ต้องการให้'+esc(DEST_NM[dest]||dest)+'ตอบ <span class="tiny">(เลือกอย่างน้อย 1)</span></h4>'+
     '<div class="qs">'+(Q_BANK[dest]||[]).map(function(q,i){return '<label><input type="checkbox" value="'+esc(q)+'"'+(i===0?' checked':'')+'> '+esc(q)+'</label>'}).join("")+
-      '<label><input type="checkbox" id="qCustomOn"> <input id="qCustom" placeholder="คำถามอื่น…" style="flex:1;font-family:inherit;font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:rgba(0,14,50,.35);color:#fff"></label></div>'+
+      '<label><input type="checkbox" id="qCustomOn"> <input id="qCustom" placeholder="คำถามอื่น…" style="flex:1;font-family:inherit;font-size:13px;padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink)"></label></div>'+
     '<div class="field" style="margin-top:8px"><label>สิ่งที่ต้องการให้ทำ (สั้น ๆ)</label><input id="rAct" placeholder="เช่น ทบทวนรายการยาและแนะนำแพทย์" value="'+esc((Q_BANK[dest]||[""])[0].slice(0,40))+'"></div>'+
-    '<div class="field"><label>กำหนดตอบกลับภายใน</label><select id="rDue" style="width:100%;font-family:inherit;font-size:15px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:rgba(0,14,50,.35);color:#fff">'+
+    '<div class="field"><label>กำหนดตอบกลับภายใน</label><select id="rDue" style="width:100%;font-family:inherit;font-size:15px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink)">'+
       '<option value="24"'+(c.level==="urgent"?" selected":"")+'>24 ชั่วโมง</option><option value="48"'+(c.level==="decline"?" selected":"")+'>48 ชั่วโมง</option><option value="72"'+(c.level==="watch"?" selected":"")+'>72 ชั่วโมง</option><option value="168">7 วัน</option></select></div>'+
     '<div class="btnrow"><button class="no" id="rCancel">ยกเลิก</button><button class="ok" id="rSend">ส่งต่อพร้อมชุดข้อมูล</button></div>'+
     '<p class="tiny">ระบบบันทึกว่าใครส่ง ส่งเมื่อใด และปลายทางต้องตอบภายในเมื่อใด · ผู้เชี่ยวชาญต้องขอความยินยอมผู้เอาประกันก่อนเปิดดูรายละเอียด</p></div>';
@@ -1783,12 +1762,12 @@ function reviewSheet(r, onDone){
     (qs.length?'<h4 style="margin:10px 0 4px;font-size:14px">คำถามจากผู้ประสานงาน</h4><ol style="margin:0 0 8px 18px;font-size:13.5px;color:var(--ink2)">'+qs.map(function(q){return '<li>'+esc(q)+'</li>'}).join("")+'</ol>':'')+
     '<div class="field"><label>ข้อค้นพบ *</label><textarea id="rvF" rows="3" placeholder="สิ่งที่ท่านพบจากการทบทวน"></textarea></div>'+
     '<div class="field"><label>คำแนะนำ</label><textarea id="rvR" rows="2" placeholder="สิ่งที่แนะนำให้ทำ (ระบบไม่สั่งหยุดหรือปรับยา — ความเห็นนี้เป็นของท่าน)"></textarea></div>'+
-    '<div class="field"><label>ขั้นตอนถัดไป *</label><select id="rvN" style="width:100%;font-family:inherit;font-size:15px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:rgba(0,14,50,.35);color:#fff">'+
+    '<div class="field"><label>ขั้นตอนถัดไป *</label><select id="rvN" style="width:100%;font-family:inherit;font-size:15px;padding:11px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink)">'+
       Object.keys(NEXT_NM).map(function(k){return '<option value="'+k+'">'+esc(NEXT_NM[k])+'</option>'}).join("")+'</select></div>'+
     '<div class="field"><label>หมายเหตุถึงผู้ประสานงาน</label><input id="rvX" placeholder="ไม่บังคับ"></div>'+
     '<div class="btnrow"><button class="no" id="rvC">ยกเลิก</button><button class="ok" id="rvS">ส่งผลกลับผู้ประสานงาน</button></div>'+
     '<p class="tiny">ผลนี้จะไปตั้งงานถัดไปของเคสให้ผู้ประสานงานเห็นทันที และบันทึกชื่อท่านในบันทึกตรวจสอบ</p></div>';
-  w.querySelectorAll("textarea").forEach(function(t){t.style.cssText="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:rgba(0,14,50,.35);color:#fff"});
+  w.querySelectorAll("textarea").forEach(function(t){t.style.cssText="width:100%;font-family:inherit;font-size:14px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)"});
   document.body.appendChild(w);
   w.querySelector("#rvC").addEventListener("click",function(){w.remove()});
   w.querySelector("#rvS").addEventListener("click",async function(){
@@ -1805,7 +1784,7 @@ function reviewHTML(r){
   return '<div class="rv"><b>✓ ผลทบทวนส่งกลับแล้ว · '+thDate(r.reviewed_at)+'</b><div class="row">'+
     '<span>ข้อค้นพบ</span><span>'+esc(v.finding||"")+'</span>'+
     (v.recommend?'<span>คำแนะนำ</span><span>'+esc(v.recommend)+'</span>':'')+
-    '<span>ขั้นตอนถัดไป</span><span><b style="color:#fff;display:inline">'+esc(NEXT_NM[v.next_step]||v.next_step)+'</b></span>'+
+    '<span>ขั้นตอนถัดไป</span><span><b style="display:inline">'+esc(NEXT_NM[v.next_step]||v.next_step)+'</b></span>'+
     (v.note?'<span>หมายเหตุ</span><span>'+esc(v.note)+'</span>':'')+'</div></div>';
 }
 
@@ -1938,7 +1917,7 @@ function inviteFormHTML(){
   'ส่งรหัสนั้นให้เจ้าตัวไปกรอกหลังสมัครบัญชี · <b>รหัสแสดงครั้งเดียว</b></p>'+
   '<div class="field"><label>ชื่อผู้ใช้ที่ตั้งให้</label><input id="ivUser" placeholder="เช่น nurse01"></div>'+
   '<div class="field"><label>ชื่อที่จะแสดงในระบบ (ไม่บังคับ)</label><input id="ivName" placeholder="เช่น สมศรี ใจดี"></div>'+
-  '<div class="field"><label>บทบาท</label><select id="ivRole" style="width:100%;font-family:inherit;font-size:16px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:rgba(0,14,50,.35);color:#fff">'+
+  '<div class="field"><label>บทบาท</label><select id="ivRole" style="width:100%;font-family:inherit;font-size:16px;padding:13px;border:1.5px solid var(--line);border-radius:13px;background:#fff;color:var(--ink)">'+
     ASSIGNABLE.map(function(r){return '<option value="'+r+'">'+esc(ROLE_NM[r]||r)+'</option>'}).join("")+
   '</select></div>'+
   '<div class="field"><label>อายุรหัส (วัน)</label><input id="ivDays" inputmode="numeric" value="30"></div>'+
@@ -1954,7 +1933,7 @@ function inviteListHTML(rows){
     rows.map(function(r){
       var st=INV_ST[r.status]||["—","var(--ink3)"];
       return '<div class="case">'+
-        '<div class="top"><b style="color:#fff">'+esc(r.username)+'</b>'+
+        '<div class="top"><b>'+esc(r.username)+'</b>'+
         '<span class="who">'+esc(ROLE_NM[r.role]||r.role)+'</span>'+
         '<span style="margin-left:auto;font-size:11.5px;font-weight:600;color:'+st[1]+'">'+st[0]+'</span></div>'+
         (r.display_name?'<div class="rowline"><span class="k">ชื่อที่จะแสดง</span><span class="v">'+esc(r.display_name)+'</span></div>':'')+
@@ -2007,7 +1986,7 @@ function showLastInvite(){
   box.innerHTML='<div class="notice" style="margin:14px 0 0;border-color:var(--c4)">'+
     '<b>รหัสสำหรับ '+esc(li.u)+'</b>'+
     '<div style="font-family:var(--mono);font-size:21px;letter-spacing:.08em;margin:10px 0;'+
-    'color:#fff;user-select:all">'+esc(li.code)+'</div>'+
+    'user-select:all">'+esc(li.code)+'</div>'+
     'คัดลอกหรือจดไว้ตอนนี้ — <b>ปิดหน้านี้แล้วจะไม่เห็นรหัสนี้อีก</b> '+
     'ถ้าทำหายให้ยกเลิกใบนี้แล้วออกใบใหม่'+
     '<div class="btnrow"><button class="ok" id="ivCopy">คัดลอกรหัส</button>'+
@@ -2077,7 +2056,7 @@ function acctCard(title,rows,isMember){
       var nm=a.display_name||a.username||"—";
       var n=a.n_assess+a.n_cases+a.n_meds;
       return '<div class="case">'+
-        '<div class="top"><b style="color:#fff">'+esc(nm)+'</b>'+
+        '<div class="top"><b>'+esc(nm)+'</b>'+
         '<span class="who">'+esc(a.username||"ไม่มีชื่อผู้ใช้")+' · '+esc(ROLE_NM[a.role]||a.role)+'</span>'+
         (a.is_self?'<span style="margin-left:auto;font-size:11.5px;color:var(--gold)">บัญชีของท่าน</span>':'')+
         '</div>'+
@@ -2168,7 +2147,7 @@ async function usersV(){
         '<td>'+esc(ROLE_NM[u.role]||u.role)+'</td>'+
         '<td style="font-size:12px;color:var(--ink2)">'+scope+'</td>'+
         '<td><select data-uid="'+esc(u.id)+'" style="font-family:inherit;font-size:12.5px;padding:6px 8px;'+
-          'border-radius:9px;background:rgba(0,14,50,.5);color:#fff;border:1px solid var(--line)">'+
+          'border-radius:9px;background:var(--surf2);color:var(--ink);border:1px solid var(--line)">'+
           ASSIGNABLE.map(function(r){
             return '<option value="'+r+'"'+(r===u.role?" selected":"")+'>'+esc(ROLE_NM[r]||r)+'</option>'
           }).join("")+'</select></td></tr>';
