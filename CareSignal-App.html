@@ -1073,7 +1073,7 @@ function handRaised(lm){return handsUp(lm)>0}
 /* คำสั่งหลักของขั้นตอนที่กำลังรออยู่ = ยกมือข้างเดียว */
 function stepPrimary(){
   if(!STEP.id||!STEP.on)return null;
-  var order=["record","start","pass","next"];
+  var order=["record","start","pass","next","done"];
   for(var i=0;i<order.length;i++)if(STEP.on[order[i]])return order[i];
   return null;
 }
@@ -1086,7 +1086,7 @@ function stepSecondary(){
   return null;
 }
 /* ชื่อท่าทางที่ใช้ได้ตอนนี้ ไว้แสดงบนจอให้ผู้ใช้รู้ว่าทำอะไรได้บ้าง */
-var VC_NM={record:"บันทึก",start:"เริ่ม",pass:"ผ่าน",next:"ต่อไป",
+var VC_NM={record:"บันทึก",start:"เริ่ม",pass:"ผ่าน",next:"ต่อไป",done:"จบ",
            fail:"ไม่ผ่าน",redo:"ทำใหม่",stop:"หยุด"};
 function gestureHint(){
   var a=stepPrimary(), b=stepSecondary(), out=[];
@@ -2257,6 +2257,16 @@ function riseNow(lm) {
   var p = normRise(pv, S.draft.sitRef, S.draft.standRef);
   if (p != null) return { v: p, src: "pose" };
   return { v: null, src: null };
+}
+/* ป้ายหนึ่งใบในหน่วย "สัดส่วนของความกว้างภาพ" (0 ถึง 1)
+   ทำไมต้องแปลง: ตัวอ่านป้ายคืนค่าเป็นพิกเซลของภาพจากกล้อง ส่วนโมเดลท่าทาง
+   คืนค่าเป็นสัดส่วน 0-1 ถ้าเอามาลบกันตรง ๆ จะได้ตัวเลขที่ไม่มีความหมายเลย
+   หารด้วยความกว้างทั้งคู่ (ไม่ใช่กว้างสำหรับ x และสูงสำหรับ y) เพื่อให้
+   ระยะในแนวตั้งกับแนวนอนเทียบกันได้ และขนาดป้ายยังเป็นหน่วยเดียวกัน */
+function markNorm(m){
+  var W=MARK.W||0;
+  if(!m||!m.side||!W)return null;
+  return {x:m.cx/W, y:m.cy/W, side:m.side/W};
 }
 /* ขนาดอ้างอิงในภาพ ใช้เป็นมาตรวัดระยะของ TUG
    ป้ายดีกว่าความกว้างไหล่เพราะขนาดจริงคงที่และรู้ค่า ส่วนไหล่เปลี่ยนตามการหันตัว */
@@ -5052,6 +5062,9 @@ async function finishAssess(){
     tugOut:S.draft.tugOut!=null?S.draft.tugOut:null,
     tugBack:S.draft.tugBack!=null?S.draft.tugBack:null,
     tugDistanceOk:S.draft.tugDistanceOk!=null?S.draft.tugDistanceOk:null,
+    tugTurnBy:S.draft.tugTurnBy||null, tugBackBy:S.draft.tugBackBy||null,
+    tugEndedBy:S.draft.tugEndedBy||null, tugMarkTurn:!!S.draft.tugMarkTurn,
+    tugReach:S.draft.tugReach!=null?S.draft.tugReach:null,
     tugDrift:S.draft.tugDrift!=null?S.draft.tugDrift:null,
     balPassed:S.draft.balPassed!=null?S.draft.balPassed:null,
     balStages:S.draft.balStages||null,
@@ -6097,6 +6110,15 @@ BalanceEngine.prototype.finalSway=function(){return this._sd(this.samples)};
    - การเดินตรง วัดจากการเบี่ยงซ้าย-ขวาของกึ่งกลางไหล่ หน่วยเป็น
      ความกว้างไหล่ ณ ระยะนั้น จึงเทียบได้ทุกระยะห่างจากกล้อง
    ============================================================ */
+/* ---- เกณฑ์ของหลักฐานจากป้าย ----
+   ตัวเลขทุกตัวในนี้ตอบคำถามเดียวกัน: "แค่ไหนถึงเรียกว่าเชื่อได้" */
+var TUG_HIDE_N=6;       /* ป้ายหายติดกันกี่เฟรม จึงนับว่ามีคนยืนบัง ~0.2 วินาที */
+var TUG_SEEN_N=15;      /* ต้องเคยเห็นป้ายรวมกี่เฟรม จึงเชื่อว่าวางอยู่จริง */
+var TUG_SPAN_MIN=0.10;  /* ป้ายต้องห่างจากเก้าอี้ในภาพขั้นต่ำเท่านี้ จึงใช้แนวนอนวัดได้ */
+var TUG_REACH=0.88;     /* เดินไปได้กี่ส่วนของระยะ จึงนับว่าถึงจุดกลับตัว */
+var TUG_HOME=0.20;      /* กลับมาใกล้เก้าอี้เหลือกี่ส่วน จึงนับว่ากลับถึงแล้ว */
+var TUG_WALK_MIN=1500;  /* เดินอย่างน้อยกี่มิลลิวินาที จึงยอมรับว่าถึงจุดกลับตัวได้ */
+
 function TugTracker(refs){
   this.sitRef=refs.sitRef; this.standRef=refs.standRef;
   /* CDC ให้เริ่มจับเวลาเมื่อผู้ประเมินพูดว่า "เริ่ม" ไม่ใช่ตอนที่ผู้รับการ
@@ -6107,7 +6129,61 @@ function TugTracker(refs){
   this.buf=[]; this.onsetFrac=0.18;
   this.s0=null; this.s0buf=[]; this.sMin=null; this.sw=null;
   this.cx0=null; this.maxDrift=0; this.driftSum=0; this.driftN=0;
+  /* ---- หลักฐานจากป้ายบนพื้น ----
+     ขนาดตัวในภาพบอกได้แค่ว่า "ไกลขึ้น" ไม่ได้บอกว่าไกลเท่าไร เดิน 4 เมตร
+     กับเดิน 3 เมตรจึงผ่านเหมือนกัน ป้ายที่วัดระยะวางไว้แล้วบอกได้ว่าถึงจริงไหม
+     พิกัดในนี้เป็นสัดส่วนของความกว้างภาพทั้งหมด ไม่ใช่พิกเซล */
+  this.turnRef=null; this.homeRef=null;  /* ตำแหน่งป้ายตอนที่ยังไม่มีใครบัง */
+  this.turnN=0;   this.homeN=0;          /* เคยเห็นป้ายมาแล้วกี่เฟรม */
+  this.turnHid=0; this.homeHid=0;        /* ป้ายหายไปติดกันแล้วกี่เฟรม */
+  this.turnHidAt=null; this.homeHidAt=null;  /* เวลาที่เริ่มหายไปครั้งล่าสุด */
+  this.turnBy=null; this.backBy=null;    /* occlude | cross | size | null */
+  this.reach=0;                          /* เดินไปได้กี่ส่วนของระยะถึงป้าย */
+  this.tWalk=null;                       /* เวลาที่เริ่มเดินออกจากเก้าอี้ */
+  this.autoStop=true;                    /* ให้ระบบหยุดเวลาเองเมื่อเห็นว่านั่งลง */
+  this.seatedSeen=false;
 }
+/* ป้ายไม่ขยับ ค่าที่ต่างกันรายเฟรมจึงเป็นสัญญาณรบกวนล้วน ๆ — เฉลี่ยถ่วงน้ำหนักทิ้ง */
+TugTracker.prototype._ref=function(m,ref){
+  if(!m)return ref;
+  if(!ref)return {x:m.x,y:m.y,side:m.side};
+  return {x:ref.x*0.9+m.x*0.1, y:ref.y*0.9+m.y*0.1, side:ref.side*0.9+m.side*0.1};
+};
+/* ป้อนป้ายบนพื้นหนึ่งเฟรม
+     turn = ป้ายจุด 3 เมตร · home = ป้ายข้างเก้าอี้ · null เมื่อเฟรมนี้ไม่เห็น
+   หลักฐานสองแบบที่เก็บจากตรงนี้
+     บัง   ป้ายที่เห็นมาตลอดแล้วหายไป แปลว่ามีคนไปยืนตรงนั้น
+     ข้าม  จุดกึ่งกลางไหล่เคลื่อนจากเก้าอี้ไปถึงตำแหน่งป้ายในภาพกี่ส่วนแล้ว
+   ทั้งสองแบบไม่ต้องรู้ทางยาวโฟกัสหรือมุมมองภาพของกล้องเลย */
+TugTracker.prototype.pushMarks=function(turn,home,cx,t){
+  this.turnRef=this._ref(turn,this.turnRef); if(turn)this.turnN++;
+  this.homeRef=this._ref(home,this.homeRef); if(home)this.homeN++;
+  /* นับว่า "ถูกบัง" เฉพาะป้ายที่เคยเห็นมั่นคงแล้ว ป้ายที่ไม่เคยเห็นเลย
+     ไม่ใช่ป้ายที่ถูกบัง แต่คือป้ายที่ผู้ใช้ไม่ได้วางหรือกล้องมองไม่ถึง */
+  var th=(!turn&&this.turnN>=TUG_SEEN_N)?this.turnHid+1:0;
+  var hh=(!home&&this.homeN>=TUG_SEEN_N)?this.homeHid+1:0;
+  /* จำเวลาที่ "เริ่ม" หายไป ไม่ใช่แค่ว่าหายมากี่เฟรมแล้ว
+     ป้ายที่ถูกเฟอร์นิเจอร์หรือมุมกล้องบังอยู่ก่อนแล้ว จะหายยาวไปเรื่อย ๆ
+     ถ้าดูแค่ความยาว มันจะผ่านเกณฑ์เองเมื่อเวลาผ่านไปนานพอ ทั้งที่ไม่มีใครเดินไปถึง */
+  if(th===1)this.turnHidAt=t!=null?t:null;
+  if(hh===1)this.homeHidAt=t!=null?t:null;
+  this.turnHid=th; this.homeHid=hh;
+  /* แนวนอนใช้ได้เฉพาะเมื่อกล้องเห็นเส้นทางจากด้านข้าง ถ้ากล้องอยู่ปลายทาง
+     ป้ายกับเก้าอี้จะซ้อนกันในภาพ ระยะสั้นจนหารแล้วได้ค่าเพี้ยน จึงไม่ใช้ */
+  if(this.turnRef&&this.cx0!=null&&cx!=null){
+    var span=Math.abs(this.turnRef.x-this.cx0);
+    if(span>=TUG_SPAN_MIN){
+      var f=Math.abs(cx-this.cx0)/span;
+      if(f>this.reach)this.reach=f;
+    }
+  }
+};
+/* ระยะที่เดินไปได้จริง คิดเป็นเมตรตามป้ายที่ผู้ใช้วางไว้
+   ค่านี้เชื่อได้เท่ากับที่ผู้ใช้วางป้ายตรงระยะ ระบบไม่ได้วัดระยะนั้นเอง */
+TugTracker.prototype.reachM=function(){
+  if(!this.reach||!this.turnRef)return null;
+  return Math.min(this.reach,1)*3;
+};
 TugTracker.prototype.pushFrame=function(raw,sw,cx,t){
   /* แกนลุก-นั่ง: ตรรกะเดียวกับตัวจับ TUG เดิม (เริ่มนับตั้งแต่เริ่มโน้มตัวลุก) */
   this.buf.push(raw); if(this.buf.length>5)this.buf.shift();
@@ -6127,7 +6203,7 @@ TugTracker.prototype.pushFrame=function(raw,sw,cx,t){
       this.s0buf.sort(function(a,b){return a-b});
       this.s0=this.s0buf[Math.floor(this.s0buf.length/2)];
       this.sMin=this.s0; this.cx0=cx;
-      this.state="walkOut"; return {event:"walk"};
+      this.state="walkOut"; this.tWalk=t; return {event:"walk"};
     }
     return null;
   }
@@ -6138,24 +6214,68 @@ TugTracker.prototype.pushFrame=function(raw,sw,cx,t){
       if(d>this.maxDrift)this.maxDrift=d;
       this.driftSum+=d; this.driftN++;
     }
-    /* จุดกลับ: ตัวเล็กลงพอสมควรแล้ว และเริ่มกลับมาใหญ่ขึ้นต่อเนื่อง */
-    if(this.state==="walkOut"&&this.sMin<=this.s0*0.90&&this.sw>=this.sMin*1.07){
-      this.state="walkBack"; this.tTurn=t; return {event:"turn"};
+    /* ---- ถึงจุดกลับตัวหรือยัง ----
+       เรียงตามความน่าเชื่อถือ ป้ายก่อนเสมอ ขนาดตัวเป็นทางสำรองเมื่อไม่มีป้าย
+       เพราะขนาดตัวตอบได้แค่ "ไกลขึ้น" ส่วนป้ายตอบได้ว่า "ถึงจุดที่วางไว้แล้ว"
+       มีเพดานเวลาขั้นต่ำกันการบังพลาด เช่น มีคนเดินผ่านหน้าป้ายตอนเพิ่งออกตัว */
+    if(this.state==="walkOut"&&this.tWalk!=null&&(t-this.tWalk)>=TUG_WALK_MIN){
+      var by=null;
+      /* ต้องเป็นป้ายที่ "เห็นอยู่แล้วเพิ่งหายไป" หลังจากเดินมาพอสมควร */
+      if(this.turnHid>=TUG_HIDE_N&&this.turnHidAt!=null&&
+         (this.turnHidAt-this.tWalk)>=TUG_WALK_MIN)by="occlude";
+      else if(this.reach>=TUG_REACH)by="cross";
+      else if(this.sMin<=this.s0*0.90&&this.sw>=this.sMin*1.07)by="size";
+      if(by){this.state="walkBack";this.tTurn=t;this.turnBy=by;return{event:"turn",by:by}}
+    }
+  }
+  /* ---- กลับถึงเก้าอี้หรือยัง — เก็บเป็นหลักฐาน ไม่ใช่ตัวสั่งหยุดเวลา ---- */
+  if(this.state==="walkBack"&&this.backBy==null){
+    /* ต้องเริ่มถูกบังหลังหมุนกลับแล้ว ไม่ใช่ป้ายที่ถูกบังมาตั้งแต่ตอนนั่งอยู่ */
+    if(this.homeHid>=TUG_HIDE_N&&this.homeHidAt!=null&&this.tTurn!=null&&
+       this.homeHidAt>=this.tTurn)this.backBy="occlude";
+    else if(this.turnRef&&this.cx0!=null&&cx!=null){
+      var sp=Math.abs(this.turnRef.x-this.cx0);
+      if(sp>=TUG_SPAN_MIN&&Math.abs(cx-this.cx0)/sp<=TUG_HOME)this.backBy="cross";
     }
   }
   if((this.state==="walkOut"||this.state==="walkBack")&&v<=down&&this.t0&&(t-this.t0)>4000){
+    /* ปิดการหยุดเองไว้ = มีคนอยู่ตรงนั้นและเป็นผู้ตัดสินว่าจบ
+       บอกได้ว่าเห็นว่านั่งแล้ว แต่ไม่หยุดนาฬิกาแทนเขา */
+    if(!this.autoStop){
+      if(this.seatedSeen)return null;
+      this.seatedSeen=true; return {event:"seated"};
+    }
     this.state="done"; this.t1=t;
-    var base=this.goAt!=null?this.goAt:this.t0;
-    return {event:"finish",
-      elapsed:(t-base)/1000,
-      reaction:this.goAt!=null?(this.t0-this.goAt)/1000:null,
-      out:this.tTurn?(this.tTurn-base)/1000:null,
-      back:this.tTurn?(this.t1-this.tTurn)/1000:null,
-      distanceOk:this.s0!=null&&this.sMin<=this.s0*0.82,
-      turnSeen:this.tTurn!=null,
-      drift:this.driftN?{max:this.maxDrift,avg:this.driftSum/this.driftN}:null};
+    return this._result(t,"auto");
   }
   return null;
+};
+/* จบด้วยคำสั่งของคน — ปุ่ม เสียง ยกมือ หรือรีโมต
+   CDC ให้ผู้ประเมินจับเวลาจน "นั่งลงเรียบร้อย" ซึ่งคนตัดสินแม่นกว่ากล้อง
+   เพราะการทรุดตัวลงเก้าอี้กับการนั่งเข้าที่เรียบร้อยไม่ใช่จังหวะเดียวกัน
+   กล้องเห็นจังหวะแรกแล้วหยุดทันที ทำให้เวลาที่ได้สั้นกว่าความจริง
+   ซึ่งเป็นทิศทางที่ผิดที่สุดสำหรับเครื่องมือคัดกรอง เพราะทำให้ดูปลอดภัยเกินจริง */
+TugTracker.prototype.stop=function(t,by){
+  if(this.state==="done"||this.state==="waiting")return null;
+  this.state="done"; this.t1=t;
+  return this._result(t,by||"press");
+};
+TugTracker.prototype._result=function(t,endedBy){
+  var base=this.goAt!=null?this.goAt:this.t0;
+  var markTurn=this.turnBy==="occlude"||this.turnBy==="cross";
+  return {event:"finish",
+    elapsed:(t-base)/1000,
+    reaction:this.goAt!=null&&this.t0!=null?(this.t0-this.goAt)/1000:null,
+    out:this.tTurn?(this.tTurn-base)/1000:null,
+    back:this.tTurn?(this.t1-this.tTurn)/1000:null,
+    /* ระยะครบหรือไม่ — ป้ายยืนยันได้จริง ส่วนขนาดตัวเป็นการประมาณ */
+    distanceOk:markTurn||(this.s0!=null&&this.sMin<=this.s0*0.82),
+    turnBy:this.turnBy, backBy:this.backBy, endedBy:endedBy,
+    markTurn:markTurn, markHome:this.backBy!=null,
+    reach:this.reach?Math.min(this.reach,1):null,
+    reachM:this.reachM(),
+    turnSeen:this.tTurn!=null,
+    drift:this.driftN?{max:this.maxDrift,avg:this.driftSum/this.driftN}:null};
 };
 /* แปลผลการเดินตรงเป็นข้อสังเกต (หน่วย: เท่าของความกว้างไหล่) */
 function gaitLabel(d){
@@ -6249,7 +6369,9 @@ function tugV(){
   '<div class="rowline"><span class="k">③ กลับมานั่งเก้าอี้</span><span class="v">พิงพนัก</span></div>'+
   '<p class="sub" style="margin:10px 0 0">เมื่อวางป้ายเสร็จ กลับมานั่งที่เก้าอี้ ระบบจะบอกเมื่อเห็นว่าท่านพร้อม แล้ว<b>รอคำสั่งของท่าน</b> — พูดว่า “เริ่มทดสอบ” (หรือกดปุ่ม) ระบบจึงจะนับ 3-2-1</p></div>'+
   '<div class="card" style="background:var(--surf2)"><h3>เมื่อได้ยินคำว่า “เริ่ม”</h3>'+
-  '<p class="sub" style="margin:0">ลุกขึ้น → เดินด้วย<b>ความเร็วปกติ</b>ไปที่ป้ายจุดกลับ → หมุนกลับ → เดินกลับมา → นั่งลงพิงพนัก · ระบบจะพูดว่า “เสร็จสิ้น” เองเมื่อท่านนั่งลงเรียบร้อย</p>'+
+  '<p class="sub" style="margin:0">ลุกขึ้น → เดินด้วย<b>ความเร็วปกติ</b>ไปที่ป้ายจุด 3 เมตร → หมุนกลับ → เดินกลับมา → นั่งลงพิงพนัก</p>'+
+  '<p class="sub" style="margin:8px 0 0"><b>หมุนกลับตรงป้าย ไม่ต้องหมุนก่อน</b> — ระบบดูว่าท่านเดินไปยืนบังป้ายจุด 3 เมตรหรือยัง จึงรู้ว่าเดินครบระยะจริง ไม่ใช่เดาจากขนาดตัวในภาพ</p>'+
+  '<p class="sub" style="margin:8px 0 0">นั่งลงเรียบร้อยแล้ว <b>กดปุ่มจบ</b> (หรือพูดว่า “จบ” หรือยกมือ) · ถ้าไม่มีใครกด ระบบจะหยุดให้เองเมื่อเห็นว่านั่งลงแล้ว</p>'+
   '<p class="sub" style="margin:8px 0 0">ใช้ไม้เท้าหรือเครื่องช่วยเดินที่ใช้ประจำได้ · สวมรองเท้าที่ใส่ประจำ · วางมือถือพิงผนังให้เห็นทั้งเก้าอี้และทางเดิน</p>'+
   '<p class="sub" style="margin:8px 0 0">เกณฑ์คัดกรอง CDC STEADI: ใช้เวลาตั้งแต่ <b>12 วินาที</b> ขึ้นไป สัมพันธ์กับความเสี่ยงหกล้มที่สูงขึ้น</p></div>'+
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
@@ -6258,6 +6380,7 @@ function tugV(){
   '<div class="coach" id="coach">วางป้ายทั้งสามใบให้เรียบร้อย แล้วกลับมานั่งที่เก้าอี้</div></div></div></div>'+
   statusHTML()+
   '<button class="cta" id="tugStart">เริ่มทดสอบ (แทนคำสั่งเสียงได้)</button>'+
+  '<button class="cta" id="tugEnd" hidden style="background:var(--c2);margin-bottom:10px">■ จบการทดสอบ — นั่งลงเรียบร้อยแล้ว</button>'+
   '<button class="ghostb" id="tugSkip">ข้ามขั้นนี้ · ไปทดสอบการทรงตัว</button>'+
   '<div class="disc">กล้องบันทึกเฉพาะ<b>ตัวเลขเวลา ระยะสัมพัทธ์ และการเบี่ยงแนวเดิน</b> ไม่เก็บภาพหรือวิดีโอ</div></div>';
   document.getElementById("tugSkip").addEventListener("click",function(){
@@ -6279,7 +6402,10 @@ async function startTugPipeline(){
   S.cam=stream;video.srcObject=stream;/* บางเบราว์เซอร์ play() ค้างไม่ resolve เมื่อหน้าจอถูกซ่อนหรือสตรีมผิดปกติ
      ใส่เพดานเวลาไว้ 1.5 วินาที เพื่อไม่ให้การทดสอบค้างตั้งแต่เปิดกล้อง */
   await Promise.race([video.play().catch(function(){}),new Promise(function(r){setTimeout(r,1500)})]);
-  markStart([0,1]);
+  /* ป้ายหน้าอกกับเอวใช้เป็นมาตรวัดขนาด ส่วนป้ายจุด 3 เมตรกับป้ายข้างเก้าอี้
+     ใช้ยืนยันว่าเดินถึงและกลับถึงจริง — ป้ายสองใบหลังอยู่กับที่ ตัวติดตาม
+     จึงจับได้ตั้งแต่เฟรมแรก ๆ แล้วดูเฉพาะกรอบรอบป้าย ราคาเกือบไม่เพิ่ม */
+  markStart([0,1,3,4]);
   try{await loadModel(tag)}catch(e){tag.textContent="โหลดโมเดลไม่สำเร็จ";setStatus("red","โหลดระบบไม่สำเร็จ — ข้ามขั้นนี้ได้");return}
   tag.textContent="พร้อมแล้ว";
 
@@ -6308,6 +6434,14 @@ async function startTugPipeline(){
       else { clearCd(); begin(); }
     },1000);
   }
+  function endNow(by){
+    if(phase!=="active"||!TUG)return;
+    /* ก่อนถึงจุดกลับตัว รับเฉพาะการกดปุ่ม เพราะปุ่มคือเจตนาที่ชัดเจน
+       ส่วนมือที่ยกขึ้นระหว่างเดินอาจเป็นการถ่วงตัวให้ทรงตัว ไม่ใช่การสั่งจบ */
+    if(by!=="press"&&TUG.state!=="walkBack")return;
+    var ev=TUG.stop(performance.now(),by);
+    if(ev)finishTug(ev);
+  }
   function begin(){
     phase="active";
     /* สัญญาณท่าทางถูกแปลงเป็นสเกล 0 ถึง 1 ที่ riseNow() แล้ว
@@ -6315,9 +6449,21 @@ async function startTugPipeline(){
     TUG=new TugTracker({sitRef:0,standRef:1});
     /* CDC ให้เริ่มจับเวลาที่สัญญาณ "เริ่ม" ไม่ใช่ตอนผู้รับการประเมินขยับ */
     TUG.goAt=performance.now();
-    setStatus("green","เริ่ม — ลุกขึ้นแล้วเดินไปที่ป้าย",false);
-    coach.textContent="เริ่ม — ลุกขึ้น เดินไปที่ป้าย หมุนกลับ แล้วมานั่งลง";
-    speak("เริ่ม ลุกขึ้น เดินไปที่ป้าย หมุนกลับ แล้วกลับมานั่งลง");
+    /* โหมดผู้ดูแล: คนที่ยืนอยู่ตรงนั้นเป็นผู้ตัดสินว่าจบ ระบบไม่หยุดเวลาเอง
+       ทำคนเดียว: ยังให้ระบบหยุดเองได้ ไม่งั้นถ้าเอื้อมไม่ถึงปุ่มนาฬิกาจะเดินค้าง
+       ซึ่งแย่กว่าการหยุดเร็วไปเล็กน้อย — แต่บันทึกไว้เสมอว่าใครเป็นคนหยุด */
+    TUG.autoStop=!CARER.on;
+    startBtn.hidden=true;
+    var eb=document.getElementById("tugEnd"); if(eb)eb.hidden=false;
+    setStatus("green","เริ่ม — ลุกขึ้นแล้วเดินไปที่ป้ายจุด 3 เมตร",false);
+    coach.textContent="เริ่ม — ลุกขึ้น เดินไปที่ป้ายจุด 3 เมตร หมุนกลับ แล้วมานั่งลง";
+    speak("เริ่ม ลุกขึ้น เดินไปที่ป้ายจุดสามเมตร หมุนกลับ แล้วกลับมานั่งลง");
+    /* ตอนจบผู้ทดสอบยังอยู่ห่างจอ กดปุ่มไม่ถึง จึงเปิดคำสั่ง "จบ" ไว้ด้วย
+       โหมดผู้ดูแลไม่เข้าเงื่อนไขนี้เอง เพราะ stepBegin ปิดคำสั่งเสียงให้แล้ว */
+    stepBegin({id:"tugEnd",say:"จบ",quiet:true,hint:"นั่งลงเรียบร้อยแล้วพูดว่า จบ",
+      on:{done:function(){endNow("voice")},
+          next:function(){endNow("voice")},
+          stop:function(){endNow("voice")}}});
   }
 
   function loop(){
@@ -6354,22 +6500,34 @@ async function startTugPipeline(){
       /* มาตรวัดระยะ: ป้ายดีกว่าความกว้างไหล่เพราะขนาดจริงคงที่และรู้ค่า
          ส่วนไหล่แคบลงเองเมื่อผู้ใช้หันตัว ทำให้ระบบเข้าใจผิดว่าเดินออกห่าง */
       var sc=scaleNow(lm), sw=sc.v, cx=(lm[LM.LSH].x+lm[LM.RSH].x)/2;
-      var ev=TUG.pushFrame(m,sw,cx,performance.now());
+      /* ป้ายพื้นเป็นพิกเซล จุดกึ่งกลางไหล่เป็นสัดส่วน 0-1 — แปลงให้หน่วยตรงกันก่อน */
+      var tNow=performance.now();
+      TUG.pushMarks(markNorm(markOf("turn")),markNorm(markOf("start")),cx,tNow);
+      var ev=TUG.pushFrame(m,sw,cx,tNow);
       phaseEl.textContent=PH[TUG.state]||"—";
-      if(ev&&ev.event==="walk"){coach.textContent="เดินไปให้ถึงป้ายจุดกลับ 3 เมตร";speak("เดินไปที่ป้ายได้เลย")}
-      if(ev&&ev.event==="turn"){coach.textContent="ถึงจุดกลับแล้ว — เดินกลับมานั่งลง";speak("ถึงจุดกลับแล้ว เดินกลับมานั่งลงได้เลย")}
+      if(ev&&ev.event==="walk"){coach.textContent="เดินไปให้ถึงป้ายจุด 3 เมตร";speak("เดินไปที่ป้ายจุดสามเมตรได้เลย")}
+      if(ev&&ev.event==="turn"){
+        /* บอกให้รู้ด้วยว่ารู้ได้อย่างไร ผู้ใช้จะได้รู้ว่าป้ายทำงานอยู่จริงไหม */
+        coach.textContent=(ev.by==="size"?"น่าจะถึงจุดกลับแล้ว":"ถึงป้ายจุด 3 เมตรแล้ว")+" — เดินกลับมานั่งลง";
+        speak("ถึงจุดกลับแล้ว เดินกลับมานั่งลงได้เลย");
+      }
+      if(ev&&ev.event==="seated"){
+        coach.textContent="เห็นว่านั่งลงแล้ว — ผู้ดูแลกดปุ่มจบการทดสอบ";
+        setStatus("green","นั่งลงแล้ว — รอผู้ดูแลกดจบ",false);
+      }
       if(ev&&ev.event==="finish"){ finishTug(ev); return }
     }
 
     if(phase==="active"&&TUG&&TUG.goAt!=null)
       clk.textContent=((performance.now()-TUG.goAt)/1000).toFixed(1);
     if(phase==="active"&&TUG&&TUG.goAt!=null&&performance.now()-TUG.goAt>75000)
-      coach.textContent="หากนั่งลงแล้วระบบไม่หยุด กดข้ามขั้นนี้ได้ — คะแนนส่วนอื่นยังครบ";
+      coach.textContent="นั่งลงแล้วให้กดปุ่มจบ — หรือกดข้ามขั้นนี้ก็ได้ คะแนนส่วนอื่นยังครบ";
     RAF=requestAnimationFrame(loop);
   }
   loop();
 
   startBtn.addEventListener("click",function(){ if(phase==="waitSit")countdown(); });
+  document.getElementById("tugEnd").addEventListener("click",function(){ endNow("press") });
   vcStart(function(){});
   TUG_ASK=function(){
     stepBegin({id:"tug",say:"เริ่ม",
@@ -6389,6 +6547,21 @@ async function startTugPipeline(){
   }
 }
 
+/* หลักฐานที่ใช้ยืนยันว่าเดินถึงจุดกลับตัวจริง เรียงจากตรงที่สุดลงมา
+     บัง   ผู้ใช้ไปยืนบังป้ายที่วางไว้ตรงจุด — ตรงที่สุด ไม่ต้องอนุมานอะไรเลย
+     ข้าม  เคลื่อนจากเก้าอี้ไปถึงตำแหน่งป้ายในภาพเกือบสุด — ยังอิงป้ายอยู่
+     ขนาด  ตัวเล็กลงแล้วใหญ่ขึ้น — บอกได้แค่ "ไกลขึ้นแล้วกลับ" ไม่ได้บอกว่ากี่เมตร
+   ความต่างนี้ต้องไปถึงผู้เชี่ยวชาญ เพราะเวลาที่ได้จากสองแบบแรกเทียบข้ามครั้งได้
+   ส่วนแบบสุดท้ายเทียบได้ต่อเมื่อวางเก้าอี้กับกล้องที่เดิมเป๊ะ ๆ */
+var TUG_TURN_NM={occlude:"ยืนยันด้วยป้ายจุด 3 เมตร (เดินไปบังป้าย)",
+                 cross:"ยืนยันด้วยป้ายจุด 3 เมตร (เดินถึงตำแหน่งป้าย)",
+                 size:"ประมาณจากขนาดตัวในภาพ — ไม่ได้ยืนยันด้วยป้าย"};
+var TUG_END_NM={press:"ผู้ใช้หรือผู้ดูแลกดปุ่มจบ",
+                voice:"ผู้ใช้สั่งจบด้วยเสียงหรือยกมือ",
+                auto:"ระบบหยุดเองเมื่อเห็นว่านั่งลง"};
+function tugTurnNm(by){ return TUG_TURN_NM[by]||"ไม่พบจุดกลับตัว" }
+function tugEndNm(by){ return TUG_END_NM[by]||"ไม่ทราบ" }
+
 function finishTug(ev){
   stopCam();
   S.draft.tug=Math.round(ev.elapsed*10)/10; S.draft.tugSkipped=false;
@@ -6397,19 +6570,32 @@ function finishTug(ev){
   S.draft.tugDistanceOk=!!ev.distanceOk;
   S.draft.tugDrift=ev.drift?Math.round(ev.drift.max*100)/100:null;
   S.draft.tugReaction=ev.reaction!=null?Math.round(ev.reaction*10)/10:null;
+  /* เก็บ "รู้ได้อย่างไร" ไว้คู่กับ "ได้เท่าไร" เสมอ
+     ตัวเลข 13.2 วินาทีที่ยืนยันระยะด้วยป้าย กับ 13.2 วินาทีที่เดาระยะจากขนาดตัว
+     ไม่ควรถูกอ่านเท่ากัน และเมื่อดูย้อนหลังจะแยกไม่ออกเลยถ้าไม่บันทึกไว้ตอนนี้ */
+  S.draft.tugTurnBy=ev.turnBy||null;
+  S.draft.tugBackBy=ev.backBy||null;
+  S.draft.tugEndedBy=ev.endedBy||null;
+  S.draft.tugMarkTurn=!!ev.markTurn;
+  S.draft.tugReach=ev.reach!=null?Math.round(ev.reach*100)/100:null;
   var g=gaitLabel(ev.drift);
   audit("วัดลุกเดิน 3 เมตร (TUG ไป-กลับ ตามโปรโตคอล CDC)",
     "รวม "+S.draft.tug.toFixed(1)+" วิ (จับเวลาตั้งแต่สัญญาณเริ่ม)"+
     (S.draft.tugReaction!=null?" · เวลาตอบสนอง "+S.draft.tugReaction.toFixed(1)+" วิ":"")+
     (S.draft.tugOut!=null?" · ขาไป "+S.draft.tugOut.toFixed(1)+" วิ · ขากลับ "+S.draft.tugBack.toFixed(1)+" วิ":"")+
     " · "+(ev.distanceOk?"เดินครบระยะ":"ระยะอาจไม่ครบ 3 เมตร — ไม่นำมาคัดกรอง")+
+    " · จุดกลับตัว: "+tugTurnNm(ev.turnBy)+
+    (ev.reach!=null?" (เดินไปได้ "+Math.round(ev.reach*100)+"% ของระยะถึงป้าย)":"")+
+    " · กลับถึงเก้าอี้: "+(ev.markHome?"ยืนยันด้วยป้ายข้างเก้าอี้":"ไม่ได้ยืนยันด้วยป้าย")+
+    " · หยุดเวลาโดย: "+tugEndNm(ev.endedBy)+
     " · การเดิน: "+g.nm);
   setStatus(S.draft.tug>=12?"yellow":"green",
-    "เสร็จสิ้น — ใช้เวลา "+S.draft.tug.toFixed(1)+" วินาที · "+g.nm,false);
+    "เสร็จสิ้น — ใช้เวลา "+S.draft.tug.toFixed(1)+" วินาที · "+g.nm+
+    (ev.markTurn?" · ยืนยันระยะด้วยป้ายแล้ว":" · ยังไม่ได้ยืนยันระยะด้วยป้าย"),false);
   speak("เสร็จสิ้น บันทึกเรียบร้อยแล้ว ใช้เวลา "+Math.round(ev.elapsed)+" วินาที "+
         (ev.distanceOk?"เดินครบระยะ":"ระยะเดินอาจไม่ครบสามเมตร")+
         " ขั้นตอนต่อไป ทดสอบการทรงตัวสี่ท่า");
-  toast("ลุกเดิน "+S.draft.tug.toFixed(1)+" วิ · "+g.nm);
+  toast("ลุกเดิน "+S.draft.tug.toFixed(1)+" วิ · "+g.nm+(ev.markTurn?" · ยืนยันระยะด้วยป้าย":""));
   setTimeout(function(){ if(S.screen==="tug")sectionDone("tug",{next:function(){go("balance")}}) },3200);
 }
 
