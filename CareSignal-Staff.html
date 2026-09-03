@@ -383,6 +383,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
 <script src="./cs-backend.js?v=4"></script>
 <script src="./cs-meds.js?v=4"></script>
+<script src="./cs-hospitals.js?v=1"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -1616,32 +1617,94 @@ function orgPrompt(){
   return new Promise(function(resolve){
     var w=document.createElement("div");
     w.style.cssText="position:fixed;inset:0;background:rgba(22,35,59,.45);"+
-      "display:grid;place-items:center;z-index:200;padding:20px";
-    w.innerHTML='<div class="card" style="max-width:440px;width:100%;margin:0">'+
+      "display:grid;place-items:center;z-index:200;padding:20px;overflow:auto";
+    var hasList = typeof CSHosp!=="undefined" && CSHosp.count()>0;
+    w.innerHTML='<div class="card" style="max-width:460px;width:100%;margin:0">'+
       '<div class="kick">ขั้นตอนสุดท้ายก่อนเริ่มงาน</div>'+
       '<h3 style="margin:4px 0 6px">เลือกหน่วยบริการที่ท่านปฏิบัติงานอยู่</h3>'+
       '<p class="sub">ระบบบันทึกหน่วยบริการไว้กับทุกคำขอเปิดดูข้อมูล เพื่อให้ตรวจย้อนได้ '+
       'และเพื่อให้ผู้เอาประกันเห็นว่าคำขอมาจากที่ใด</p>'+
-      '<div class="field"><label>หน่วยบริการ / หน่วยงาน</label>'+
-      '<input id="orgIn" list="orgList" placeholder="เช่น โรงพยาบาลส่งเสริมสุขภาพตำบลบางแค" autocomplete="off">'+
-      '<datalist id="orgList"></datalist></div>'+
+      '<div id="orgRecent"></div>'+
+      (hasList?
+        '<div id="orgPick">'+
+        '<div class="field"><label>จังหวัด</label>'+
+          '<select id="orgProv"><option value="">— เลือกจังหวัด —</option></select></div>'+
+        '<div class="field"><label>โรงพยาบาล</label>'+
+          '<select id="orgHosp" disabled><option value="">— เลือกจังหวัดก่อน —</option></select></div>'+
+        '</div>':'')+
+      '<div id="orgFree"'+(hasList?' hidden':'')+'>'+
+        '<div class="field"><label>ชื่อหน่วยบริการ / หน่วยงาน</label>'+
+        '<input id="orgIn" list="orgList" placeholder="เช่น รพ.สต.บ้านใหม่ · คลินิกหมอสมชาย" autocomplete="off">'+
+        '<datalist id="orgList"></datalist></div></div>'+
       '<button class="cta" id="orgGo">ยืนยันและเริ่มงาน</button>'+
-      '<p class="tiny" style="margin:8px 0 0">เลือกผิดสามารถเปลี่ยนได้ภายหลังจากแถบด้านบน</p></div>';
+      (hasList?
+        '<p class="tiny" style="margin:10px 0 0">รายชื่อนี้เป็นโรงพยาบาลรัฐในเขตสุขภาพของกระทรวงสาธารณสุข '+
+        CSHosp.count()+' แห่ง <b>ไม่รวม รพ.สต. คลินิก และหน่วยงานในกรุงเทพฯ</b><br>'+
+        '<button class="linkbtn" id="orgOther">หน่วยงานของท่านไม่อยู่ในรายการ — พิมพ์ชื่อเอง</button></p>':'')+
+      '<p class="tiny" style="margin:6px 0 0">เลือกผิดสามารถเปลี่ยนได้ภายหลังจากแถบด้านบน</p></div>';
     document.body.appendChild(w);
-    var input=w.querySelector("#orgIn");
+
+    var pick=w.querySelector("#orgPick"), free=w.querySelector("#orgFree");
+    var prov=w.querySelector("#orgProv"), hosp=w.querySelector("#orgHosp");
+    var input=w.querySelector("#orgIn"), other=w.querySelector("#orgOther");
+
+    function finish(v){ w.remove(); resolve(v) }
+
+    /* ---- เคยทำงานที่ไหนมาก่อน = ทางที่เร็วที่สุด ----
+       คนส่วนใหญ่เข้าระบบจากที่เดิมทุกวัน จึงให้แตะครั้งเดียวจบ
+       ไม่ต้องไล่เลือกจังหวัดใหม่ทุกเช้า */
     CSBackend.myOrgHistory().then(function(list){
-      w.querySelector("#orgList").innerHTML=list.map(function(o){
-        return '<option value="'+esc(o)+'">'}).join("");
-      if(list.length) input.value=list[0];
-      input.focus();
-    }).catch(function(){input.focus()});
+      if(input){
+        var dl=w.querySelector("#orgList");
+        if(dl)dl.innerHTML=list.map(function(o){return '<option value="'+esc(o)+'">'}).join("");
+      }
+      if(!list.length)return;
+      w.querySelector("#orgRecent").innerHTML=
+        '<div class="tiny" style="margin:0 0 6px">ที่เคยปฏิบัติงาน</div>'+
+        list.slice(0,3).map(function(o){
+          return '<button class="ghostb" data-org="'+esc(o)+'" style="text-align:left;margin:0 0 6px">🏥 '+esc(o)+'</button>';
+        }).join("")+
+        '<div class="tiny" style="margin:2px 0 10px;border-bottom:1px solid var(--line2);padding-bottom:10px">'+
+        'หรือเลือกใหม่ด้านล่าง</div>';
+      w.querySelectorAll("[data-org]").forEach(function(b){
+        b.addEventListener("click",function(){ finish(b.dataset.org) });
+      });
+    }).catch(function(){});
+
+    /* ---- จังหวัด → โรงพยาบาล ---- */
+    if(hasList){
+      prov.innerHTML='<option value="">— เลือกจังหวัด —</option>'+
+        CSHosp.provinces().map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>'}).join("");
+      prov.addEventListener("change",function(){
+        var list=CSHosp.of(prov.value);
+        if(!list.length){ hosp.disabled=true; hosp.innerHTML='<option value="">— เลือกจังหวัดก่อน —</option>'; return }
+        /* บอกระดับไว้ข้างชื่อ เพราะชื่อโรงพยาบาลในจังหวัดเดียวกันคล้ายกันได้มาก */
+        hosp.innerHTML='<option value="">— เลือกโรงพยาบาล ('+list.length+' แห่ง) —</option>'+
+          list.map(function(h){
+            return '<option value="'+esc(h[0])+'">'+esc(h[0])+' · '+esc(CSHosp.levelName(h[1]))+'</option>';
+          }).join("");
+        hosp.disabled=false;
+      });
+      other.addEventListener("click",function(){
+        pick.hidden=true; free.hidden=false; other.parentNode.hidden=true;
+        input.focus();
+      });
+    }else if(input){ input.focus() }
+
     function done(){
-      var v=(input.value||"").trim();
-      if(!v){ toast("กรุณาระบุหน่วยบริการ"); return }
-      w.remove(); resolve(v);
+      /* พิมพ์เองมาก่อนเสมอเมื่อเปิดช่องนั้นอยู่ ไม่งั้นค่าที่ค้างในตัวเลือก
+         จะถูกบันทึกแทนสิ่งที่ผู้ใช้เพิ่งพิมพ์ */
+      if(free && !free.hidden){
+        var t=(input.value||"").trim();
+        if(!t){ toast("กรุณาระบุหน่วยบริการ"); input.focus(); return }
+        finish(t); return;
+      }
+      if(!prov.value){ toast("กรุณาเลือกจังหวัด"); prov.focus(); return }
+      if(!hosp.value){ toast("กรุณาเลือกโรงพยาบาล"); hosp.focus(); return }
+      finish(CSHosp.label(hosp.value, prov.value));
     }
     w.querySelector("#orgGo").addEventListener("click",done);
-    input.addEventListener("keydown",function(e){if(e.key==="Enter")done()});
+    if(input)input.addEventListener("keydown",function(e){if(e.key==="Enter")done()});
   });
 }
 /* แถบบอกหน่วยบริการปัจจุบัน ติดบนสุดของทุกหน้าที่ทำงานกับเคส */
