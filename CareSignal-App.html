@@ -780,6 +780,12 @@ function vcIntent(txt){
 var STEP={id:null,on:null,cue:"",hint:"",say:"",quiet:false,t0:0,nudges:0,timer:null,lastMiss:0};
 function stepBegin(spec){
   stepStop();
+  /* โหมดผู้ดูแลปิดการรับคำสั่งเสียงทั้งหมด แต่ยังพูดบอกขั้นตอนตามเดิม
+     เพราะผู้ทดสอบยืนห่างจอและต้องได้ยินว่าต้องทำอะไรต่อ */
+  if(typeof voiceOK==="function"&&!voiceOK()){
+    if(spec&&spec.cue)speak(spec.cue,{force:true});
+    return;
+  }
   STEP.id=spec.id; STEP.on=spec.on||{};
   STEP.cue=spec.cue||""; STEP.hint=spec.hint||spec.cue||"";
   STEP.t0=Date.now(); STEP.nudges=0; STEP.lastMiss=0;
@@ -2275,6 +2281,95 @@ function camConstraints(){
   return { facingMode:"user", width:{ideal:w}, height:{ideal:h} };
 }
 
+/* ============================================================
+   โหมดผู้ดูแล
+   ------------------------------------------------------------
+   CDC STEADI เขียนวิธีทำแบบทดสอบการทรงตัวไว้ว่าผู้ประเมินยืนอยู่ข้าง ๆ
+   จับแขนช่วยจัดท่า พอผู้ทดสอบนิ่งแล้วจึงปล่อยและเริ่มจับเวลา และพร้อม
+   เข้าไปช่วยตลอดเวลา · แปลว่าในสถานการณ์จริงมี "คนที่สอง" อยู่ตรงนั้นอยู่แล้ว
+
+   ระบบสั่งการด้วยเสียงถูกสร้างขึ้นเพราะผู้ทดสอบยืนห่างจอสองถึงสามเมตร
+   จนกดปุ่มไม่ถึง แต่เมื่อมีผู้ดูแลอยู่ข้างเครื่อง ปัญหานั้นหายไปทั้งหมด
+   และการกดปุ่มก็แม่นกว่าการฟังเสียงในบ้านที่มีเสียงรบกวนมาก
+
+   โหมดนี้จึงปิดการรับคำสั่งเสียงทั้งหมด แล้วให้ผู้ดูแลเป็นผู้กดเริ่มและหยุด
+   ระบบยังพูดบอกขั้นตอนเหมือนเดิม เพราะผู้ทดสอบต้องได้ยินว่าต้องทำอะไร
+   ============================================================ */
+var CARER = { on: false };
+var CARER_LS = "cs:carer";
+function carerLoad() {
+  try { CARER.on = localStorage.getItem(CARER_LS) === "1" } catch (e) {}
+}
+function carerSave() {
+  try { localStorage.setItem(CARER_LS, CARER.on ? "1" : "0") } catch (e) {}
+}
+/* จุดเดียวที่ตัดสินว่าจะเปิดหูฟังคำสั่งหรือไม่ — ประตูเดียวจึงไม่มีทางลืมปิดที่ใดที่หนึ่ง */
+function voiceOK() { return !CARER.on }
+
+/* ============================================================
+   เหตุผลที่หยุดกลางคัน
+   ------------------------------------------------------------
+   STEADI สั่งให้หยุดทันทีเมื่อผู้ทดสอบขยับเท้าหรือต้องการการพยุง
+   สามข้อแรกคือเหตุที่พบบ่อยที่สุดและเป็นเหตุที่ต้องบันทึกแยกกัน
+   เพราะสามอย่างนี้หมายถึงคนละเรื่อง: เสียสมดุลคือปัญหาการทรงตัว
+   เวียนศีรษะอาจเป็นความดันหรือยา ส่วนการต้องจับพยุงคือระดับการพึ่งพิง
+   ถ้าบันทึกรวมกันเป็น "หยุดกลางคัน" เฉย ๆ ผู้เชี่ยวชาญจะแยกไม่ออก
+   ============================================================ */
+var STOP_REASONS = [
+  { k: "balance", nm: "เสียสมดุล เซ หรือจะล้ม" },
+  { k: "dizzy",   nm: "เวียนศีรษะ หน้ามืด" },
+  { k: "support", nm: "ต้องจับพยุงหรือยึดเกาะ" },
+  { k: "pain",    nm: "เจ็บ ปวด หรือไม่สบาย" },
+  { k: "tired",   nm: "เหนื่อย ขอพัก" },
+  { k: "other",   nm: "เหตุผลอื่น" }
+];
+function stopReasonNm(k) {
+  var r = STOP_REASONS.filter(function (x) { return x.k === k })[0];
+  return r ? r.nm : (k || "ไม่ระบุ");
+}
+
+/* ============================================================
+   ตัวเก็บคุณภาพภาพระหว่างทดสอบ
+   ------------------------------------------------------------
+   ผลที่ได้จากกล้องจะมีความหมายก็ต่อเมื่อรู้ว่าตอนนั้นกล้องเห็นดีแค่ไหน
+   ค่าเดียวกันจากภาพที่เห็นชัดตลอด กับจากภาพที่คนหลุดกรอบไปครึ่งหนึ่ง
+   ไม่ควรถูกอ่านเท่ากัน · เก็บทุกครั้งแม้แต่ครั้งที่หยุดกลางคัน
+   เพราะครั้งที่หยุดคือครั้งที่ต้องอธิบายได้มากที่สุด
+   ============================================================ */
+function QLog() { this.reset() }
+QLog.prototype.reset = function () {
+  this.n = 0; this.qSum = 0; this.seen = 0; this.feet = 0; this.mark = 0; this.multi = 0;
+};
+QLog.prototype.push = function (q, sawFeet, sawMark, nPeople) {
+  this.n++;
+  if (q != null) { this.qSum += q; this.seen++ }
+  if (sawFeet) this.feet++;
+  if (sawMark) this.mark++;
+  if (nPeople > 1) this.multi++;
+};
+QLog.prototype.summary = function () {
+  if (!this.n) return null;
+  var pc = function (v, n) { return Math.round(v / n * 100) };
+  return {
+    frames: this.n,
+    visPct: this.seen ? Math.round(this.qSum / this.seen * 100) : null,
+    seenPct: pc(this.seen, this.n),
+    feetPct: pc(this.feet, this.n),
+    markPct: pc(this.mark, this.n),
+    multiPct: pc(this.multi, this.n)
+  };
+};
+/* คำอธิบายคุณภาพเป็นภาษาคน — ตัวเลขล้วนไม่ช่วยให้ใครตัดสินใจได้ */
+function qualityNote(s) {
+  if (!s) return "ไม่มีข้อมูลคุณภาพภาพ";
+  var bad = [];
+  if (s.seenPct < 80) bad.push("กล้องเห็นตัวเพียง " + s.seenPct + "% ของเวลา");
+  if (s.feetPct < 50) bad.push("เห็นเท้าชัดเพียง " + s.feetPct + "%");
+  if (s.visPct != null && s.visPct < 70) bad.push("ภาพไม่ครบทั้งตัวบ่อย");
+  if (s.multiPct > 20) bad.push("มีคนมากกว่าหนึ่งคนในภาพ " + s.multiPct + "% ของเวลา");
+  return bad.length ? ("คุณภาพภาพจำกัด — " + bad.join(" · ")) : "คุณภาพภาพดีตลอดการทดสอบ";
+}
+
 function hipRatio(lm){
   var sh=midY(lm,LM.LSH,LM.RSH), hip=midY(lm,LM.LHIP,LM.RHIP), ank=midY(lm,LM.LANK,LM.RANK);
   var span=ank-sh;
@@ -3690,7 +3785,7 @@ async function renderAccessReqs(host){
 var SHEET_MM = 90;      /* ขนาดที่ออกแบบไว้ ก่อนหักความคลาดของเครื่องพิมพ์ */
 /* ป้ายที่มีบนแผ่น — ต้องตรงกับ tools/make-marker-pdf.mjs
    ห้าตำแหน่งนี้คือทั้งหมดที่การทดสอบในโปรแกรมใช้จริง ไม่มีป้ายที่พิมพ์แล้วไม่ได้ใช้ */
-var MK_SHEET_IDS = [0, 1, 2, 3, 4];
+var MK_SHEET_IDS = [0, 1, 2, 3, 4, 5];
 
 function markGridHTML(id, mm){
   if(!window.CSAruco) return "";
@@ -3801,6 +3896,13 @@ function markersV(){
     audit("ยืนยันขนาดป้ายที่พิมพ์","วัดไม้บรรทัดได้ "+v+" มม. → ขนาดป้ายจริง "+MARK.mm.toFixed(1)+" มม.");
     toast("บันทึกขนาดป้ายแล้ว");
     if(MARK.mm<80)toast("ป้ายเล็กกว่า 8 ซม. อาจอ่านไม่ได้ที่ระยะ 3 เมตร");
+  });
+  var cOn=document.getElementById("carerOn");
+  if(cOn)cOn.addEventListener("change",function(){
+    CARER.on=this.checked; carerSave();
+    /* ปิดหูฟังทันที ไม่รอหน้าจอถัดไป ไม่งั้นคำสั่งเสียงยังทำงานอยู่ทั้งที่ปิดไปแล้ว */
+    if(CARER.on&&typeof stepStop==="function")stepStop();
+    toast(CARER.on?"เปิดโหมดผู้ดูแลแล้ว — ปิดคำสั่งเสียง":"ปิดโหมดผู้ดูแลแล้ว — เปิดคำสั่งเสียง");
   });
   document.getElementById("mkOn").addEventListener("change",function(){
     MARK.on=this.checked; markSave();
@@ -5783,12 +5885,15 @@ function BalanceEngine(stage){
   /* ตัวอย่างจากป้าย เก็บแยกจากตัวอย่างจากกล้อง เพราะหน่วยคนละอย่าง
      ของกล้องเป็นสัดส่วนของภาพ ของป้ายแปลงเป็นมิลลิเมตรจริงได้ */
   this.mk=[]; this.mkAng=[];
+  /* คุณภาพภาพระหว่างท่านี้ — เก็บทุกเฟรม รายงานทุกครั้งแม้ครั้งที่หยุดกลางคัน */
+  this.q=new QLog();
 }
 /* ป้อนป้ายหนึ่งเฟรม — เก็บทั้งตำแหน่งเป็นมิลลิเมตรและมุมเอียงเป็นองศา
    เหตุผลที่แปลงเป็นมิลลิเมตรตั้งแต่ตอนเก็บ ไม่ใช่ตอนสรุป
    เพราะระยะห่างจากกล้องเปลี่ยนได้ระหว่างทดสอบ ถ้าเก็บเป็นพิกเซลไว้ก่อน
    แล้วค่อยคูณด้วยอัตราส่วนตอนท้าย จะใช้อัตราส่วนของเฟรมสุดท้ายกับทุกเฟรม */
 BalanceEngine.prototype.feedMark=function(m){
+  this._sawMark=!!(m&&m.side);
   if(!m||!m.side)return;
   var mmPerPx=markMmPerPx(m);
   if(mmPerPx==null)return;
@@ -5861,6 +5966,7 @@ BalanceEngine.prototype.frame=function(lm){
   var r=this._read(lm);
   if(!r){
     this.lostN++; this.stillN=0;
+    if(this.state==="hold")this.q.push(null,false,false,POSE_COUNT);
     return {seen:false, lost:this.lostN, ready:false,
             fail:this.state==="hold"&&this.lostN>75,
             why:"กล้องมองไม่เห็นตัวนานเกินไป", sway:this.liveSway()};
@@ -5897,6 +6003,10 @@ BalanceEngine.prototype.frame=function(lm){
   /* ---- ระหว่างจับเวลา 10 วินาที ---- */
   this.samples.push({x:this.c.x,y:this.c.y});
   this.hn++; if(r.feet)this.hFeet++;
+  /* คุณภาพภาพเก็บทุกเฟรมระหว่างจับเวลา ไม่ใช่สรุปตอนจบ
+     เพราะเฟรมที่กล้องมองไม่เห็นคือเฟรมที่จะหายไปจากค่าเฉลี่ยถ้าเก็บทีหลัง */
+  this.q.push(visOK(lm), !!r.feet, !!this._sawMark, POSE_COUNT);
+  this._sawMark=false;
   var res={seen:true, ready:true, fail:false, why:null,
            sway:this.liveSway(), stepped:false, dropped:false, remind:null};
 
@@ -5971,7 +6081,8 @@ BalanceEngine.prototype.observe=function(){
   }
   if(!obs.length)obs.push("ไม่พบการขยับเท้าและไม่พบการทรุดตัว");
   return {obs:obs, suggest:suggest, confidence:conf,
-          feetSeen:Math.round(feetRatio*100), sway:this.finalSway()};
+          feetSeen:Math.round(feetRatio*100), sway:this.finalSway(),
+          quality:this.q.summary()};
 };
 BalanceEngine.prototype.liveSway=function(){return this._sd(this.samples.slice(-90))};
 BalanceEngine.prototype.finalSway=function(){return this._sd(this.samples)};
@@ -6129,11 +6240,12 @@ TugDetector.prototype.push=function(raw,t){
 };
 function tugV(){
   head("ขั้นที่ 3","ลุกเดิน 3 เมตร (TUG)",
-       "วางป้าย 2 จุด แล้วกลับมานั่งเก้าอี้ · ระบบจะรู้เองว่าท่านนั่งแล้ว แล้วนับ 3-2-1 ให้","assessIntro");
+       "วางป้าย 3 จุด แล้วกลับมานั่งเก้าอี้ · ป้ายแต่ละใบมีรหัสของตัวเอง ระบบจึงรู้ว่าท่านเดินผ่านจุดไหนแล้ว","assessIntro");
   V.innerHTML='<div class="anim">'+
   '<div class="card"><h3>เตรียม 3 อย่างก่อนเริ่ม</h3>'+
-  '<div class="rowline"><span class="k">① วางป้ายจุดเริ่ม</span><span class="v">ที่เก้าอี้</span></div>'+
-  '<div class="rowline"><span class="k">② วางป้ายจุดกลับ</span><span class="v">ห่าง 3 เมตร</span></div>'+
+  '<div class="rowline"><span class="k">① ป้ายจุดเริ่มต้น</span><span class="v">ตั้งข้างเก้าอี้</span></div>'+
+  '<div class="rowline"><span class="k">② ป้ายจุด 1 เมตร</span><span class="v">ห่างเก้าอี้ 1 เมตร</span></div>'+
+  '<div class="rowline"><span class="k">③ ป้ายจุด 3 เมตร</span><span class="v">ห่างเก้าอี้ 3 เมตร</span></div>'+
   '<div class="rowline"><span class="k">③ กลับมานั่งเก้าอี้</span><span class="v">พิงพนัก</span></div>'+
   '<p class="sub" style="margin:10px 0 0">เมื่อวางป้ายเสร็จ กลับมานั่งที่เก้าอี้ ระบบจะบอกเมื่อเห็นว่าท่านพร้อม แล้ว<b>รอคำสั่งของท่าน</b> — พูดว่า “เริ่มทดสอบ” (หรือกดปุ่ม) ระบบจึงจะนับ 3-2-1</p></div>'+
   '<div class="card" style="background:var(--surf2)"><h3>เมื่อได้ยินคำว่า “เริ่ม”</h3>'+
@@ -6143,7 +6255,7 @@ function tugV(){
   '<div class="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas>'+
   '<div class="hud"><div class="hudtop"><span class="hudtag" id="tag">กำลังเปิดกล้อง…</span><span class="hudtag" id="tphase">รอท่านนั่ง</span></div>'+
   '<div class="hudbot"><div class="counter"><span class="n" id="tugclk">0.0</span><span class="of">วินาที</span></div>'+
-  '<div class="coach" id="coach">วางป้ายให้เรียบร้อย แล้วกลับมานั่งที่เก้าอี้</div></div></div></div>'+
+  '<div class="coach" id="coach">วางป้ายทั้งสามใบให้เรียบร้อย แล้วกลับมานั่งที่เก้าอี้</div></div></div></div>'+
   statusHTML()+
   '<button class="cta" id="tugStart">เริ่มทดสอบ (แทนคำสั่งเสียงได้)</button>'+
   '<button class="ghostb" id="tugSkip">ข้ามขั้นนี้ · ไปทดสอบการทรงตัว</button>'+
@@ -6229,8 +6341,8 @@ async function startTugPipeline(){
           coach.textContent="เห็นแล้วว่าท่านนั่งอยู่";
         }
       }else{
-        setStatus("yellow","วางป้ายให้ครบ แล้วกลับมานั่งที่เก้าอี้",false);
-        coach.textContent="วางป้ายให้ครบ แล้วกลับมานั่งพิงพนักเก้าอี้";
+        setStatus("yellow","วางป้ายทั้งสามใบให้ครบ แล้วกลับมานั่งที่เก้าอี้",false);
+        coach.textContent="วางป้ายทั้งสามใบให้ครบ แล้วกลับมานั่งพิงพนักเก้าอี้";
       }
       if(seatedN>=45&&!armed){ armed=true;   /* นั่งนิ่งราว 1.8 วิ */
         coach.textContent="เห็นว่านั่งพร้อมแล้ว — กำลังนับถอยหลัง";
@@ -6271,8 +6383,8 @@ async function startTugPipeline(){
 
   if(!introDone){
     introDone=true;
-    setStatus("yellow","วางป้าย 2 จุด แล้วกลับมานั่งเก้าอี้",false);
-    speak("การทดสอบลุกเดินสามเมตร กรุณาวางป้ายจุดเริ่มไว้ที่เก้าอี้ และป้ายจุดกลับให้ห่างสามเมตร "+
+    setStatus("yellow","วางป้าย 3 จุด แล้วกลับมานั่งเก้าอี้",false);
+    speak("การทดสอบลุกเดินสามเมตร กรุณาตั้งป้ายจุดเริ่มต้นไว้ข้างเก้าอี้ ป้ายจุดหนึ่งเมตร และป้ายจุดสามเมตรตามระยะ "+
           "เมื่อวางเสร็จแล้ว กลับมานั่งพิงพนักเก้าอี้",{onDone:function(){if(TUG_ASK)TUG_ASK()}});
   }
 }
@@ -6325,6 +6437,16 @@ function balanceV(){
     '<button class="ghostb" id="bcFail" style="margin:0 0 8px">✗ ไม่ผ่าน — ขยับเท้าหรือต้องจับพยุง</button>'+
     '<button class="ghostb" id="bcHalt" style="margin:0;border-color:#DC2626;color:#DC2626">■ หยุดเพื่อความปลอดภัย</button>'+
   '</div>'+
+  /* ปุ่มหยุดต้องอยู่ตรงนี้ ไม่ใช่ในการ์ดยืนยันผลซึ่งโผล่หลังจบท่าแล้ว
+     STEADI สั่งให้หยุด "ทันที" ที่ผู้ทดสอบเสียสมดุลหรือต้องจับพยุง
+     ปุ่มที่ยังไม่ปรากฏตอนนั้นจึงไม่มีประโยชน์ */
+  '<button class="cta" id="bHaltNow" hidden style="background:#DC2626;color:#fff">'+
+    '■ หยุดทันที (เสียสมดุล · เวียนศีรษะ · ต้องจับพยุง)</button>'+
+  '<div class="card" id="bWhy" hidden style="border:2px solid #DC2626">'+
+    '<h3 style="margin:0 0 6px">หยุดเพราะอะไร</h3>'+
+    '<p class="sub" style="margin:0 0 10px">บันทึกเหตุผลไว้ให้ผู้เชี่ยวชาญอ่าน — '+
+    'สามข้อแรกหมายถึงคนละเรื่องกัน จึงต้องแยกกัน ไม่รวมเป็น "หยุดกลางคัน" เฉย ๆ</p>'+
+    '<div id="bWhyList"></div></div>'+
   '<button class="cta" id="bStart">เริ่มท่านี้ (หรือพูดว่า "เริ่ม")</button>'+
   '<button class="ghostb" id="bRetry" hidden>ทำท่านี้ใหม่อีกครั้ง</button>'+
   '<div style="display:flex;gap:8px;margin:8px 0">'+
@@ -6335,6 +6457,59 @@ function balanceV(){
   '<div class="disc">กล้องทำหน้าที่ช่วยจัดท่า ตรวจว่าเห็นตัวครบ และเฝ้าระวังความปลอดภัย '+
   '<b>ผลผ่าน/ไม่ผ่านยืนยันโดยท่านหรือผู้ดูแลเสมอ</b> — ระบบไม่ใช้ค่าความโคลงจากกล้องตัดสินผล '+
   'เพราะการวัดการแกว่งของร่างกายให้เชื่อถือได้ต้องใช้อุปกรณ์อย่าง force plate หรือเซ็นเซอร์ติดตัว</div></div>';
+  /* ============================================================
+     หยุดทันที
+     ------------------------------------------------------------
+     กดได้ทุกช่วงที่ยังไม่จบท่า · หยุดจับเวลาก่อนแล้วค่อยถามเหตุผล
+     ลำดับนี้สำคัญ ถ้าถามก่อนหยุด นาฬิกาจะเดินต่อระหว่างที่คนกำลังเลือก
+     และเวลาที่บันทึกจะยาวกว่าที่ผู้ทดสอบยืนได้จริง
+     ============================================================ */
+  var haltAt=null;
+  haltBtn.addEventListener("click",function(){
+    if(phase!=="setup"&&phase!=="arming"&&phase!=="holding")return;
+    /* กดตอนกำลังจับเวลาจึงมีเวลาให้บันทึก กดตอนยังจัดท่าอยู่ถือว่าศูนย์วินาที */
+    haltAt=(phase==="holding")?(performance.now()-t0)/1000:0;
+    clearCd(); stepStop(); imuStop();
+    phase="halting";
+    haltBtn.hidden=true; startBtn.hidden=true; retryBtn.hidden=true;
+    setStatus("red","หยุดแล้ว — เลือกเหตุผลเพื่อบันทึก",false);
+    coach.textContent="หยุดแล้ว กรุณาเลือกเหตุผล";
+    speak("หยุดแล้ว กรุณาเลือกเหตุผลที่หยุด");
+    whyList.innerHTML=STOP_REASONS.map(function(r){
+      return '<button class="ghostb" data-why="'+r.k+'" style="margin:0 0 8px">'+esc(r.nm)+'</button>';
+    }).join("");
+    whyBox.hidden=false;
+    whyList.querySelectorAll("[data-why]").forEach(function(b){
+      b.addEventListener("click",function(){ finishHalt(b.dataset.why) });
+    });
+  });
+
+  /* บันทึกท่านี้ว่าไม่ผ่านพร้อมเหตุผล แล้วให้ผู้ใช้เลือกว่าจะทำต่อหรือหยุดทั้งชุด
+     ไม่ตัดสินแทนว่าต้องเลิกทั้งหมด เพราะบางเหตุผล เช่น ขอพัก ทำต่อได้ */
+  function finishHalt(k){
+    whyBox.hidden=true;
+    var o=ENG?ENG.observe():{obs:[],suggest:"unsure",confidence:"low",feetSeen:0,quality:null};
+    o.obs.push("ผู้ดูแลกดหยุดกลางคัน — "+stopReasonNm(k));
+    results[stage]={held:Math.round((haltAt||0)*10)/10, pass:false,
+      stage:BAL_STAGES[stage].nm, attempts:attempts[stage],
+      reason:"หยุดกลางคัน", stopReason:k, stopReasonNm:stopReasonNm(k),
+      aiObs:o.obs, aiSuggest:"fail", aiConfidence:o.confidence,
+      feetSeenPct:o.feetSeen, decidedBy:"human-halt", sway:o.sway,
+      quality:o.quality, qualityNote:qualityNote(o.quality)};
+    chip(stage,"bad");
+    audit("หยุดการทดสอบทรงตัวกลางคัน",
+      "ท่าที่ "+(stage+1)+" ที่ "+(haltAt||0).toFixed(1)+" วินาที · เหตุผล "+stopReasonNm(k)+
+      " · "+qualityNote(o.quality));
+    /* หยุดกลางคันแล้วจบทั้งชุดเสมอ ไม่ว่าเหตุผลใด
+       CDC STEADI เขียนไว้ว่าถ้ายืนท่าใดไม่ครบสิบวินาที ให้หยุดการทดสอบ
+       ไม่ต้องทำท่าถัดไป เพราะท่าถัดไปยากกว่าเดิมเสมอ
+       การชวนทำต่อหลังเพิ่งเสียสมดุลคือการเพิ่มความเสี่ยงโดยไม่ได้ข้อมูลเพิ่ม
+       ถ้าอยากทำใหม่ทั้งชุด เริ่มการทดสอบทรงตัวใหม่ได้จากหน้าสรุป */
+    for(var i=stage+1;i<BAL_STAGES.length;i++)chip(i,"",""+(i+1)+" ไม่ได้ทำ");
+    speak("บันทึกแล้ว หยุดการทดสอบไว้เท่านี้");
+    finishAll("หยุดกลางคัน — "+stopReasonNm(k));
+  }
+
   document.getElementById("bStop").addEventListener("click",function(){
     stopCam();
     audit("หยุดการทดสอบทรงตัวกลางคัน","ผู้ใช้เลือกตอบด้วยตนเอง");
@@ -6349,6 +6524,8 @@ async function startBalancePipeline(){
   var tag=document.getElementById("tag"),coach=document.getElementById("coach"),
       secEl=document.getElementById("bsec"),swayEl=document.getElementById("bsway"),trk=document.getElementById("btrk"),
       startBtn=document.getElementById("bStart"),retryBtn=document.getElementById("bRetry"),
+      haltBtn=document.getElementById("bHaltNow"),whyBox=document.getElementById("bWhy"),
+      whyList=document.getElementById("bWhyList"),
       confirmBox=document.getElementById("bConfirm"),obsBox=document.getElementById("bObs"),
       bcQ=document.getElementById("bcQ");
   var stream;
@@ -6379,7 +6556,9 @@ async function startBalancePipeline(){
     confirmBox.hidden=true;
     secEl.textContent=BAL_SECONDS; trk.style.width="0%"; swayEl.textContent="—";
     startBtn.hidden=false; startBtn.disabled=false;
-    startBtn.textContent="เริ่มท่าที่ "+(stage+1)+" (แทนคำสั่งเสียงได้)";
+    haltBtn.hidden=false; whyBox.hidden=true;
+    startBtn.textContent=CARER.on?("ผู้ดูแลกดเริ่มท่าที่ "+(stage+1))
+                                 :("เริ่มท่าที่ "+(stage+1)+" (แทนคำสั่งเสียงได้)");
     retryBtn.hidden=true;
     chip(stage,"on");
     coach.innerHTML='<b>ท่าที่ '+(stage+1)+' · '+esc(st.nm)+'</b><br>'+esc(st.how);
@@ -6446,8 +6625,9 @@ async function startBalancePipeline(){
       if(imuSpikes>0)o.obs.push("เซ็นเซอร์จับจังหวะเสียหลักได้ "+imuSpikes+" ครั้ง");
     }
     if(extraN>20)o.obs.push("เห็นคนมากกว่าหนึ่งคนในภาพ — หากมีการช่วยพยุงถือว่าไม่ผ่าน");
-    pending={held:Math.round(held*10)/10, reason:reason||null, o:o};
-    startBtn.hidden=true; retryBtn.hidden=true;
+    pending={held:Math.round(held*10)/10, reason:reason||null,
+             stopReason:pending&&pending.stopReason?pending.stopReason:null, o:o};
+    startBtn.hidden=true; retryBtn.hidden=true; haltBtn.hidden=true; whyBox.hidden=true;
     var full=held>=BAL_SECONDS-0.3;
 
     bcQ.textContent=full?("ยืนครบ "+BAL_SECONDS+" วินาทีหรือไม่")
@@ -6455,6 +6635,8 @@ async function startBalancePipeline(){
     obsBox.innerHTML='<b>กล้องสังเกตเห็น</b> (ข้อมูลประกอบ ไม่ใช่คำตัดสิน)<br>· '+
       o.obs.map(esc).join('<br>· ')+
       '<br>· เห็นเท้าชัด '+o.feetSeen+'% ของเวลาทดสอบ'+
+      '<br>· '+esc(qualityNote(o.quality))+
+      (o.quality&&o.quality.markPct>0?' · เห็นป้ายบนตัว '+o.quality.markPct+'%':'')+
       (o.sway!=null?'<br>· ความโคลงของลำตัว: '+esc(swayLabel(o.sway).nm)+' <i>(ข้อสังเกตเชิงสำรวจ ไม่ใช้ตัดสินผล)</i>':'');
     confirmBox.hidden=false;
 
@@ -6488,6 +6670,10 @@ async function startBalancePipeline(){
     var o=pending.o;
     results[stage]={held:pending.held, pass:!!pass,
                     stage:BAL_STAGES[stage].nm, attempts:attempts[stage], reason:pending.reason,
+                    /* บันทึกทุกครั้ง ไม่ใช่เฉพาะครั้งที่หยุด — ครั้งที่ผ่านก็ต้องรู้ว่า
+                       ตอนนั้นกล้องเห็นดีแค่ไหน ไม่งั้นเทียบข้ามครั้งไม่ได้ */
+                    quality:o.quality, qualityNote:qualityNote(o.quality),
+                    stopReason:pending.stopReason||null,
                     footStance:ENG.startStance!=null?STANCE_NM[ENG.startStance]:null,
                     footOk:ENG.startStance===stage,
                     aiObs:o.obs, aiSuggest:o.suggest, aiConfidence:o.confidence,
@@ -6537,8 +6723,10 @@ async function startBalancePipeline(){
     if(pending){
       results[stage]={held:pending.held, pass:false, stage:BAL_STAGES[stage].nm,
         attempts:attempts[stage], reason:"หยุดเพื่อความปลอดภัย",
+        stopReason:pending.stopReason||"safety", stopReasonNm:stopReasonNm(pending.stopReason||"safety"),
         aiObs:pending.o.obs, aiSuggest:pending.o.suggest, aiConfidence:pending.o.confidence,
-        feetSeenPct:pending.o.feetSeen, decidedBy:"human-safety", sway:pending.o.sway};
+        feetSeenPct:pending.o.feetSeen, decidedBy:"human-safety", sway:pending.o.sway,
+        quality:pending.o.quality, qualityNote:qualityNote(pending.o.quality)};
       chip(stage,"bad"); pending=null;
     }
     for(var i=stage+1;i<BAL_STAGES.length;i++)chip(i,"",""+(i+1)+" ไม่ได้ทำ");
@@ -7117,6 +7305,13 @@ function aiV(){
   var log=(S.data.audit||[]).slice(-12).reverse();
   var c=S.data.consent;
   V.innerHTML='<div class="anim">'+
+  '<div class="card" style="background:var(--surf2)"><h3>มีผู้ดูแลอยู่ด้วยระหว่างทดสอบ</h3>'+
+  '<p class="sub" style="margin:0 0 10px">แนวทาง CDC STEADI ให้ผู้ประเมินยืนข้าง ๆ '+
+  'ช่วยจัดท่า แล้วปล่อยเมื่อผู้ทดสอบนิ่ง และพร้อมเข้าไปช่วยตลอดเวลา · '+
+  'ถ้ามีคนอยู่ข้างเครื่องอยู่แล้ว <b>การกดปุ่มแม่นกว่าการสั่งด้วยเสียง</b> '+
+  'โหมดนี้จะปิดการรับคำสั่งเสียงทั้งหมด แต่ระบบยังพูดบอกขั้นตอนเหมือนเดิม</p>'+
+  '<label class="chk" style="font-size:16px"><input type="checkbox" id="carerOn"'+
+    (CARER.on?" checked":"")+'><span>เปิดโหมดผู้ดูแล — ผู้ดูแลกดเริ่มและกดหยุดเอง</span></label></div>'+
   '<div class="card" style="background:var(--surf2)"><h3>ป้ายช่วยติดตามการเคลื่อนไหว</h3>'+
   '<p class="sub" style="margin:0 0 10px">พิมพ์ป้ายติดหน้าอกและเอว เพื่อให้กล้องวัดการโคลงของลำตัว'+
   'เป็นมิลลิเมตรจริง — ไม่บังคับใช้ ไม่มีป้ายทุกอย่างยังทำงานเหมือนเดิม</p>'+
@@ -7262,7 +7457,7 @@ document.addEventListener("click",function(e){
   go(g.dataset.go);
 });
 (async function(){
-  markLoad();
+  markLoad(); carerLoad();
   applyFontScale();
   await loadAll();
   /* จำบทบาทที่เลือกไว้ เปิดแอปครั้งถัดไปเข้าแดชบอร์ดของบทบาทนั้นทันที */

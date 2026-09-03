@@ -118,10 +118,15 @@ function pageIntro() {
   const rows = [
     ["ป้ายหน้าอก", "ติดกลางอก บนเสื้อหรือสายคาด ให้แผ่นแบนเรียบ"],
     ["ป้ายเอว", "ติดหน้าท้องระดับสะดือ บนเสื้อหรือสายคาด"],
-    ["ป้ายจุดเก้าอี้", "พับตามเส้นแล้วตั้งไว้ข้างเก้าอี้ ให้หันหน้าเข้ากล้อง"],
-    ["ป้ายจุดกลับตัว", "พับตั้งไว้ที่ระยะ 3 เมตรจากเก้าอี้ หันหน้าเข้ากล้อง"],
-    ["ป้ายจุดยืน", "วางราบกับพื้นตรงจุดที่จะยืนทำท่าทรงตัว"]
+    ["ป้ายจุดเริ่มต้น", "พับตามเส้นแล้วตั้งข้างเก้าอี้ ให้หันหน้าเข้ากล้อง"],
+    ["ป้ายจุด 1 เมตร", "พับตั้งไว้ห่างจากเก้าอี้ 1 เมตร"],
+    ["ป้ายจุด 3 เมตร", "พับตั้งไว้ห่างจากเก้าอี้ 3 เมตร เป็นจุดกลับตัว"],
+    ["ป้ายท่าทรงตัว", "วางราบกับพื้นตรงจุดที่จะยืนทำท่าทรงตัวทั้งสี่ท่า"]
   ];
+  y -= 2;
+  p.text("ป้ายทุกใบมีรหัสในตัวเอง ระบบแยกจุดจากรหัส ไม่ได้แยกจากสีหรือรูปทรง",
+         mm(MARGIN + 5), mm(y), 9.5, 0.3);
+  y -= 4;
   for (const [a, b] of rows) {
     p.text("•", mm(MARGIN), mm(y), 10, 0.3);
     p.text(a, mm(MARGIN + 5), mm(y), 10.5, 0);
@@ -169,23 +174,68 @@ function pageBody() {
    ป้ายกว้าง 90 มม. จะเหลือความสูงในภาพเพียงราวหนึ่งในสาม ซึ่งต่ำกว่าขีดที่
    อ่านได้ · จึงพิมพ์ฐานพับมาให้ตั้งขึ้นหันหน้าเข้ากล้องแทน
    ============================================================ */
-function pageStand() {
+function pageStand(ids, title) {
   const p = page();
-  p.text("ป้ายตั้งพื้น — พับตามเส้นแล้วตั้งให้หันหน้าเข้ากล้อง",
-         mm(MARGIN), mm(297 - MARGIN - 4), 13, 0);
+  p.text(title, mm(MARGIN), mm(297 - MARGIN - 4), 13, 0);
   const total = CODE_MM + 2 * (CODE_MM / A.CELLS);
   const x = (210 - total) / 2;
   const FOLD = 26;
+  const tops = [297 - MARGIN - 12, MARGIN + 4 + total + 16 + FOLD];
 
-  for (const [id, yTop] of [[4, 297 - MARGIN - 12], [3, MARGIN + 4 + total + 16 + FOLD]]) {
-    const yBase = yTop - (total + 16) - FOLD;
+  ids.forEach((id, i) => {
+    const yBase = tops[i] - (total + 16) - FOLD;
     markerBlock(p, id, x, yBase + FOLD, CODE_MM);
     /* ฐานพับ: เส้นประคือแนวพับ ไม่ใช่แนวตัด */
     p.frame(mm(x), mm(yBase), mm(total), mm(FOLD), 0.5, 0.8);
     p.line(mm(x), mm(yBase + FOLD), mm(x + total), mm(yBase + FOLD), 0.8, 0.45, 2.5);
     p.text("พับตามเส้นนี้ แล้ววางให้ป้ายตั้งขึ้น", mm(x + total / 2), mm(yBase + FOLD / 2 - 1),
            10, 0.35, "c");
+  });
+  return p;
+}
+
+/* ============================================================
+   ผังการวางป้ายบนเส้นทางเดิน
+   ------------------------------------------------------------
+   ระยะที่พิมพ์บนผังไม่ใช่ระยะจริง เป็นแค่ลำดับ ผู้ใช้ต้องวัดด้วยตลับเมตร
+   ระบบอ่านได้ว่าเดินผ่านจุดใดแล้ว แต่ไม่ได้ตรวจว่าจุดนั้นวางห่างถูกจริง
+   ซึ่งต้องบอกให้ชัด ไม่งั้นผู้ใช้จะคิดว่าระบบวัดระยะให้เอง
+   ============================================================ */
+function pageCourse(id) {
+  const p = page();
+  p.text("ป้ายจุดกลับตัว และผังการวางป้าย", mm(MARGIN), mm(297 - MARGIN - 4), 13, 0);
+  const total = CODE_MM + 2 * (CODE_MM / A.CELLS);
+  const x = (210 - total) / 2;
+  const FOLD = 26;
+  const yBase = 297 - MARGIN - 12 - (total + 16) - FOLD;
+  markerBlock(p, id, x, yBase + FOLD, CODE_MM);
+  p.frame(mm(x), mm(yBase), mm(total), mm(FOLD), 0.5, 0.8);
+  p.line(mm(x), mm(yBase + FOLD), mm(x + total), mm(yBase + FOLD), 0.8, 0.45, 2.5);
+  p.text("พับตามเส้นนี้ แล้ววางให้ป้ายตั้งขึ้น", mm(x + total / 2), mm(yBase + FOLD / 2 - 1),
+         10, 0.35, "c");
+
+  let y = yBase - 14;
+  p.text("วางป้ายตามผังนี้ แล้ววัดระยะด้วยตลับเมตร", mm(MARGIN), mm(y), 12, 0);
+  y -= 12;
+
+  /* เส้นทางเดินในแนวนอน พร้อมหมุดสามจุด */
+  const x0 = MARGIN + 14, x1 = 210 - MARGIN - 14;
+  p.line(mm(x0), mm(y), mm(x1), mm(y), 1.2, 0.55);
+  const stops = [[0, "จุดเริ่มต้น", "เก้าอี้"], [1 / 3, "จุด 1 เมตร", "1 ม."],
+                 [1, "จุด 3 เมตร", "3 ม."]];
+  for (const [t, nm, sub] of stops) {
+    const px = x0 + (x1 - x0) * t;
+    p.rect(mm(px - 1), mm(y - 5), mm(2), mm(10), 0.2);
+    p.text(nm, mm(px), mm(y + 8), 9.5, 0, "c");
+    p.text(sub, mm(px), mm(y - 11), 9, 0.4, "c");
   }
+  y -= 22;
+  p.paragraph(
+    "ระบบอ่านรหัสในป้ายจึงรู้ว่าผู้ใช้เดินผ่านจุดใดไปแล้ว " +
+    "แต่ระบบไม่ได้วัดว่าท่านวางป้ายห่างถูกระยะหรือไม่ " +
+    "ต้องวัดด้วยตลับเมตรเองทุกครั้ง และวางที่เดิมทุกครั้งที่ทดสอบซ้ำ " +
+    "ไม่งั้นเวลาที่ได้จะเทียบกันข้ามครั้งไม่ได้",
+    mm(MARGIN), mm(y), 10, mm(186), mm(5), 0.3);
   return p;
 }
 
@@ -197,7 +247,7 @@ function pageStand() {
    ============================================================ */
 function pageFloor() {
   const p = page();
-  p.text("ป้ายจุดยืน และตำแหน่งเท้าสี่ท่า", mm(MARGIN), mm(297 - MARGIN - 4), 13, 0);
+  p.text("ป้ายท่าทรงตัว และตำแหน่งเท้าสี่ท่า", mm(MARGIN), mm(297 - MARGIN - 4), 13, 0);
   const total = CODE_MM + 2 * (CODE_MM / A.CELLS);
   const x = (210 - total) / 2;
   markerBlock(p, 2, x, 297 - MARGIN - 12 - (total + 16), CODE_MM);
@@ -237,16 +287,18 @@ function pageFloor() {
 }
 
 export function build() {
-  return buildPDF([pageIntro(), pageBody(), pageStand(), pageFloor()], font,
+  return buildPDF([pageIntro(), pageBody(),
+                   pageStand([4, 5], "ป้ายเส้นทางเดิน — พับตามเส้นแล้วตั้งให้หันหน้าเข้ากล้อง"),
+                   pageCourse(3), pageFloor()], font,
                   { title: "CareSignal ArUco markers" });
 }
-export const SHEET = { CODE_MM: CODE_MM, MARGIN: MARGIN, IDS: [0, 1, 2, 3, 4] };
+export const SHEET = { CODE_MM: CODE_MM, MARGIN: MARGIN, IDS: [0, 1, 2, 3, 4, 5] };
 
 /* รันเป็นสคริปต์เท่านั้นจึงเขียนไฟล์ ถูก import มาก็แค่ให้ฟังก์ชันไป */
 if (process.argv[1] && process.argv[1].endsWith("make-marker-pdf.mjs")) {
   const pdf = build();
   writeFileSync(OUT, pdf);
-  console.log("เขียน " + OUT + " แล้ว · " + (pdf.length / 1024).toFixed(0) + " KB · 4 หน้า");
+  console.log("เขียน " + OUT + " แล้ว · " + (pdf.length / 1024).toFixed(0) + " KB · 5 หน้า");
   console.log("ป้ายในแผ่น: " + SHEET.IDS
     .map((id) => id + "=" + A.ROLE_NM[A.ROLE[id]]).join(" · "));
 }
