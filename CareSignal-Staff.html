@@ -383,7 +383,7 @@ td.num{font-family:var(--mono);white-space:nowrap}
 <script>window.CS_AUTH_SCOPE="staff";/* แอปเจ้าหน้าที่ใช้ช่อง session แยกจากแอปสมาชิกเสมอ */</script>
 <script src="./cs-backend.js?v=4"></script>
 <script src="./cs-meds.js?v=4"></script>
-<script src="./cs-hospitals.js?v=1"></script>
+<script src="./cs-hospitals.js?v=2"></script>
 <script>
 /* ============================================================
    CareSignal Staff — แอปเจ้าหน้าที่ (แยกจากแอปผู้เอาประกันโดยสิ้นเชิง)
@@ -1638,8 +1638,8 @@ function orgPrompt(){
         '<datalist id="orgList"></datalist></div></div>'+
       '<button class="cta" id="orgGo">ยืนยันและเริ่มงาน</button>'+
       (hasList?
-        '<p class="tiny" style="margin:10px 0 0">รายชื่อนี้เป็นโรงพยาบาลรัฐในเขตสุขภาพของกระทรวงสาธารณสุข '+
-        CSHosp.count()+' แห่ง <b>ไม่รวม รพ.สต. คลินิก และหน่วยงานในกรุงเทพฯ</b><br>'+
+        '<p class="tiny" style="margin:10px 0 0">รายชื่อโรงพยาบาลรัฐและเอกชนทั่วประเทศ '+
+        CSHosp.count()+' แห่ง ครบทุกจังหวัด <b>ไม่รวม รพ.สต. คลินิก และสำนักงานบริษัทประกัน</b><br>'+
         '<button class="linkbtn" id="orgOther">หน่วยงานของท่านไม่อยู่ในรายการ — พิมพ์ชื่อเอง</button></p>':'')+
       '<p class="tiny" style="margin:6px 0 0">เลือกผิดสามารถเปลี่ยนได้ภายหลังจากแถบด้านบน</p></div>';
     document.body.appendChild(w);
@@ -1676,13 +1676,18 @@ function orgPrompt(){
       prov.innerHTML='<option value="">— เลือกจังหวัด —</option>'+
         CSHosp.provinces().map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>'}).join("");
       prov.addEventListener("change",function(){
-        var list=CSHosp.of(prov.value);
-        if(!list.length){ hosp.disabled=true; hosp.innerHTML='<option value="">— เลือกจังหวัดก่อน —</option>'; return }
-        /* บอกระดับไว้ข้างชื่อ เพราะชื่อโรงพยาบาลในจังหวัดเดียวกันคล้ายกันได้มาก */
-        hosp.innerHTML='<option value="">— เลือกโรงพยาบาล ('+list.length+' แห่ง) —</option>'+
-          list.map(function(h){
-            return '<option value="'+esc(h[0])+'">'+esc(h[0])+' · '+esc(CSHosp.levelName(h[1]))+'</option>';
-          }).join("");
+        var g=CSHosp.split(prov.value), n=g.gov.length+g.priv.length;
+        if(!n){ hosp.disabled=true; hosp.innerHTML='<option value="">— เลือกจังหวัดก่อน —</option>'; return }
+        /* บอกชนิดไว้ข้างชื่อ เพราะชื่อโรงพยาบาลในจังหวัดเดียวกันคล้ายกันได้มาก
+           และแยกกลุ่มรัฐกับเอกชน เพราะคนหาจากสองกลุ่มนี้คนละแบบกัน */
+        function grp(nm,list){
+          if(!list.length)return "";
+          return '<optgroup label="'+esc(nm)+' ('+list.length+')">'+list.map(function(h){
+            return '<option value="'+esc(h[0])+'">'+esc(h[0])+' · '+esc(CSHosp.kindName(h))+'</option>';
+          }).join("")+'</optgroup>';
+        }
+        hosp.innerHTML='<option value="">— เลือกโรงพยาบาล ('+n+' แห่ง) —</option>'+
+          grp("โรงพยาบาลรัฐ",g.gov)+grp("โรงพยาบาลเอกชน",g.priv);
         hosp.disabled=false;
       });
       other.addEventListener("click",function(){
