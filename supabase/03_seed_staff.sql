@@ -1,32 +1,44 @@
 -- ============================================================
--- CareSignal — ตั้งบทบาทเจ้าหน้าที่ (รันหลังสร้างบัญชีจากหน้าเว็บแล้ว)
+-- 03_seed_staff.sql — ตั้งต้นระบบ: ผู้ดูแลระบบคนแรกเพียงคนเดียว
 -- ------------------------------------------------------------
--- วิธีใช้:
---   1) สมัครบัญชีเจ้าหน้าที่ผ่านหน้า staff login ของระบบก่อน (email + รหัสผ่าน)
---   2) เปิด Supabase → SQL Editor → แก้อีเมลด้านล่างให้ตรง แล้วรัน
+-- ไฟล์นี้เคยเป็น "สมัครบัญชีเองก่อน แล้วค่อยเลื่อนบทบาทด้วย SQL"
+-- ซึ่งขัดกับกติกาปัจจุบัน: ไม่มีใครสมัครบัญชีเจ้าหน้าที่เองได้
+-- ทุกบทบาทนอกจากผู้ดูแลระบบต้องเกิดจาก "รหัสเปิดใช้งาน" ที่ผู้ดูแลระบบออกให้
+-- (18_staff_invite.sql, 19_staff_login.sql, functions/staff-activate)
 --
--- เหตุผลที่ต้องทำผ่าน SQL: ผู้ใช้เลื่อนขั้นบทบาทตัวเองไม่ได้
--- (trigger guard_role_change กันไว้) จึงต้องให้ผู้ดูแลระบบตั้งให้จากหลังบ้าน
+-- แล้วผู้ดูแลระบบคนแรกมาจากไหน ในเมื่อยังไม่มีใครออกรหัสให้ได้
+--   ไฟล์นี้แหละ — ใส่รหัสเปิดใช้งานหนึ่งใบสำหรับชื่อผู้ใช้ admin ลงตาราง
+--   staff_invite โดยตรง แล้วคนที่ถือรหัสไปเข้าหน้า login ของคอนโซล
+--   ด้วย "admin + รหัสนี้" ระบบจะสร้างบัญชีให้และบังคับตั้งรหัสผ่านของตัวเอง
+--   ไม่มีใครรวมทั้งคนรันสคริปต์นี้ที่รู้รหัสผ่านของผู้ดูแลระบบ
+--
+-- เงื่อนไขก่อนรัน
+--   * ต้องยังไม่มีบัญชี admin และไม่มีรหัส admin ที่ยังเปิดอยู่ (สคริปต์ตรวจให้)
+--   * ตัวรหัสจะแสดงในผลลัพธ์ "ครั้งเดียว" ฐานข้อมูลเก็บแค่แฮช
+--     ปิดหน้าต่างแล้วหาย ต้องรันใหม่ (ใบเดิมจะถูกยกเลิกให้อัตโนมัติ)
+--   * รหัสมีอายุ 14 วัน ให้ใช้ก่อนหมดอายุ
 -- ============================================================
 
--- Care Manager / พยาบาล
-update public.profiles
-set role = 'care_manager', display_name = 'พยาบาลผู้ประเมิน'
-where id = (select id from auth.users where email = 'nurse@example.com');
+do $$
+begin
+  if exists (select 1 from public.profiles where role = 'admin') then
+    raise exception 'มีผู้ดูแลระบบอยู่แล้ว — ให้คนนั้นออกรหัสจากเมนู "จัดการผู้ใช้" แทนการรันไฟล์นี้';
+  end if;
+end $$;
 
--- เจ้าหน้าที่บริษัทประกัน
-update public.profiles
-set role = 'insurer', display_name = 'เจ้าหน้าที่บริษัทประกัน'
-where id = (select id from auth.users where email = 'insurer@example.com');
+-- ยกเลิกรหัส admin ใบเก่าที่ยังไม่ถูกใช้ (กรณีรันซ้ำเพราะทำรหัสหาย)
+update public.staff_invite set revoked_at = now()
+ where username = 'admin' and used_at is null and revoked_at is null;
 
--- ผู้ดูแลระบบ
-update public.profiles
-set role = 'admin', display_name = 'ผู้ดูแลระบบ'
-where id = (select id from auth.users where email = 'admin@example.com');
-
--- ตรวจผลลัพธ์
-select p.pseudonym, u.email, p.role, p.display_name
-from public.profiles p
-join auth.users u on u.id = p.id
-where p.role <> 'user'
-order by p.role;
+with f as (
+  select substr(raw,1,4)||'-'||substr(raw,5,4)||'-'||substr(raw,9,4) as code
+  from (select string_agg(substr('23456789ABCDEFGHJKMNPQRSTUVWXYZ', 1+floor(random()*31)::int, 1), '') as raw
+        from generate_series(1,12)) r
+), ins as (
+  insert into public.staff_invite(code_hash, code_hint, username, role, display_name, note, expires_at)
+  select encode(extensions.digest(code,'sha256'),'hex'), right(code,4), 'admin', 'admin',
+         'ผู้ดูแลระบบ', 'รหัสตั้งต้นจาก 03_seed_staff.sql', now() + interval '14 days'
+  from f returning username, role, expires_at
+)
+-- ผลลัพธ์บรรทัดเดียวนี้คือรหัสที่ต้องส่งให้ผู้ดูแลระบบ — แสดงครั้งเดียว
+select ins.username, ins.role, f.code, ins.expires_at from ins, f;
