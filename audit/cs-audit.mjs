@@ -2388,6 +2388,46 @@ function layer7() {
       bad.join(" · "), "ให้เว็บมีแค่คู่มือกับผลที่ยืนยันแล้ว และให้แอปในโหมดดูผลปิดทางไปหน้าตรวจ");
   }
 
+  /* ---- X-126: แดชบอร์ดมาตรฐานโรงพยาบาล — ชุดเดียวทุกหน้ารายการ ----
+     เจ้าหน้าที่ใช้คอนโซลนี้ทั้งวันบนจอเคาน์เตอร์และบนมือถือ
+     ถ้าแต่ละหน้าวาดรายการคนละแบบ จะไม่มีที่ไหนเรียงหรือค้นหาได้
+     และแถวเกินกำหนดจะไม่โดดออกมา — สามชิ้นร่วมนี้ต้องอยู่ครบทุกหน้า */
+  {
+    const bad = [];
+    const st = read("CareSignal-Staff.html") || "";
+    const pf = read("CareSignal-Portfolio-Dashboard.html") || "";
+    ["function kpiRow(", "function sortRows(", "function searchRows(", "function dashTable(", "function dashInner(", "function bindDash("].forEach((f) => {
+      if (st.indexOf(f) < 0) bad.push("ไม่มีชิ้นส่วนร่วม " + f);
+    });
+    const uses = (st.match(/dashTable\(\{id:"([a-z]+)"/g) || []).map((m) => m.match(/id:"([a-z]+)"/)[1]);
+    ["queue", "mine", "refer", "meds", "port", "audit"].forEach((k) => {
+      if (uses.indexOf(k) < 0) bad.push("หน้า " + k + " ไม่ได้ใช้ตารางมาตรฐาน");
+    });
+    if (!/function head\(t,p,n\)/.test(st) || !/id="hdClk"/.test(st) || !/🏥 <b>'\+esc\(ST\.org\)/.test(st))
+      bad.push("หัวหน้าไม่มีหน่วยบริการ จำนวนรายการ และเวลาจริง");
+    ["งานวันนี้", "งานของฉัน", "ติดตามการส่งต่อ", "ทบทวนยา", "พอร์ตความเสี่ยง", "บันทึกตรวจสอบ", "จัดการผู้ใช้"].forEach((t) => {
+      if (!new RegExp('head\\("' + t + '",[^;]*,\\s*(rows|q|n)(\\.length)?\\)').test(st)) bad.push("หน้า " + t + " ไม่ได้ส่งจำนวนรายการเข้าหัวหน้า");
+    });
+    if (!/\.dtbl td::before\{content:attr\(data-th\)/.test(st)) bad.push("จอแคบไม่พับตารางเป็นการ์ด");
+    if (!/<td data-th="'\+esc\(c\.label\)\+'"/.test(st)) bad.push("ช่องตารางไม่มี data-th จึงพับเป็นการ์ดไม่ได้");
+    if (!/\.dtbl tbody tr\.late td\{background:var\(--c1t\)\}/.test(st)) bad.push("แถวเกินกำหนดไม่ย้อมสี");
+    if (!/th\[data-sort\]/.test(st) || !/st\.sort=\(st\.sort&&st\.sort\.k===k\)/.test(st)) bad.push("หัวคอลัมน์เรียงไม่ได้");
+    if (!/class="dsearch"/.test(st) || !/function searchRows/.test(st)) bad.push("ตารางค้นหาไม่ได้");
+    if (!/class="pthead"/.test(st) || !/pthead" style="border-left-color:'\+\(LV_C\[c\.level\]/.test(st))
+      bad.push("หน้ารายละเอียดเคสไม่มีแถบผู้ป่วยแบบหัวเวชระเบียน");
+    /* สีบนตารางต้องมาจากระดับเท่านั้น — ไม่มีสีสุ่มในหน้ารายการ */
+    const listBlocks = ["renderQueue", "mineV", "portV", "auditV"].map((f) => (st.match(new RegExp("function " + f + "\\([\\s\\S]*?\\n\\}")) || [""])[0]).join("\n");
+    if (/#[0-9A-Fa-f]{6}/.test(listBlocks.replace(/#5B77B4|#D9E1EC|#64748B/g, ""))) bad.push("หน้ารายการใช้สีฮาร์ดโค้ดนอกระบบระดับ");
+    if (/linear-gradient\(160deg,#1E3A8A/.test(pf) || !/--brand:#1D4E9A/.test(pf)) bad.push("แดชบอร์ดบริษัทประกันยังคนละโทนกับคอนโซล");
+
+    req(7, "X-126", "ทุกหน้ารายการใช้แดชบอร์ดมาตรฐานโรงพยาบาลชุดเดียวกัน",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ") : "หัวหน้า+KPI+ตารางมาตรฐานครบ 6 หน้า · เรียง/ค้นหาได้ · แถวเกินกำหนดย้อมสี · จอแคบพับเป็นการ์ด · แถบผู้ป่วยบนหน้าเคส · แดชบอร์ดบริษัทประกันโทนเดียวกัน");
+    if (bad.length) finding("MED", "X-126", "หน้ารายการไม่เป็นมาตรฐานเดียวกัน",
+      "เจ้าหน้าที่ต้องเรียนรู้ใหม่ทุกหน้า เรียงหรือค้นหาไม่ได้ และเคสเกินกำหนดไม่โดดออกมาจากรายการ", bad.join(" · "),
+      "ให้ทุกหน้ารายการประกอบจาก head()+kpiRow()+dashTable() และคงกติกาสี=ระดับเท่านั้น");
+  }
+
   /* ---- ภาษาที่ห้ามใช้กับผู้ใช้ (NICE ไม่แนะนำให้แสดงความน่าจะเป็นว่าจะหกล้ม) ---- */
   const banned = [
     ["X-10", "ห้ามเรียกผู้ใช้ว่า \"ผู้ป่วย Red\"", /ผู้ป่วย\s*(Red|แดง)/i],

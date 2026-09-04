@@ -23,34 +23,36 @@
    actuarial premium · wellness reward
    มีแทน: ประชากร → ความเสี่ยง → การดูแล → ผลลัพธ์
    ============================================================ */
+/* โทนเดียวกับคอนโซลเจ้าหน้าที่: พื้นขาว ตัดด้วยสีสถานะ ไม่มีไล่สี */
 :root{
-  --bg:#F4F7FC; --surf:#fff; --ink:#0F1B33; --ink2:#5B6B84; --ink3:#8FA3CF;
-  --line:#E4EBF6; --line2:#EEF3FA; --brand:#2563EB; --brand2:#1D4ED8;
-  --c4:#0E9F6E; --c3:#D9A21B; --c2:#E07A2F; --c1:#C7443E;
+  --bg:#F4F6FA; --surf:#fff; --surf2:#F7F9FC; --ink:#16233B; --ink2:#4F5F78; --ink3:#7B8AA1;
+  --line:#D9E1EC; --line2:#EAEFF5; --brand:#1D4E9A; --brand2:#143A74; --brandt:#E8F0FB;
+  --c4:#16A34A; --c3:#D97706; --c2:#EA580C; --c1:#DC2626;
   --sans:"Prompt","Noto Sans Thai",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,monospace;
-  --sh:0 1px 2px rgba(16,32,64,.05),0 8px 24px rgba(16,32,64,.06);
+  --sh:0 1px 2px rgba(22,35,59,.06);
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-header{background:linear-gradient(160deg,#1E3A8A,#2563EB 60%,#3B82F6);color:#fff;padding:44px 0 40px}
-.kick{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:#BFDBFE;font-weight:600}
-h1{font-size:31px;letter-spacing:-.02em;margin:8px 0 10px;line-height:1.25}
-header p{color:#DBEAFE;font-size:15px;margin:0;max-width:760px}
-.navback{display:inline-block;margin-top:18px;color:#fff;text-decoration:none;font-size:13.5px;
-  border:1px solid rgba(255,255,255,.4);border-radius:99px;padding:7px 16px}
+header{background:var(--surf);color:var(--ink);padding:22px 0 18px;border-bottom:3px solid var(--brand)}
+.kick{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);font-weight:700}
+h1{font-size:24px;letter-spacing:-.02em;margin:6px 0 8px;line-height:1.25;color:var(--brand2)}
+header p{color:var(--ink2);font-size:14px;margin:0;max-width:760px}
+header p b{color:var(--ink)!important}
+.navback{display:inline-block;margin-top:14px;color:var(--brand);text-decoration:none;font-size:13px;font-weight:600;
+  border:1px solid var(--line);border-radius:6px;padding:6px 14px;background:var(--surf)}
 section{padding:30px 0}
 h2{font-size:21px;letter-spacing:-.01em;margin:0 0 4px}
 .sub{color:var(--ink2);font-size:14px;margin:0 0 18px;max-width:820px}
-.card{background:var(--surf);border-radius:18px;padding:22px;box-shadow:var(--sh);margin-bottom:16px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:18px 20px;box-shadow:var(--sh);margin-bottom:14px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:840px){.grid2,.grid3{grid-template-columns:1fr}}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:var(--surf);border-radius:16px;padding:16px 18px;box-shadow:var(--sh)}
-.kpi .l{font-size:12px;color:var(--ink2);font-weight:500}
-.kpi .n{font-size:26px;font-family:var(--mono);font-weight:600;letter-spacing:-.02em;margin:2px 0}
+.kpi{background:var(--surf);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:12px 14px}
+.kpi .l{font-size:12px;color:var(--ink2);font-weight:600}
+.kpi .n{font-size:26px;font-family:var(--mono);font-weight:700;letter-spacing:-.02em;margin:2px 0;color:var(--ink)}
 .kpi .d{font-size:12px;color:var(--ink3);line-height:1.5}
 .rowline{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line2);font-size:14px}
 .rowline:last-child{border-bottom:0}
@@ -60,7 +62,7 @@ h2{font-size:21px;letter-spacing:-.01em;margin:0 0 4px}
 .bar i{display:block;height:100%;border-radius:99px}
 .split{display:flex;height:9px;border-radius:99px;overflow:hidden;margin:3px 0 10px;background:var(--line)}
 .split i{display:block;height:100%}
-.note{background:#F7FAFF;border:1px solid var(--line);border-radius:14px;padding:15px 18px;font-size:13.5px;color:var(--ink2)}
+.note{background:var(--brandt);border:1px solid #C9DAF3;border-radius:10px;padding:14px 16px;font-size:13.5px;color:var(--ink2)}
 .note b{color:var(--ink)}
 .pending{border:1.5px dashed #C2CFE3;background:#F7FAFF;border-radius:16px;padding:18px}
 .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:99px}
@@ -68,12 +70,13 @@ h2{font-size:21px;letter-spacing:-.01em;margin:0 0 4px}
 .tag.wait{background:#E4EBF6;color:#3A4A66}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line2)}
-th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);font-weight:700;background:var(--surf2)}
+tbody tr:hover td{background:var(--surf2)}
 .tblwrap{overflow-x:auto}
-.login{background:var(--surf);border:1.5px solid var(--brand);border-radius:18px;padding:20px;box-shadow:var(--sh)}
-.login input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:15px;margin-bottom:10px}
-.btn{border:0;border-radius:12px;background:var(--brand);color:#fff;font-family:inherit;font-size:15px;font-weight:600;padding:12px 22px;cursor:pointer}
-.btn.lite{background:#EEF3FA;color:var(--ink)}
+.login{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:20px;box-shadow:var(--sh);max-width:460px}
+.login input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:15px;margin-bottom:10px}
+.btn{border:0;border-radius:8px;background:var(--brand);color:#fff;font-family:inherit;font-size:15px;font-weight:700;padding:11px 20px;cursor:pointer}
+.btn.lite{background:var(--surf2);color:var(--ink);border:1px solid var(--line)}
 footer{padding:28px 0 40px;color:var(--ink3);font-size:12.5px;text-align:center;line-height:1.8}
 </style>
 </head>
