@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-09-03 16:09 |
+| วันที่ตรวจ | 2026-09-04 02:09 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 170 |
+| PASS | 171 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -35,9 +35,9 @@
 |---|---|---|---|
 | F-01 | Consent — มีหน้าขอความยินยอมและบันทึกเวลา | PASS | CareSignal-App.html:201 · CareSignal-Vision.html:174 · cs-backend.js:222 |
 | F-02 | Falls history — บันทึกย้อนหลัง 12 เดือน | PASS | CareSignal-App.html:2488 · CareSignal-Vision.html:525 · supabase/07_closed_loop.sql:17 |
-| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:4478 · CareSignal-Vision.html:4943 · CareSignal-App.html:4776 |
+| F-03 | Medication risk — OCR + ผู้ใช้ยืนยัน + ส่งเภสัชกร | PASS | CareSignal-App.html:4502 · CareSignal-Vision.html:4943 · CareSignal-App.html:4800 |
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:2329 · CareSignal-Vision.html:501 · supabase/01_schema.sql:79 |
-| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:5034 · CareSignal-Vision.html:4817 · CareSignal-App.html:3551 |
+| F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:5058 · CareSignal-Vision.html:4817 · CareSignal-App.html:3575 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:2761 · CareSignal-Vision.html:781 · CareSignal-App.html:2552 |
 | F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:644 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
@@ -235,6 +235,7 @@
 | X-122 | ทำคนเดียวต้องข้ามท่ายืนขาเดียว และคำตอบเรื่องผู้ดูแลต้องมีที่เดียว | PASS | ด่านความปลอดภัยเป็นผู้ตั้งโหมดผู้ดูแล สวิตช์เขียนกลับที่เดียวกัน · คนเดียวเหลือ 3 ท่า ตัดเฉพาะยืนขาเดียว · บอกก่อนเริ่ม · ท่าที่ข้ามบันทึกว่าไม่ได้ทดส |
 | X-123 | กฎที่จุดได้ทุกข้อต้องถูกประกาศ และสองไฟล์ต้องมีชุดกฎเดียวกัน | PASS | กฎที่จุดได้ 25 ข้อ ประกาศครบ ไม่มีกฎตาย และตรงกันทั้งสองไฟล์ |
 | X-124 | เลือกหน่วยบริการจากรายชื่อได้ และหน่วยงานนอกรายชื่อยังพิมพ์เองได้เสมอ | PASS | จังหวัดแล้วโรงพยาบาล เรียงแบบไทย บันทึกพร้อมจังหวัด · บอกขอบเขตของรายการตรง ๆ · พิมพ์เองได้เสมอและมาก่อนตัวเลือก · แตะซ้ำหน่วยเดิมได้ทันที |
+| X-125 | เว็บส่วนที่ 2 บอกสิ่งที่ต้องทำ และแสดงเฉพาะผลที่ผู้เชี่ยวชาญยืนยันแล้ว | PASS | ไม่มีโปรแกรมตรวจบนเว็บ · คู่มือครบ 8 ขั้นชื่อตรงกับแอปพร้อมท่าทางสำคัญ · แอปโหมดดูผลไปถึงหน้าตรวจไม่ได้ · หน้าผลแสดงเฉพาะสิ่งที่ผู้เชี่ยวชาญส่งกลับ |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |

@@ -237,7 +237,30 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
 .strip .acts button{border:1.5px solid var(--line2);background:var(--surf);color:var(--ink);border-radius:10px;padding:7px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .strip .acts button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
 /* กรอบระบบงานสูงพอดีจอเสมอ — ไม่ให้หน้าแม่มีแถบเลื่อนซ้อนกับแถบเลื่อนของแอป */
+/* คู่มือในส่วนที่ 2 — สูงเท่ากรอบแอป และเลื่อนในตัวเอง เพราะ body[data-sec=work] ปิดการเลื่อนของหน้าแม่ */
+.guide{display:none;height:var(--frame-h,70dvh);overflow:auto;background:var(--bg)}
+.guide[data-on="1"]{display:block}
+.guide .wrap{padding:22px 20px 60px}
+.gnote{background:#FFF7ED;border:1px solid #FED7AA;border-radius:14px;padding:14px 18px;font-size:14.5px;line-height:1.75;color:#7C2D12;margin-bottom:22px}
+.gnote b{color:#9A3412}
+.gh{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);font-weight:700;margin:26px 0 12px}
+.gsteps{display:grid;gap:10px}
+.gs{display:flex;gap:14px;align-items:flex-start;background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.gs .gi{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--surf2)}
+.gs .gi.n{background:var(--navy);color:#fff;font-weight:700;font-size:16px;font-family:var(--mono)}
+.gs b{font-size:15.5px}
+.gs .gt{display:inline-block;margin-left:6px;font-size:11.5px;color:var(--ink3);background:var(--surf2);border-radius:99px;padding:2px 9px;vertical-align:middle}
+.gs p{margin:5px 0 0;font-size:14px;color:var(--ink2);line-height:1.75}
+.gs p b{color:var(--ink)}
+.gflow{display:grid;gap:8px}
+.gf{display:flex;gap:12px;align-items:flex-start;font-size:14px;color:var(--ink2);line-height:1.7}
+.gf b{flex:none;width:26px;height:26px;border-radius:99px;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:13px;font-family:var(--mono)}
+.gf span b{width:auto;height:auto;background:none;color:var(--ink);display:inline;font-family:inherit;font-size:inherit}
+.gfoot{margin:22px 0 0;font-size:13px;color:var(--ink3);line-height:1.75;border-top:1px solid var(--line);padding-top:14px}
+.gfoot b{color:var(--ink2)}
+@media(min-width:900px){.gsteps{grid-template-columns:1fr 1fr}.gsteps .gs:only-child{grid-column:1/-1}}
 .frame{position:relative;background:#0F2A5C}
+.frame[data-on="0"]{display:none}
 .frame iframe{display:block;width:100%;height:var(--frame-h,70dvh);border:0;background:#fff}
 .frame .ld{position:absolute;inset:0;display:grid;place-items:center;color:#DCE7FA;font-size:14px;pointer-events:none}
 .frame[data-ready="1"] .ld{display:none}
@@ -484,14 +507,64 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
      ============================================================ -->
 <div class="panel" id="p-member" role="tabpanel">
   <div class="strip"><div class="wrap">
-    <button class="back" data-go="intro">‹ ส่วนอื่น</button><span class="who">ส่วนที่ 2</span><h2><span class="lg">ผู้เอาประกันและครอบครัว</span><span class="sm">ผู้เอาประกัน</span></h2>
-    <p class="note" id="n-member">สมัครหรือเข้าสู่ระบบในหน้านี้ · ครอบครัวเชื่อมบัญชีได้เมื่อท่านอนุญาต</p>
+    <button class="back" data-go="intro">‹ ส่วนอื่น</button><span class="who">ส่วนที่ 2</span><h2><span class="lg">ผู้เอาประกันและครอบครัว</span><span class="sm">สมาชิก</span></h2>
+    <p class="note" id="n-member">การตรวจทำใน<b>แอปบนมือถือ</b> · หน้านี้บอกว่าต้องทำอะไรบ้าง และแสดงผลเมื่อผู้เชี่ยวชาญยืนยันแล้ว</p>
     <div class="acts">
-      <button data-src="member" aria-pressed="true"><span class="lg">แอปสมาชิก</span><span class="sm">สมาชิก</span></button>
-      <button data-src="try"><span class="lg">ทดลองวัด · ไม่บันทึกข้อมูล</span><span class="sm">ทดลองวัด</span></button>
+      <button data-mv="guide" aria-pressed="true"><span class="lg">สิ่งที่ต้องทำ</span><span class="sm">ต้องทำ</span></button>
+      <button data-mv="results" aria-pressed="false"><span class="lg">ผลที่ผู้เชี่ยวชาญยืนยันแล้ว</span><span class="sm">ผลตรวจ</span></button>
     </div>
   </div></div>
-  <div class="frame" id="f-member"><div class="ld">กำลังเปิดแอปสมาชิก…</div></div>
+
+  <!-- ---------- คู่มือ: ทุกอย่างที่แอปจะขอให้ทำ เรียงตามลำดับจริงในแอป ---------- -->
+  <div class="guide" id="g-member" data-on="1">
+    <div class="wrap">
+      <div class="gnote">
+        <b>การตรวจทั้งหมดทำในแอป CareSignal บนมือถือ</b> ไม่ใช่บนหน้าเว็บนี้ — เพราะต้องใช้กล้อง เซ็นเซอร์ และเสียงของเครื่อง
+        หน้านี้มีไว้ให้ท่านและครอบครัว<b>รู้ล่วงหน้าว่าจะเจออะไร</b> เตรียมของให้ครบ แล้วเปิดแอปทำทีเดียวจบ ·
+        ติดตั้งแอปได้จากปุ่ม "ใช้ออฟไลน์ได้" ในส่วนที่ 1
+      </div>
+
+      <h3 class="gh">เตรียมก่อนเปิดแอป</h3>
+      <div class="gsteps">
+        <div class="gs"><div class="gi">📄</div><div><b>พิมพ์แผ่นป้าย 5 หน้า</b><p>พิมพ์ที่ขนาด 100% ห้ามเลือก "พอดีหน้ากระดาษ" · วัดไม้บรรทัดหน้าแรกด้วยไม้บรรทัดจริง แล้วกรอกค่าที่ได้ในแอปที่ ตั้งค่า → โหมดป้าย · กระดาษขาวผิวด้าน · ตัดให้เหลือกรอบขาวรอบป้ายไว้เสมอ</p></div></div>
+        <div class="gs"><div class="gi">🎽</div><div><b>ป้ายหน้าอกและป้ายเอว</b><p>ติดกลางอก และหน้าท้องระดับสะดือ บนเสื้อหรือสายคาด ให้แผ่นแบนเรียบ ไม่ยับ ไม่ห้อยแกว่ง — กล้องใช้สองป้ายนี้วัดการลุก-นั่ง การเดิน และการโคลงเป็นมิลลิเมตรจริง</p></div></div>
+        <div class="gs"><div class="gi">📱</div><div><b>วางมือถือ</b><p>พิงผนังหรือตั้งบนโต๊ะเตี้ย ห่างจากท่าน 2–3 เมตร ให้เห็น<b>ตั้งแต่ศีรษะถึงเท้า</b>และเก้าอี้ทั้งตัว · แสงพอ ไม่ย้อนแสง</p></div></div>
+        <div class="gs"><div class="gi">🪑</div><div><b>เก้าอี้และรองเท้า</b><p>เก้าอี้มีพนักพิง ไม่มีล้อ ไม่ต่ำหรือสูงเกินไป · สวมรองเท้าหุ้มส้นที่ใส่ประจำ หรือเท้าเปล่า <b>ห้ามถุงเท้า</b> · ใช้ไม้เท้าหรือเครื่องช่วยเดินที่ใช้ประจำได้</p></div></div>
+        <div class="gs"><div class="gi">🧑‍🤝‍🧑</div><div><b>มีคนอยู่ข้าง ๆ ถ้าเป็นไปได้</b><p>ถ้ามีผู้ดูแล ให้ตอบ "มี" ในด่านความปลอดภัย — ผู้ดูแลจะเป็นคนกดเริ่มและกดหยุดแทนการสั่งด้วยเสียง และท่ายืนขาเดียวจะทำได้ · ถ้าอยู่คนเดียว แอปจะตัดท่ายืนขาเดียวออกให้เอง</p></div></div>
+      </div>
+
+      <h3 class="gh">8 ขั้นตอนในแอป — เรียงตามลำดับที่แอปจะพาไป</h3>
+      <div class="gsteps">
+        <div class="gs"><div class="gi n">1</div><div><b>ความยินยอมและความปลอดภัย</b> <span class="gt">คำถาม 5 ข้อ · บังคับ</span><p>วันนี้หน้ามืดหรือเวียนศีรษะมากไหม · เจ็บหน้าอกหรือหายใจลำบากไหม · อ่อนแรงเฉียบพลันหรือหน้าเบี้ยวไหม · เพิ่งหกล้ม บาดเจ็บ หรือแพทย์ห้ามเดินไหม · มีผู้ดูแลอยู่ข้าง ๆ ไหม — ตอบว่า "มี" ในสี่ข้อแรกข้อใดข้อหนึ่ง แอปจะ<b>หยุดการทดสอบร่างกายให้ทันที</b>และแนะนำสิ่งที่ควรทำแทน</p></div></div>
+        <div class="gs"><div class="gi n">2</div><div><b>ประวัติหกล้มและอาการ</b> <span class="gt">ตอบคำถาม · บังคับ</span><p>ใน 12 เดือนที่ผ่านมาหกล้มกี่ครั้ง · ล้มแล้วลุกเองได้ไหม บาดเจ็บไหม หมดสติไหม — สามอย่างนี้ส่งต่อไปคนละทาง จึงถามแยกกัน</p></div></div>
+        <div class="gs"><div class="gi n">3</div><div><b>ยาที่ใช้ประจำ</b> <span class="gt">ถ่ายฉลาก · บังคับ</span><p>ถ่ายรูปฉลากยาทีละรายการ แอปอ่านชื่อยาให้ท่านยืนยัน แล้วจัดกลุ่มว่ายาตัวไหนเพิ่มความเสี่ยงหกล้ม · แอป<b>ไม่สั่งหยุดหรือปรับยาเอง</b> ถ้าเข้าเกณฑ์จะส่งให้เภสัชกรทบทวน</p></div></div>
+        <div class="gs"><div class="gi n">4</div><div><b>ลุกนั่ง 5 ครั้ง (FTSST)</b> <span class="gt">ท่าทาง · ไม่บังคับ</span><p><b>กอดอกไว้</b> นั่งพิงพนัก แล้วลุกยืนจนสุดและนั่งลงให้ครบ 5 ครั้ง เร็วที่สุดเท่าที่ปลอดภัย · กล้องนับครั้งและจับเวลาให้จากป้ายเอวหรือสะโพก · ถ้ากล้องใช้ไม่ได้ ให้คนช่วยจับเวลาแล้วกรอกเอง</p></div></div>
+        <div class="gs"><div class="gi n">5</div><div><b>ลุกเดิน 3 เมตร (TUG)</b> <span class="gt">ท่าทาง · ไม่บังคับ</span><p>ตั้งป้าย 3 ใบ: <b>จุดเริ่มต้น</b>ข้างเก้าอี้ · <b>จุด 1 เมตร</b> · <b>จุด 3 เมตร</b> วัดระยะด้วยตลับเมตร · นั่งพิงพนัก พูดว่า "เริ่ม" หรือกดปุ่ม → ลุกขึ้น เดินด้วยความเร็วปกติไปที่ป้ายจุด 3 เมตร <b>หมุนกลับตรงป้าย ไม่หมุนก่อนถึง</b> (แอปดูว่าท่านเดินไปบังป้ายหรือยัง จึงรู้ว่าครบระยะจริง) → เดินกลับมานั่งลงเรียบร้อย → กดปุ่มจบ หรือพูดว่า "จบ" หรือยกมือ</p></div></div>
+        <div class="gs"><div class="gi n">6</div><div><b>การทรงตัว 4 ท่า</b> <span class="gt">ท่าทาง · ไม่บังคับ</span><p><b>ยืนหันข้างให้กล้อง</b> ลืมตาตลอด ไม่จับสิ่งใด ท่าละ 10 วินาที: ① เท้าชิดกัน ② กึ่งต่อเท้า (เลื่อนเท้าหน้าไปครึ่งเท้า) ③ ต่อเท้าเป็นเส้นตรง ④ ยืนขาเดียว · แอปตรวจตำแหน่งเท้าและบอกเมื่อพร้อม แล้วรอท่านพูดว่า "เริ่ม" · <b>ปุ่มหยุดทันทีอยู่บนจอตลอด</b> เสียสมดุล เวียนศีรษะ หรือต้องจับพยุง กดได้เลย แล้วจบทั้งชุด · ยืนขาเดียวทำเฉพาะเมื่อมีคนอยู่ข้าง ๆ · ผลผ่าน/ไม่ผ่านท่านหรือผู้ดูแลเป็นผู้ยืนยัน กล้องแค่ช่วยสังเกต</p></div></div>
+        <div class="gs"><div class="gi n">7</div><div><b>กิจวัตรประจำวัน (Barthel ADL)</b> <span class="gt">ตอบคำถาม · บังคับ</span><p>การย้ายตัวจากเตียงไปเก้าอี้ · อาบน้ำ · ใช้ห้องส้วม · ขึ้นลงบันได · เดินในบ้าน — ตอบตามที่ทำได้จริงในตอนนี้</p></div></div>
+        <div class="gs"><div class="gi n">8</div><div><b>ความปลอดภัยในบ้าน</b> <span class="gt">ติ๊กเลือก · ไม่บังคับ</span><p>พรมหรือสายไฟบนทางเดิน · พื้นห้องน้ำลื่น · ทางเดินกลางคืนมืด · ห้องน้ำไม่มีราวจับ · บันไดไม่มีราว · รองเท้าแตะหลวม · ของใช้อยู่สูงต้องปีน — ข้อนี้ไม่เข้าคะแนน แต่ทีมดูแลใช้วางแผนแก้ไขที่บ้าน</p></div></div>
+      </div>
+
+      <h3 class="gh">สั่งงานแอปจากระยะไกล</h3>
+      <div class="gsteps">
+        <div class="gs"><div class="gi">🗣️</div><div><b>พูดคำที่แอปบอก</b><p>แอปบอกทุกขั้นว่าให้พูดคำไหน ส่วนใหญ่คือ "เริ่ม" "บันทึก" "ผ่าน" "ไม่ผ่าน" "จบ" · พูดว่า "ช่วยเหลือ" เมื่อใดก็ได้เพื่อฟังคำสั่งทั้งหมด</p></div></div>
+        <div class="gs"><div class="gi">🙋</div><div><b>ยกมือ</b><p>ยกมือข้างเดียวค้างไว้ 1 วินาที = คำสั่งหลักของขั้นนั้น · ยกสองมือ = คำสั่งตรงข้าม เช่น ไม่ผ่าน หรือทำใหม่</p></div></div>
+        <div class="gs"><div class="gi">🎮</div><div><b>รีโมตบลูทูธ</b><p>รีโมตนำเสนอสไลด์หรือรีโมตชัตเตอร์กดแทนได้ สอนปุ่มให้แอปรู้จักครั้งเดียวที่ ตั้งค่า → ปุ่มรีโมต</p></div></div>
+      </div>
+
+      <h3 class="gh">หลังจากบันทึกผลแล้ว</h3>
+      <div class="gflow">
+        <div class="gf"><b>1</b><span>แอปบันทึกผลลงระบบกลาง แล้วอ่านสัญญาณเสี่ยงด้วยกฎที่ประกาศไว้ ไม่ใช่โมเดลทำนาย</span></div>
+        <div class="gf"><b>2</b><span>ถ้าพบสัญญาณ ทีมดูแลของบริษัทประกันเปิดเคสและติดต่อท่านภายใน 24–72 ชั่วโมงตามระดับ</span></div>
+        <div class="gf"><b>3</b><span>ทีมดูแลส่งชุดข้อมูลให้ผู้เชี่ยวชาญ — แพทย์ เภสัชกร นักกายภาพ หรือพยาบาล — ตามชนิดของสัญญาณ</span></div>
+        <div class="gf"><b>4</b><span>ผู้เชี่ยวชาญส่งผลกลับเป็นข้อค้นพบ คำแนะนำ และขั้นตอนถัดไป · <b>ผลนั้นจะมาแสดงที่แท็บ "ผลที่ผู้เชี่ยวชาญยืนยันแล้ว"</b> ในหน้านี้</span></div>
+      </div>
+      <p class="gfoot">ผลจากแอปใช้เพื่อ<b>เฝ้าระวังและประสานการดูแล</b>เท่านั้น ไม่ใช่การวินิจฉัย ไม่มีผลต่อเบี้ยหรือความคุ้มครอง · หากเจ็บหน้าอก เวียนศีรษะรุนแรง หรือล้มแล้วลุกไม่ได้ โทร 1669 ทันที</p>
+    </div>
+  </div>
+
+  <!-- ---------- ผลที่ผู้เชี่ยวชาญยืนยันแล้ว: แอปในโหมดดูผลเท่านั้น ไม่มีหน้าตรวจ ---------- -->
+  <div class="frame" id="f-member" data-on="0"><div class="ld">กำลังเปิดหน้าผลตรวจ…</div></div>
 </div>
 
 <!-- ============================================================
@@ -538,8 +611,9 @@ footer{padding:26px 0 40px;font-size:12.5px;color:var(--ink3);text-align:center;
    ============================================================ */
 var TABS = document.querySelectorAll('nav.tabs [data-t]');
 var SRC = {
-  member : "./CareSignal-App.html",
-  try    : "./CareSignal-Vision.html",
+  /* โหมด results: แอปเปิดเฉพาะหน้าเข้าสู่ระบบและหน้าผล ไม่มีหน้าตรวจร่างกายให้ไปถึง
+     การตรวจต้องทำในแอปบนมือถือ ที่มีกล้อง เซ็นเซอร์ และเสียงของเครื่อง */
+  member : "./CareSignal-App.html?view=results",
   staff  : "./CareSignal-Staff.html",
   insurer: "./CareSignal-Portfolio-Dashboard.html"
 };
@@ -584,7 +658,7 @@ function show(t, push){
   document.body.dataset.sec = (t === "intro") ? "intro" : "work";
   document.querySelectorAll(".panel").forEach(function(p){ p.dataset.on = (p.id === "p-" + t) ? "1" : "0"; });
   TABS.forEach(function(b){ b.setAttribute("aria-selected", b.dataset.t === t ? "true" : "false"); });
-  if (t === "member")  mountFrame(document.getElementById("f-member"), "member");
+  if (t === "member")  showMember(MV);
   if (t === "care" || t === "expert") mountStaff(t);
   if (t === "insurer") mountFrame(document.getElementById("f-insurer"), "insurer");
   if (push !== false && location.hash !== "#" + t) history.replaceState(null, "", "#" + t);
@@ -594,14 +668,20 @@ function show(t, push){
 TABS.forEach(function(b){ b.addEventListener("click", function(){ show(b.dataset.t); }); });
 document.querySelectorAll("[data-go]").forEach(function(el){ el.addEventListener("click", function(){ show(el.dataset.go); }); });
 
-/* สลับแอปสมาชิก ↔ ทดลองวัด ภายในส่วนที่ 2 */
-document.querySelectorAll('#p-member [data-src]').forEach(function(b){
-  b.addEventListener("click", function(){
-    var host = document.getElementById("f-member"), f = host.querySelector("iframe");
-    document.querySelectorAll('#p-member [data-src]').forEach(function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
-    host.dataset.ready = "0";
-    if (f) f.src = SRC[b.dataset.src]; else mountFrame(host, b.dataset.src);
-  });
+/* ส่วนที่ 2: คู่มือ ↔ ผลที่ผู้เชี่ยวชาญยืนยันแล้ว
+   คู่มือเป็นหน้าเว็บธรรมดา ส่วนผลเปิดแอปในโหมดดูผลเท่านั้น และเปิดต่อเมื่อถูกเลือก
+   ไม่โหลดล่วงหน้า เพราะคนส่วนใหญ่มาอ่านว่าต้องทำอะไร ไม่ได้มาล็อกอิน */
+var MV = "guide";
+function showMember(which){
+  MV = which;
+  document.getElementById("g-member").dataset.on = which === "guide" ? "1" : "0";
+  document.getElementById("f-member").dataset.on = which === "results" ? "1" : "0";
+  document.querySelectorAll('#p-member [data-mv]').forEach(function(x){ x.setAttribute("aria-pressed", x.dataset.mv === which ? "true" : "false"); });
+  if (which === "results") mountFrame(document.getElementById("f-member"), "member");
+  fitFrame();
+}
+document.querySelectorAll('#p-member [data-mv]').forEach(function(b){
+  b.addEventListener("click", function(){ showMember(b.dataset.mv); });
 });
 
 /* เปิดตามแฮช และรองรับปุ่มย้อนกลับ */

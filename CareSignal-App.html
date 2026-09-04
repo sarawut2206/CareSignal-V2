@@ -2930,7 +2930,18 @@ function head(kick,h,p,back,prog){
   B.innerHTML=(back?'<button class="backb" data-go="'+back+'">‹ ย้อนกลับ</button>':'<div class="brandrow">'+LOGO+'<span style="font-weight:700;font-size:15px;letter-spacing:-.01em">Care<span style="color:#FCD34D">Signal</span></span></div>')+
   '<div class="kick">'+kick+'</div><h1>'+h+'</h1>'+(p?'<p>'+p+'</p>':'')+bar;
 }
+/* ---------- โหมดของแอป ----------
+   full    = แอปเต็มบนมือถือ ตรวจร่างกายได้
+   results = เปิดจากหน้าเว็บ เห็นได้แค่หน้าเข้าสู่ระบบและหน้าผลที่ผู้เชี่ยวชาญยืนยันแล้ว
+   ทำไมต้องกันที่ go() ไม่ใช่แค่ซ่อนปุ่ม: ปุ่มซ่อนได้ แต่ data-go และลิงก์ในหน้าอื่นยังพาไปได้
+   ประตูเดียวที่ทุกเส้นทางต้องผ่านคือ go() จึงกันตรงนี้ที่เดียว */
+function appMode(){
+  try{ var v=new URLSearchParams(location.search).get("view"); if(v==="results")return "results" }catch(e){}
+  return "full";
+}
+var RESULTS_ONLY=["welcome","login","results"];
 function go(sc,arg){
+  if(S.mode==="results"&&RESULTS_ONLY.indexOf(sc)<0)sc=S.data.profile?"results":"welcome";
   /* ปิดกล้องและตัวจับเวลาทุกครั้งที่เปลี่ยนหน้า — กันกล้องค้างเปิดหลังกดยกเลิก */
   stopCam();
   camExit();
@@ -2980,11 +2991,11 @@ function askTime(cb,onCancel){
 
 function render(arg){
   setTimeout(bindFontBar,0);
-  T.hidden = getPortal()==="carer" || !S.data.profile ||
+  T.hidden = S.mode==="results" || getPortal()==="carer" || !S.data.profile ||
     ["portal","carerAuth","famLink","famHome","famView","assessQ","assessTimer","assessResult","calib","camtest","tug","faceEnroll"].indexOf(S.screen)>=0;
   var tabOf={home:"home",assessIntro:"assessIntro",assessQ:"assessIntro",assessTimer:"assessIntro",calib:"assessIntro",camtest:"assessIntro",tug:"assessIntro",faceEnroll:"assessIntro",assessResult:"assessIntro",history:"assessIntro",plan:"assessIntro",policy:"policy",pay:"policy",me:"home",ai:"home",family:"family"}[S.screen]||"home";
   T.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.go===tabOf ? "true":"false")});
-  var fn={markers:markersV,assessHub:assessHubV,loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,radar:radarV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
+  var fn={results:resultsV,markers:markersV,assessHub:assessHubV,loading:loadingV,portal:portalV,safety:safetyV,safetyStop:safetyStopV,carePlan:carePlanV,events:eventsV,welcome:welcomeV,register:registerV,login:loginV,family:familyV,carerAuth:carerAuthV,famLink:famLinkV,famHome:famHomeV,famView:famViewV,home:homeV,assessIntro:assessIntroV,assessQ:assessQV,assessTimer:assessTimerV,assessResult:assessResultV,history:historyV,policy:policyV,me:meV,plan:planV,ai:aiV,calib:calibV,camtest:camtestV,radar:radarV,tug:tugV,balance:balanceV,faceEnroll:faceEnrollV}[S.screen]||homeV;
   fn(arg);
 }
 function loadingV(){
@@ -2995,6 +3006,19 @@ function loadingV(){
 
 /* ---------- ลงทะเบียน ---------- */
 function welcomeV(){
+  if(S.mode==="results"){
+    /* ไม่มีปุ่มสมัคร — การสมัครและการตรวจทำในแอปบนมือถือ หน้านี้มีไว้ดูผลอย่างเดียว */
+    head("ผลตรวจของท่าน","เข้าสู่ระบบเพื่อดูผลที่ผู้เชี่ยวชาญยืนยันแล้ว",
+         "ใช้เบอร์โทรและรหัส 4 หลักเดียวกับในแอป · หน้านี้ไม่มีการตรวจร่างกาย การตรวจทำในแอปบนมือถือ");
+    V.innerHTML='<div class="anim senior">'+
+    '<div class="card"><h2 style="font-size:19px">ผลที่แสดงในหน้านี้</h2>'+
+    '<div class="rowline"><span class="k">สิ่งที่ผู้เชี่ยวชาญส่งกลับ</span><span class="v">ข้อค้นพบ · คำแนะนำ · ขั้นตอนถัดไป</span></div>'+
+    '<div class="rowline"><span class="k">ผลตรวจที่ยังไม่ผ่านผู้เชี่ยวชาญ</span><span class="v">ไม่แสดง</span></div>'+
+    '<div class="rowline"><span class="k">ดูผลย้อนหลังและแนวโน้มทั้งหมด</span><span class="v">ในแอปมือถือ</span></div></div>'+
+    '<button class="cta loop" data-go="login">เข้าสู่ระบบด้วยเบอร์โทร</button>'+
+    '<div class="disc">ยังไม่มีบัญชี? สมัครในแอป CareSignal บนมือถือ แล้วกลับมาดูผลที่นี่ได้</div></div>';
+    return;
+  }
   head("CARESIGNAL","โปรแกรมป้องกันที่มากับกรมธรรม์ของท่าน","บริษัทประกันของท่านมอบโปรแกรมนี้ให้เป็นสิทธิประโยชน์ ใช้ประเมินความเสี่ยงหกล้มและภาวะพึ่งพิงเองที่บ้าน โดยไม่มีค่าใช้จ่าย");
   V.innerHTML='<div class="anim">'+
   '<div class="card senior"><h2 style="font-size:19px">แอปนี้ทำอะไรได้บ้าง</h2>'+
@@ -3102,8 +3126,8 @@ function loginV(){
         tug:r.tug_seconds!=null?+r.tug_seconds:null,parts:r.parts,
         method:r.method,reps:r.reps,verified:r.identity_verified}});
       await saveAll();
-      toast("ยินดีต้อนรับกลับ · ดึงผล "+rows.length+" รายการ");
-      go("home");
+      toast(S.mode==="results"?"ยินดีต้อนรับกลับ":"ยินดีต้อนรับกลับ · ดึงผล "+rows.length+" รายการ");
+      go(S.mode==="results"?"results":"home");
     }catch(e){this.disabled=false;this.textContent="เข้าสู่ระบบ";toast("เข้าสู่ระบบไม่สำเร็จ ตรวจสอบเบอร์และรหัสอีกครั้ง")}
   });
 }
@@ -7416,6 +7440,73 @@ function trendSummaryHTML(A,age){
     '<p class="sub" style="font-size:15px;margin:0 0 12px">'+msg+'</p>'+rows+'</div>';
 }
 
+/* ============================================================
+   ผลที่ผู้เชี่ยวชาญยืนยันแล้ว — หน้าเดียวของโหมดดูผลบนเว็บ
+   ------------------------------------------------------------
+   แสดงเฉพาะสิ่งที่ผู้เชี่ยวชาญมนุษย์ส่งกลับ (referrals.review)
+   ไม่แสดงคะแนนดิบจากกล้อง เพราะเว็บคือที่ที่ครอบครัวเปิดดูโดยไม่มีบริบท
+   ตัวเลขที่ยังไม่ผ่านคนจะถูกอ่านเป็นคำตัดสิน ทั้งที่ระบบนี้ไม่วินิจฉัย
+   ============================================================ */
+var REF_STAGE={
+  sent:       {nm:"ส่งให้ทีมดูแลแล้ว",          confirmed:false},
+  received:   {nm:"ผู้เชี่ยวชาญรับเรื่องแล้ว",    confirmed:false},
+  returned:   {nm:"ผู้เชี่ยวชาญส่งผลกลับแล้ว",   confirmed:true},
+  closed:     {nm:"ปิดเรื่องแล้ว",               confirmed:true},
+  declined:   {nm:"ทีมดูแลพิจารณาแล้วว่ายังไม่ต้องส่งต่อ", confirmed:false},
+  unreachable:{nm:"ติดต่อท่านไม่ได้ — โปรดติดต่อทีมดูแล", confirmed:false}
+};
+var REF_ORDER=["sent","received","returned","closed"];
+var NEXT_NM={sufficient:"ข้อมูลเพียงพอ ไม่ต้องทำเพิ่ม",need_more_info:"ขอข้อมูลเพิ่มจากทีมดูแล",
+  book_assessment:"นัดประเมินต่อกับผู้เชี่ยวชาญ",refer_doctor:"ส่งต่อแพทย์",follow_plan:"ติดตามตามแผนดูแล"};
+/* ขั้นของใบส่งต่อจากสถานะจริง — ถ้ามีผลทบทวนกลับมาแล้ว เชื่อของจริงก่อนสถานะ */
+function refStage(r){
+  var st=r&&r.status;
+  if(r&&r.review&&(r.review.finding||r.review.recommend))
+    return (st==="outcome_recorded"||st==="completed")?REF_STAGE.closed&&{k:"closed",nm:REF_STAGE.closed.nm,confirmed:true}
+                                                      :{k:"returned",nm:REF_STAGE.returned.nm,confirmed:true};
+  var k={pending:"sent",approved:"sent",acknowledged:"received",booked:"received",
+         review_returned:"returned",outcome_recorded:"closed",completed:"closed",
+         declined:"declined",unreachable:"unreachable"}[st]||"sent";
+  return {k:k,nm:REF_STAGE[k].nm,confirmed:!!REF_STAGE[k].confirmed};
+}
+async function resultsV(){
+  head("ผลตรวจของท่าน","ผลที่ผู้เชี่ยวชาญยืนยันแล้ว",
+       "แสดงเฉพาะสิ่งที่ผู้เชี่ยวชาญส่งกลับมา · ผลดิบจากการตรวจดูได้ในแอปบนมือถือ","");
+  V.innerHTML='<div class="anim"><div class="card"><p class="sub" style="margin:0">กำลังโหลด…</p></div></div>';
+  var rows=[];
+  try{ rows=await CSBackend.myReferrals() }catch(e){ rows=[] }
+  if(!rows.length){
+    V.innerHTML='<div class="anim"><div class="card"><h3>ยังไม่มีผลที่ส่งให้ผู้เชี่ยวชาญ</h3>'+
+      '<p class="sub" style="margin:0">เมื่อทีมดูแลส่งผลของท่านให้ผู้เชี่ยวชาญ และผู้เชี่ยวชาญส่งผลกลับ ผลจะมาแสดงที่นี่ · '+
+      'การตรวจทำในแอป CareSignal บนมือถือ</p></div>'+logoutBtnHTML()+'</div>';
+    bindLogoutBtn(); return;
+  }
+  V.innerHTML='<div class="anim">'+rows.map(function(r){
+    var st=refStage(r), rv=r.review||null;
+    var pipe=(st.k==="declined"||st.k==="unreachable")
+      ? '<div class="notice" style="margin:8px 0 0">'+esc(st.nm)+'</div>'
+      : '<div class="stagebar" style="margin:8px 0 10px">'+REF_ORDER.map(function(k){
+          var i=REF_ORDER.indexOf(k), j=REF_ORDER.indexOf(st.k);
+          return '<div class="stg" data-on="'+(i<j?"done":(i===j?"1":""))+'">'+esc(REF_STAGE[k].nm)+'</div>';
+        }).join("")+'</div>';
+    return '<div class="card">'+
+      '<div class="rowline"><span class="k">ปลายทาง</span><span class="v">'+esc(DEST_NM[r.destination]||r.destination||"ทีมดูแล")+'</span></div>'+
+      '<div class="rowline"><span class="k">ส่งเมื่อ</span><span class="v">'+esc(thDate(r.created_at))+'</span></div>'+
+      pipe+
+      (st.confirmed&&rv
+        ? '<div class="rv"><b>ผลจากผู้เชี่ยวชาญ'+(r.reviewed_at?' · '+esc(thDate(r.reviewed_at)):'')+'</b>'+
+          '<div class="row"><span>ข้อค้นพบ</span><span>'+esc(rv.finding||"—")+'</span>'+
+          '<span>คำแนะนำ</span><span>'+esc(rv.recommend||"—")+'</span>'+
+          '<span>ขั้นตอนถัดไป</span><span><b style="display:inline">'+esc(NEXT_NM[rv.next_step]||rv.next_step||"—")+'</b></span>'+
+          (rv.note?'<span>หมายเหตุ</span><span>'+esc(rv.note)+'</span>':'')+'</div></div>'
+        : (st.k==="declined"||st.k==="unreachable"?'':'<p class="sub" style="margin:6px 0 0">รอผู้เชี่ยวชาญตรวจและส่งผลกลับ — ผลจะมาแสดงตรงนี้เมื่อยืนยันแล้ว</p>'))+
+      '</div>';
+  }).join("")+
+  '<div class="disc">ผลที่แสดงเป็นความเห็นของผู้เชี่ยวชาญเพื่อการเฝ้าระวังและวางแผนดูแล ไม่ใช่การวินิจฉัย และไม่มีผลต่อเบี้ยหรือความคุ้มครอง</div>'+
+  logoutBtnHTML()+'</div>';
+  bindLogoutBtn();
+}
+
 function historyV(){
   head("ผลย้อนหลัง","ผลตรวจทั้งหมดของคุณ","เก็บไว้ให้ครบทุกครั้ง ใช้ยืนยันสิทธิประโยชน์และติดตามสุขภาพ","home");
   var a=S.data.assessments;
@@ -7696,12 +7787,15 @@ document.addEventListener("click",function(e){
   go(g.dataset.go);
 });
 (async function(){
+  S.mode=appMode();
   markLoad(); carerLoad();
   applyFontScale();
   await loadAll();
   /* จำบทบาทที่เลือกไว้ เปิดแอปครั้งถัดไปเข้าแดชบอร์ดของบทบาทนั้นทันที */
   var portal=getPortal();
-  if(portal==="carer")go(CLOUD.session?"famHome":"carerAuth");
+  /* โหมดดูผล: ไม่มีบทบาทให้เลือก ไม่มีหน้าแรก มีแค่เข้าสู่ระบบแล้วดูผล */
+  if(S.mode==="results")go(S.data.profile?"results":"welcome");
+  else if(portal==="carer")go(CLOUD.session?"famHome":"carerAuth");
   else if(portal==="member")go(S.data.profile?"home":"welcome");
   else go(S.data.profile?"home":"portal");
   (async function(){
@@ -7716,6 +7810,7 @@ document.addEventListener("click",function(e){
 /* ---------- ติดตั้งเป็นแอปบนมือถือ (Add to Home Screen) ---------- */
 (function(){
   var BOTTOM="92px";
+  if(appMode()==="results")return;   /* กรอบดูผลบนเว็บ ไม่ใช่ที่ชวนติดตั้ง */
   if(matchMedia("(display-mode: standalone)").matches||navigator.standalone)return;
   try{if(localStorage.getItem("csA2HS")==="no")return}catch(e){}
   var defer=null, isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
