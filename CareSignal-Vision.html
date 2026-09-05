@@ -1192,14 +1192,14 @@ function welcomeV(){
   head("CARESIGNAL · VISION","วัดสมรรถภาพด้วยกล้อง ไม่ต้องมีอุปกรณ์","กล้องมือถือนับท่าลุกนั่ง 5 ครั้งและจับเวลาให้อัตโนมัติ ประมวลผลในเครื่อง ไม่ส่งภาพออกไปที่ใด");
   V.innerHTML='<div class="anim">'+
   '<div class="card"><h3>ระบบนี้ทำอะไร</h3>'+
-  '<div class="rowline"><span class="k">ตรวจจับท่าทางด้วย AI</span><span class="v">33 จุดบนร่างกาย</span></div>'+
+  '<div class="rowline"><span class="k">ตรวจจับโครงร่างบนเครื่อง</span><span class="v">33 จุดบนร่างกาย</span></div>'+
   '<div class="rowline"><span class="k">นับครั้งและจับเวลา</span><span class="v">อัตโนมัติ</span></div>'+
   '<div class="rowline"><span class="k">ภาพที่ส่งออกจากเครื่อง</span><span class="v" style="color:var(--c4)">ไม่มี</span></div>'+
   '<div class="rowline"><span class="k">อธิบายเหตุผลทุกคำเตือน</span><span class="v">ทุกครั้ง</span></div></div>'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">ก่อนเริ่ม โปรดเตรียม</h3>'+
   '<p class="sub" style="margin:0">เก้าอี้มีพนักพิงวางชิดผนัง · พื้นที่ว่างด้านหน้าประมาณ 2 เมตร (พอสำหรับวางมือถือให้เห็นเต็มตัว) · วางมือถือให้เห็นตัวคุณตั้งแต่ศีรษะถึงเท้า · มีคนอยู่ใกล้ ๆ เผื่อต้องช่วยพยุง</p>'+
   '<p class="sub" style="margin:8px 0 0;font-size:13.5px;color:var(--ink3)">หน้านี้วัดเฉพาะ<b>ลุกนั่ง 5 ครั้ง</b>ซึ่งนั่งอยู่กับที่ จึงใช้พื้นที่ไม่มาก · ส่วนการทดสอบ<b>ลุกเดิน 3 เมตร</b>ในแอปสมาชิกต้องใช้พื้นที่ 4–5 เมตร</p></div>'+
-  '<div class="card"><h3>หลักคุ้มครองผู้ใช้</h3><p class="sub" style="margin:0">ผลประเมินใช้เพื่อ<b>เฝ้าระวังและประสานการดูแลเท่านั้น</b> — ไม่ใช้ปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม · ระบบไม่วินิจฉัยโรคและไม่สั่งหยุด ลด หรือเพิ่มยา · AI คัดกรองเท่านั้น การส่งต่อทุกกรณีตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์</p></div>'+
+  '<div class="card"><h3>หลักคุ้มครองผู้ใช้</h3><p class="sub" style="margin:0">ผลประเมินใช้เพื่อ<b>เฝ้าระวังและประสานการดูแลเท่านั้น</b> — ไม่ใช้ปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม · ระบบไม่วินิจฉัยโรคและไม่สั่งหยุด ลด หรือเพิ่มยา · ระบบคัดกรองด้วยกฎเท่านั้น การส่งต่อทุกกรณีตัดสินโดยผู้เชี่ยวชาญที่เป็นมนุษย์</p></div>'+
   '<button class="cta" data-go="reg">เริ่มใช้งาน · สร้างบัญชี</button>'+
   '<button class="ghostb" data-go="login">มีบัญชีอยู่แล้ว · เข้าสู่ระบบด้วยเบอร์โทร</button></div>';
 }
@@ -6055,7 +6055,7 @@ function roleGateV(target,roleName){
   head("พื้นที่ผู้เชี่ยวชาญ","หน้านี้ไม่ใช่ของผู้เอาประกัน","ในระบบจริงต้องเข้าสู่ระบบด้วยบัญชี"+roleName+"ก่อน","assess");
   V.innerHTML='<div class="anim">'+
   '<div class="card" style="background:var(--accentb)"><h3 style="color:var(--accent2)">คุณกำลังจะเข้าชมในบทบาท: '+esc(roleName)+'</h3>'+
-  '<p class="sub" style="margin:0">เดโมนี้เปิดให้เข้าชมได้เพื่อการนำเสนอ แต่ในระบบใช้งานจริง หน้านี้อยู่หลังการยืนยันตัวตนและการแบ่งสิทธิ์การเข้าถึงตามบทบาท (role-based access) — ผู้เอาประกันจะไม่เห็นข้อมูลของผู้อื่น และ AI ไม่มีสิทธิ์ตัดสินใจแทน'+esc(roleName)+'ในทุกกรณี</p></div>'+
+  '<p class="sub" style="margin:0">เดโมนี้เปิดให้เข้าชมได้เพื่อการนำเสนอ แต่ในระบบใช้งานจริง หน้านี้อยู่หลังการยืนยันตัวตนและการแบ่งสิทธิ์การเข้าถึงตามบทบาท (role-based access) — ผู้เอาประกันจะไม่เห็นข้อมูลของผู้อื่น และระบบไม่มีสิทธิ์ตัดสินใจแทน'+esc(roleName)+'ในทุกกรณี</p></div>'+
   '<button class="cta" id="roleOk">เข้าชมในบทบาท'+esc(roleName)+' (สาธิต)</button>'+
   '<button class="ghostb" data-go="assess">กลับหน้าประเมิน</button></div>';
   document.getElementById("roleOk").addEventListener("click",function(){
@@ -6085,7 +6085,7 @@ function casesV(){
       : '<div class="meta" style="margin-top:8px;color:'+(c.status==="approved"?"var(--c4)":"var(--ink3)")+'">'+
         (c.status==="approved"?"ผู้เชี่ยวชาญยืนยันส่งต่อแล้ว":"ผู้เชี่ยวชาญพิจารณาแล้วว่ายังไม่ต้องส่งต่อ")+' เมื่อ '+thDate(c.decidedAt)+'</div>')+
     '</div>'}).join("")+'</div>'+
-  '<div class="disc">การกดปุ่มนี้แทนการตัดสินใจของพยาบาลหรือ Care Manager ในระบบจริง ผู้ใช้ทั่วไปไม่มีสิทธิ์เข้าถึงหน้านี้ · AI ไม่มีสิทธิ์ยืนยันเคสด้วยตนเองในทุกกรณี</div></div>';
+  '<div class="disc">การกดปุ่มนี้แทนการตัดสินใจของพยาบาลหรือ Care Manager ในระบบจริง ผู้ใช้ทั่วไปไม่มีสิทธิ์เข้าถึงหน้านี้ · ระบบไม่มีสิทธิ์ยืนยันเคสด้วยตนเองในทุกกรณี</div></div>';
   V.querySelectorAll("[data-ok],[data-no]").forEach(function(b){
     b.addEventListener("click",async function(){
       var ok=b.hasAttribute("data-ok"), id=b.dataset.ok||b.dataset.no;
