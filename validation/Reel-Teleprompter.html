@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reel Teleprompter · ภารกิจที่ 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f17;
+    --ink: #f5f7fb;
+    --muted: #8a96ab;
+    --accent: #ffd34d;
+    --cue: #5eb3ff;
+    --bar: rgba(11, 15, 23, .92);
+    --size: 56px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+  body { font-family: "Sarabun", "Leelawadee UI", "Tahoma", sans-serif; overflow: hidden; }
+
+  /* แถบควบคุมด้านบน */
+  .bar {
+    position: fixed; inset: 0 0 auto 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 14px; background: var(--bar); border-bottom: 1px solid #1d2636;
+    transition: opacity .3s;
+  }
+  .bar.dim { opacity: 0; pointer-events: none; }
+  .bar button, .bar select {
+    font: inherit; font-size: 16px; color: var(--ink); background: #1a2233;
+    border: 1px solid #2b3750; border-radius: 10px; padding: 8px 12px; cursor: pointer;
+  }
+  .bar button.on { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
+  .bar .grp { display: flex; gap: 4px; align-items: center; }
+  .bar .lbl { color: var(--muted); font-size: 14px; margin: 0 2px 0 6px; }
+  .bar .val { min-width: 3.2em; text-align: center; font-variant-numeric: tabular-nums; }
+  .timer {
+    margin-left: auto; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;
+    padding: 4px 12px; border-radius: 10px; background: #1a2233;
+  }
+  .timer.ok { background: #14532d; }
+
+  /* พื้นที่บท */
+  #stage { position: fixed; inset: 0; overflow: hidden; }
+  #scroll {
+    position: absolute; left: 0; right: 0; top: 0;
+    padding: 0 max(6vw, 24px);
+    will-change: transform;
+  }
+  #stage.mirror #scroll { transform-origin: center; }
+  .spacer-top { height: 34vh; }
+  .spacer-bottom { height: 80vh; }
+  .seg { margin: 0 0 1.1em; }
+  .cue {
+    display: block; font-size: max(15px, calc(var(--size) * .32)); color: var(--cue);
+    font-weight: 600; letter-spacing: .02em; margin-bottom: .25em;
+  }
+  .cue b { color: var(--muted); font-weight: 600; }
+  .line { font-size: var(--size); line-height: 1.45; font-weight: 600; margin: 0; }
+  .line em { font-style: normal; color: var(--accent); }
+  .end { font-size: calc(var(--size) * .7); color: var(--accent); text-align: center; font-weight: 700; }
+
+  /* เส้นอ่าน */
+  .guide {
+    position: fixed; left: 0; right: 0; top: 34vh; height: 0; z-index: 3; pointer-events: none;
+    border-top: 2px dashed rgba(255, 211, 77, .45);
+  }
+  .guide::before {
+    content: "▶"; position: absolute; left: 6px; top: -.75em; color: var(--accent); font-size: 22px;
+  }
+  .fade-top, .fade-bot { position: fixed; left: 0; right: 0; z-index: 2; pointer-events: none; }
+  .fade-top { top: 0; height: 22vh; background: linear-gradient(var(--bg), transparent); }
+  .fade-bot { bottom: 0; height: 22vh; background: linear-gradient(transparent, var(--bg)); }
+
+  /* นับถอยหลัง */
+  #count {
+    position: fixed; inset: 0; z-index: 9; display: none; place-items: center;
+    background: rgba(0, 0, 0, .6); font-size: 30vh; font-weight: 700; color: var(--accent);
+  }
+  #count.show { display: grid; }
+
+  .help {
+    position: fixed; right: 12px; bottom: 10px; z-index: 5; font-size: 13px; color: var(--muted);
+    background: var(--bar); padding: 6px 10px; border-radius: 8px; transition: opacity .3s;
+  }
+  .help.dim { opacity: 0; }
+  @media (max-width: 700px) {
+    :root { --size: 38px; }
+    .help { display: none; }
+    .bar button, .bar select { padding: 7px 9px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar">
+  <div class="grp">
+    <button id="bA" class="on">แบบ A · 45–50 วิ</button>
+    <button id="bB">แบบ B · 30–35 วิ</button>
+  </div>
+  <div class="grp">
+    <button id="play">▶ เริ่ม (นับ 3)</button>
+    <button id="reset">⟲ ต้นบท</button>
+  </div>
+  <div class="grp">
+    <span class="lbl">ความเร็ว</span>
+    <button id="sDn">−</button><span class="val" id="sVal">40</span><button id="sUp">+</button>
+  </div>
+  <div class="grp">
+    <span class="lbl">ขนาดตัวอักษร</span>
+    <button id="fDn">A−</button><button id="fUp">A+</button>
+  </div>
+  <div class="grp">
+    <button id="cues" class="on">คำกำกับภาพ</button>
+    <button id="mir">กลับด้าน</button>
+  </div>
+  <div class="timer" id="timer">0.0 วิ</div>
+</div>
+
+<div id="stage"><div id="scroll"></div></div>
+<div class="guide"></div>
+<div class="fade-top"></div>
+<div class="fade-bot"></div>
+<div id="count">3</div>
+<div class="help" id="help">Space เริ่ม/หยุด · ↑↓ ความเร็ว · + − ขนาด · R ต้นบท · M กลับด้าน · C คำกำกับ · แตะจอ = เริ่ม/หยุด</div>
+
+<script>
+/* บท — แก้ข้อความตรงนี้ได้เลย · cue คือสิ่งที่ต้องขึ้นบนจอ/มุมกล้อง ไม่ต้องอ่าน */
+var SCRIPTS = {
+  A: [
+    { cue: "0–5 วิ · หน้าตรง", text: "สองสัปดาห์ที่ผ่านมา ผมเรียนคอร์สประกันภัยของ <em>คปภ.</em> ครบสองหลักสูตร ขอสรุปสั้น ๆ ครับ" },
+    { cue: "5–18 วิ · ขึ้นจอ: สุจริตใจ · ส่วนได้เสีย · ชดใช้ตามจริง", text: "ประกัน<em>วินาศภัย</em>มีหลักสำคัญ เช่น ต้องบอกความจริงกับบริษัท ต้องมีส่วนได้เสียกับสิ่งที่เอาประกัน และบริษัทจ่ายตามความเสียหายจริง ไม่ได้ทำให้เรากำไรจากการเกิดเหตุ" },
+    { cue: "18–30 วิ · ขึ้นจอ: ชั่วระยะเวลา · ตลอดชีพ · สะสมทรัพย์ · บำนาญ", text: "ส่วนประกัน<em>ชีวิต</em>มีหลายแบบ มีแบบคุ้มครองเป็นช่วงเวลา แบบตลอดชีพ แบบสะสมทรัพย์ และแบบบำนาญ ต้องเลือกให้ตรงกับเป้าหมาย ไม่ใช่เลือกเพราะเบี้ยถูกอย่างเดียว" },
+    { cue: "30–42 วิ · ตัดภาพไปที่แอป CareSignal", text: "ที่ได้มากที่สุดคือ ประกันส่วนใหญ่ทำงาน<em>หลัง</em>เกิดเหตุ ทีม CareSignal ของเรา จึงอยากช่วยให้ผู้สูงอายุรู้<em>ก่อน</em>ว่าเริ่มเสี่ยงล้ม และได้รับการดูแลก่อนเกิดเรื่อง" },
+    { cue: "42–50 วิ · หน้าตรง แล้วโชว์ Certificate สองใบ", text: "ก่อนซื้อประกัน อ่านเงื่อนไขให้ครบ สงสัยโทรถามสายด่วน คปภ. <em>1186</em> ได้ครับ" }
+  ],
+  B: [
+    { cue: "เปิด · หน้าตรง", text: "ผมเพิ่งเรียนคอร์สประกันภัยของ <em>คปภ.</em> จบสองหลักสูตรครับ" },
+    { cue: "หลักสูตรที่ 1", text: "เรื่องแรก ประกัน<em>วินาศภัย</em>จ่ายตามความเสียหายจริง และเราต้องบอกข้อมูลตามจริง" },
+    { cue: "หลักสูตรที่ 2", text: "เรื่องที่สอง ประกัน<em>ชีวิต</em>มีหลายแบบ ต้องเลือกให้ตรงเป้าหมาย" },
+    { cue: "ตัดภาพไปที่แอป CareSignal", text: "สิ่งที่ได้คือ ประกันส่วนใหญ่ช่วย<em>หลัง</em>เกิดเหตุ ทีม CareSignal จึงอยากช่วยผู้สูงอายุให้รู้ความเสี่ยงล้ม<em>ก่อน</em>เกิดเหตุ" },
+    { cue: "ปิด · โชว์ Certificate ค้างไว้ 3–5 วินาที ให้คลิปเกิน 30 วิ", text: "สงสัยเรื่องประกัน โทรสายด่วน คปภ. <em>1186</em> ครับ" }
+  ]
+};
+
+var $ = function (id) { return document.getElementById(id); };
+var root = document.documentElement;
+var scrollEl = $("scroll"), stage = $("stage");
+var state = { which: "A", speed: 40, size: 56, running: false, y: 0, last: 0, elapsed: 0, mirror: false, cues: true };
+
+function load() {
+  try {
+    var s = JSON.parse(localStorage.getItem("reel-prompter") || "{}");
+    if (s.speed) state.speed = s.speed;
+    if (s.size) state.size = s.size;
+    if (s.which) state.which = s.which;
+  } catch (e) { /* ใช้ค่าเริ่มต้น */ }
+  if (window.innerWidth < 700 && state.size > 44) state.size = 38;
+}
+function save() {
+  try { localStorage.setItem("reel-prompter", JSON.stringify({ speed: state.speed, size: state.size, which: state.which })); } catch (e) {}
+}
+
+function render() {
+  var html = '<div class="spacer-top"></div>';
+  SCRIPTS[state.which].forEach(function (s) {
+    html += '<div class="seg">' + (state.cues ? '<span class="cue"><b>●</b> ' + s.cue + '</span>' : '') +
+            '<p class="line">' + s.text + '</p></div>';
+  });
+  html += '<p class="end">— จบ · กดหยุดกล้อง —</p><div class="spacer-bottom"></div>';
+  scrollEl.innerHTML = html;
+  $("bA").classList.toggle("on", state.which === "A");
+  $("bB").classList.toggle("on", state.which === "B");
+  $("cues").classList.toggle("on", state.cues);
+  $("mir").classList.toggle("on", state.mirror);
+  root.style.setProperty("--size", state.size + "px");
+  $("sVal").textContent = state.speed;
+  place();
+}
+
+function place() {
+  scrollEl.style.transform = "translateY(" + (-state.y) + "px)" + (state.mirror ? " scaleX(-1)" : "");
+}
+
+function tick(t) {
+  if (!state.running) return;
+  var dt = state.last ? (t - state.last) / 1000 : 0;
+  state.last = t;
+  state.y += state.speed * dt;
+  state.elapsed += dt;
+  var max = scrollEl.scrollHeight - window.innerHeight * 0.45;
+  if (state.y >= max) { state.y = max; stop(); }
+  place();
+  showTimer();
+  requestAnimationFrame(tick);
+}
+
+function showTimer() {
+  var t = $("timer");
+  t.textContent = state.elapsed.toFixed(1) + " วิ";
+  t.classList.toggle("ok", state.elapsed >= 30);
+}
+
+function start() {
+  if (state.running) return;
+  var c = $("count"), n = 3;
+  c.textContent = n; c.classList.add("show");
+  var iv = setInterval(function () {
+    n--;
+    if (n > 0) { c.textContent = n; return; }
+    clearInterval(iv); c.classList.remove("show");
+    state.running = true; state.last = 0;
+    $("play").textContent = "❚❚ หยุด";
+    dim(true);
+    requestAnimationFrame(tick);
+  }, 800);
+}
+function stop() {
+  state.running = false;
+  $("play").textContent = "▶ ต่อ (นับ 3)";
+  dim(false);
+}
+function toggle() { state.running ? stop() : start(); }
+function reset() {
+  stop(); state.y = 0; state.elapsed = 0; place(); showTimer();
+  $("play").textContent = "▶ เริ่ม (นับ 3)";
+}
+function dim(on) { $("bar").classList.toggle("dim", on); $("help").classList.toggle("dim", on); }
+function speed(d) { state.speed = Math.max(10, Math.min(200, state.speed + d)); $("sVal").textContent = state.speed; save(); }
+function size(d) { state.size = Math.max(24, Math.min(110, state.size + d)); root.style.setProperty("--size", state.size + "px"); save(); }
+
+$("bA").onclick = function () { state.which = "A"; save(); reset(); render(); };
+$("bB").onclick = function () { state.which = "B"; save(); reset(); render(); };
+$("play").onclick = toggle;
+$("reset").onclick = reset;
+$("sUp").onclick = function () { speed(5); };
+$("sDn").onclick = function () { speed(-5); };
+$("fUp").onclick = function () { size(4); };
+$("fDn").onclick = function () { size(-4); };
+$("cues").onclick = function () { state.cues = !state.cues; render(); };
+$("mir").onclick = function () { state.mirror = !state.mirror; render(); };
+stage.onclick = toggle;
+/* ปุ่มที่ถูกคลิกค้างโฟกัสไว้ Space จะไปกดปุ่มซ้ำตอนปล่อยคีย์ — ปล่อยโฟกัสทุกครั้ง */
+$("bar").addEventListener("click", function (e) { if (e.target.tagName === "BUTTON") e.target.blur(); });
+
+document.addEventListener("keydown", function (e) {
+  var key = e.code === "Space" ? " " : e.key;
+  if (e.target.tagName === "BUTTON" && (key === " " || key === "Enter")) e.preventDefault();
+  switch (key) {
+    case " ": e.preventDefault(); toggle(); break;
+    case "ArrowUp": e.preventDefault(); speed(5); break;
+    case "ArrowDown": e.preventDefault(); speed(-5); break;
+    case "+": case "=": size(4); break;
+    case "-": case "_": size(-4); break;
+    case "r": case "R": reset(); break;
+    case "m": case "M": state.mirror = !state.mirror; render(); break;
+    case "c": case "C": state.cues = !state.cues; render(); break;
+  }
+});
+/* เลื่อนด้วยล้อเมาส์ตอนหยุดอยู่ เพื่อหาตำแหน่งเริ่ม */
+stage.addEventListener("wheel", function (e) {
+  if (state.running) return;
+  state.y = Math.max(0, state.y + e.deltaY); place();
+}, { passive: true });
+
+load();
+render();
+showTimer();
+</script>
+</body>
+</html>
