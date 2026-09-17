@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| วันที่ตรวจ | 2026-09-17 17:50 |
+| วันที่ตรวจ | 2026-09-17 18:14 |
 | เวอร์ชันที่ตรวจ | 2.1.0-vision |
 | ขอบเขต | requirements · workflow · scope · rules engine · สิทธิ์ข้อมูล |
 | ผู้ตรวจ | เครื่องมืออัตโนมัติ (อ่านอย่างเดียว ไม่แก้ระบบ) |
@@ -16,7 +16,7 @@
 
 | สถานะ | จำนวน |
 |---|---:|
-| PASS | 181 |
+| PASS | 182 |
 | PARTIAL | 0 |
 | MISSING | 0 |
 | VIOLATION | 0 |
@@ -39,7 +39,7 @@
 | F-04 | FTSST / TUG — มี safety gate ก่อนทดสอบ และบันทึกผล | PASS | CareSignal-App.html:1875 · CareSignal-Vision.html:501 · supabase/01_schema.sql:79 |
 | F-05 | Barthel ADL — คำนวณและแสดงแนวโน้ม | PASS | CareSignal-App.html:4585 · CareSignal-Vision.html:4347 · CareSignal-App.html:3121 |
 | F-06 | Risk engine — Green/Yellow/Red ตามกฎที่ประกาศ | PASS | CareSignal-App.html:2307 · CareSignal-Vision.html:781 · CareSignal-App.html:2098 |
-| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:863 · supabase/09_insurtech.sql:20 |
+| F-07 | Case workflow — สถานะเปลี่ยนตามลำดับที่กำหนด | PASS | CareSignal-Staff.html:982 · supabase/09_insurtech.sql:20 |
 | F-08 | Referral — บันทึกผู้รับผิดชอบและสถานะส่งต่อ | PASS | supabase/01_schema.sql:129 · supabase/02_rls.sql:106 · supabase/12_roles.sql:37 |
 | F-09 | Follow-up — มี due date และการเตือนเมื่อเกินกำหนด | PASS | supabase/07_closed_loop.sql:42 · supabase/08_outcomes.sql:69 · supabase/11_dashboards.sql:47 |
 | F-10 | Audit log — ตรวจย้อนได้ว่าใครทำอะไรเมื่อใด | PASS | supabase/01_schema.sql:7 · supabase/02_rls.sql:12 · supabase/12_roles.sql:232 |
@@ -246,6 +246,7 @@
 | X-133 | เดโมเส้นทางหนึ่งเคสอ่านจากชุดข้อมูลสาธิตชุดเดียวกับคอนโซล ครบสี่วิชาชีพ ติดป้ายสาธิต และไม่แตะแอปสมาชิก | PASS | DEMO-41 เดินครบวงจรในข้อมูลสาธิต · หน้าเดโมอ่านจาก CS_DEMO.state() และ insurerOutcomes() · ปุ่มเปิดหน้าจอจริงชี้ไปใบส่งต่อนั้นในบทบาทนั้น |
 | X-134 | แดชบอร์ดบริษัทประกันเรียงตามลำดับการตัดสินใจ มีสถานะว่างที่อธิบายได้ บอกที่มาข้อมูล และไม่เปิดทางดูรายบุคคล | PASS | สี่ชั้นครบและเรียงถูก · สถานะว่างแทนศูนย์เปล่า · ป้ายสาธิต/จริง + เวลาอัปเดต · ปุ่มคิวงานเฉพาะทีมดูแล · กราฟรายเดือนต่อครบทั้ง view, backend และโหมดสา |
 | X-135 | ใบส่งต่อเป็นแบบฟอร์มสหวิชาชีพตามโครง CDC STEADI ทุกแถวบอกที่มา ตอบกลับด้วยปุ่มมาตรฐาน 6 แบบ และไม่ส่งคำสั่งหยุดยา | PASS | แกนกลาง + โมดูล 4 วิชาชีพ · Checklist 17 แถว · STEADI-Rx · TUG 8 ข้อสังเกต · Orthostatic BP 20/10 · migration 22 + backend + แอป + คอนโซล + เดโม + sw  |
+| X-136 | คอนโซลแยกกระดานตามวิชาชีพ เลือกบทบาทก่อนเข้าสู่ระบบ และกรองที่ฐานข้อมูล | PASS | หน้าเลือกบทบาท 4 วิชาชีพ + ผู้ประสานงาน · ชื่อกระดานและขอบเขตทุกหน้า · สถานะว่างเฉพาะบทบาท · my_work กรองด้วย cs_my_destination ที่ฐานข้อมูล |
 | X-10 | ห้ามเรียกผู้ใช้ว่า "ผู้ป่วย Red" | PASS | ไม่พบ |
 | X-11 | ห้ามแสดงความน่าจะเป็นว่าจะหกล้ม | PASS | ไม่พบ |
 | X-12 | ห้ามอ้างว่า AI วินิจฉัย | PASS | ไม่พบ |
