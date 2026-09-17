@@ -13,7 +13,9 @@
    หมายเหตุความเป็นส่วนตัว: Service Worker นี้แคชเฉพาะ "ไฟล์โปรแกรม"
    ไม่แตะข้อมูลผู้ใช้ และไม่มีการส่งข้อมูลใดออกจากเครื่อง
    ============================================================ */
-var VERSION = "caresignal-v91";
+var VERSION = "caresignal-v92";
+/* V2 กับ V3 อยู่บนโดเมนเดียวกัน แคชอยู่ถังเดียวกัน — ลบเฉพาะแคชของ V2 (ขึ้นต้น caresignal-v) */
+var PREFIX = "caresignal-v";
 
 /* รับคำสั่งจากหน้าเว็บให้สลับเป็นเวอร์ชันใหม่ทันที (ใช้โดยระบบแจ้งอัปเดต) */
 self.addEventListener("message", function (e) {
@@ -71,7 +73,7 @@ self.addEventListener("activate", function (e) {
   e.waitUntil(
     caches.keys()
       .then(function (keys) {
-        return Promise.all(keys.filter(function (k) { return k !== VERSION; })
+        return Promise.all(keys.filter(function (k) { return k.indexOf(PREFIX) === 0 && k !== VERSION; })
           .map(function (k) { return caches.delete(k); }));
       })
       .then(function () { return self.clients.claim(); })
