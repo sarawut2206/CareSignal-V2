@@ -2816,6 +2816,40 @@ function layer7() {
       bad.join(" · "), "คงโมดูล cs-referral-forms.js เป็นแหล่งเดียว รัน 22_referral_forms.sql และห้ามตัดช่องซิงก์รายละเอียดออกจาก finishAssess");
   }
 
+  /* ---- X-137: ผู้เชี่ยวชาญต้องผ่านการตรวจใบอนุญาตก่อนเห็นเคส ----
+     รหัสบทบาทจากผู้ดูแลระบบไม่พอ ต้องมีใบอนุญาตที่ผู้ดูแลระบบตรวจแล้วและยังไม่หมดอายุ
+     ประตูต้องอยู่ที่ฐานข้อมูล (cs_credential_ok) ครอบทุกฟังก์ชันและนโยบายที่ให้สิทธิ์วิชาชีพ */
+  {
+    const bad = [];
+    const sql = read("supabase/24_staff_credentials.sql") || "", st = read("CareSignal-Staff.html") || "", be = read("cs-backend.js") || "";
+    if (!sql) bad.push("ไม่มี migration 24");
+    for (const f of ["cs_is_clinician", "cs_is_care_team", "cs_my_destination", "cs_referred_to_me", "resolve_unknown_drug"])
+      if (!new RegExp("function public\\." + f + "[\\s\\S]{0,600}cs_credential_ok\\(\\)").test(sql)) bad.push(f + " ไม่ได้ตรวจใบอนุญาต");
+    /* ทุกประโยค using / with check ของนโยบายต้องตรวจใบอนุญาตเอง — ประโยคเดียวไม่พอ */
+    for (const p of ["meds_pharmacist_read", "alias_pharm_rw", "dq_pharm"]) {
+      const stmt = (sql.match(new RegExp("create policy " + p + "[^;]*;")) || [""])[0];
+      const clauses = (stmt.match(/\busing\b|\bwith check\b/g) || []).length, gates = (stmt.match(/cs_credential_ok\(\)/g) || []).length;
+      if (!stmt || gates < clauses) bad.push("นโยบาย " + p + " มีประโยคที่ให้สิทธิ์เภสัชกรโดยไม่ตรวจใบอนุญาต");
+    }
+    if (!/new\.status := 'pending'/.test(sql)) bad.push("แก้ข้อมูลแล้วไม่กลับไปรอตรวจ");
+    if (!/if public\.cs_role\(\) <> 'admin' then raise exception/.test(sql) || !/p_user = auth\.uid\(\)/.test(sql)) bad.push("ผู้ที่ไม่ใช่ผู้ดูแลระบบหรือเจ้าของเองอนุมัติได้");
+    if (!/revoke update \(license_no, license_body\) on public\.profiles from authenticated/.test(sql)) bad.push("เจ้าของบัญชียังแก้เลขใบอนุญาตใน profiles ตรงได้");
+    if (!/'staff-licenses', 'staff-licenses', false/.test(sql)) bad.push("บัคเก็ตรูปใบอนุญาตไม่ได้เป็นแบบส่วนตัว");
+    if (!/if\(!\(await credGate\(\)\)\) return;/.test(st)) bad.push("คอนโซลไม่ได้พาผู้เชี่ยวชาญไปยื่นใบอนุญาตก่อนเข้าทำงาน");
+    if (!/L < 1000 \|\| Sm < 600/.test(st)) bad.push("ไม่ได้ตรวจความละเอียดรูปใบอนุญาต");
+    if (!/ใช้ยืนยันกับ CareSignal เท่านั้น/.test(st)) bad.push("ไม่ได้ประทับข้อความกันนำรูปไปใช้ที่อื่น");
+    if (!/คำเตือน — การให้ข้อมูลเท็จ/.test(st) || (st.match(/class="crC"/g) || []).length !== 4) bad.push("ไม่มีคำเตือนข้อมูลเท็จ หรือความยินยอมไม่ครบ 4 ข้อ");
+    if (!/ok\.disabled = !\(\[\]\.every\.call\(cks/.test(st)) bad.push("อนุมัติได้โดยไม่ติ๊กรายการตรวจครบ");
+    if (!/async function myCredential/.test(be) || !/admin_review_credential/.test(be)) bad.push("backend ไม่ได้ต่อระบบใบอนุญาต");
+    req(7, "X-137", "ผู้เชี่ยวชาญเห็นเคสได้เฉพาะเมื่อใบอนุญาตผ่านการตรวจโดยผู้ดูแลระบบและยังไม่หมดอายุ บังคับที่ฐานข้อมูล",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ")
+                   : "cs_credential_ok ครอบฟังก์ชันสิทธิ์ 5 ตัวและนโยบาย 3 ตัว · แก้ข้อมูลกลับไปรอตรวจ · อนุมัติได้เฉพาะผู้ดูแลระบบและไม่ใช่ของตัวเอง · รูปอยู่บัคเก็ตส่วนตัว ตรวจความละเอียดและประทับข้อความ · ความยินยอม 4 ข้อ + คำเตือน");
+    if (bad.length) finding("CRITICAL", "X-137", "ผู้ที่ยังไม่ผ่านการตรวจใบอนุญาตอาจเห็นข้อมูลสุขภาพ",
+      "รหัสบทบาทออกโดยคน ถ้ารั่วหรือออกผิดคน ผู้ที่ไม่ใช่ผู้ประกอบวิชาชีพจะเห็นข้อมูลสุขภาพของผู้เอาประกันทันที",
+      bad.join(" · "), "รัน 24_staff_credentials.sql และคงประตู cs_credential_ok ไว้ในทุกฟังก์ชันและนโยบายที่ให้สิทธิ์วิชาชีพ");
+  }
+
   /* ---- X-136: แยกกระดานตามวิชาชีพ ไม่ให้ทุกคนเห็นคิวเดียวกัน ----
      แพทย์ เภสัชกร นักกายภาพ และพยาบาลมีหน้าที่และข้อมูลที่ต้องใช้คนละชุด
      (CDC STEADI Coordinated Care Plan) คอนโซลจึงต้อง
