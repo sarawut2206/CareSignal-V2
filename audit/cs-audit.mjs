@@ -2816,6 +2816,31 @@ function layer7() {
       bad.join(" · "), "คงโมดูล cs-referral-forms.js เป็นแหล่งเดียว รัน 22_referral_forms.sql และห้ามตัดช่องซิงก์รายละเอียดออกจาก finishAssess");
   }
 
+  /* ---- X-138: รายชื่อโทรติดตามรายคน ----
+     นัดติดตามต้องมีคนโทรจริงและบันทึกผล ไม่ใช่แค่ตัวเลขในพอร์ต
+     รายชื่อทั้งพอร์ตเห็นได้เฉพาะผู้ประสานงาน (วิชาชีพเห็นเฉพาะงานที่ส่งถึงตน — X-136)
+     ผลการโทรต้องลงประวัติการติดต่อของเคสและบันทึกตรวจสอบ */
+  {
+    const bad = [];
+    const sql = read("supabase/26_call_list.sql") || "", st = read("CareSignal-Staff.html") || "", be = read("cs-backend.js") || "", dm = read("cs-demo.js") || "";
+    if (!sql) bad.push("ไม่มี migration 26");
+    if (!/select public\.cs_role\(\) in \('care_manager','admin'\)\s*\$fn\$/.test(sql)) bad.push("สิทธิ์ดูรายชื่อไม่ได้จำกัดเฉพาะผู้ประสานงาน");
+    if (!/where public\.cs_is_caller\(\)/.test(sql) || !/if not public\.cs_is_caller\(\) then raise exception/.test(sql)) bad.push("ฟังก์ชันไม่ได้ตรวจสิทธิ์ที่ฐานข้อมูล");
+    if (!/revoke all on function public\.staff_call_list\(int\) from public, anon/.test(sql)) bad.push("ผู้ไม่ล็อกอินเรียกรายชื่อได้");
+    if (!/insert into public\.contact_log/.test(sql) || !/insert into public\.audit_logs/.test(sql)) bad.push("ผลการโทรไม่ลงประวัติเคสหรือบันทึกตรวจสอบ");
+    if (!/f\.attempts \+ 1 >= 3 then 'missed'/.test(sql)) bad.push("ไม่รับสายไม่จำกัดจำนวนครั้ง");
+    if (!/care_manager:\["ward","mine","queue","call"/.test(st) || /(pharmacist|physio|doctor|nurse):\s*\[[^\]]*"call"/.test(st)) bad.push("เมนูโทรติดตามแสดงผิดบทบาท");
+    if (!/async function callV\(\)\{[\s\S]{0,300}if\(!isCoordinator\(\)\)/.test(st)) bad.push("หน้าโทรติดตามไม่ได้กันบทบาทอื่น");
+    if (!/href="tel:'\+esc\(r\.phone\)/.test(st)) bad.push("ไม่มีปุ่มโทรออก");
+    if (!/async function callList/.test(be) || !/callList: function/.test(dm)) bad.push("backend หรือโหมดสาธิตไม่ได้ต่อรายชื่อโทรติดตาม");
+    req(7, "X-138", "รายชื่อโทรติดตามรายคน: เฉพาะผู้ประสานงาน โทรออกได้ บันทึกผลลงประวัติเคส ไม่รับสาย 3 ครั้ง = ขาดการติดตาม",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ") : "staff_call_list/staff_followup_result ตรวจสิทธิ์ที่ฐานข้อมูล · ลง contact_log + audit_logs · เมนูเฉพาะ care_manager/admin · ปุ่ม tel: · ครบ 3 ครั้งเป็น missed");
+    if (bad.length) finding("HIGH", "X-138", "นัดโทรติดตามอาจหลุดหรือเปิดรายชื่อให้ผู้ไม่เกี่ยวข้อง",
+      "ระบบสัญญาว่าจะมีเจ้าหน้าที่โทรติดตาม ถ้าไม่มีรายชื่อรายวันและบันทึกผล นัดจะหลุดโดยไม่มีใครรู้",
+      bad.join(" · "), "รัน 26_call_list.sql และคงสิทธิ์เฉพาะผู้ประสานงาน");
+  }
+
   /* ---- X-137: ผู้เชี่ยวชาญต้องผ่านการตรวจใบอนุญาตก่อนเห็นเคส ----
      รหัสบทบาทจากผู้ดูแลระบบไม่พอ ต้องมีใบอนุญาตที่ผู้ดูแลระบบตรวจแล้วและยังไม่หมดอายุ
      ประตูต้องอยู่ที่ฐานข้อมูล (cs_credential_ok) ครอบทุกฟังก์ชันและนโยบายที่ให้สิทธิ์วิชาชีพ */
