@@ -2816,6 +2816,28 @@ function layer7() {
       bad.join(" · "), "คงโมดูล cs-referral-forms.js เป็นแหล่งเดียว รัน 22_referral_forms.sql และห้ามตัดช่องซิงก์รายละเอียดออกจาก finishAssess");
   }
 
+  /* ---- X-140: การแจ้งเหตุ (ล้ม · อุบัติเหตุ · เข้าโรงพยาบาล · ช่วยเหลือตัวเองแย่ลง) ----
+     ครอบครัวแจ้ง → ทีมดูแลเปิดเคสตามความรุนแรง · บริษัทประกันเห็นแค่ภาพรวมไม่ระบุตัวตน
+     เส้นที่ห้ามข้าม: ฟังก์ชันของบริษัทประกันต้องไม่คืน user_id/ชื่อ และหน้าจอต้องบอกว่าไม่ใช่ข้อมูลเคลม */
+  {
+    const bad = [];
+    const sql = read("supabase/28_incidents.sql") || "", inc = read("cs-incident.js") || "", dash = read("CareSignal-Portfolio-Dashboard.html") || "",
+          st = read("CareSignal-Staff.html") || "";
+    if (!sql || !inc) bad.push("ไม่มี migration 28 หรือ cs-incident.js");
+    const fn = (sql.match(/function public\.insurer_incident_summary[\s\S]*?\$fn\$;/) || [""])[0];
+    if (!fn || /user_id|display_name|pseudonym|phone|note|hospital_name|created_at\s*[,)]/.test(fn.replace(/ev\.user_id|m\.id = ev\.user_id|ev\.created_at >/g, ""))) bad.push("ภาพรวมของบริษัทประกันคืนข้อมูลรายบุคคล");
+    if (!/share_pool = true/.test(fn) || !/cs_role\(\) in \('insurer','care_manager','admin'\)/.test(fn)) bad.push("ภาพรวมไม่จำกัดเฉพาะผู้ยินยอมหรือไม่ตรวจบทบาท");
+    if (!/'fall','near_fall','accident','hospital','adl_drop'/.test(sql)) bad.push("ทริกเกอร์ไม่เปิดเคสสำหรับเหตุทุกชนิด");
+    if (!/ไม่ใช่ข้อมูลเคลม/.test(dash) || !/&lt;3/.test(dash)) bad.push("แดชบอร์ดไม่บอกว่าไม่ใช่ข้อมูลเคลม หรือไม่ซ่อนกลุ่มเล็ก");
+    if (!/CSIncident\.describe/.test(st)) bad.push("คอนโซลเจ้าหน้าที่ไม่แสดงรายละเอียดเหตุ");
+    req(7, "X-140", "แจ้งเหตุ: เปิดเคสตามความรุนแรง · บริษัทประกันเห็นแค่ภาพรวมไม่ระบุตัวตน ไม่ใช่ข้อมูลเคลม",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ") : "insurer_incident_summary คืนเฉพาะจำนวน · ผู้ยินยอม share_pool · ตรวจบทบาท · กลุ่มเล็กแสดง <3 · คอนโซลเห็นรายละเอียด");
+    if (bad.length) finding("CRITICAL", "X-140", "ข้อมูลการแจ้งเหตุรายคนอาจรั่วถึงบริษัทประกัน หรือเหตุร้ายแรงไม่มีคนรับผิดชอบ",
+      "เหตุหกล้มหรืออุบัติเหตุเป็นข้อมูลที่อาจถูกใช้พิจารณาสินไหม บริษัทประกันต้องเห็นเฉพาะภาพรวม",
+      bad.join(" · "), "คงการนับรวมใน insurer_incident_summary และทริกเกอร์ใน 28_incidents.sql");
+  }
+
   /* ---- X-139: นัดตรวจทางวิดีโอคอล · แบบยืนยันผลครั้งสุดท้าย · คำขอบริการป้องกัน ----
      ผู้เชี่ยวชาญตรวจทางวิดีโอแล้วลงชื่อยืนยันผล → ผู้ประสานงานส่งคำขอบริการป้องกันให้บริษัทประกัน
      เส้นที่ห้ามข้าม: บริษัทประกันต้องไม่ได้ข้อมูลระบุตัวตน ส่งได้เฉพาะผลที่ยืนยันว่าเสี่ยงจริงและครอบครัวยินยอม
