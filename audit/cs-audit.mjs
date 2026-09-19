@@ -2816,6 +2816,39 @@ function layer7() {
       bad.join(" · "), "คงโมดูล cs-referral-forms.js เป็นแหล่งเดียว รัน 22_referral_forms.sql และห้ามตัดช่องซิงก์รายละเอียดออกจาก finishAssess");
   }
 
+  /* ---- X-139: นัดตรวจทางวิดีโอคอล · แบบยืนยันผลครั้งสุดท้าย · คำขอบริการป้องกัน ----
+     ผู้เชี่ยวชาญตรวจทางวิดีโอแล้วลงชื่อยืนยันผล → ผู้ประสานงานส่งคำขอบริการป้องกันให้บริษัทประกัน
+     เส้นที่ห้ามข้าม: บริษัทประกันต้องไม่ได้ข้อมูลระบุตัวตน ส่งได้เฉพาะผลที่ยืนยันว่าเสี่ยงจริงและครอบครัวยินยอม
+     ผลยืนยันต้องมีผู้รับผิดชอบที่มีใบอนุญาตและแก้ไขย้อนหลังไม่ได้ และระบบไม่บันทึกภาพหรือเสียงจากวิดีโอคอล */
+  {
+    const bad = [];
+    const sql = read("supabase/27_teleconsult.sql") || "", st = read("CareSignal-Staff.html") || "", vis = read("CareSignal-Visit.html") || "",
+          tc = read("cs-teleconsult.js") || "", be = read("cs-backend.js") || "", dm = read("cs-demo.js") || "";
+    if (!sql || !vis || !tc) bad.push("ไม่มีไฟล์ migration 27 / หน้าห้องวิดีโอ / โมดูลกลาง");
+    const lst = (sql.match(/function public\.insurer_prevention_list\(\)\s*returns table \(([^)]*)\)/) || [])[1];
+    if (!lst || /user_id|display_name|pseudonym|phone|findings|signer/.test(lst)) bad.push("ฟังก์ชันของบริษัทประกันคืนข้อมูลระบุตัวตนหรือข้อค้นพบฉบับเต็ม");
+    if (/create policy \w+ on public\.prevention_requests[^;]*insurer/i.test(sql)) bad.push("บริษัทประกันอ่านตาราง prevention_requests ตรงได้");
+    if (!/fr\.risk <> 'confirmed'/.test(sql) || !/not coalesce\(a\.share_insurer, false\)/.test(sql)) bad.push("ส่งคำขอได้โดยไม่ยืนยันความเสี่ยงหรือไม่มีความยินยอม");
+    if (!/position\(pf\.display_name in p_summary\)/.test(sql)) bad.push("ฐานข้อมูลไม่ตรวจชื่อในสรุปก่อนส่ง");
+    if (!/attested\s+boolean not null check \(attested\)/.test(sql) || !/revoke insert, update, delete on public\.final_reports from anon, authenticated/.test(sql) || !/แก้ไขไม่ได้/.test(sql)) bad.push("แบบยืนยันผลไม่บังคับรับรองหรือแก้ไขย้อนหลังได้");
+    if (!/a\.clinician_id <> auth\.uid\(\) then raise exception 'เฉพาะผู้เชี่ยวชาญที่ตรวจ/.test(sql)) bad.push("คนอื่นลงชื่อยืนยันผลแทนผู้ตรวจได้");
+    if (!/revoke select on public\.appointments from anon, authenticated/.test(sql) || /grant select \([^)]*\broom\b/.test(sql)) bad.push("รหัสห้องวิดีโออ่านจากตารางได้");
+    if (!/interval '15 minutes'/.test(sql) || !/ท่านไม่ได้เป็นคู่สนทนา/.test(sql)) bad.push("เข้าห้องได้นอกเวลานัดหรือไม่ใช่คู่สนทนา");
+    if (/MediaRecorder|captureStream\(/.test(vis)) bad.push("หน้าห้องวิดีโอมีการบันทึกภาพ");
+    if (!(vis.indexOf("joinAppointment(APPT)") >= 0 && vis.indexOf("joinAppointment(APPT)") < vis.indexOf("await openMedia()"))) bad.push("เปิดกล้องก่อนตรวจสิทธิ์เข้าห้อง");
+    if (!/insurer:\s*\["port","prev","me"\]/.test(st) || /(pharmacist|physio|doctor|nurse|care_manager):\s*\[[^\]]*"prev"/.test(st)) bad.push("เมนูคำขอบริการป้องกันแสดงผิดบทบาท");
+    if (!/\.side \[hidden\],\.tabs \[hidden\][^{]*\{display:none!important\}/.test(st)) bad.push("เมนูที่ไม่มีสิทธิ์ยังแสดงอยู่ (display ทับ hidden)");
+    if (!/ใช้ข้อมูลนี้อนุมัติบริการป้องกันเท่านั้น/.test(st) || !/ห้ามนำไปปรับเบี้ย/.test(st)) bad.push("หน้าบริษัทประกันไม่ประกาศขอบเขตการใช้ข้อมูล");
+    if (!/leaksIdentity/.test(tc) || !/NO_STOP/.test(tc)) bad.push("โมดูลกลางไม่ตรวจข้อมูลระบุตัวตนหรือคำสั่งหยุดยา");
+    if (!/async function listAppointments/.test(be) || !/insurerPrevention: function/.test(dm)) bad.push("backend หรือโหมดสาธิตไม่ได้ต่อระบบนัดตรวจทางไกล");
+    req(7, "X-139", "นัดตรวจทางวิดีโอ: ผู้เชี่ยวชาญลงชื่อยืนยันผลแก้ไขไม่ได้ · บริษัทประกันได้เฉพาะคำขอไม่ระบุชื่อที่ยืนยันแล้วและครอบครัวยินยอม · ไม่บันทึกภาพ",
+        bad.length ? "FAIL" : "PASS",
+        bad.length ? bad.join(" · ") : "insurer_prevention_list ไม่มีคอลัมน์ระบุตัวตน · ส่งได้เมื่อ risk=confirmed และ share_insurer · ผู้ตรวจลงชื่อเอง attested แก้ไม่ได้ · รหัสห้องไม่เปิดอ่าน · ตรวจสิทธิ์ก่อนเปิดกล้อง · ไม่มี MediaRecorder");
+    if (bad.length) finding("CRITICAL", "X-139", "ข้อมูลสุขภาพรายคนอาจรั่วถึงบริษัทประกัน หรือผลยืนยันไม่มีผู้รับผิดชอบ",
+      "บริษัทประกันเป็นผู้จ่ายค่าบริการ ถ้าได้ข้อมูลระบุตัวตนอาจนำไปใช้ปรับเบี้ยหรือพิจารณาสินไหม ซึ่งขัดกับขอบเขตที่ประกาศไว้",
+      bad.join(" · "), "คงการตัดข้อมูลระบุตัวตนที่ฐานข้อมูล และเงื่อนไขยืนยันความเสี่ยง + ความยินยอมใน cm_send_prevention()");
+  }
+
   /* ---- X-138: รายชื่อโทรติดตามรายคน ----
      นัดติดตามต้องมีคนโทรจริงและบันทึกผล ไม่ใช่แค่ตัวเลขในพอร์ต
      รายชื่อทั้งพอร์ตเห็นได้เฉพาะผู้ประสานงาน (วิชาชีพเห็นเฉพาะงานที่ส่งถึงตน — X-136)

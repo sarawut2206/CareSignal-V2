@@ -13,7 +13,7 @@
    หมายเหตุความเป็นส่วนตัว: Service Worker นี้แคชเฉพาะ "ไฟล์โปรแกรม"
    ไม่แตะข้อมูลผู้ใช้ และไม่มีการส่งข้อมูลใดออกจากเครื่อง
    ============================================================ */
-var VERSION = "caresignal-v94";
+var VERSION = "caresignal-v95";
 /* โฮสต์ที่เก็บเฉพาะไฟล์คงที่ (ไลบรารี โมเดล ฟอนต์) — แคชได้ */
 var STATIC_HOSTS = /(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net|storage\.googleapis\.com|esm\.sh|cdnjs\.cloudflare\.com)$/;
 
@@ -37,6 +37,8 @@ var APP_SHELL = [
   "./cs-hospitals.js",
   "./cs-demo.js",
   "./cs-referral-forms.js",
+  "./cs-teleconsult.js",
+  "./CareSignal-Visit.html",
   "./cs-aruco.js",
   "./CareSignal-markers.pdf",
   "./manifest-staff.json",
