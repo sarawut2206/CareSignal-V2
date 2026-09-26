@@ -892,7 +892,7 @@ function trajectory(){
   out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
   out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
                : out.level==="decline"?{nm:"Care Manager โทรติดตาม",sla:"ภายใน 7 วัน",need:true}
-               : out.level==="watch"?{nm:"แผนป้องกันด้วยตนเอง + เตือนประเมินซ้ำ",sla:"ไม่ต้องส่งต่อ",need:false}
+               : out.level==="watch"?{nm:"แผนดูแลตนเอง + เตือนประเมินซ้ำ",sla:"ไม่ต้องส่งต่อ",need:false}
                                      :{nm:"ดูแลตนเองตามแผนปกติ",sla:"ไม่ต้องส่งต่อ",need:false};
   return out;
 }
@@ -5359,12 +5359,12 @@ function trendSummaryHTML(A,age){
 var PATHWAY={
   stable:{nm:"เขียว · ดูแลตนเองตามปกติ",
     items:[
-      {k:"edu",   nm:"อ่านคู่มือป้องกันการหกล้ม"},
+      {k:"edu",   nm:"อ่านคู่มือลดความเสี่ยงหกล้ม"},
       {k:"home",  nm:"ตรวจบ้านตามรายการจุดเสี่ยง"},
       {k:"exer",  nm:"ออกกำลังกายฝึกกำลังขา สัปดาห์ละ 2–3 ครั้ง"}
     ],
     follow:[{kind:"checkin_7d",days:180,nm:"เช็กอินสั้น"},{kind:"reassess",days:365,nm:"ประเมินเต็มรูปแบบ"}]},
-  watch:{nm:"เหลือง · เฝ้าสังเกตและป้องกัน",
+  watch:{nm:"เหลือง · เฝ้าสังเกตและดูแลตนเอง",
     items:[
       {k:"home",  nm:"ตรวจบ้าน เก็บของกีดขวาง เพิ่มแสงสว่าง"},
       {k:"exer",  nm:"เริ่มโปรแกรมฝึกกำลังและการทรงตัว"},
@@ -5660,11 +5660,11 @@ async function insurerV(){
   '<div class="kpi"><div class="l">เวลาลุกนั่งเฉลี่ย</div><div class="n">'+(avgFt?avgFt.toFixed(1)+" วิ":"—")+'</div></div>'+
   '<div class="kpi"><div class="l">เข้าเกณฑ์ส่งต่อ</div><div class="n">'+ref+' ราย</div></div></div>'+
   '<div class="card"><h3>การกระจายระดับสัญญาณ</h3>'+mixRows+
-  '<p class="sub" style="margin:10px 0 0">พอร์ตที่มีสัดส่วนเขียว-เหลืองสูง หมายถึงต้นทุนสินไหมคาดการณ์ต่ำกว่า — ผลของโปรแกรมป้องกันที่พ่วงกับกรมธรรม์</p></div>'+
+  '<p class="sub" style="margin:10px 0 0">พอร์ตที่มีสัดส่วนเขียว-เหลืองสูง หมายถึงต้นทุนสินไหมคาดการณ์ต่ำกว่า — ผลของโปรแกรมคัดกรองและเฝ้าระวังที่พ่วงกับกรมธรรม์</p></div>'+
   '<div class="card"><h3>ผลต่อการตั้งราคา</h3>'+
   '<div class="rowline"><span class="k">เข้าเกณฑ์ติดตามต่อเนื่อง</span><span class="v">'+disc+' ราย ('+Math.round(disc/n*100)+'%)</span></div>'+
   '<div class="rowline"><span class="k">ยังไม่เข้าเกณฑ์ (ไม่มีโทษ)</span><span class="v">'+(n-disc)+' ราย</span></div>'+
-  '<p class="sub" style="margin:10px 0 0"><b>ไม่มีเส้นทางใดในระบบ</b>ที่นำผลตรวจไปเพิ่มเบี้ย ปฏิเสธความคุ้มครอง หรือปฏิเสธการเคลม — ออกแบบเพื่อไม่ลงโทษผู้ที่ประเมินตนเองอย่างซื่อสัตย์ เพราะข้อมูลที่ตรงความจริงคือสิ่งเดียวที่ทำให้การป้องกันได้ผล</p></div>'+
+  '<p class="sub" style="margin:10px 0 0"><b>ไม่มีเส้นทางใดในระบบ</b>ที่นำผลตรวจไปเพิ่มเบี้ย ปฏิเสธความคุ้มครอง หรือปฏิเสธการเคลม — ออกแบบเพื่อไม่ลงโทษผู้ที่ประเมินตนเองอย่างซื่อสัตย์ เพราะข้อมูลที่ตรงความจริงคือสิ่งเดียวที่ทำให้การดูแลได้ผล</p></div>'+
   '<div class="card"><h3>รายการในพอร์ต</h3>'+
   pool.slice(0,12).map(function(r){var t=CFG.tiers[r.tier]||{nm:"—",b:""};
     return '<div class="rowline"><span class="k">'+esc(r.uid.slice(0,10))+' · '+esc(r.ageBand||"—")+' · '+(r.sex==="f"?"ญ":"ช")+'</span>'+

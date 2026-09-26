@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://esm.sh; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://tessdata.projectnaptha.com https://esm.sh https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <!-- ล็อก layout ไว้ที่ 430 หน่วยแล้วให้เบราว์เซอร์ขยายเต็มจอจริง — ขนาดตัวอักษรเป็นสัดส่วนเดียวกันทุกเครื่อง -->
 <meta name="viewport" content="width=430, viewport-fit=cover">
-<meta name="description" content="แอปสมาชิก CareSignal — โปรแกรมป้องกันการหกล้มและภาวะพึ่งพิงที่บริษัทประกันมอบให้พ่วงกับกรมธรรม์ วัดสมรรถภาพด้วยกล้อง ดูแนวโน้ม รับสิทธิประโยชน์ทางเดียว">
+<meta name="description" content="แอปสมาชิก CareSignal — โปรแกรมคัดกรองและเฝ้าระวังความเสี่ยงหกล้มและภาวะพึ่งพิงที่บริษัทประกันมอบให้พ่วงกับกรมธรรม์ วัดสมรรถภาพด้วยกล้อง ดูแนวโน้ม รับสิทธิประโยชน์ทางเดียว">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" href="./favicon-64.png">
-<title>CareSignal — โปรแกรมป้องกันที่มากับกรมธรรม์ของท่าน</title>
+<title>CareSignal — โปรแกรมคัดกรองและเฝ้าระวังที่มากับกรมธรรม์ของท่าน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2418,7 +2418,7 @@ function trajectory(){
   out.nextDate=new Date(Date.now()+out.nextDays*864e5).toISOString();
   out.referral = out.level==="urgent"?{nm:"ส่งต่อพยาบาลประเมินที่บ้าน",sla:"ภายใน 72 ชั่วโมง",need:true}
                : out.level==="decline"?{nm:"Care Manager โทรติดตาม",sla:"ภายใน 7 วัน",need:true}
-               : out.level==="watch"?{nm:"แผนป้องกันด้วยตนเอง + เตือนประเมินซ้ำ",sla:"ไม่ต้องส่งต่อ",need:false}
+               : out.level==="watch"?{nm:"แผนดูแลตนเอง + เตือนประเมินซ้ำ",sla:"ไม่ต้องส่งต่อ",need:false}
                                      :{nm:"ดูแลตนเองตามแผนปกติ",sla:"ไม่ต้องส่งต่อ",need:false};
   return out;
 }
@@ -2430,7 +2430,7 @@ function nextDueDays(flags,tier){
   return ENGINE.cadence.stable;
 }
 
-/* ---- แผนป้องกันเฉพาะบุคคล ---- */
+/* ---- แผนดูแลเฉพาะบุคคล ---- */
 var PREV_LIB=[
   {id:"P1", dom:"ftsst", nm:"ฝึกลุกนั่งจากเก้าอี้แบบเพิ่มระดับ", how:"เริ่ม 5 ครั้ง × 2 รอบ/วัน เพิ่มเป็น 10 ครั้ง × 3 รอบเมื่อทำได้สบาย ใช้เก้าอี้มีพนักพิงชิดผนัง", src:"Otago Exercise Programme (สร้างความแข็งแรงขาส่วนล่าง)"},
   {id:"P2", dom:"balance", nm:"ฝึกทรงตัวยืนต่อเท้า", how:"ยืนเท้าต่อเท้าจับขอบโต๊ะ 30 วินาที × 3 ครั้ง สัปดาห์ละ 3 วัน", src:"Cochrane 2019 — โปรแกรมออกกำลังกายลดอัตราการหกล้ม 20–25%"},
@@ -2565,7 +2565,7 @@ function welcomeV(){
     '<div class="disc">ยังไม่มีบัญชี? สมัครในแอป CareSignal บนมือถือ แล้วกลับมาดูผลที่นี่ได้</div></div>';
     return;
   }
-  head("CARESIGNAL","โปรแกรมป้องกันที่มากับกรมธรรม์ของท่าน","บริษัทประกันของท่านมอบโปรแกรมนี้ให้เป็นสิทธิประโยชน์ ใช้ประเมินความเสี่ยงหกล้มและภาวะพึ่งพิงเองที่บ้าน โดยไม่มีค่าใช้จ่าย");
+  head("CARESIGNAL","โปรแกรมคัดกรองและเฝ้าระวังที่มากับกรมธรรม์ของท่าน","บริษัทประกันของท่านมอบโปรแกรมนี้ให้เป็นสิทธิประโยชน์ ใช้ประเมินความเสี่ยงหกล้มและภาวะพึ่งพิงเองที่บ้าน โดยไม่มีค่าใช้จ่าย");
   V.innerHTML='<div class="anim">'+
   '<div class="card senior"><h2 style="font-size:19px">แอปนี้ทำอะไรได้บ้าง</h2>'+
   '<div class="rowline"><span class="k">วัดความแข็งแรง 5 ด้าน</span><span class="v">8 นาที</span></div>'+
@@ -2596,7 +2596,7 @@ function registerV(){
   '<div class="field"><label>เบอร์โทรของท่าน (ใช้เข้าสู่ระบบ)</label><input id="fPhone" inputmode="tel" placeholder="เช่น 0812345678"></div>'+
   '<div class="field"><label>ตั้งรหัส 4 หลัก</label><input id="fPin" inputmode="numeric" type="password" maxlength="4" placeholder="••••"></div></div>'+
   '<div class="card"><h3 style="font-size:15px;margin:0 0 10px">ความยินยอมตาม PDPA</h3>'+
-  '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนป้องกัน (2) รายงานระดับสัญญาณและการเข้าร่วมให้บริษัทประกันผู้ออกกรมธรรม์ใช้พิจารณาสิทธิประโยชน์ (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
+  '<p class="sub" style="margin:0 0 12px">เราเก็บ ปีเกิด เพศ ผลประเมินร่างกาย และประวัติหกล้ม เพื่อ (1) ประเมินความเสี่ยงและสร้างแผนดูแล (2) รายงานระดับสัญญาณและการเข้าร่วมให้บริษัทประกันผู้ออกกรมธรรม์ใช้พิจารณาสิทธิประโยชน์ (3) ส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง — ไม่ขายข้อมูลให้บุคคลที่สาม และคุณถอนความยินยอมพร้อมลบข้อมูลได้ทุกเมื่อ</p>'+
   '<label class="chk"><input type="checkbox" id="fConsent"'+(d.consent?" checked":"")+'><span>ข้าพเจ้าอ่านและยินยอมให้เก็บและใช้ข้อมูลตามวัตถุประสงค์ข้างต้น</span></label></div>'+
   '<button class="cta loop" id="fGo">บันทึกและเริ่มใช้งาน</button>'+
   '<p class="hint" style="margin-top:12px">ข้อมูลสรุปแบบแฝงชื่อ (รหัสสุ่มแทนชื่อ ช่วงอายุ เพศ ระดับสัญญาณ) จะถูกส่งเข้าระบบกลางเพื่อให้ Care Manager ดูแลคุณได้ — ไม่ส่งชื่อจริง และปิดได้ในหน้า "ฉัน"</p></div>';
@@ -2616,7 +2616,7 @@ function registerV(){
     var age=ageFrom(yr,mo);
     S.data.profile={uid:"u"+Date.now().toString(36), name:nm, birthYear:yr, birthMonth:mo, age:age, sex:S.draft.sex,
       phone:ph||null, carerPhone:document.getElementById("fCarer").value.trim()||null, joined:todayISO()};
-    S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนป้องกัน","รายงานสิทธิประโยชน์ให้บริษัทประกัน","ส่งต่อทีมดูแล"]};
+    S.data.consent={version:"PDPA-1.0", at:todayISO(), purposes:["ประเมินความเสี่ยง","แผนดูแล","รายงานสิทธิประโยชน์ให้บริษัทประกัน","ส่งต่อทีมดูแล"]};
     audit("บันทึกความยินยอม","ผู้ใช้ให้ความยินยอมตามข้อตกลง PDPA-1.0 ครบทุกวัตถุประสงค์");
     await saveAll();
     S.draft={};
@@ -3112,7 +3112,7 @@ function renderFamBody(){
       (lv==="urgent"?'<p class="sub" style="font-size:16px;margin:0">โปรดติดต่อหรือไปเยี่ยมโดยเร็ว · เก็บของกีดขวางทางเดิน เปิดไฟให้สว่าง และอยู่ใกล้เมื่อท่านลุกเดิน</p>'
       :lv==="decline"?'<p class="sub" style="font-size:16px;margin:0">ควรโทรหาหรือแวะเยี่ยมสัปดาห์นี้ · ช่วยสังเกตการเดิน ลดสิ่งกีดขวางในบ้าน และตรวจดูยาที่กินร่วมกันหลายชนิด</p>'
       :lv==="watch"?'<p class="sub" style="font-size:16px;margin:0">ช่วยสังเกตการเดิน · ลดสิ่งกีดขวางในบ้าน · เตือนให้ประเมินซ้ำตามกำหนด</p>'
-      :'<p class="sub" style="font-size:16px;margin:0">สมรรถภาพคงที่ดี · การโทรหาสม่ำเสมอคือการป้องกันที่ดีที่สุด</p>')+'</div>';
+      :'<p class="sub" style="font-size:16px;margin:0">สมรรถภาพคงที่ดี · การโทรหาสม่ำเสมอช่วยให้รู้เร็วเมื่อมีอะไรเปลี่ยน</p>')+'</div>';
   }
   else if(FAMTAB==="trend"){
     if(!perms.trend)return el.innerHTML=noPerm("แนวโน้มสมรรถภาพ");
@@ -3599,7 +3599,7 @@ function warnCard(){
   return '<div class="card"><h3><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+ENGINE.levelColor[tr.level]+';margin-right:8px"></span>'+lvNm+'</h3>'+warnBody(tr)+'</div>';
 }
 
-/* ---------- สิ่งที่ควรทำต่อ (แผนป้องกัน) ---------- */
+/* ---------- สิ่งที่ควรทำต่อ (แผนดูแล) ---------- */
 function planV(){
   var pl=preventionPlan();
   if(!pl){
@@ -3617,7 +3617,7 @@ function planV(){
   }).join("")+
   '<div class="card"><h3>ตรวจครั้งต่อไป</h3>'+
   '<div class="bigrow"><div class="ic">📅</div><div class="tx"><b>ภายใน '+pl.tr.nextDays+' วัน</b><span>ระบบจะเตือนคุณเมื่อถึงกำหนด</span></div></div></div>'+
-  '<div class="disc">คำแนะนำเหล่านี้ช่วยป้องกันการหกล้ม <b>ไม่ใช่การรักษาโรค</b> และไม่ใช้แทนคำแนะนำของแพทย์ พยาบาล หรือเภสัชกร · หากเจ็บหน้าอก เวียนศีรษะรุนแรง หรือล้มแล้วลุกไม่ได้ ให้โทร 1669 ทันที</div>'+
+  '<div class="disc">คำแนะนำเหล่านี้ช่วยลดความเสี่ยงหกล้ม <b>ไม่ใช่การรักษาโรค</b> และไม่ใช้แทนคำแนะนำของแพทย์ พยาบาล หรือเภสัชกร · หากเจ็บหน้าอก เวียนศีรษะรุนแรง หรือล้มแล้วลุกไม่ได้ ให้โทร 1669 ทันที</div>'+
   '<button class="cta" data-go="home">กลับหน้าแรก</button></div>';
 }
 
@@ -4707,7 +4707,7 @@ function assessResultV(rec){
   '<div class="card" style="background:var(--c4b)"><h3 style="color:var(--c4)">ผลนี้ถูกนำไปทำอะไรต่อ</h3><p class="sub" style="margin:0">เมื่อพบสัญญาณเสี่ยง ระบบ<b>เปิดเคสให้มีผู้รับผิดชอบติดตาม</b>และประสานการส่งต่อไปยังผู้เชี่ยวชาญที่เหมาะกับสัญญาณนั้น · ผลประเมิน<b>ไม่ถูกใช้ปรับเบี้ย ไม่ใช้พิจารณารับประกัน และไม่ใช้ตัดสินการจ่ายสินไหม</b></p></div>'+
   (rec.tier<=2?'<div class="card" style="background:var(--c2b)"><h3 style="color:var(--c2)">เราส่งเรื่องให้ทีมดูแลแล้ว</h3><p class="sub" style="margin:0">ทีมดูแลได้รับเรื่องของคุณแล้ว '+t.act+'</p></div>':'')+
   (S.data.assessments.length>1?warnCard():'')+
-  '<button class="cta" data-go="plan">ดูแผนป้องกันเฉพาะของฉัน</button>'+
+  '<button class="cta" data-go="plan">ดูแผนดูแลของฉัน</button>'+
   '<button class="ghostb" data-go="home">กลับหน้าหลัก</button>'+
   '<button class="ghostb" data-go="policy">ดูสิทธิประโยชน์ของฉัน</button></div>';
   /* ---- ปุ่มรายงานส่งต่อและส่งออก FHIR — สร้างจากเอนจินตัวจริง ณ ตอนกด ---- */
@@ -6694,12 +6694,12 @@ async function startBalancePipeline(){
 var PATHWAY={
   stable:{nm:"เขียว · ดูแลตนเองตามปกติ",
     items:[
-      {k:"edu",   nm:"อ่านคู่มือป้องกันการหกล้ม"},
+      {k:"edu",   nm:"อ่านคู่มือลดความเสี่ยงหกล้ม"},
       {k:"home",  nm:"ตรวจบ้านตามรายการจุดเสี่ยง"},
       {k:"exer",  nm:"ออกกำลังกายฝึกกำลังขา สัปดาห์ละ 2–3 ครั้ง"}
     ],
     follow:[{kind:"checkin_7d",days:180,nm:"เช็กอินสั้น"},{kind:"reassess",days:365,nm:"ประเมินเต็มรูปแบบ"}]},
-  watch:{nm:"เหลือง · เฝ้าสังเกตและป้องกัน",
+  watch:{nm:"เหลือง · เฝ้าสังเกตและดูแลตนเอง",
     items:[
       {k:"home",  nm:"ตรวจบ้าน เก็บของกีดขวาง เพิ่มแสงสว่าง"},
       {k:"exer",  nm:"เริ่มโปรแกรมฝึกกำลังและการทรงตัว"},
@@ -7057,7 +7057,7 @@ function historyV(){
    ------------------------------------------------------------
    CareSignal ไม่ใช่บริษัทประกันและไม่ขายประกัน
    ผู้ใช้ "เชื่อม" กรมธรรม์ที่ถืออยู่กับบริษัทประกันพันธมิตร
-   แล้วโปรแกรมป้องกันทั้งหมดกลายเป็นสิทธิประโยชน์ของกรมธรรม์นั้น
+   แล้วโปรแกรมคัดกรองและเฝ้าระวังทั้งหมดกลายเป็นสิทธิประโยชน์ของกรมธรรม์นั้น
    ผลตรวจใช้เพื่อเฝ้าระวังและประสานการดูแลเท่านั้น ไม่แตะเบี้ยและความคุ้มครอง
    ============================================================ */
 var PARTNERS=["ทิพยประกันชีวิต (สาธิต)","ไทยสุขใจประกันภัย (สาธิต)","สยามวัยทองประกันชีวิต (สาธิต)"];
@@ -7100,7 +7100,7 @@ function policyV(){
     '<p class="note">เลขที่กรมธรรม์ '+esc(pol.no)+' · เชื่อมเมื่อ '+thDate(pol.linked)+'</p></div>'+
     '<div class="card"><h3>สิ่งที่ท่านได้จากโปรแกรมนี้ (ฟรี)</h3>'+
     '<div class="rowline"><span class="k">ตรวจสมรรถภาพด้วยกล้องที่บ้าน</span><span class="v">ทุก 3 เดือน</span></div>'+
-    '<div class="rowline"><span class="k">แผนป้องกันรายบุคคล + การติดตาม</span><span class="v">ตามระดับ</span></div>'+
+    '<div class="rowline"><span class="k">แผนดูแลรายบุคคล + การติดตาม</span><span class="v">ตามระดับ</span></div>'+
     '<div class="rowline"><span class="k">เสี่ยงสูง ทีมดูแลติดต่อภายใน</span><span class="v">24–72 ชม.</span></div></div>'+
     '<div class="card"><h3>สถานะการดูแลของท่าน</h3>'+
     (tier?'<div class="rowline"><span class="k">ผลล่าสุดของท่าน</span><span class="v"><b class="tierpill '+CFG.tiers[tier].b+'">'+CFG.tiers[tier].nm.split(" — ")[0]+'</b></span></div>'
@@ -7128,7 +7128,7 @@ function policyV(){
   /* ---------- ยังไม่ได้เชื่อม — ฟอร์มเชื่อมกรมธรรม์ที่มีอยู่ ---------- */
   var dr=S.draft;
   V.innerHTML='<div class="anim senior">'+
-  '<div class="notice"><b>โปรแกรมนี้ไม่ขายประกันและไม่ยุ่งกับเบี้ย</b> — หากท่านถือประกันสุขภาพ ประกันผู้สูงอายุ หรือประกันดูแลระยะยาวกับบริษัทพันธมิตรอยู่แล้ว เชื่อมกรมธรรม์เพื่อให้ทีมดูแลของบริษัทรับสัญญาณเสี่ยงและติดตามท่านได้ · หากยังไม่มีประกัน ท่านยังใช้โปรแกรมป้องกันได้ครบทุกส่วน</div>'+
+  '<div class="notice"><b>โปรแกรมนี้ไม่ขายประกันและไม่ยุ่งกับเบี้ย</b> — หากท่านถือประกันสุขภาพ ประกันผู้สูงอายุ หรือประกันดูแลระยะยาวกับบริษัทพันธมิตรอยู่แล้ว เชื่อมกรมธรรม์เพื่อให้ทีมดูแลของบริษัทรับสัญญาณเสี่ยงและติดตามท่านได้ · หากยังไม่มีประกัน ท่านยังใช้โปรแกรมคัดกรองและเฝ้าระวังได้ครบทุกส่วน</div>'+
   '<div class="card"><h3>เชื่อมกรมธรรม์ของท่าน</h3>'+
   '<div class="field"><label>บริษัทประกันของท่าน</label><select id="pIns" style="width:100%;box-sizing:border-box;font-size:17px;font-family:inherit;padding:13px;border:1.5px solid var(--line,#DFE7F2);border-radius:14px;background:#fff">'+
     PARTNERS.map(function(x){return '<option'+(dr.pIns===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div>'+
@@ -7191,7 +7191,7 @@ function aiV(){
   (c?'<div class="rowline"><span class="k">ให้ความยินยอมเมื่อ</span><span class="v">'+thDate(c.at)+'</span></div>'+
      '<div class="rowline"><span class="k">รุ่นข้อตกลง</span><span class="v">'+esc(c.version)+'</span></div>'
     :'<p class="sub">ยังไม่มีบันทึกความยินยอมในเครื่องนี้</p>')+
-  '<p class="sub" style="margin:10px 0 0">วัตถุประสงค์: ประเมินความเสี่ยง สร้างแผนป้องกัน รายงานสิทธิประโยชน์ให้บริษัทประกันผู้ออกกรมธรรม์ และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · คุณถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อในหน้า “ฉัน”</p></div>'+
+  '<p class="sub" style="margin:10px 0 0">วัตถุประสงค์: ประเมินความเสี่ยง สร้างแผนดูแล รายงานสิทธิประโยชน์ให้บริษัทประกันผู้ออกกรมธรรม์ และส่งต่อทีมดูแลเมื่อพบความเสี่ยงสูง · คุณถอนความยินยอมและลบข้อมูลทั้งหมดได้ทุกเมื่อในหน้า “ฉัน”</p></div>'+
   '<div class="card"><h3>บันทึกการทำงานของระบบ (Audit log)</h3>'+
   (log.length?log.map(function(x){
     return '<div class="logline"><b>'+thDate(x.at)+' · '+esc(x.ev)+'</b><br>'+esc(x.detail)+'<br>ผู้ตรวจสอบ: '+esc(x.human)+'</div>'}).join("")
